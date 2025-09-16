@@ -1,0 +1,10 @@
+** Spice model for LS844
+**
+.subckt LS844 G1 D1 S1 G2 D2 S2
+J1 D1 G1 S1 LS84x
+J2 D2 G2 S2 LS84x
+.model LS84x NJF level=1
++ Beta=1.47m Betatce=-.5 Rd=11 Rs=12 Lambda=9.12m
++ Vto=-3.25 Vtotc=-2.5m Is=1.77f Xti=0 Cgd=1p
++ M=0.5 Pb=0.8 Fc=0.5 Cgs=1p Kf=0 Af=1
+.ends

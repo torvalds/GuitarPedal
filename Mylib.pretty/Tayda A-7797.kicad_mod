@@ -1,0 +1,240 @@
+(footprint "Tayda A-7797"
+	(version 20241229)
+	(generator "pcbnew")
+	(generator_version "9.0")
+	(layer "F.Cu")
+	(descr "Momentary stomp switch (ON)-OFF")
+	(property "Reference" "REF**"
+		(at 0 -0.5 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "8c8b669d-8d2c-4ec2-9276-9d34ed85a8d5")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(property "Value" "Momentary Stomp Switch"
+		(at 0 8.5 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "ed350b38-ae46-42f0-b4e7-3922de18f02e")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" "https://www.taydaelectronics.com/datasheets/files/h1.pdf"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "7c76b930-51bd-497c-ae2b-6231199e450e")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "a8f038b6-f852-4243-8f1e-f62778f06f8d")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Tayda" "https://www.taydaelectronics.com/spst-momentary-push-button-stomp-foots-pedal-switch-pcb-pin.html"
+		(at 0 11.5 0)
+		(layer "F.SilkS")
+		(uuid "d9319514-d684-449b-ad8a-0d87e6d4b49f")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(attr through_hole)
+	(fp_line
+		(start -13.5 -5.5)
+		(end -13.5 5.5)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "c98bf3d6-b01c-40a4-8279-478e99b5fdeb")
+	)
+	(fp_line
+		(start -12.500001 6.5)
+		(end 5.5 6.5)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "e816d7a9-7ab6-4dd3-9ec6-3de8aa815e1a")
+	)
+	(fp_line
+		(start 5.5 -6.5)
+		(end -12.500001 -6.5)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "539a4d8c-a62c-4767-a850-8274f8004748")
+	)
+	(fp_rect
+		(start -18.5 -3.675)
+		(end -13.5 -2.675)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "278ed79b-bbf8-4e75-8305-b184129d4500")
+	)
+	(fp_rect
+		(start -18.5 2.675)
+		(end -13.5 3.675)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "50a8088c-ad52-41fc-8744-6ffdf33038c1")
+	)
+	(fp_rect
+		(start -6 -1)
+		(end -5.5 1)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "d4e3fc01-0b37-4b7d-a174-32755a21e1ea")
+	)
+	(fp_arc
+		(start -13.5 -5.5)
+		(mid -13.207107 -6.207107)
+		(end -12.5 -6.5)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "997426d8-f709-49f5-8900-16ef91803959")
+	)
+	(fp_arc
+		(start -12.5 6.5)
+		(mid -13.207107 6.207107)
+		(end -13.5 5.5)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "6e4de043-46e8-4e1f-bde8-01d6633173f2")
+	)
+	(fp_arc
+		(start 5.5 -6.5)
+		(mid 12 0)
+		(end 5.5 6.5)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "0a32d1f0-3b34-4df7-9170-62c4c137d0ac")
+	)
+	(fp_circle
+		(center -11 0)
+		(end -9.5 0)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "2e2997dc-922f-4806-8342-65cae2344b9f")
+	)
+	(fp_circle
+		(center 0 0)
+		(end 0 -6.5)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "95a56f22-b1b8-406b-81b2-9417d568df69")
+	)
+	(fp_circle
+		(center 0 0)
+		(end 0 -6)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "ccbdb36a-1730-45e5-b342-dd1ae5fdd3f4")
+	)
+	(fp_circle
+		(center 9 0)
+		(end 10.5 0)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "fb53093b-b3a6-469b-8fec-cd26647934eb")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 2.5 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "108376d1-66ef-41c1-aad9-593d2bd516b0")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "1" thru_hole roundrect
+		(at -18 -3.175)
+		(size 3.5 2.5)
+		(drill oval 2 1.5)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(roundrect_rratio 0.15)
+		(uuid "8c92c131-852a-429e-a209-6b98ff18a087")
+	)
+	(pad "2" thru_hole roundrect
+		(at -18 3.175)
+		(size 3.5 2.5)
+		(drill oval 2 1.5)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(roundrect_rratio 0.15)
+		(uuid "c52ed097-10cf-4dad-bd9b-47574dd4fd28")
+	)
+	(embedded_fonts no)
+)

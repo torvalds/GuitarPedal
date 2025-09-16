@@ -1,0 +1,13 @@
+** MMBD1203 is a dual diode package with two diodes in series:
+**  pin1: anode of the first one,
+**  pin2: cathode of the second one
+**  pin3: center (cathode of first, anode of second)
+** KiCad calls this "Dual_Series_AKC"
+** presumably for Anode/Kathode/Center ??
+**
+.subckt MMBD1203 A K C
+D1 A C MMBD1203MODEL
+D2 C K MMBD1203MODEL
+.model MMBD1203MODEL  D(Is=10E-15 Rs=1.0 CJO=1.3p Tt=12n Bv=70 Ibv=0.1p)
+.ends
+

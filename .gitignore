@@ -1,0 +1,10 @@
+fp-info-cache
+gerbers/
+manufacturing/
+*-backups/
+*-bak
+*.bak
+*.wav
+*.mp3
+bom
+~*.lck

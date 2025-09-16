@@ -1,0 +1,107 @@
+(footprint "Wurth WR-DC 2.1mm Power Jack"
+	(version 20241229)
+	(generator "pcbnew")
+	(generator_version "9.0")
+	(layer "F.Cu")
+	(descr "Wurth 694106301002")
+	(tags "Right Angled THT 2.1mm Power Jack")
+	(property "Reference" "REF**"
+		(at 0 3 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "0cebc4b0-b627-4b3d-9ec3-9f5f8607bdcb")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(property "Value" "Wurth WR-DC 2.1mm Power Jack"
+		(at 0 -4.05 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "980da2e6-d642-4dc2-927a-cf13ba325cd6")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" "https://www.we-online.com/components/products/datasheet/694106301002.pdf"
+		(at 0 18 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "6ad06342-803a-46ed-b2af-a10c248d90ee")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" "Wurth WR-DC 2.1mm Power Jack"
+		(at 0 16 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "f43b635d-0d55-46df-a7f2-0968004814c6")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr through_hole)
+	(fp_rect
+		(start -4.5 -0.875)
+		(end 4.5 13.625)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(fill no)
+		(layer "F.CrtYd")
+		(uuid "73d369c9-e5b1-446a-a289-fe6bf40f2a96")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 -2.55 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "4c3cca79-aa9a-4875-a45d-e1eeb06a5b99")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "1" thru_hole rect
+		(at 0 0.025)
+		(size 4 1.8)
+		(drill oval 3 0.8)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "e7ddffb5-754f-4b53-94a8-6acfd38340cc")
+	)
+	(pad "2" thru_hole oval
+		(at 0 5.825)
+		(size 4 2)
+		(drill oval 3 0.8)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "1473302c-4522-4c93-8d1d-07469bb2d8cb")
+	)
+	(pad "3" thru_hole oval
+		(at 4.8 3.025)
+		(size 2 4)
+		(drill oval 0.8 3)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "67c75e71-1c55-4826-a0aa-485593265931")
+	)
+	(embedded_fonts no)
+)

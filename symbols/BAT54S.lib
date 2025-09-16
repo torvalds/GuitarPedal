@@ -1,0 +1,13 @@
+** BAT54S is a dual schottky diode package with two diodes in series:
+**  pin1: anode of the first one,
+**  pin2: cathode of the second one
+**  pin3: center (cathode of first, anode of second)
+** KiCad calls this "Dual_Series_AKC"
+** presumably for Anode/Kathode/Center ??
+**
+.subckt BAT54S A K C
+D1 A C DBAT54WT1
+D2 C K DBAT54WT1
+.include ../../sim/BAT54WT1.REV2.LIB
+.ends
+

@@ -1,0 +1,314 @@
+(footprint "CK-6.35"
+	(version 20241229)
+	(generator "pcbnew")
+	(generator_version "9.0")
+	(layer "F.Cu")
+	(descr "6.35mm 1/4\" Right Angle Mono Female Connector Thread Lock Panel Mount CK635008")
+	(tags "mono audio jack Tayda A-6976")
+	(property "Reference" "REF**"
+		(at 1.2 -10.7 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "d1d2e70a-9f6b-4871-a694-303691e79dbe")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(property "Value" "CK-6.35"
+		(at 1.2 -9.2 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "a9d60043-a3f9-450c-9a11-e691708d982d")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" "https://www.taydaelectronics.com/datasheets/files/A-5238mono.pdf"
+		(at 1.2 -10.2 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "250cd1f9-073b-4b1e-975d-8e66494dfde9")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" "mono audio jack"
+		(at 1.2 -10.2 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "1edd9745-f4ff-4715-a6b6-0f2c0b018fe2")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr through_hole)
+	(fp_line
+		(start -7.5 -6.5)
+		(end -7.5 6.5)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "55e71157-0f88-4c12-acdc-f9243641a7ff")
+	)
+	(fp_line
+		(start -7.5 -6.5)
+		(end 8.2 -6.5)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "606dae48-3e69-4824-b74d-dda46b289a4d")
+	)
+	(fp_line
+		(start -7.5 6.5)
+		(end 8.2 6.5)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "6c725d83-b4f6-4d36-b80c-41b89b436303")
+	)
+	(fp_line
+		(start 13.5 -5.1)
+		(end 19 -5.1)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "2d58946c-44de-4c54-a8a1-5044eba29b80")
+	)
+	(fp_line
+		(start 19 -5.1)
+		(end 19 5.1)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "1fb8ced2-d122-4af9-bef6-771317848c29")
+	)
+	(fp_line
+		(start 19 5.1)
+		(end 13.5 5.1)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "00b21b91-abcf-455e-a862-f57bb2910fb8")
+	)
+	(fp_rect
+		(start -16.5 -4.5)
+		(end -7.5 4.5)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "Dwgs.User")
+		(uuid "dd8fe3f6-3249-41f7-bc2b-7b8060e10367")
+	)
+	(fp_line
+		(start -7.5 -6.5)
+		(end -7.5 6.5)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "e625a17b-7046-4305-9c95-3cd404b0c4da")
+	)
+	(fp_line
+		(start -7.5 -6.5)
+		(end 8.25 -6.5)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "ec712b29-c904-4b98-aea8-60ff581fb19e")
+	)
+	(fp_line
+		(start 8.25 -5.1)
+		(end 8.25 -6.5)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "5743fa18-a53c-44dd-80df-26edebf350b7")
+	)
+	(fp_line
+		(start 8.25 -5.1)
+		(end 19 -5.1)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "7dcfe13b-35ec-435e-b4e2-2029076d1f98")
+	)
+	(fp_line
+		(start 8.25 6.5)
+		(end -7.5 6.5)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "ed6cdaa1-d31e-4e81-936c-d42101f572c9")
+	)
+	(fp_line
+		(start 8.25 6.5)
+		(end 8.25 5.1)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "3f23a982-1fa2-421b-b2d3-30d53393123c")
+	)
+	(fp_line
+		(start 19 5.1)
+		(end 8.25 5.1)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "36c20cf6-6c78-42f1-bb25-7045ead15ddd")
+	)
+	(fp_line
+		(start 19 5.1)
+		(end 19 -5.1)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "96683411-ffa2-4b10-9509-8d74a90a97c1")
+	)
+	(fp_text user "GND"
+		(at -2 0 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "1e2eedc8-3558-4607-b463-a186461556d2")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+			(justify right)
+		)
+	)
+	(fp_text user "SW"
+		(at 14 -2.5 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "820e2852-df8d-435e-a599-c1f9a46d6661")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+			(justify right top)
+		)
+	)
+	(fp_text user "TIP"
+		(at 13 2.5 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "972a8a31-5dff-46e3-953b-829d79c37f78")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+			(justify right bottom)
+		)
+	)
+	(fp_text user "${REFERENCE}"
+		(at 1.2 -7.7 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "4f49724a-6137-4f1c-8dcd-15ed3e64b8ea")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "" np_thru_hole circle
+		(at 0.3 -3.9)
+		(size 2.54 2.54)
+		(drill 2)
+		(layers "*.Mask")
+		(uuid "c4b621df-7930-4db5-89d2-a3c6b68e54dc")
+	)
+	(pad "" np_thru_hole circle
+		(at 0.3 3.9)
+		(size 2.54 2.54)
+		(drill 2)
+		(layers "*.Mask")
+		(uuid "fab6d858-a535-4da7-afb1-aea40a515b22")
+	)
+	(pad "" np_thru_hole circle
+		(at 11.9 -3.9)
+		(size 2.54 2.54)
+		(drill 2)
+		(layers "*.Mask")
+		(uuid "a19c7aba-b01c-47d1-b749-0b09891c14e6")
+	)
+	(pad "" np_thru_hole circle
+		(at 11.9 3.9)
+		(size 2.54 2.54)
+		(drill 2)
+		(layers "*.Mask")
+		(uuid "5e9536a9-6601-4525-8fb8-ce101862d89e")
+	)
+	(pad "G" thru_hole oval
+		(at 0 0)
+		(size 3.5 2.2)
+		(drill oval 2.5 1.2)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "e1013d5c-4dcd-4a6c-9f44-595fc66ed21e")
+	)
+	(pad "S" thru_hole oval
+		(at 16 -2.5)
+		(size 3.7 2.2)
+		(drill oval 2.7 1.2)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "95f9d00c-9f51-486e-b146-2349f8bc71a6")
+	)
+	(pad "T" thru_hole oval
+		(at 15 2.5)
+		(size 3.7 2.2)
+		(drill oval 2.7 1.2)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "70ef15f6-b9db-4f38-94de-f0cd92792869")
+	)
+	(embedded_fonts no)
+)

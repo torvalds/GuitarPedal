@@ -1,0 +1,20 @@
+** The NXP SPICE model argument order and naming is odd.
+** This tries to make both sane. Or at least sanER. The
+** pins are in the SOT-23 package order with sane names:
+** 1 - Gate, 2 - Source, 3 - Drain
+**
+** For some reason the SPICE model is DGS. Maybe that's
+** some standard transistor pin order? That would be the
+** first time there's a standard for it.
+**
+** I would love to just include the whole SPICE file,
+** but it's (C) Transim. Go download it from 
+**
+**   https://www.nexperia.com/product/PMV250EPEA
+**
+** and put it under this repo in a "sim" directory
+**
+.subckt PMV250 GATE SOURCE DRAIN
+.include ../../sim/PMV250EPEA_22_5_2013.lib
+XU1 DRAIN GATE SOURCE PMV250EPEA
+.ends

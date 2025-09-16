@@ -1,0 +1,135 @@
+(footprint "Würth Reverse Mount LED"
+	(version 20241229)
+	(generator "pcbnew")
+	(generator_version "9.0")
+	(layer "F.Cu")
+	(descr "Reverse mount SMD LED")
+	(property "Reference" "REF**"
+		(at 0 -2 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "5342b187-4da2-4419-8644-b364f378200d")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(property "Value" "Würth Reverse Mount LED"
+		(at 0 4 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "175bcda6-cba4-4b93-83ad-d9cdc751b9fc")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" "https://www.we-online.com/components/products/datasheet/156120VS75300.pdf"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "adbfb9df-233a-4c1b-85b9-f1dc3443aeb5")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "1b7cb847-8a92-435c-be19-3c1e29629a0f")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr smd)
+	(fp_line
+		(start -2.5 -1.2)
+		(end -2.5 1.2)
+		(stroke
+			(width 0.3)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "b2819d25-3622-4904-be9a-0a6bd8063d34")
+	)
+	(fp_line
+		(start -2.5 1.2)
+		(end 0 1.2)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "3dd60ea1-82d4-4b12-87e9-ede90320751d")
+	)
+	(fp_line
+		(start 0 -1.2)
+		(end -2.5 -1.2)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "c4c304ec-b33a-4634-a538-16ff275079d9")
+	)
+	(fp_rect
+		(start -2.6 -1.1)
+		(end 2.6 1.1)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.CrtYd")
+		(uuid "d5eff29c-5709-444c-b1c3-6445318f750f")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 2.5 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "82478890-5bc8-4f84-893f-19765f9351cf")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "" np_thru_hole circle
+		(at 0 0)
+		(size 2.1 2.1)
+		(drill 2.1)
+		(layers "*.Mask")
+		(uuid "5538a3bd-9ede-414d-9cc9-81cbdca2e734")
+	)
+	(pad "1" smd roundrect
+		(at -1.8 0)
+		(size 1 1.6)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.15)
+		(thermal_bridge_angle 45)
+		(uuid "ac021635-ad59-4ff0-8472-4be0882edab1")
+	)
+	(pad "2" smd roundrect
+		(at 1.8 0)
+		(size 1 1.6)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.15)
+		(thermal_bridge_angle 45)
+		(uuid "d87bc1f4-14a5-4d43-a75a-5971a36c8f88")
+	)
+	(embedded_fonts no)
+)

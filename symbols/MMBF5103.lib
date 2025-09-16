@@ -1,0 +1,23 @@
+*$
+******** Power JFET Electrical Model Parameters *********
+** Product: MMBF5103
+** Package: SOT-23
+** N-Channel Switch
+**-------------------------------------------------------
+.MODEL MMBF5103 NJF
++ VTO=-2.2
++ BETA=6.288e-3
++ LAMBDA=0.00011438
++ ALPHA=1.0e-5
++ VK=1.0
++ RD=1
++ RS=1
++ CGD=6.9860e-12
++ CGS=8.1234e-12
++ M=0.36762
++ PB=1.2
++ BETATCE=-0.5
++ VTOTC=-2.50e-3
+*--------------------------------------------------------
+* Creation: Jun.-25-2014   Rev: 1.0
+* Fairchild Semiconductor

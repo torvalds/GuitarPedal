@@ -1,0 +1,153 @@
+(footprint "PBS-24-102P"
+	(version 20241229)
+	(generator "pcbnew")
+	(generator_version "9.0")
+	(layer "F.Cu")
+	(descr "SPDT Momentary Stomp Foot-Switch")
+	(tags "momentary stomp switch")
+	(property "Reference" "REF**"
+		(at 0 -0.5 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "8503465a-88d7-4652-a010-1c1f7aff2ab1")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(property "Value" "A-859"
+		(at 0 1 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "a944fb6c-9943-4a46-a18d-54fb355f2f0d")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" "https://www.taydaelectronics.com/datasheets/files/A-859.pdf"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "d0ee110f-3ee5-4143-bc7d-1ce116fa36c7")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" "Momentary Stomp Switch"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "1ffbeeba-7e1e-4a17-add4-780250abb69a")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Tayda" "https://www.taydaelectronics.com/1pdt-stomp-foot-pedal-switch-pcb-2.html"
+		(at 0 8 0)
+		(layer "F.SilkS")
+		(uuid "c425722b-f192-488f-8371-765cda6e6ca8")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(property "Note" "Check orientation!"
+		(at 0 -2.5 0)
+		(layer "F.SilkS")
+		(uuid "23c622ae-a70d-42e5-8bf3-88cdc3557799")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(attr through_hole)
+	(fp_rect
+		(start -8.6 -6.1)
+		(end 8.6 6.1)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.CrtYd")
+		(uuid "b5011aad-a199-455b-88d7-317b1045f653")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 2.5 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "d8d9f353-1d86-4af4-b49a-1a293b6a8331")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "1" thru_hole circle
+		(at 7.1 -4.65)
+		(size 2.54 2.54)
+		(drill 1.5)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "ef904bcc-09a7-4ee4-88c7-2c29d589a17d")
+	)
+	(pad "1" thru_hole circle
+		(at 7.1 4.65)
+		(size 2.54 2.54)
+		(drill 1.5)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "d83b4c04-dd17-4f58-89d7-96eb83a7821e")
+	)
+	(pad "2" thru_hole circle
+		(at 0 -4.65)
+		(size 2.54 2.54)
+		(drill 1.5)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "b7c68e4a-075a-45bc-9080-3c55b082adef")
+	)
+	(pad "2" thru_hole circle
+		(at 0 4.65)
+		(size 2.54 2.54)
+		(drill 1.5)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "1a56138a-af79-44f1-889f-5f2c62112816")
+	)
+	(pad "3" thru_hole circle
+		(at -7.1 -4.65)
+		(size 2.54 2.54)
+		(drill 1.5)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "b088eeaf-5c45-4404-85b7-54dc59b62dc3")
+	)
+	(pad "3" thru_hole circle
+		(at -7.1 4.65)
+		(size 2.54 2.54)
+		(drill 1.5)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "bac1cb81-a293-472d-bf08-0a5dfa6793b9")
+	)
+	(embedded_fonts no)
+)
