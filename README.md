@@ -119,6 +119,10 @@ those dirt-cheap op-amps.
 
 Put another way: go elsewhere for sane designs.  This is not the place.
 
+But it does work quite well. See some notes on the signal path testing
+[here](Documentation/Passthrough/Notes.md)
+
+
 ### Physical design
 
 I started out with small designs that I decided would fit best into a
