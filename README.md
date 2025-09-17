@@ -98,7 +98,7 @@ could be DC coupled, although I do the coupling capacitor with resistor
 to ground) and gives a good output signal somewhere roughly in the
 middle of the single-supply 9V rail.
 
-See [https://www.linearsystems.com/_files/ugd/7e8069_52b1022fbded45fab609459acb337629.pdf](LS844 Application note)
+See [LS844 Application note](https://www.linearsystems.com/_files/ugd/7e8069_52b1022fbded45fab609459acb337629.pdf)
 
 Why do I mention this in particular? Mainly because it's a great example
 of how completely *insane* my designs are.  That LS844 is used as a
