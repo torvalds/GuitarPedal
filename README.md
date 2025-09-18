@@ -98,7 +98,7 @@ could be DC coupled, although I do the coupling capacitor with resistor
 to ground) and gives a good output signal somewhere roughly in the
 middle of the single-supply 9V rail.
 
-See [https://www.linearsystems.com/_files/ugd/7e8069_52b1022fbded45fab609459acb337629.pdf](LS844 Application note)
+See [LS844 Application note](https://www.linearsystems.com/_files/ugd/7e8069_52b1022fbded45fab609459acb337629.pdf)
 
 Why do I mention this in particular? Mainly because it's a great example
 of how completely *insane* my designs are.  That LS844 is used as a
@@ -153,21 +153,78 @@ saner.
 
 ### Components
 
+I've used JLCPCB, PCBWAY and OSH Park for PCB manufacturing.  The end
+results are all good, pick the one you're most comfortable with.  I've
+found that at least for me, JLCPCB gives the fastest turnaround time,
+but I suspect it heavily depends on where you live.
+
+In the past, I've done some PCB assembly services too, and PCBWAY did a
+good job.  With this project where the manual soldering has been part of
+the whole experience, I've just done bare boards so far.
+
+I've toyed with the idea of doing some assembly service jobs in case I
+decide to go for more fiddly components, but that's really for a future
+"what if I do the digital side too".  I'm not there yet.
+
 Connectors and potentiometers are typically from Tayda Electronics, with
 most of the actual common SMD components from kits or from Mouser.
+
+Some typical parts from Tayda:
+ - [Mono Audio Jack A-6976](https://www.taydaelectronics.com/6-35-mm-1-4-righ-angle-mono-female-connector-thread-lock-panel-mount.html)
+ - [2.1mm DC Barrel Jack A-4118](https://www.taydaelectronics.com/dc-power-jack-2-1mm-barrel-type-pcb-mount.html)
+ - [10k Linear 9mm Pot A-1847](https://www.taydaelectronics.com/10k-ohm-linear-taper-potentiometer-round-shaft-pcb-9mm.html)
+ - [DPDT Compact Stomp Foot Switch A-1884](https://www.taydaelectronics.com/dpdt-compact-stomp-foot-pedal-switch-momentary-pcb.html)
+ - [Right Angle IDC Header A-2943](https://www.taydaelectronics.com/10-pin-box-header-connector-2-54mm-right-angle.html)
 
 For "random" SMD capacitors and resistors, get one of the kits.  I can
 personally heartily recommend the Guanruixin kits from Amazon: there are
 0805 and 1206 kits of both capacitors and resistors, and I love the
 packaging and labeling.  Very good for organizing at a hobbyist level.
 
-The AideTek kits are good too, but the Guanruixin ones are really
-compact for those "get all the values just in case" situations.
+Just the storage case makes them worth getting:
 
-Then just go to Mouser or Digikey and buy cut tape for the values you
-use more of.  You'll run out of the common resistors in the kits, but
-they are still worth having for the less usual ones and just for the
-organizing.
+ - [Guanruixin 0805 Capacitor Kit](https://www.amazon.com/Guanruixin-Capacitor-1pF-47uF-Capacitance-Compliant/dp/B0B3JV5PMT)
+ - [Guanruixin 0805 Resistor Kit](https://www.amazon.com/Guanruixin-Resistor-Assortment-Tolerance-Compliant/dp/B0B3JVDMZ1)
+ - .. any other sizes you want
 
-And things that are just a bit more specialized - like the the C0G caps
-in higher capacitances - you won't necessarily find in the kits.
+There are other kits out there, but it's nice to have a good compact
+case with a selection of various values.  If you are like me, you'll run
+out of the common resistor values, and then I buy cut tape from Mouser
+and just fill the specific compartments in that kit case.
+
+Which brings us to Mouser and DigiKey and the like: not just for
+refills, but for anything that is slightly more specialized.  Like that
+LS844, but really most of the not-completely-standard SMD components.
+
+My exact SMD component choices have been pretty random, and a number of
+them have been influenced by footprint rather than technical merit.  I
+tend to like things like dual transistor SOT-23-6 packages, and if you
+look at my MOSFET choices I think you'll find that the primary choice
+was packaging and a high enough V<sub>GSS</sub>.
+
+Put another way: I'm not claiming my parts choices necessarily make
+sense.  They've worked for me - often in the sense of "that other part
+was just too fiddly to solder, so I've replaced it with this other part
+that works for me"
+
+> [!NOTE]
+> If you actually know what you are doing, and you looked at the
+> schematic and went "Linus is clearly way over his head, and that is
+> just _stupid_", whether it comes to parts choices or to just the
+> circuit in general, please let me know.
+>
+> In particular, don't feel like it would be impolite to tell me I'm
+> incompetent and doing stupid things. I absolutely know I'm not
+> competent and would love to hear any criticism. Some of the best
+> teaching moments have been when I haven't understood something, and
+> somebody piped up to tell me I should do Xyz.
+>
+> I'm going to leave the link to the
+> ["Tremolo doubling as a metronome"](https://github.com/torvalds/1590A/issues/4)
+> issue from the 1590A pedal project, because that was a case of
+> somebody (@gralco) coming in and very politely telling me I was doing
+> stupid things.
+>
+> Pushing me to do simulations in KiCad completely changed the game.
+> So don't be shy to tell me my circuits suck. Because that's literally
+> why I do this!
