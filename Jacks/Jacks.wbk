@@ -7,7 +7,6 @@
         ".tran 1u 5 0 10u uic",
         ".kicad adjustpaths",
         ".save all",
-        ".probe alli",
         ".kicad esavenone"
       ],
       "dottedSecondary": true,
@@ -31,13 +30,8 @@
           "trace_type": 257
         },
         {
-          "color": "rgb(152, 78, 163)",
+          "color": "rgb(77, 175, 74)",
           "signal": "V(OUTCONN)",
-          "trace_type": 257
-        },
-        {
-          "color": "rgb(255, 127, 0)",
-          "signal": "V(OUTEFF)",
           "trace_type": 257
         }
       ]
