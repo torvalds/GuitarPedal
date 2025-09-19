@@ -205,7 +205,7 @@
 				)
 			)
 		)
-		(property "Sim.Library" "${KIPRJMOD}/../symbols/LS844.lib"
+		(property "Sim.Library" "${TOPLEVEL}/symbols/LS844.lib"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -1318,7 +1318,7 @@
 				)
 			)
 		)
-		(property "Sim.Library" "${KIPRJMOD}/../symbols/DMC3071LVT.lib"
+		(property "Sim.Library" "${TOPLEVEL}/symbols/DMC3071LVT.lib"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -7809,7 +7809,7 @@
 				)
 			)
 		)
-		(property "Sim.Library" "${KIPRJMOD}/../symbols/DMC3071LVT.lib"
+		(property "Sim.Library" "${TOPLEVEL}/symbols/DMC3071LVT.lib"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -8186,7 +8186,7 @@
 				)
 			)
 		)
-		(property "Sim.Library" "${KIPRJMOD}/../symbols/DMC3071LVT.lib"
+		(property "Sim.Library" "${TOPLEVEL}/symbols/DMC3071LVT.lib"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "F.Fab")

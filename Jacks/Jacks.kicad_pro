@@ -804,7 +804,9 @@
       "Simulation"
     ]
   ],
-  "text_variables": {},
+  "text_variables": {
+    "TOPLEVEL": "${KIPRJMOD}/.."
+  },
   "time_domain_parameters": {
     "delay_profiles_user_defined": [],
     "meta": {

@@ -8,6 +8,6 @@
 .subckt BAT54S A K C
 D1 A C DBAT54WT1
 D2 C K DBAT54WT1
-.include ../../sim/BAT54WT1.REV2.LIB
+.include external-sim/BAT54WT1.REV2.LIB
 .ends
 
