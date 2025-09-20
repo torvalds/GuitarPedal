@@ -1,0 +1,113 @@
+{
+  "last_sch_text_sim_command": "",
+  "tabs": [
+    {
+      "analysis": "TRAN",
+      "commands": [
+        ".tran 1u 5 0 10u uic",
+        ".kicad adjustpaths",
+        ".save all",
+        ".kicad esavenone"
+      ],
+      "dottedSecondary": true,
+      "margins": {
+        "bottom": 45,
+        "left": 70,
+        "right": 140,
+        "top": 30
+      },
+      "measurements": [],
+      "showGrid": true,
+      "traces": [
+        {
+          "color": "rgb(228, 26, 28)",
+          "signal": "V(INCONN)",
+          "trace_type": 257
+        },
+        {
+          "color": "rgb(55, 126, 184)",
+          "signal": "V(INEFF)",
+          "trace_type": 257
+        },
+        {
+          "color": "rgb(152, 78, 163)",
+          "signal": "V(ON_OFF)",
+          "trace_type": 257
+        },
+        {
+          "color": "rgb(77, 175, 74)",
+          "signal": "V(OUTCONN)",
+          "trace_type": 257
+        },
+        {
+          "color": "rgb(247, 129, 191)",
+          "signal": "V(OUTEFF)",
+          "trace_type": 257
+        },
+        {
+          "color": "rgb(255, 127, 0)",
+          "signal": "V(SW1)",
+          "trace_type": 257
+        },
+        {
+          "color": "rgb(255, 255, 51)",
+          "signal": "V(SW2)",
+          "trace_type": 257
+        }
+      ]
+    },
+    {
+      "analysis": "AC",
+      "commands": [
+        ".ac dec 50 10 40k",
+        ".kicad adjustpaths",
+        ".save all",
+        ".probe alli",
+        ".probe allp"
+      ],
+      "dottedSecondary": true,
+      "margins": {
+        "bottom": 45,
+        "left": 70,
+        "right": 70,
+        "top": 30
+      },
+      "measurements": [],
+      "showGrid": true,
+      "traces": [
+        {
+          "color": "rgb(228, 26, 28)",
+          "signal": "V(INEFF) (phase)",
+          "trace_type": 517
+        },
+        {
+          "color": "rgb(228, 26, 28)",
+          "signal": "V(INEFF) (gain)",
+          "trace_type": 521
+        },
+        {
+          "color": "rgb(77, 175, 74)",
+          "signal": "V(OUTCONN) (phase)",
+          "trace_type": 517
+        },
+        {
+          "color": "rgb(77, 175, 74)",
+          "signal": "V(OUTCONN) (gain)",
+          "trace_type": 521
+        }
+      ]
+    },
+    {
+      "analysis": "OP",
+      "commands": [
+        ".op",
+        ".kicad adjustpaths",
+        ".save all",
+        ".probe alli",
+        ".probe allp"
+      ]
+    }
+  ],
+  "user_defined_signals": [],
+  "version": 6
+}
