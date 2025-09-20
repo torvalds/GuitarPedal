@@ -513,4 +513,15 @@
 		)
 	)
 	(embedded_fonts no)
+	(model "${TOPLEVEL}/Enclosure/1590B-box.step"
+		(offset
+			(xyz 0 0 12)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz -0 180 -0)
+		)
+	)
 )
