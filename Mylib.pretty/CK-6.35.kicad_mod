@@ -311,4 +311,15 @@
 		(uuid "70ef15f6-b9db-4f38-94de-f0cd92792869")
 	)
 	(embedded_fonts no)
+	(model "/home/torvalds/KiCad/GuitarPedal/Models/CK-6.35-308.step"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
 )
