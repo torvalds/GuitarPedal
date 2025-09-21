@@ -4524,7 +4524,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Connector_BarrelJack:BarrelJack_Wuerth_6941xx301002"
+		(property "Footprint" "Mylib:Wurth WR-DC 2.1mm Power Jack"
 			(at 33.02 50.546 0)
 			(effects
 				(font

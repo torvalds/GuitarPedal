@@ -104,4 +104,15 @@
 		(uuid "67c75e71-1c55-4826-a0aa-485593265931")
 	)
 	(embedded_fonts no)
+	(model "${TOPLEVEL}/Models/WR-DC-2.1.step"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
 )

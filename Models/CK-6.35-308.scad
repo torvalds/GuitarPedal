@@ -1,5 +1,8 @@
 $fn=40;
 
+black = [0.2,0.2,0.2];
+silver = [0.75,0.75,0.75];
+
 // The model is centered on the front pin
 // as per the data sheet
 pins = [ [0, 0], [15, -2.5], [16, 2.5]];
@@ -33,13 +36,13 @@ module jack()
     }
 }
 
-body();
-jack();
+color(black) body();
+color(silver) jack();
 
 // Feet or locating pins..
-translate([0,0,-1]) for (pos = feet)
+color(black) translate([0,0,-1]) for (pos = feet)
 	translate(pos) cylinder(2, d=2);
 
 // Pins
-for (pos = pins)
+color(silver) for (pos = pins)
 	translate(pos) translate([0,0,-2]) cube([2,0.8,6], center=true);
