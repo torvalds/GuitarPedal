@@ -3,6 +3,8 @@
 	(generator "pcbnew")
 	(generator_version "9.0")
 	(layer "F.Cu")
+	(descr "Embedded Audio DSP Platform")
+	(tags "Audio DSP")
 	(property "Reference" "REF**"
 		(at 0 -10 0)
 		(layer "F.SilkS")

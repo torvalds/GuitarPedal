@@ -1,8 +1,10 @@
 (footprint "3PDT-Stomp-Switch"
-	(version 20240108)
+	(version 20241229)
 	(generator "pcbnew")
-	(generator_version "8.0")
+	(generator_version "9.0")
 	(layer "F.Cu")
+	(descr "3PDT stomp switch with solder lugs")
+	(tags "3PDT switch")
 	(property "Reference" "REF**"
 		(at 0 -13 0)
 		(unlocked yes)
@@ -27,20 +29,7 @@
 			)
 		)
 	)
-	(property "Footprint" ""
-		(at -8.8 -10.5 0)
-		(unlocked yes)
-		(layer "F.Fab")
-		(hide yes)
-		(uuid "d7f24aac-a95c-4d3a-a501-4b6e7312ef99")
-		(effects
-			(font
-				(size 1 1)
-				(thickness 0.15)
-			)
-		)
-	)
-	(property "Datasheet" ""
+	(property "Datasheet" "https://www.taydaelectronics.com/datasheets/files/A-4191.pdf"
 		(at -8.8 -10.5 0)
 		(unlocked yes)
 		(layer "F.Fab")
@@ -53,7 +42,7 @@
 			)
 		)
 	)
-	(property "Description" ""
+	(property "Description" "3PDT stomp switch with solder lugs"
 		(at -8.8 -10.5 0)
 		(unlocked yes)
 		(layer "F.Fab")
@@ -218,7 +207,7 @@
 			(width 0.05)
 			(type default)
 		)
-		(fill none)
+		(fill no)
 		(layer "F.CrtYd")
 		(uuid "69e0ed6d-614b-4499-b018-dd268972f5cb")
 	)
@@ -306,4 +295,5 @@
 		(remove_unused_layers no)
 		(uuid "76029b71-e42b-4580-abf7-d8eaabe21da1")
 	)
+	(embedded_fonts no)
 )

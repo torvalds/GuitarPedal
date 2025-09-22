@@ -3,6 +3,7 @@
 	(generator "pcbnew")
 	(generator_version "9.0")
 	(layer "F.Cu")
+	(descr "17mm pcb lugs potentiometer")
 	(property "Reference" "REF**"
 		(at 0 14.75 0)
 		(unlocked yes)
@@ -27,7 +28,7 @@
 			)
 		)
 	)
-	(property "Datasheet" ""
+	(property "Datasheet" "https://www.taydaelectronics.com/datasheets/files/RV16A-41-15R-B10K-3.pdf"
 		(at 0 0 0)
 		(unlocked yes)
 		(layer "F.Fab")
@@ -40,7 +41,7 @@
 			)
 		)
 	)
-	(property "Description" ""
+	(property "Description" "17mm pcb lugs potentiometer"
 		(at 0 0 0)
 		(unlocked yes)
 		(layer "F.Fab")
