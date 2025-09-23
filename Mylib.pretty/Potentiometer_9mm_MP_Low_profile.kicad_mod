@@ -255,4 +255,15 @@
 		(uuid "2e6b92b6-ebb3-4fa0-b331-ac45c3fc01f5")
 	)
 	(embedded_fonts no)
+	(model "${TOPLEVEL}/Models/Pot-9mm.step"
+		(offset
+			(xyz 0 0 -3)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz -0 -0 -0)
+		)
+	)
 )
