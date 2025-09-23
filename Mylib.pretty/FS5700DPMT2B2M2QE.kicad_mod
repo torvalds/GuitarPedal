@@ -270,4 +270,15 @@
 		(uuid "fe3549fb-e519-4eeb-813d-f32f9bf3f9de")
 	)
 	(embedded_fonts no)
+	(model "${TOPLEVEL}/Models/FS5700.step"
+		(offset
+			(xyz 0 0 0.5)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz -0 -0 -0)
+		)
+	)
 )

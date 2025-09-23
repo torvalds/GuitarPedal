@@ -1839,7 +1839,7 @@
 		(on_board no)
 		(dnp no)
 		(uuid "1fa04d26-2a0a-4471-b355-52998c148b5b")
-		(property "Reference" "V406"
+		(property "Reference" "V405"
 			(at 130.81 105.2801 0)
 			(effects
 				(font
@@ -1930,7 +1930,7 @@
 		(instances
 			(project "Buffered"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "V406")
+					(reference "V405")
 					(unit 1)
 				)
 			)
@@ -1945,7 +1945,7 @@
 		(on_board no)
 		(dnp no)
 		(uuid "2264fad4-81dc-4bfa-8b78-af898eace22a")
-		(property "Reference" "V408"
+		(property "Reference" "V407"
 			(at 207.01 48.1301 0)
 			(effects
 				(font
@@ -2027,7 +2027,7 @@
 		(instances
 			(project "Buffered"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "V408")
+					(reference "V407")
 					(unit 1)
 				)
 			)
@@ -2110,7 +2110,7 @@
 		(on_board no)
 		(dnp no)
 		(uuid "44e0286a-85e9-4510-b0ae-5b62e5cf0b3b")
-		(property "Reference" "V403"
+		(property "Reference" "V402"
 			(at 34.29 49.4001 0)
 			(effects
 				(font
@@ -2201,7 +2201,7 @@
 		(instances
 			(project "Buffered"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "V403")
+					(reference "V402")
 					(unit 1)
 				)
 			)
@@ -2216,7 +2216,7 @@
 		(on_board no)
 		(dnp yes)
 		(uuid "5cbfabcd-c98c-4058-a85b-f7a2d0842af8")
-		(property "Reference" "R1"
+		(property "Reference" "R401"
 			(at 29.21 129.5399 0)
 			(effects
 				(font
@@ -2387,7 +2387,7 @@
 		(instances
 			(project "Base"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "R1")
+					(reference "R401")
 					(unit 1)
 				)
 			)
@@ -2788,7 +2788,7 @@
 		(on_board no)
 		(dnp no)
 		(uuid "823a8b65-67ee-4ad6-b0ac-fff95ea077f2")
-		(property "Reference" "V407"
+		(property "Reference" "V406"
 			(at 132.08 48.1301 0)
 			(effects
 				(font
@@ -2879,7 +2879,7 @@
 		(instances
 			(project "Buffered"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "V407")
+					(reference "V406")
 					(unit 1)
 				)
 			)
@@ -2961,7 +2961,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "9e1ce8b6-a66a-4b99-9bdc-96f6ae67becc")
-		(property "Reference" "V402"
+		(property "Reference" "V401"
 			(at 34.29 37.9701 0)
 			(effects
 				(font
@@ -3043,7 +3043,7 @@
 		(instances
 			(project "Buffered"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "V402")
+					(reference "V401")
 					(unit 1)
 				)
 			)
@@ -3058,7 +3058,7 @@
 		(on_board no)
 		(dnp no)
 		(uuid "b8333846-4f92-4277-acd9-759061ee32fd")
-		(property "Reference" "V405"
+		(property "Reference" "V404"
 			(at 34.29 73.5301 0)
 			(effects
 				(font
@@ -3149,7 +3149,7 @@
 		(instances
 			(project "Buffered"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "V405")
+					(reference "V404")
 					(unit 1)
 				)
 			)
@@ -3164,7 +3164,7 @@
 		(on_board no)
 		(dnp no)
 		(uuid "bf72e94a-fc99-44d6-9163-faeaeabb2b87")
-		(property "Reference" "V404"
+		(property "Reference" "V403"
 			(at 34.29 62.1001 0)
 			(effects
 				(font
@@ -3255,7 +3255,7 @@
 		(instances
 			(project "Buffered"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "V404")
+					(reference "V403")
 					(unit 1)
 				)
 			)

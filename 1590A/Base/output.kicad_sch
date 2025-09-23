@@ -2632,7 +2632,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "31a08a1e-c940-49df-9db9-da08f34a0a1f")
-		(property "Reference" "R312"
+		(property "Reference" "R311"
 			(at 255.27 85.0899 0)
 			(effects
 				(font
@@ -2803,7 +2803,7 @@
 		(instances
 			(project "Base"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/82119736-3682-4322-9383-b4b2debfc9f1"
-					(reference "R312")
+					(reference "R311")
 					(unit 1)
 				)
 			)
