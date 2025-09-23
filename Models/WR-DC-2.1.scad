@@ -41,4 +41,4 @@ module housing()
 
 color(black) housing();
 translate([0, -13.6, 6.5]) rotate([-90,0,0])
-	color(silver) cylinder(5.3, d=2.1);
+	color(silver) cylinder(6.6, d=2.1);
