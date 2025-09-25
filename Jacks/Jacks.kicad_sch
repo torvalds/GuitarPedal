@@ -1278,7 +1278,7 @@
 					(hide yes)
 				)
 			)
-			(property "Sim.Library" "${TOPLEVEL}/symbols/DMC3071LVT.lib"
+			(property "Sim.Library" "${KIPRJMOD}/../symbols/DMC3071LVT.lib"
 				(at 2.54 -6.35 0)
 				(effects
 					(font
@@ -3996,7 +3996,7 @@
 				(hide yes)
 			)
 		)
-		(property "Sim.Library" "${TOPLEVEL}/symbols/DMC3071LVT.lib"
+		(property "Sim.Library" "${KIPRJMOD}/../symbols/DMC3071LVT.lib"
 			(at 49.53 105.41 0)
 			(effects
 				(font
@@ -5061,7 +5061,7 @@
 				(hide yes)
 			)
 		)
-		(property "Sim.Library" "${TOPLEVEL}/symbols/DMC3071LVT.lib"
+		(property "Sim.Library" "${KIPRJMOD}/../symbols/DMC3071LVT.lib"
 			(at 49.53 129.54 0)
 			(effects
 				(font

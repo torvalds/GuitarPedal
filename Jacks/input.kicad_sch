@@ -318,7 +318,7 @@
 					(hide yes)
 				)
 			)
-			(property "Sim.Library" "${TOPLEVEL}/symbols/LS844.lib"
+			(property "Sim.Library" "${KIPRJMOD}/../symbols/LS844.lib"
 				(at 0 -22.86 0)
 				(effects
 					(font
@@ -1475,7 +1475,7 @@
 				(hide yes)
 			)
 		)
-		(property "Sim.Library" "${TOPLEVEL}/symbols/LS844.lib"
+		(property "Sim.Library" "${KIPRJMOD}/../symbols/LS844.lib"
 			(at 64.77 120.65 0)
 			(effects
 				(font
@@ -1782,7 +1782,7 @@
 				(hide yes)
 			)
 		)
-		(property "Sim.Library" "${TOPLEVEL}/symbols/LS844.lib"
+		(property "Sim.Library" "${KIPRJMOD}/../symbols/LS844.lib"
 			(at 64.77 95.25 0)
 			(effects
 				(font

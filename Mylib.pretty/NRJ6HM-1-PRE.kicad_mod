@@ -230,7 +230,7 @@
 		(uuid "1a70c1d4-afad-4c19-900e-c22528a3e3ef")
 	)
 	(embedded_fonts no)
-	(model "${TOPLEVEL}/Models/NRJ6HM-1-PRE.step"
+	(model "NRJ6HM-1-PRE.step"
 		(offset
 			(xyz 0 0 0)
 		)

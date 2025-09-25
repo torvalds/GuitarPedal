@@ -237,17 +237,6 @@
 		(uuid "2f4bc372-718e-429d-a70d-60eb04444f61")
 	)
 	(fp_rect
-		(start -20.5 -61.6)
-		(end -11.5 -52.5)
-		(stroke
-			(width 0.1)
-			(type solid)
-		)
-		(fill no)
-		(layer "Dwgs.User")
-		(uuid "71e6f7e7-fffb-4ffe-b3ed-99685336a856")
-	)
-	(fp_rect
 		(start -4.5 -56.3)
 		(end 4.5 -40.3)
 		(stroke
@@ -257,17 +246,6 @@
 		(fill no)
 		(layer "Dwgs.User")
 		(uuid "c5fc1fff-cb5d-4a12-b1b9-495ed3ab393e")
-	)
-	(fp_rect
-		(start 11.5 -61.6)
-		(end 20.5 -52.5)
-		(stroke
-			(width 0.1)
-			(type solid)
-		)
-		(fill no)
-		(layer "Dwgs.User")
-		(uuid "126611d8-42e9-43e2-8e3d-550851537137")
 	)
 	(fp_rect
 		(start 27 21.5)
@@ -391,8 +369,8 @@
 		(uuid "8dbb055a-d2bc-4dac-8d7f-d10d49feb5a2")
 	)
 	(fp_circle
-		(center -20 -35)
-		(end -16.25 -35)
+		(center -20 -40)
+		(end -16.25 -40)
 		(stroke
 			(width 0.1)
 			(type solid)
@@ -402,8 +380,8 @@
 		(uuid "3baef1c2-8ad9-45a5-90f6-07bedb908f24")
 	)
 	(fp_circle
-		(center -20 -10)
-		(end -16.25 -10)
+		(center -20 -15)
+		(end -16.25 -15)
 		(stroke
 			(width 0.1)
 			(type solid)
@@ -424,8 +402,8 @@
 		(uuid "9c3ee0fe-3fc8-4c61-a6b5-f22367ccadac")
 	)
 	(fp_circle
-		(center 0 -35)
-		(end 3.75 -35)
+		(center 0 -40)
+		(end 3.75 -40)
 		(stroke
 			(width 0.1)
 			(type solid)
@@ -435,8 +413,8 @@
 		(uuid "442d209c-cb0b-4d08-bd19-76b070332d50")
 	)
 	(fp_circle
-		(center 0 -10)
-		(end 3.75 -10)
+		(center 0 -15)
+		(end 3.75 -15)
 		(stroke
 			(width 0.1)
 			(type solid)
@@ -457,8 +435,8 @@
 		(uuid "11fae2de-938c-4667-8130-fdda4bc255e2")
 	)
 	(fp_circle
-		(center 20 -35)
-		(end 23.75 -35)
+		(center 20 -40)
+		(end 23.75 -40)
 		(stroke
 			(width 0.1)
 			(type solid)
@@ -468,8 +446,8 @@
 		(uuid "6da059e1-fb74-4d8c-aade-1612b1cffd8e")
 	)
 	(fp_circle
-		(center 20 -10)
-		(end 23.75 -10)
+		(center 20 -15)
+		(end 23.75 -15)
 		(stroke
 			(width 0.1)
 			(type solid)
@@ -513,7 +491,7 @@
 		)
 	)
 	(embedded_fonts no)
-	(model "${TOPLEVEL}/Enclosure/1590B-box.step"
+	(model "1590B-box.step"
 		(offset
 			(xyz 0 0 22)
 		)

@@ -127,7 +127,7 @@
 		(uuid "bac1cb81-a293-472d-bf08-0a5dfa6793b9")
 	)
 	(embedded_fonts no)
-	(model "${TOPLEVEL}/Models/PBS-24-102P.step"
+	(model "PBS-24-102P.step"
 		(offset
 			(xyz 0 0 0)
 		)
