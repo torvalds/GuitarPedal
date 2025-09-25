@@ -5,13 +5,16 @@ silver = [0.75,0.75,0.75];
 
 module pin(pos, size)
 {
-    translate(pos) color(silver) cube(concat(size,8), center=true);
+    translate(pos) cube(concat(size,8), center=true);
 }
 
-// The model is centered on the back pin
-pin([  0,  0],   [2.8, 0.6]);
-pin([4.8, -3],   [0.6, 2.4]);
-pin([  0, -5.8], [2.4, 0.6]);
+module legs()
+{
+	// The model is centered on the back pin
+	pin([  0,  0],   [2.8, 0.6]);
+	pin([4.8, -3],   [0.6, 2.4]);
+	pin([  0, -5.8], [2.4, 0.6]);
+}
 	
 module body()
 {
@@ -39,6 +42,19 @@ module housing()
     }
 }
 
-color(black) housing();
-translate([0, -13.6, 6.5]) rotate([-90,0,0])
-	color(silver) cylinder(5.3, d=2.1);
+module center_pin()
+{
+    translate([0, -13.6, 6.5]) rotate([-90,0,0])
+	cylinder(5.3, d=2.1);
+}
+
+module dc_jack()
+{
+    color(black) housing();
+    color(silver) {
+	legs();
+	center_pin();
+    }
+}
+
+dc_jack();

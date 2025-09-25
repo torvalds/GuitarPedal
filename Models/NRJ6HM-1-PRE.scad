@@ -32,7 +32,8 @@ module barrel()
     }
 }
 
-union() {
+module nrj6hm()
+{
     color(black) body();
     color(silver)
 	barrel();
@@ -40,3 +41,5 @@ union() {
     color(silver) for (pos = pins)
 	translate(pos) translate([0,0,-2]) cube([1,1,6], center=true);
 }
+
+nrj6hm();

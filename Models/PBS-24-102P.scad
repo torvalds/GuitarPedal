@@ -32,9 +32,14 @@ module switch()
 	cylinder(5.8, d=10);
 }
 
-color(red) base();
-color(silver) union() { body(); switch(); }
+module pbs24()
+{
+    color(red) base();
+    color(silver) union() { body(); switch(); }
 
-// Pins
-color(silver) for (pos = pins)
+    // Pins
+    color(silver) for (pos = pins)
 	translate(pos) translate([0,0,-2]) cube([1,1,6], center=true);
+}
+
+pbs24();

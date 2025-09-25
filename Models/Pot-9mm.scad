@@ -30,18 +30,23 @@ module leg(w1, w2)
 	    cube([w2, 0.3, 7.5], center=true);
 }
 
-color(green) body();
-color(silver) shaft();
+module pot()
+{
+    color(green) body();
+    color(silver) shaft();
 
-// Legs and supports
-color(silver) {
-    translate([-2.54, -7.5]) leg(1.5, 0.8);
-    translate([ 0,    -7.5]) leg(1.5, 0.8);
-    translate([ 2.54, -7.5]) leg(1.5, 0.8);
+    // Legs and supports
+    color(silver) {
+	translate([-2.54, -7.5]) leg(1.5, 0.8);
+	translate([ 0,    -7.5]) leg(1.5, 0.8);
+	translate([ 2.54, -7.5]) leg(1.5, 0.8);
 
-    translate([-4.8, 0]) rotate(90) leg(3, 1);
-    translate([ 4.8, 0]) rotate(90) leg(3, 1);
+	translate([-4.8, 0]) rotate(90) leg(3, 1);
+	translate([ 4.8, 0]) rotate(90) leg(3, 1);
 
-    translate([0,-4.55]) leg(3, 0);
-    translate([0, 4.55]) leg(3, 0);
+	translate([0,-4.55]) leg(3, 0);
+	translate([0, 4.55]) leg(3, 0);
+    }
 }
+
+pot();
