@@ -1,0 +1,19 @@
+7.7mm holes for pots:
+
+	 [ -20,35] [ 0,35] [ 20,35 ]
+
+	 [ -20,10] [ 0,10] [ 20,10 ]
+
+12.5mm hole for stomp:
+
+		[ 0, -44 ]
+
+6mm hole for LED
+
+		[-14, -44 ]
+
+9.5mm side jacks:
+
+	C: [ -5, -26 ]
+	E: [  5, -26 ]
+

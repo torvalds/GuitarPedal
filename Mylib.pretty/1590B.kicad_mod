@@ -226,6 +226,17 @@
 		(uuid "f9d9f22a-905c-4fc7-b20e-28b98f3823ca")
 	)
 	(fp_rect
+		(start -27 21.5)
+		(end -35 30.5)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "Dwgs.User")
+		(uuid "2f4bc372-718e-429d-a70d-60eb04444f61")
+	)
+	(fp_rect
 		(start -20.5 -61.6)
 		(end -11.5 -52.5)
 		(stroke
@@ -257,6 +268,17 @@
 		(fill no)
 		(layer "Dwgs.User")
 		(uuid "126611d8-42e9-43e2-8e3d-550851537137")
+	)
+	(fp_rect
+		(start 27 21.5)
+		(end 35 30.5)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "Dwgs.User")
+		(uuid "e31c8f88-47a3-4bfc-9dec-21971c28b102")
 	)
 	(fp_arc
 		(start -30.25 -51.05)
@@ -369,8 +391,8 @@
 		(uuid "8dbb055a-d2bc-4dac-8d7f-d10d49feb5a2")
 	)
 	(fp_circle
-		(center -20 -38)
-		(end -16.25 -38)
+		(center -20 -35)
+		(end -16.25 -35)
 		(stroke
 			(width 0.1)
 			(type solid)
@@ -380,8 +402,8 @@
 		(uuid "3baef1c2-8ad9-45a5-90f6-07bedb908f24")
 	)
 	(fp_circle
-		(center -20 -10.5)
-		(end -16.25 -10.5)
+		(center -20 -10)
+		(end -16.25 -10)
 		(stroke
 			(width 0.1)
 			(type solid)
@@ -391,8 +413,8 @@
 		(uuid "0ccdb07b-bd37-4b6b-9f25-c19e1dda1e95")
 	)
 	(fp_circle
-		(center -14 30)
-		(end -11 30)
+		(center -14 44)
+		(end -11 44)
 		(stroke
 			(width 0.1)
 			(type solid)
@@ -402,19 +424,8 @@
 		(uuid "9c3ee0fe-3fc8-4c61-a6b5-f22367ccadac")
 	)
 	(fp_circle
-		(center -14 42)
-		(end -7.75 42)
-		(stroke
-			(width 0.1)
-			(type solid)
-		)
-		(fill no)
-		(layer "Dwgs.User")
-		(uuid "11fae2de-938c-4667-8130-fdda4bc255e2")
-	)
-	(fp_circle
-		(center 0 -38)
-		(end 3.75 -38)
+		(center 0 -35)
+		(end 3.75 -35)
 		(stroke
 			(width 0.1)
 			(type solid)
@@ -424,8 +435,8 @@
 		(uuid "442d209c-cb0b-4d08-bd19-76b070332d50")
 	)
 	(fp_circle
-		(center 0 -10.5)
-		(end 3.75 -10.5)
+		(center 0 -10)
+		(end 3.75 -10)
 		(stroke
 			(width 0.1)
 			(type solid)
@@ -435,30 +446,19 @@
 		(uuid "10f82621-484d-4fa0-a013-396a054f08f1")
 	)
 	(fp_circle
-		(center 14 30)
-		(end 17 30)
+		(center 0 44)
+		(end 6.25 44)
 		(stroke
 			(width 0.1)
 			(type solid)
 		)
 		(fill no)
 		(layer "Dwgs.User")
-		(uuid "4eba6d91-6544-4583-aaa0-f6dd1335839a")
+		(uuid "11fae2de-938c-4667-8130-fdda4bc255e2")
 	)
 	(fp_circle
-		(center 14 42)
-		(end 20.25 42)
-		(stroke
-			(width 0.1)
-			(type solid)
-		)
-		(fill no)
-		(layer "Dwgs.User")
-		(uuid "6844e7ff-d273-4052-934b-859edcdf3d8e")
-	)
-	(fp_circle
-		(center 20 -38)
-		(end 23.75 -38)
+		(center 20 -35)
+		(end 23.75 -35)
 		(stroke
 			(width 0.1)
 			(type solid)
@@ -468,8 +468,8 @@
 		(uuid "6da059e1-fb74-4d8c-aade-1612b1cffd8e")
 	)
 	(fp_circle
-		(center 20 -10.5)
-		(end 23.75 -10.5)
+		(center 20 -10)
+		(end 23.75 -10)
 		(stroke
 			(width 0.1)
 			(type solid)
@@ -515,7 +515,7 @@
 	(embedded_fonts no)
 	(model "${TOPLEVEL}/Enclosure/1590B-box.step"
 		(offset
-			(xyz 0 0 12)
+			(xyz 0 0 22)
 		)
 		(scale
 			(xyz 1 1 1)
