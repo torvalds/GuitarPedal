@@ -66,9 +66,10 @@
 			)
 		)
 	)
-	(property "Note" "Check orientation!"
+	(property "Note" "1-2 normally connected 2-3 push-to-connect"
 		(at 0 -2.5 0)
 		(layer "F.SilkS")
+		(hide yes)
 		(uuid "23c622ae-a70d-42e5-8bf3-88cdc3557799")
 		(effects
 			(font
@@ -102,28 +103,12 @@
 		)
 	)
 	(pad "1" thru_hole circle
-		(at 7.1 -4.65)
-		(size 2.54 2.54)
-		(drill 1.5)
-		(layers "*.Cu" "*.Mask")
-		(remove_unused_layers no)
-		(uuid "ef904bcc-09a7-4ee4-88c7-2c29d589a17d")
-	)
-	(pad "1" thru_hole circle
 		(at 7.1 4.65)
 		(size 2.54 2.54)
 		(drill 1.5)
 		(layers "*.Cu" "*.Mask")
 		(remove_unused_layers no)
 		(uuid "d83b4c04-dd17-4f58-89d7-96eb83a7821e")
-	)
-	(pad "2" thru_hole circle
-		(at 0 -4.65)
-		(size 2.54 2.54)
-		(drill 1.5)
-		(layers "*.Cu" "*.Mask")
-		(remove_unused_layers no)
-		(uuid "b7c68e4a-075a-45bc-9080-3c55b082adef")
 	)
 	(pad "2" thru_hole circle
 		(at 0 4.65)
@@ -134,14 +119,6 @@
 		(uuid "1a56138a-af79-44f1-889f-5f2c62112816")
 	)
 	(pad "3" thru_hole circle
-		(at -7.1 -4.65)
-		(size 2.54 2.54)
-		(drill 1.5)
-		(layers "*.Cu" "*.Mask")
-		(remove_unused_layers no)
-		(uuid "b088eeaf-5c45-4404-85b7-54dc59b62dc3")
-	)
-	(pad "3" thru_hole circle
 		(at -7.1 4.65)
 		(size 2.54 2.54)
 		(drill 1.5)
@@ -150,4 +127,15 @@
 		(uuid "bac1cb81-a293-472d-bf08-0a5dfa6793b9")
 	)
 	(embedded_fonts no)
+	(model "${TOPLEVEL}/Models/PBS-24-102P.step"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
 )
