@@ -1,0 +1,244 @@
+(footprint "NRJ6HM-1-PRE"
+	(version 20241229)
+	(generator "pcbnew")
+	(generator_version "9.0")
+	(layer "F.Cu")
+	(descr "Neutrik 6.35mm Stereo Jack")
+	(tags "Audio Jack Stereo TRS Neutralling")
+	(property "Reference" "REF**"
+		(at -11 -4 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "382389a5-775e-4415-84a4-9838c980f4de")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(property "Value" "NRJ6HM-1-PRE"
+		(at -11 -2 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "9c90bf89-51b3-4a39-9e75-dafc374ba25f")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" "https://www.neutrik.com/en/product/nrj6hm-1-pre"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "79c65819-0404-4c26-8f78-71b6f3783f15")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" "Neutrik 6.35mm Stereo Jack"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "592a9a6e-b11f-4b89-99ce-efb35740fed0")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr through_hole)
+	(fp_rect
+		(start -24.8 -4.5)
+		(end -21.85 4.5)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "Dwgs.User")
+		(uuid "1d18afe8-d162-4556-b606-7193f89b5177")
+	)
+	(fp_rect
+		(start 0 -4.5)
+		(end 8.2 4.5)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "Dwgs.User")
+		(uuid "fd1e3af0-91b7-42fb-90a0-d9332e6f631d")
+	)
+	(fp_rect
+		(start 0 6.43)
+		(end -21.85 -9.32)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "Dwgs.User")
+		(uuid "4e1e9ed1-d170-4815-a40d-5956227f045e")
+	)
+	(fp_line
+		(start -24.75 -4.5)
+		(end -22 -4.5)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "ccd006c1-6b19-4409-9cab-6c4ed3db210e")
+	)
+	(fp_line
+		(start -24.75 4.5)
+		(end -24.75 -4.5)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "e62fca25-5666-41d2-84f7-40f9a7d2f510")
+	)
+	(fp_line
+		(start -22 -9.5)
+		(end 0 -9.5)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "769b4b9e-56a6-4cfa-b218-08861190ed38")
+	)
+	(fp_line
+		(start -22 -4.5)
+		(end -22 -9.5)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "62048f51-4b6b-42b5-b8bd-c97de83b1bf5")
+	)
+	(fp_line
+		(start -22 4.5)
+		(end -24.75 4.5)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "87eb2966-6956-476d-b23d-3768f09bcb5c")
+	)
+	(fp_line
+		(start -22 6.5)
+		(end -22 4.5)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "4eb29ba6-0ee5-4391-9e20-5a69e14be058")
+	)
+	(fp_line
+		(start 0 -9.5)
+		(end 0 6.5)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "79ff75ce-6fa2-45e5-8d99-9b2326c9e693")
+	)
+	(fp_line
+		(start 0 6.5)
+		(end -22 6.5)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "4ace59f7-fef3-4fc7-9cd6-a719faf2ef1c")
+	)
+	(fp_text user "${REFERENCE}"
+		(at -11 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "e36912d5-1e8a-4fa2-8248-c62b6b546694")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "R" thru_hole oval
+		(at -11.1 -7.23)
+		(size 3 1.5)
+		(drill oval 2 0.8)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "1cb73126-107b-49b5-b1d9-b1e0a42abadb")
+	)
+	(pad "RN" thru_hole oval
+		(at -11.1 4.2)
+		(size 3 1.5)
+		(drill oval 2 0.8)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "a1216b8e-e184-4491-a9c6-f53bdf36add5")
+	)
+	(pad "S" thru_hole oval
+		(at -4.75 -7.23)
+		(size 3 1.5)
+		(drill oval 2 0.8)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "b6ede532-70d5-4b26-bcca-321e13786f7d")
+	)
+	(pad "S" thru_hole oval
+		(at -4.75 4.2)
+		(size 3 1.5)
+		(drill oval 2 0.8)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "6bfd22ee-d8c7-4aee-a08d-ae1f9385bfc4")
+	)
+	(pad "T" thru_hole oval
+		(at -17.45 -7.23)
+		(size 3 1.5)
+		(drill oval 2 0.8)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "6dc41e39-1a10-4d24-9814-db9fd3d88502")
+	)
+	(pad "TN" thru_hole oval
+		(at -17.45 4.2)
+		(size 3 1.5)
+		(drill oval 2 0.8)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "1a70c1d4-afad-4c19-900e-c22528a3e3ef")
+	)
+	(embedded_fonts no)
+	(model "${TOPLEVEL}/Models/NRJ6HM-1-PRE.step"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
+)
