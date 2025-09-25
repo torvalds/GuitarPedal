@@ -617,4 +617,15 @@
 		(uuid "95ebea9e-e6e9-4eff-be6d-fc0ed1a77582")
 	)
 	(embedded_fonts no)
+	(model "/home/torvalds/KiCad/GuitarPedal/Mylib.pretty/DaisySeed.step"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz -0 -0 90)
+		)
+	)
 )
