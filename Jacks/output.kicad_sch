@@ -323,7 +323,7 @@
 					(hide yes)
 				)
 			)
-			(property "Sim.Library" "${KIPRJMOD}/../symbols/DMC3071LVT.lib"
+			(property "Sim.Library" "spice/DMC3071LVT.lib"
 				(at 2.54 -6.35 0)
 				(effects
 					(font
@@ -1772,7 +1772,7 @@
 				(hide yes)
 			)
 		)
-		(property "Sim.Library" "${KIPRJMOD}/../symbols/DMC3071LVT.lib"
+		(property "Sim.Library" "spice/DMC3071LVT.lib"
 			(at 68.58 62.23 0)
 			(effects
 				(font
@@ -3834,7 +3834,7 @@
 				(hide yes)
 			)
 		)
-		(property "Sim.Library" "${KIPRJMOD}/../symbols/DMC3071LVT.lib"
+		(property "Sim.Library" "spice/DMC3071LVT.lib"
 			(at 68.58 95.25 0)
 			(effects
 				(font
@@ -4330,7 +4330,7 @@
 				(hide yes)
 			)
 		)
-		(property "Sim.Library" "${KIPRJMOD}/../symbols/DMC3071LVT.lib"
+		(property "Sim.Library" "spice/DMC3071LVT.lib"
 			(at 73.66 62.23 0)
 			(effects
 				(font
@@ -4454,7 +4454,7 @@
 				(hide yes)
 			)
 		)
-		(property "Sim.Library" "${KIPRJMOD}/../symbols/DMC3071LVT.lib"
+		(property "Sim.Library" "spice/DMC3071LVT.lib"
 			(at 73.66 95.25 0)
 			(effects
 				(font

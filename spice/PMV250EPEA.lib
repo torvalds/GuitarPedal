@@ -15,6 +15,6 @@
 ** and put it under this repo in a "sim" directory
 **
 .subckt PMV250 GATE SOURCE DRAIN
-.include external-sim/PMV250EPEA_22_5_2013.lib
+.include external/PMV250EPEA_22_5_2013.lib
 XU1 DRAIN GATE SOURCE PMV250EPEA
 .ends

@@ -6,7 +6,7 @@
 **  5: Q1 base
 **  6: Q2 collector
 .subckt MBT2222ADW1 E2 B2 C1 E1 B1 C2
-.include external-sim/mmbt2222alt1.lib
+.include external/mmbt2222alt1.lib
 Q1 C1 B1 E1 Qmmbt2222alt1g
 Q2 C2 B2 E2 Qmmbt2222alt1g
 .ends
