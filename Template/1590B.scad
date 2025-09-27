@@ -78,12 +78,16 @@ module outside_outline()
 
 module enclosure_side_holes()
 {
-	translate([30,-26,10])
-		rotate([0,90,0])
-			cylinder(10,d=10,center=true);
-	translate([-30,-26,10])
-		rotate([0,90,0])
-			cylinder(10,d=10,center=true);
+	translate([30,-26]) {
+		cube([9.5,9.5,20],center=true);
+		translate([0,0,10.5]) rotate([0,90,0])
+			cylinder(10,d=9.5,center=true);
+	}
+	translate([-30,-26]) {
+		cube([9.5,9.5,20],center=true);
+		translate([0,0,10.5]) rotate([0,90,0])
+			cylinder(10,d=9.5,center=true);
+	}
 	translate([0,55,10])
 		cube([9.5, 12.5, 12.5], center=true);
 }

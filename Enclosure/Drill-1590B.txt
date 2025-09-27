@@ -1,3 +1,4 @@
+
 7.7mm holes for pots:
 
 	 [ -20,40] [ 0,40] [ 20,40 ]
@@ -12,8 +13,74 @@
 
 		[-14, -44 ]
 
+Vertical space is a bit more exciting and the measurements can't just be
+taken from the PCB.  From the top of the *inside* of the 1590B, we have
+
+ 9 mm for potentiometer board (7mm for low-profile pots, 1.6mm board)
+
+ 11 mm for pin header board-to-board distance
+
+so the top of the base board is at a minimum 20mm from the inside top of
+the enclosure.
+
+The Daisy Seed is also 9mm high (with the plastic SWD cover in place),
+and also has the pin header board-to-board connection, so 20mm there
+too.
+
+Finally, the height of the momentary stomp switch is at about 21mm.
+
+End result: the stomp switch ends up standing up the highest, but all
+are in the same comfortable ballpark.  If the stomp switch was a real
+problem, both the latching "real" 3DPT one (at 16mm high, but needing
+more board space) or the compact one (Tayda A-1884 at 13mm high, but
+smaller switch height) would work.
+
+Anyway, "20-21 mm vertical space from top of base board" in a 1590B is
+pretty much optimal: the inner enclosure depth is 24.8mm (Hammond says
+25mm, Tayda says 24.9mm, and I'm measuring right under and being
+conservative).
+
+With the lip of the lid is 2mm (Tayda says 2.1mm), so we basically have
+22.8mm free and clear (and then ~4mm component space inside the lid).
+
+With the standard PCB thickness of 1.6mm, we're on the money with the
+21mm of vertical space.
+
+So while the 1590B is actually shallower than the 1590A was, and the
+Neutrik connectors are physically higher than the ones I used for the
+1590A enclosure (13mm vs 11mm), we have less vertical space constraints
+because the audio jacks are not under the potentiometer board so the
+"low profile" setup with the legs sticking out below the potentiometer
+board works better.
+
+With the top of the base board at 21mm from the (inner) top, the center
+of the audio jack drill will be 14.5mm from the top.  The enclosure wall
+thickness is 2mm (Tayda says 2.1mm), so 16.5mm from the outer top.
+
+Or alternatively, counting from the bottom: 2.1mm lid lip, 1.6mm board
+height, and center of audio jack 6.5mm above board: 10.2 mm from the
+bottom of the 1590B box.
+
+Tayda's box tool drill pattern measures from the middle, but it's not
+actually clear what the middle of the drill pattern is, since Tayda
+doesn't drill to the lower edge (~1mm space) and I'd have expected not
+into the top of the box (~2.5mm).  But the drill tool allows me to
+specify a side drill hole up to 26.5mm high on a 27mm tall side.  Funky.
+
+Result: "3mm from center line" seems to be the right place to drill the
+hole for the audio jack.
+
 9.5mm side jacks:
 
-	C: [ -5, -26 ]
-	E: [  5, -26 ]
+	C: [ -3, -26 ]
+	E: [  3, -26 ]
 
+with rectangular cutouts for the underside:
+
+	C: center:[ -8.75, -26 ] height: 9.5 width :9
+	E: center:[  8.75, -26 ] height: 9.5 width: 9
+
+and power jack (11.5mm high hole, 9.5mm wide) + 3mm extra from bottom,
+so 15mm high.
+
+	B: center: [ 0, 6 ] height: 14.5 width: 9.5

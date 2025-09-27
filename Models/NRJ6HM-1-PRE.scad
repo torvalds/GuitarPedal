@@ -24,7 +24,7 @@ module body()
 
 module barrel()
 {
-    translate([0,0,6]) rotate([0,90,0]) {
+    translate([0,0,6.5]) rotate([0,90,0]) {
 	difference() {
 	    cylinder(8,d=9);
 	    cylinder(9,d=6.35);
