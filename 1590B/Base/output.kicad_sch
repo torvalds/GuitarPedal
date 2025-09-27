@@ -808,7 +808,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text_box "Output switching\n\nUse series MOSFETs to switch signals on and off. \n\nUse complementary MOSFETS so that we can just use one single gate voltage for both signals.\n\nBig gate resistor to slow down switching and minimize popping\n"
+	(text_box "Output switching\n\nUse series MOSFETs to switch signals on and off. \n\nUse complementary MOSFETS so that we can just use one single gate voltage for both signals.\n\nBig gate resistor to slow down switching and minimize popping\n\n3k3 / 1nF is a 48kHz lowpass filter at output\n"
 		(exclude_from_sim no)
 		(at 14.605 14.605 0)
 		(size 164.465 109.855)
@@ -2852,7 +2852,7 @@
 				)
 			)
 		)
-		(property "Value" "2k2"
+		(property "Value" "3k3"
 			(at 116.84 74.93 90)
 			(effects
 				(font
@@ -3224,7 +3224,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "220pF"
+		(property "Value" "1nF"
 			(at 121.92 87.6299 0)
 			(effects
 				(font

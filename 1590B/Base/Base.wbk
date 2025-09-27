@@ -4,7 +4,7 @@
     {
       "analysis": "TRAN",
       "commands": [
-        ".tran 1u 5 0 10u uic",
+        ".tran 1u 5 0 10u",
         ".kicad adjustpaths",
         ".save all",
         ".kicad esavenone"
