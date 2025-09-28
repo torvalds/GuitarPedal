@@ -1,0 +1,138 @@
+***********************************************************
+*
+* NMB2227A
+*
+* Nexperia
+*
+* General purpose double NPN/PNP Transistor
+* IC   = 600mA each
+* VCEO = 40V / 60V 
+* hFE  = 100 - 300 @ 10V/150mA each
+* 
+* 
+*
+*
+* Package pinning does not match Spice model pinning.
+* Package: SOT 457
+* 
+* Package Pin 5;2: Emitter   TR1;TR2 
+* Package Pin 1;3: Base      TR1;TR2
+* Package Pin 6;4: Collector TR1;TR2
+*
+*
+* Extraction date (week/year): 25/2014 (TR1) / 28/2014 (TR2)
+* Spicemodel includes temperature dependency
+*
+**********************************************************
+* #
+* Please note: Diode D1 is dedicated to improve modeling in  reverse 
+* area of operation and does not reflect a physical device.
+*
+.SUBCKT NMB2227A B1 E2 B2 C2 E1 C1
+
+.SUBCKT NMB2227A_NPN 1 2 3
+Q1 1 2 3 MAIN
+D1 2 1 DIODE
+*
+.MODEL MAIN NPN
++ IS = 1.718E-014
++ NF = 0.9872
++ ISE = 5.598E-015
++ NE = 1.415
++ BF = 231
++ IKF = 0.774
++ VAF = 47.16
++ NR = 0.985
++ ISC = 1.754E-016
++ NC = 1.182
++ BR = 4.5
++ IKR = 0.01941
++ VAR = 11.97
++ RB = 120
++ IRB = 0.001
++ RBM = 6.2
++ RE = 0.04575
++ RC = 0.3532
++ XTB = 1.679
++ EG = 1.11
++ XTI = 5.305
++ CJE = 3.431E-011
++ VJE = 0.6681
++ MJE = 0.2959
++ TF = 3.7E-010
++ XTF = 25
++ VTF = 2
++ ITF = 0.18
++ PTF = 0
++ CJC = 1.046E-011
++ VJC = 0.4009
++ MJC = 0.3151
++ XCJC = 1
++ TR = 8.5E-008
++ CJS = 0
++ VJS = 0.75
++ MJS = 0.333
++ FC = 0.78
+.MODEL DIODE D
++ IS = 2.018E-012
++ N = 1.111
++ BV = 1000
++ IBV = 0.001
++ RS = 341.5
++ CJO = 0
++ VJ = 1
++ M = 0.5
++ FC = 0
++ TT = 0
++ EG = 1.11
++ XTI = 3
+.ENDS
+*
+.SUBCKT NMB2227A_PNP 1 2 3
+Q1 1 2 3 MAIN
+*
+.MODEL MAIN PNP
++ IS = 1.897E-014
++ NF = 1.004
++ ISE = 4.178E-015
++ NE = 1.428
++ BF = 176
++ IKF = 1.442
++ VAF = 13.24
++ NR = 1.002
++ ISC = 2.178E-015
++ NC = 1.087
++ BR = 20.38
++ IKR = 0.7727
++ VAR = 22.7
++ RB = 39
++ IRB = 9.5E-005
++ RBM = 3.024
++ RE = 0.148
++ RC = 0.1756
++ XTB = 1.344
++ EG = 1.11
++ XTI = 1.707
++ CJE = 4.496E-011
++ VJE = 0.7048
++ MJE = 0.3198
++ TF = 1.046E-009
++ XTF = 5.967
++ VTF = 2.011
++ ITF = 0.8587
++ PTF = 0
++ CJC = 1.444E-011
++ VJC = 0.8453
++ MJC = 0.4279
++ XCJC = 1
++ TR = 2.2E-008
++ CJS = 0
++ VJS = 0.75
++ MJS = 0.333
++ FC = 0.79
+.ENDS
+
+XQ1A C1 B1 E1 NMB2227A_NPN
+XQ1B C2 B2 E2 NMB2227A_PNP
+.ENDS
+*
