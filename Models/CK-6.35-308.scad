@@ -20,29 +20,33 @@ module body()
 
 module barrel()
 {
-    difference() {
-	cylinder(9, d=9);
-	translate([0,0,-1])
-	    cylinder(11, d=6.35);
-    }
-
+    translate([-6.5,0,5.5]) rotate([0,-90,0])
+	difference() {
+	    union() {
+		cylinder(1, d=10.9);
+		cylinder(9, d=9);
+	    }
+	    translate([0,0,-1]) cylinder(12, d=6.35);
+	}
 }
 
-module jack()
+module ck635()
 {
-    translate([-6.5,0,5.5]) rotate([0,-90,0]) {
-	cylinder(1, d=10.9);
+    color(black) {
+	body();
+
+	// Feet or locating pins..
+	translate([0,0,-0.5]) for (pos = feet)
+	    translate(pos) cylinder(2, d=2);
+    }
+
+    color(silver) {
 	barrel();
+
+	// Pins
+	for (pos = pins)
+	    translate(pos) translate([0,0,-2]) cube([2,0.8,6], center=true);
     }
 }
 
-color(black) body();
-color(silver) jack();
-
-// Feet or locating pins..
-color(black) translate([0,0,-1]) for (pos = feet)
-	translate(pos) cylinder(2, d=2);
-
-// Pins
-color(silver) for (pos = pins)
-	translate(pos) translate([0,0,-2]) cube([2,0.8,6], center=true);
+ck635();

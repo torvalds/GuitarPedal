@@ -1,4 +1,4 @@
-(footprint "CK-6.35"
+(footprint "CK-6.35-no-NPTH"
 	(version 20241229)
 	(generator "pcbnew")
 	(generator_version "9.0")
@@ -17,7 +17,7 @@
 			)
 		)
 	)
-	(property "Value" "CK-6.35"
+	(property "Value" "CK-6.35-no-NPTH"
 		(at 1.2 -9.2 0)
 		(unlocked yes)
 		(layer "F.Fab")
@@ -219,34 +219,6 @@
 			)
 		)
 	)
-	(pad "" np_thru_hole circle
-		(at 0.3 -3.9)
-		(size 2.54 2.54)
-		(drill 2)
-		(layers "*.Mask")
-		(uuid "c4b621df-7930-4db5-89d2-a3c6b68e54dc")
-	)
-	(pad "" np_thru_hole circle
-		(at 0.3 3.9)
-		(size 2.54 2.54)
-		(drill 2)
-		(layers "*.Mask")
-		(uuid "fab6d858-a535-4da7-afb1-aea40a515b22")
-	)
-	(pad "" np_thru_hole circle
-		(at 11.9 -3.9)
-		(size 2.54 2.54)
-		(drill 2)
-		(layers "*.Mask")
-		(uuid "a19c7aba-b01c-47d1-b749-0b09891c14e6")
-	)
-	(pad "" np_thru_hole circle
-		(at 11.9 3.9)
-		(size 2.54 2.54)
-		(drill 2)
-		(layers "*.Mask")
-		(uuid "5e9536a9-6601-4525-8fb8-ce101862d89e")
-	)
 	(pad "S" thru_hole oval
 		(at 0 0)
 		(size 3.5 2.2)
@@ -274,13 +246,13 @@
 	(embedded_fonts no)
 	(model "CK-6.35-308.step"
 		(offset
-			(xyz 0 0 0)
+			(xyz 0 0 0.5)
 		)
 		(scale
 			(xyz 1 1 1)
 		)
 		(rotate
-			(xyz 0 0 0)
+			(xyz -0 -0 -0)
 		)
 	)
 )
