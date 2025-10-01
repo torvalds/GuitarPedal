@@ -4036,6 +4036,68 @@
 		)
 		(embedded_fonts no)
 	)
+	(symbol "Enclosure_1590LB"
+		(exclude_from_sim yes)
+		(in_bom yes)
+		(on_board yes)
+		(property "Reference" "Box"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "1590LB"
+			(at 0 -2.54 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Mylib:1590LB"
+			(at 0 2.54 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "https://www.hammfg.com/pdf/1590LB.pdf"
+			(at 0 -7.62 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Guitar pedal enclosure"
+			(at 0 -5.08 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(symbol "Enclosure_1590LB_0_1"
+			(rectangle
+				(start -3.81 1.27)
+				(end 3.81 -3.81)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+		)
+		(embedded_fonts no)
+	)
 	(symbol "HUSB237"
 		(exclude_from_sim no)
 		(in_bom yes)
