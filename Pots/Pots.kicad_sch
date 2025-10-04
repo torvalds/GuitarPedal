@@ -833,32 +833,32 @@
 		(uuid "54a123b9-dfd0-4bf4-8a0a-724b796f1374")
 	)
 	(junction
-		(at 97.79 49.53)
+		(at 69.85 78.74)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "b0bc0911-94d4-4eb0-99c1-e7877b9f54ab")
+		(uuid "0ea7127a-fe50-4191-ad23-4154b747fa48")
 	)
 	(junction
-		(at 69.85 49.53)
+		(at 69.85 45.72)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "bbe0239f-2a36-4128-96aa-22a3a34654f4")
+		(uuid "718536d8-4b72-4e48-badb-13ecb73da2b8")
 	)
 	(junction
-		(at 97.79 82.55)
+		(at 97.79 78.74)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "c2f69d9b-8099-4c20-ba44-ba4092933911")
+		(uuid "d4fccb44-605c-42e9-80ba-4770f43be18c")
 	)
 	(junction
-		(at 69.85 82.55)
+		(at 97.79 45.72)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "e4b0e3b0-19b7-4c33-92cc-85f23b7b8712")
+		(uuid "f25feb32-10c2-49de-a8e2-518032240e62")
 	)
 	(wire
 		(pts
-			(xy 69.85 82.55) (xy 69.85 86.36)
+			(xy 69.85 78.74) (xy 69.85 86.36)
 		)
 		(stroke
 			(width 0)
@@ -868,7 +868,7 @@
 	)
 	(wire
 		(pts
-			(xy 124.46 49.53) (xy 124.46 53.34)
+			(xy 124.46 45.72) (xy 124.46 53.34)
 		)
 		(stroke
 			(width 0)
@@ -878,7 +878,7 @@
 	)
 	(wire
 		(pts
-			(xy 69.85 78.74) (xy 69.85 82.55)
+			(xy 69.85 74.93) (xy 69.85 78.74)
 		)
 		(stroke
 			(width 0)
@@ -888,7 +888,7 @@
 	)
 	(wire
 		(pts
-			(xy 97.79 82.55) (xy 97.79 86.36)
+			(xy 97.79 78.74) (xy 97.79 86.36)
 		)
 		(stroke
 			(width 0)
@@ -898,17 +898,7 @@
 	)
 	(wire
 		(pts
-			(xy 69.85 49.53) (xy 69.85 53.34)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "3828fb74-7c5c-4f26-8bd6-bd3143e1ef6f")
-	)
-	(wire
-		(pts
-			(xy 97.79 49.53) (xy 124.46 49.53)
+			(xy 97.79 45.72) (xy 124.46 45.72)
 		)
 		(stroke
 			(width 0)
@@ -918,7 +908,17 @@
 	)
 	(wire
 		(pts
-			(xy 69.85 82.55) (xy 97.79 82.55)
+			(xy 97.79 45.72) (xy 97.79 53.34)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3fe5bbc2-9259-42eb-850c-fb4ef854aad2")
+	)
+	(wire
+		(pts
+			(xy 69.85 78.74) (xy 97.79 78.74)
 		)
 		(stroke
 			(width 0)
@@ -928,7 +928,7 @@
 	)
 	(wire
 		(pts
-			(xy 124.46 82.55) (xy 124.46 86.36)
+			(xy 124.46 78.74) (xy 124.46 86.36)
 		)
 		(stroke
 			(width 0)
@@ -948,7 +948,7 @@
 	)
 	(wire
 		(pts
-			(xy 69.85 49.53) (xy 97.79 49.53)
+			(xy 69.85 45.72) (xy 97.79 45.72)
 		)
 		(stroke
 			(width 0)
@@ -958,7 +958,7 @@
 	)
 	(wire
 		(pts
-			(xy 69.85 45.72) (xy 69.85 49.53)
+			(xy 69.85 41.91) (xy 69.85 45.72)
 		)
 		(stroke
 			(width 0)
@@ -968,23 +968,23 @@
 	)
 	(wire
 		(pts
-			(xy 97.79 49.53) (xy 97.79 53.34)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "9919766c-17d8-4230-bec0-441d0047a4bd")
-	)
-	(wire
-		(pts
-			(xy 97.79 82.55) (xy 124.46 82.55)
+			(xy 97.79 78.74) (xy 124.46 78.74)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "df040050-af73-46e1-b0ac-a6cca315ae9c")
+	)
+	(wire
+		(pts
+			(xy 69.85 45.72) (xy 69.85 53.34)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e1d428bf-18b2-48db-bab6-f71ad1562d79")
 	)
 	(wire
 		(pts
@@ -1592,7 +1592,7 @@
 	)
 	(symbol
 		(lib_id "power:+3.3VA")
-		(at 69.85 78.74 0)
+		(at 69.85 74.93 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -1601,7 +1601,7 @@
 		(fields_autoplaced yes)
 		(uuid "38813173-56b3-4187-a8ae-3a8401d8ccdd")
 		(property "Reference" "#PWR0113"
-			(at 69.85 82.55 0)
+			(at 69.85 78.74 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1610,7 +1610,7 @@
 			)
 		)
 		(property "Value" "VIN"
-			(at 69.85 73.66 0)
+			(at 69.85 69.85 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1618,7 +1618,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 69.85 78.74 0)
+			(at 69.85 74.93 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1627,7 +1627,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 69.85 78.74 0)
+			(at 69.85 74.93 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1636,7 +1636,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+3.3VA\""
-			(at 69.85 78.74 0)
+			(at 69.85 74.93 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1659,6 +1659,7 @@
 	(symbol
 		(lib_id "Device:R_Potentiometer_MountingPin")
 		(at 69.85 57.15 0)
+		(mirror x)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -1666,7 +1667,7 @@
 		(dnp no)
 		(uuid "445b54c7-32e4-4561-984b-06a516557a73")
 		(property "Reference" "RV101"
-			(at 75.946 61.214 0)
+			(at 75.946 53.086 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1674,7 +1675,7 @@
 			)
 		)
 		(property "Value" "B10k"
-			(at 75.946 63.754 0)
+			(at 75.946 50.546 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2193,7 +2194,7 @@
 	)
 	(symbol
 		(lib_id "power:+3.3VA")
-		(at 69.85 45.72 0)
+		(at 69.85 41.91 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -2202,7 +2203,7 @@
 		(fields_autoplaced yes)
 		(uuid "7abf150c-0903-455f-9755-3d3d30424b84")
 		(property "Reference" "#PWR0101"
-			(at 69.85 49.53 0)
+			(at 69.85 45.72 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2211,7 +2212,7 @@
 			)
 		)
 		(property "Value" "VIN"
-			(at 69.85 40.64 0)
+			(at 69.85 36.83 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2219,7 +2220,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 69.85 45.72 0)
+			(at 69.85 41.91 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2228,7 +2229,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 69.85 45.72 0)
+			(at 69.85 41.91 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2237,7 +2238,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+3.3VA\""
-			(at 69.85 45.72 0)
+			(at 69.85 41.91 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2260,6 +2261,7 @@
 	(symbol
 		(lib_id "Device:R_Potentiometer_MountingPin")
 		(at 124.46 57.15 0)
+		(mirror x)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -2267,7 +2269,7 @@
 		(dnp no)
 		(uuid "8ae4d31a-a886-4a57-a7f4-fbe95216b525")
 		(property "Reference" "RV103"
-			(at 130.81 61.468 0)
+			(at 130.81 52.832 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2275,7 +2277,7 @@
 			)
 		)
 		(property "Value" "B10k"
-			(at 130.81 64.008 0)
+			(at 130.81 50.292 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2483,6 +2485,7 @@
 	(symbol
 		(lib_id "Device:R_Potentiometer_MountingPin")
 		(at 97.79 57.15 0)
+		(mirror x)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -2490,7 +2493,7 @@
 		(dnp no)
 		(uuid "a4c089a3-1043-4c2e-8434-7a676afd60be")
 		(property "Reference" "RV102"
-			(at 105.156 61.976 0)
+			(at 105.156 52.324 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2498,7 +2501,7 @@
 			)
 		)
 		(property "Value" "B10k"
-			(at 105.156 64.516 0)
+			(at 105.156 49.784 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2556,6 +2559,7 @@
 	(symbol
 		(lib_id "Device:R_Potentiometer_MountingPin")
 		(at 69.85 90.17 0)
+		(mirror x)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -2563,7 +2567,7 @@
 		(dnp no)
 		(uuid "ee1b0cc5-0870-4eff-a4fa-4ee7408cd1ff")
 		(property "Reference" "RV104"
-			(at 76.454 94.742 0)
+			(at 76.454 85.598 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2571,7 +2575,7 @@
 			)
 		)
 		(property "Value" "B10k"
-			(at 76.454 97.282 0)
+			(at 76.454 83.058 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2695,6 +2699,7 @@
 	(symbol
 		(lib_id "Device:R_Potentiometer_MountingPin")
 		(at 124.46 90.17 0)
+		(mirror x)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -2702,7 +2707,7 @@
 		(dnp no)
 		(uuid "f5dd1f1d-a7f5-47d4-87d8-22c4202021a6")
 		(property "Reference" "RV106"
-			(at 130.302 93.98 0)
+			(at 130.302 86.36 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2710,7 +2715,7 @@
 			)
 		)
 		(property "Value" "B10k"
-			(at 130.302 96.52 0)
+			(at 130.302 83.82 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2768,6 +2773,7 @@
 	(symbol
 		(lib_id "Device:R_Potentiometer_MountingPin")
 		(at 97.79 90.17 0)
+		(mirror x)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -2775,7 +2781,7 @@
 		(dnp no)
 		(uuid "fa43913b-e5fa-426d-b247-29df99bce3c0")
 		(property "Reference" "RV105"
-			(at 103.632 93.98 0)
+			(at 103.632 86.36 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2783,7 +2789,7 @@
 			)
 		)
 		(property "Value" "B10k"
-			(at 103.632 96.52 0)
+			(at 103.632 83.82 0)
 			(effects
 				(font
 					(size 1.27 1.27)
