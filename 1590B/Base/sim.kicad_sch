@@ -1826,7 +1826,7 @@
 		(on_board no)
 		(dnp yes)
 		(uuid "1411d7b3-f1bc-4b47-80d7-53edd9338d79")
-		(property "Reference" "R405"
+		(property "Reference" "R406"
 			(at 125.73 179.07 90)
 			(effects
 				(font
@@ -1878,7 +1878,7 @@
 		(instances
 			(project "Jacks"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "R405")
+					(reference "R406")
 					(unit 1)
 				)
 			)
@@ -2097,7 +2097,7 @@
 		(dnp yes)
 		(fields_autoplaced yes)
 		(uuid "376232b6-3b2c-47e9-9b26-4eeeb140e0e7")
-		(property "Reference" "R406"
+		(property "Reference" "R404"
 			(at 125.73 154.94 90)
 			(effects
 				(font
@@ -2149,7 +2149,7 @@
 		(instances
 			(project "Jacks"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "R406")
+					(reference "R404")
 					(unit 1)
 				)
 			)
@@ -2470,7 +2470,7 @@
 		(on_board no)
 		(dnp yes)
 		(uuid "7adec729-87a2-4cd0-bc68-db9c57712698")
-		(property "Reference" "R402"
+		(property "Reference" "R405"
 			(at 123.19 167.6399 90)
 			(effects
 				(font
@@ -2641,7 +2641,7 @@
 		(instances
 			(project "Buffered"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "R402")
+					(reference "R405")
 					(unit 1)
 				)
 			)
@@ -3312,7 +3312,7 @@
 		(dnp yes)
 		(fields_autoplaced yes)
 		(uuid "d244a844-2264-4304-b4ac-8ff32150f94e")
-		(property "Reference" "R404"
+		(property "Reference" "R402"
 			(at 71.12 45.7199 0)
 			(effects
 				(font
@@ -3366,7 +3366,7 @@
 		(instances
 			(project "Buffered"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "R404")
+					(reference "R402")
 					(unit 1)
 				)
 			)
