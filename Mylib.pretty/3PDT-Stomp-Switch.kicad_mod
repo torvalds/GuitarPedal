@@ -296,4 +296,15 @@
 		(uuid "76029b71-e42b-4580-abf7-d8eaabe21da1")
 	)
 	(embedded_fonts no)
+	(model "/home/torvalds/KiCad/GuitarPedal/Mylib.pretty/Stomp.step"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
 )
