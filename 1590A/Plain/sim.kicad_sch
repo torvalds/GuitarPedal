@@ -1217,16 +1217,6 @@
 	)
 	(wire
 		(pts
-			(xy 38.1 152.4) (xy 36.83 152.4)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "48061b9f-cc97-4c82-a069-419dc3005c22")
-	)
-	(wire
-		(pts
 			(xy 45.72 127) (xy 48.26 127)
 		)
 		(stroke
@@ -1234,6 +1224,16 @@
 			(type default)
 		)
 		(uuid "50175790-2027-4cdf-8400-127a5e830dc4")
+	)
+	(wire
+		(pts
+			(xy 35.56 152.4) (xy 38.1 152.4)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "51474949-bb90-4cc9-a8ae-9b56c466b6b2")
 	)
 	(wire
 		(pts
@@ -1284,28 +1284,6 @@
 			(type default)
 		)
 		(uuid "e3e247a2-10f6-4cfe-a5d7-1958283fcfd1")
-	)
-	(global_label "IN_TRI"
-		(shape input)
-		(at 36.83 152.4 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "0d063bd5-06d9-46ad-850a-7ee56dcf5e81")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 28.0995 152.4 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-				(hide yes)
-			)
-		)
 	)
 	(global_label "+VA"
 		(shape input)
@@ -1435,6 +1413,28 @@
 					(size 1.27 1.27)
 				)
 				(justify left)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "IN_TRI"
+		(shape input)
+		(at 35.56 152.4 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "6dbf3e75-4c9d-4fd1-8227-df8c5bfb2c23")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 26.8295 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
 				(hide yes)
 			)
 		)
@@ -2483,7 +2483,7 @@
 				(hide yes)
 			)
 		)
-		(property "Sim.Params" "y1=-3.5u y2=3.5u td=50m tr=25m tf=25m tw=1u per=50m ac=1"
+		(property "Sim.Params" "y1=-0.1 y2=0.1 td=50m tr=25m tf=25m tw=1u per=50m ac=1"
 			(at 104.14 67.564 0)
 			(effects
 				(font
