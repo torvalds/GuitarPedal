@@ -33,10 +33,15 @@ module switch()
 	cylinder(5.8, d=10);
 }
 
-color(red) base();
-color(silver) body();
-color(silver) switch();
+module fs5700()
+{
+    color(red) base();
+    color(silver) body();
+    color(silver) switch();
 
-// Pins
-color(silver) for (pos = pins)
+    // Pins
+    color(silver) for (pos = pins)
 	translate(pos) translate([0,0,-2]) cube([1,1,6], center=true);
+}
+
+fs5700();
