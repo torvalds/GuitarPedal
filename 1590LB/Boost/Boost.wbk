@@ -1,0 +1,137 @@
+{
+  "last_sch_text_sim_command": "",
+  "tabs": [
+    {
+      "analysis": "TRAN",
+      "commands": [
+        ".tran 1u 3 0 10u",
+        ".kicad adjustpaths",
+        ".save all",
+        ".kicad esavenone"
+      ],
+      "dottedSecondary": true,
+      "margins": {
+        "bottom": 45,
+        "left": 70,
+        "right": 70,
+        "top": 30
+      },
+      "measurements": [],
+      "showGrid": true,
+      "traces": [
+        {
+          "color": "rgb(166, 86, 40)",
+          "signal": "V(BUFFERED)",
+          "trace_type": 257
+        },
+        {
+          "color": "rgb(154, 166, 10)",
+          "signal": "V(FEEDBACK)",
+          "trace_type": 257
+        },
+        {
+          "color": "rgb(55, 126, 184)",
+          "cursor1": {
+            "position": 7.8300021568153415,
+            "x_format": "3~s",
+            "y_format": "3~V"
+          },
+          "cursor2": {
+            "position": 7.8550289664075335,
+            "x_format": "3~s",
+            "y_format": "3~V"
+          },
+          "cursorD": {
+            "x_format": "3~s",
+            "y_format": "3~V"
+          },
+          "signal": "V(INCONN)",
+          "trace_type": 257
+        },
+        {
+          "color": "rgb(166, 216, 84)",
+          "signal": "V(OUTCONN)",
+          "trace_type": 257
+        },
+        {
+          "color": "rgb(228, 26, 28)",
+          "signal": "V(OUTPUT)",
+          "trace_type": 257
+        }
+      ]
+    },
+    {
+      "analysis": "OP",
+      "commands": [
+        ".op",
+        ".kicad adjustpaths",
+        ".save all",
+        ".probe alli",
+        ".probe allp"
+      ]
+    },
+    {
+      "analysis": "AC",
+      "commands": [
+        ".ac dec 100 10 40k",
+        ".kicad adjustpaths",
+        ".save all",
+        ".probe alli",
+        ".probe allp"
+      ],
+      "dottedSecondary": true,
+      "margins": {
+        "bottom": 45,
+        "left": 70,
+        "right": 70,
+        "top": 30
+      },
+      "measurements": [],
+      "showGrid": true,
+      "traces": [
+        {
+          "color": "rgb(228, 26, 28)",
+          "signal": "V(BUFFERED) (gain)",
+          "trace_type": 521
+        },
+        {
+          "color": "rgb(55, 126, 184)",
+          "signal": "V(OUTPUT) (gain)",
+          "trace_type": 521
+        }
+      ]
+    },
+    {
+      "analysis": "FFT",
+      "commands": [
+        "linearize V(OUTSTOMP)\nfft V(OUTSTOMP)",
+        ".kicad adjustpaths",
+        ".save all",
+        ".probe alli",
+        ".probe allp"
+      ],
+      "dottedSecondary": true,
+      "fixedY1scale": {
+        "max": 0.0,
+        "min": -100.0
+      },
+      "margins": {
+        "bottom": 45,
+        "left": 70,
+        "right": 70,
+        "top": 30
+      },
+      "measurements": [],
+      "showGrid": true,
+      "traces": [
+        {
+          "color": "rgb(228, 26, 28)",
+          "signal": "V(OUTSTOMP)",
+          "trace_type": 513
+        }
+      ]
+    }
+  ],
+  "user_defined_signals": [],
+  "version": 6
+}
