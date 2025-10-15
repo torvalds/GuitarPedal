@@ -1,0 +1,13 @@
+** The TI SPICE model argument order and naming is odd.
+** This tries to make both sane. Or at least sanER. The
+** pins are in the SOT-23 package order with sane names.
+**
+** I would love to just include the whole OPA1655.LIB file,
+** but it's (C) TI, so I'd better not. Go download it from
+** TI, and unzip it, and put it under this repo in a "sim"
+** directory
+**
+.subckt SINGLE1655 OUT V- IN+ IN- V+
+.include external/OPA1655.LIB
+XU1 IN+ IN- V+ V- OUT OPA1655
+.ends
