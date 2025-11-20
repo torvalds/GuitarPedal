@@ -158,4 +158,15 @@
 		(uuid "d223ba95-bb6b-4aa2-89eb-219e7ef95ebf")
 	)
 	(embedded_fonts no)
+	(model "/home/torvalds/KiCad/GuitarPedal/Mylib.pretty/Pot-Basic.step"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
 )
