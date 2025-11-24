@@ -6098,7 +6098,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "100n"
+		(property "Value" "0.1uF"
 			(at 151.511 30.353 0)
 			(effects
 				(font
@@ -6166,7 +6166,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "100n"
+		(property "Value" "0.1uF"
 			(at 162.941 30.353 0)
 			(effects
 				(font
@@ -6234,7 +6234,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "100n"
+		(property "Value" "0.1uF"
 			(at 174.371 30.353 0)
 			(effects
 				(font
@@ -6302,7 +6302,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "100n"
+		(property "Value" "0.1uF"
 			(at 185.801 30.353 0)
 			(effects
 				(font
@@ -6370,7 +6370,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "100n"
+		(property "Value" "0.1uF"
 			(at 197.231 30.353 0)
 			(effects
 				(font
@@ -6438,7 +6438,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "100n"
+		(property "Value" "0.1uF"
 			(at 208.661 30.353 0)
 			(effects
 				(font
@@ -6703,7 +6703,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "10u"
+		(property "Value" "10uF"
 			(at 227.711 110.363 0)
 			(effects
 				(font
@@ -6712,7 +6712,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
 			(at 225.7552 113.03 0)
 			(effects
 				(font
@@ -6771,7 +6771,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "10u"
+		(property "Value" "10uF"
 			(at 263.271 110.363 0)
 			(effects
 				(font
@@ -6780,7 +6780,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
 			(at 261.3152 113.03 0)
 			(effects
 				(font
@@ -7141,7 +7141,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "100n"
+		(property "Value" "0.1uF"
 			(at 94.361 30.353 0)
 			(effects
 				(font
@@ -7200,7 +7200,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "134e33a6-33db-487d-b21b-a0025aaa741c")
-		(property "Reference" "R207"
+		(property "Reference" "R208"
 			(at 256.54 30.4799 0)
 			(effects
 				(font
@@ -7209,7 +7209,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "3k3"
+		(property "Value" "5k1"
 			(at 256.54 33.02 0)
 			(effects
 				(font
@@ -7371,7 +7371,7 @@
 		(instances
 			(project "RP2354A"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/fee2f2f3-eeb9-41d6-a69c-8dc30c4ebf5f"
-					(reference "R207")
+					(reference "R208")
 					(unit 1)
 				)
 			)
@@ -7644,7 +7644,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "100n"
+		(property "Value" "0.1uF"
 			(at 220.091 30.353 0)
 			(effects
 				(font
@@ -7767,7 +7767,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "2cc4662e-0cfd-4908-aead-1c42e9082e5b")
-		(property "Reference" "R209"
+		(property "Reference" "R204"
 			(at 115.57 175.0822 90)
 			(effects
 				(font
@@ -7818,7 +7818,7 @@
 		(instances
 			(project "RP2354A"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/fee2f2f3-eeb9-41d6-a69c-8dc30c4ebf5f"
-					(reference "R209")
+					(reference "R204")
 					(unit 1)
 				)
 			)
@@ -7898,7 +7898,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "40b3ada1-0c3b-450b-a374-4196673514d2")
-		(property "Reference" "R204"
+		(property "Reference" "R205"
 			(at 168.91 54.61 90)
 			(effects
 				(font
@@ -7906,7 +7906,7 @@
 				)
 			)
 		)
-		(property "Value" "27R"
+		(property "Value" "33R"
 			(at 168.91 57.15 90)
 			(effects
 				(font
@@ -7950,7 +7950,7 @@
 		(instances
 			(project ""
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/fee2f2f3-eeb9-41d6-a69c-8dc30c4ebf5f"
-					(reference "R204")
+					(reference "R205")
 					(unit 1)
 				)
 			)
@@ -7974,7 +7974,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "33"
+		(property "Value" "33R"
 			(at 68.453 47.752 0)
 			(effects
 				(font
@@ -8107,7 +8107,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "4.7u"
+		(property "Value" "4.7uF"
 			(at 35.941 69.0122 0)
 			(effects
 				(font
@@ -8116,7 +8116,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
 			(at 33.9852 71.12 0)
 			(effects
 				(font
@@ -8303,7 +8303,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "15p"
+		(property "Value" "15pF"
 			(at 217.297 148.971 0)
 			(effects
 				(font
@@ -8372,7 +8372,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "4.7u"
+		(property "Value" "4.7uF"
 			(at 48.26 68.58 0)
 			(effects
 				(font
@@ -8381,7 +8381,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
 			(at 45.4152 71.12 0)
 			(effects
 				(font
@@ -8441,7 +8441,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "4.7u"
+		(property "Value" "4.7uF"
 			(at 82.55 55.88 0)
 			(effects
 				(font
@@ -8450,7 +8450,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
+		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
 			(at 79.7052 58.42 0)
 			(effects
 				(font
@@ -8893,7 +8893,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "8ca2a8d7-b8ce-4ff0-8cdb-5cd6740618b5")
-		(property "Reference" "R206"
+		(property "Reference" "R207"
 			(at 251.46 140.7922 90)
 			(effects
 				(font
@@ -8944,7 +8944,7 @@
 		(instances
 			(project "RP2354A"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/fee2f2f3-eeb9-41d6-a69c-8dc30c4ebf5f"
-					(reference "R206")
+					(reference "R207")
 					(unit 1)
 				)
 			)
@@ -8960,7 +8960,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "9a80b644-c760-4d92-afe1-c8453d235658")
-		(property "Reference" "R205"
+		(property "Reference" "R206"
 			(at 168.91 69.85 90)
 			(effects
 				(font
@@ -8968,7 +8968,7 @@
 				)
 			)
 		)
-		(property "Value" "27R"
+		(property "Value" "33R"
 			(at 168.91 67.31 90)
 			(effects
 				(font
@@ -9012,7 +9012,7 @@
 		(instances
 			(project "RP2354A"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/fee2f2f3-eeb9-41d6-a69c-8dc30c4ebf5f"
-					(reference "R205")
+					(reference "R206")
 					(unit 1)
 				)
 			)
@@ -9036,7 +9036,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "100n"
+		(property "Value" "0.1uF"
 			(at 71.501 30.353 0)
 			(effects
 				(font
@@ -9463,7 +9463,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "4.7u"
+		(property "Value" "4.7uF"
 			(at 82.931 30.353 0)
 			(effects
 				(font
@@ -9472,7 +9472,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
+		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
 			(at 80.9752 33.02 0)
 			(effects
 				(font
@@ -9899,7 +9899,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "3.3u"
+		(property "Value" "3.3uH"
 			(at 60.96 68.5799 0)
 			(effects
 				(font
@@ -10584,7 +10584,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "15p"
+		(property "Value" "15pF"
 			(at 217.297 138.811 0)
 			(effects
 				(font
@@ -10771,7 +10771,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "fc7e70f6-fa18-4cf2-b109-c4920bb0a49e")
-		(property "Reference" "R208"
+		(property "Reference" "R209"
 			(at 266.7 30.4799 0)
 			(effects
 				(font
@@ -10780,7 +10780,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "3k3"
+		(property "Value" "5k1"
 			(at 266.7 33.02 0)
 			(effects
 				(font
@@ -10789,7 +10789,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
 			(at 262.382 31.75 90)
 			(effects
 				(font
@@ -10942,7 +10942,7 @@
 		(instances
 			(project "RP2354A"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/fee2f2f3-eeb9-41d6-a69c-8dc30c4ebf5f"
-					(reference "R208")
+					(reference "R209")
 					(unit 1)
 				)
 			)
