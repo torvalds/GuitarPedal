@@ -1048,10 +1048,6 @@
 		(uuid "c8869fbd-b29d-431a-8a3c-21a8ff8e5ca1")
 	)
 	(no_connect
-		(at 68.58 77.47)
-		(uuid "10cc7086-01b7-4ff5-a844-f2d261bd4de4")
-	)
-	(no_connect
 		(at 68.58 90.17)
 		(uuid "1b830501-c6f7-461d-89cf-903d8ef93b8b")
 	)
@@ -1164,6 +1160,16 @@
 			(type default)
 		)
 		(uuid "3571dde3-db59-4fd9-ae58-48fb330eaaf2")
+	)
+	(wire
+		(pts
+			(xy 180.34 30.48) (xy 180.34 29.21)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "362b1d3f-33af-49ae-9dc7-55de932041e4")
 	)
 	(wire
 		(pts
@@ -1347,6 +1353,16 @@
 	)
 	(wire
 		(pts
+			(xy 180.34 39.37) (xy 180.34 38.1)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "dc84b59d-4d5f-4d5b-b6fa-078be12b1dc9")
+	)
+	(wire
+		(pts
 			(xy 137.16 39.37) (xy 144.78 39.37)
 		)
 		(stroke
@@ -1434,6 +1450,28 @@
 			(type default)
 		)
 		(uuid "ffece161-52e0-4972-8599-63bfa240c6d4")
+	)
+	(global_label "VBIAS"
+		(shape input)
+		(at 180.34 29.21 90)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "12bfbf0a-d3dd-4fc8-ae4a-0226af976492")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 180.34 20.9633 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
 	)
 	(global_label "DREG"
 		(shape input)
@@ -1563,6 +1601,28 @@
 					(size 1.27 1.27)
 				)
 				(justify left)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "VBIAS"
+		(shape input)
+		(at 68.58 77.47 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "77194937-4bed-4e74-9b17-cf334a6542ea")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 60.3333 77.47 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
 				(hide yes)
 			)
 		)
@@ -1986,6 +2046,72 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GND")
+		(at 180.34 39.37 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "33872994-4644-4c21-820a-e4d5b978998b")
+		(property "Reference" "#PWR0313"
+			(at 180.34 45.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 180.34 44.45 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 180.34 39.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 180.34 39.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 180.34 39.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "b70b9ec5-d574-4b27-89a0-32f00f4485fd")
+		)
+		(instances
+			(project "RP2354A"
+				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/d22a6a21-f0d7-406e-8a6d-681cd127beec"
+					(reference "#PWR0313")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:+3V3")
 		(at 80.01 60.96 0)
 		(unit 1)
@@ -2178,6 +2304,76 @@
 			(project "RP2354A"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/d22a6a21-f0d7-406e-8a6d-681cd127beec"
 					(reference "C304")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 180.34 34.29 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "53dbb408-1136-4716-b2a0-ba91a9a6aed3")
+		(property "Reference" "C308"
+			(at 184.15 33.0199 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "1uF"
+			(at 184.15 35.5599 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
+			(at 181.3052 38.1 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 180.34 34.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 180.34 34.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2"
+			(uuid "5a95fbad-4ee2-4a4f-afcf-8e0562756010")
+		)
+		(pin "1"
+			(uuid "76c0fba3-9a82-4b15-9b46-90a78fa08060")
+		)
+		(instances
+			(project "RP2354A"
+				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/d22a6a21-f0d7-406e-8a6d-681cd127beec"
+					(reference "C308")
 					(unit 1)
 				)
 			)

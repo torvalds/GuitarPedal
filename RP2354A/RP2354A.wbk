@@ -4,7 +4,7 @@
     {
       "analysis": "TRAN",
       "commands": [
-        ".tran 1u 1 0 100u uic",
+        ".tran 1u 3 0 100u uic",
         ".kicad adjustpaths",
         ".save all",
         ".probe alli",
@@ -21,23 +21,23 @@
       "showGrid": true,
       "traces": [
         {
-          "color": "rgb(152, 78, 163)",
-          "signal": "I(JQ101:s)",
-          "trace_type": 258
-        },
-        {
-          "color": "rgb(228, 26, 28)",
-          "signal": "V(+VA)",
-          "trace_type": 257
-        },
-        {
           "color": "rgb(55, 126, 184)",
           "signal": "V(INCONN)",
           "trace_type": 257
         },
         {
+          "color": "rgb(152, 78, 163)",
+          "signal": "V(Net-_U101--_)",
+          "trace_type": 257
+        },
+        {
           "color": "rgb(166, 216, 84)",
           "signal": "V(OUTCONN)",
+          "trace_type": 257
+        },
+        {
+          "color": "rgb(77, 175, 74)",
+          "signal": "V(VBIAS)",
           "trace_type": 257
         }
       ]

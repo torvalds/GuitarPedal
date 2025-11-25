@@ -1340,6 +1340,28 @@
 			)
 		)
 	)
+	(global_label "VBIAS"
+		(shape input)
+		(at 54.61 41.91 90)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "336726b3-26a7-47d4-aea6-a93d5db79423")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 54.61 33.6633 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+	)
 	(global_label "VBUS"
 		(shape input)
 		(at 30.48 41.91 90)
@@ -1504,7 +1526,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "10f9ed31-fb32-4e24-9e36-ecb7cb66eda4")
-		(property "Reference" "#PWR0303"
+		(property "Reference" "#PWR0404"
 			(at 127 119.38 0)
 			(effects
 				(font
@@ -1554,7 +1576,7 @@
 		(instances
 			(project "Stomp"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "#PWR0303")
+					(reference "#PWR0404")
 					(unit 1)
 				)
 			)
@@ -1569,7 +1591,7 @@
 		(on_board no)
 		(dnp no)
 		(uuid "1fa04d26-2a0a-4471-b355-52998c148b5b")
-		(property "Reference" "V405"
+		(property "Reference" "V406"
 			(at 130.81 105.2801 0)
 			(effects
 				(font
@@ -1660,7 +1682,7 @@
 		(instances
 			(project "Stomp"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "V405")
+					(reference "V406")
 					(unit 1)
 				)
 			)
@@ -1675,7 +1697,7 @@
 		(on_board no)
 		(dnp no)
 		(uuid "2264fad4-81dc-4bfa-8b78-af898eace22a")
-		(property "Reference" "V407"
+		(property "Reference" "V408"
 			(at 207.01 48.1301 0)
 			(effects
 				(font
@@ -1757,7 +1779,7 @@
 		(instances
 			(project "Stomp"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "V407")
+					(reference "V408")
 					(unit 1)
 				)
 			)
@@ -1826,6 +1848,104 @@
 			(project "Stomp"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
 					(reference "R401")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Simulation_SPICE:VDC")
+		(at 54.61 46.99 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board no)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "3cf017e0-b090-481f-b89a-31c426c289cb")
+		(property "Reference" "V405"
+			(at 58.42 45.5901 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "2.75"
+			(at 58.42 48.1301 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" ""
+			(at 54.61 46.99 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "https://ngspice.sourceforge.io/docs/ngspice-html-manual/manual.xhtml#sec_Independent_Sources_for"
+			(at 54.61 46.99 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Voltage source, DC"
+			(at 54.61 46.99 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Sim.Pins" "1=+ 2=-"
+			(at 54.61 46.99 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Sim.Type" "DC"
+			(at 54.61 46.99 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Sim.Device" "V"
+			(at 54.61 46.99 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "b0ce16aa-08bd-46ec-bca4-c9d3ad6a1d64")
+		)
+		(pin "2"
+			(uuid "d38060c9-07f2-4a06-80e6-d3451e070d5a")
+		)
+		(instances
+			(project "RP2354A"
+				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
+					(reference "V405")
 					(unit 1)
 				)
 			)
@@ -1947,7 +2067,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "5d585098-5a59-40c4-88d1-f7485ee1aaad")
-		(property "Reference" "#PWR0306"
+		(property "Reference" "#PWR0402"
 			(at 57.15 138.43 0)
 			(effects
 				(font
@@ -1998,7 +2118,7 @@
 		(instances
 			(project "Stomp"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "#PWR0306")
+					(reference "#PWR0402")
 					(unit 1)
 				)
 			)
@@ -2014,7 +2134,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "5e94e3c9-26c2-4671-9389-d950f5ee3fe8")
-		(property "Reference" "#PWR0301"
+		(property "Reference" "#PWR0401"
 			(at 30.48 97.79 0)
 			(effects
 				(font
@@ -2064,7 +2184,7 @@
 		(instances
 			(project "Stomp"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "#PWR0301")
+					(reference "#PWR0401")
 					(unit 1)
 				)
 			)
@@ -2265,7 +2385,7 @@
 		(on_board no)
 		(dnp no)
 		(uuid "823a8b65-67ee-4ad6-b0ac-fff95ea077f2")
-		(property "Reference" "V406"
+		(property "Reference" "V407"
 			(at 132.08 48.1301 0)
 			(effects
 				(font
@@ -2356,7 +2476,7 @@
 		(instances
 			(project "Stomp"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "V406")
+					(reference "V407")
 					(unit 1)
 				)
 			)
@@ -2372,7 +2492,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "998ccc20-5b98-42b5-b108-85015cb025f7")
-		(property "Reference" "#PWR0304"
+		(property "Reference" "#PWR0405"
 			(at 128.27 62.23 0)
 			(effects
 				(font
@@ -2422,7 +2542,7 @@
 		(instances
 			(project "Stomp"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "#PWR0304")
+					(reference "#PWR0405")
 					(unit 1)
 				)
 			)
@@ -2521,6 +2641,72 @@
 			(project "Stomp"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
 					(reference "V401")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 54.61 52.07 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "a0e64e85-4c0f-4ce8-aa14-67fc150e304f")
+		(property "Reference" "#PWR0403"
+			(at 54.61 58.42 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 54.61 57.15 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 54.61 52.07 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 54.61 52.07 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 54.61 52.07 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "f13caf5c-e942-4b1e-9f6a-a5d0496a0384")
+		)
+		(instances
+			(project "RP2354A"
+				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
+					(reference "#PWR0403")
 					(unit 1)
 				)
 			)
@@ -2748,7 +2934,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "e9797059-8d9b-42ce-9f90-e36e6cc12bdb")
-		(property "Reference" "#PWR0307"
+		(property "Reference" "#PWR0406"
 			(at 203.2 62.23 0)
 			(effects
 				(font
@@ -2798,7 +2984,7 @@
 		(instances
 			(project "Stomp"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "#PWR0307")
+					(reference "#PWR0406")
 					(unit 1)
 				)
 			)
