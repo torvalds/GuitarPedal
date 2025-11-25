@@ -900,6 +900,170 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "Device:R_Potentiometer"
+			(pin_names
+				(offset 1.016)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "RV"
+				(at -4.445 0 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "R_Potentiometer"
+				(at -2.54 0 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Potentiometer"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "resistor variable"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "Potentiometer*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "R_Potentiometer_0_1"
+				(rectangle
+					(start 1.016 2.54)
+					(end -1.016 -2.54)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.143 0) (xy 2.286 0.508) (xy 2.286 -0.508) (xy 1.143 0)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy 2.54 0) (xy 1.524 0)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "R_Potentiometer_1_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 1.27)
+					(name "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 1.27)
+					(name "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 3.81 0 180)
+					(length 1.27)
+					(name "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "Device:R_Potentiometer_MountingPin"
 			(pin_names
 				(offset 1.016)
@@ -3595,12 +3759,6 @@
 		(uuid "de10acfc-1ca8-4de1-a6c7-0b31bb00fb0f")
 	)
 	(junction
-		(at 40.64 182.88)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "dedf7a50-cb08-4ee1-969c-598d7a51c33c")
-	)
-	(junction
 		(at 63.5 182.88)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -3819,26 +3977,6 @@
 			(type default)
 		)
 		(uuid "121ad11d-204a-4ea0-9935-36609622aaa3")
-	)
-	(wire
-		(pts
-			(xy 22.86 179.07) (xy 22.86 182.88)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "1258b51e-9a0d-4817-bd24-40a8bd66044a")
-	)
-	(wire
-		(pts
-			(xy 40.64 179.07) (xy 40.64 182.88)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "19f0b078-a5c2-463e-99c1-efba3259f3f3")
 	)
 	(wire
 		(pts
@@ -4092,16 +4230,6 @@
 	)
 	(wire
 		(pts
-			(xy 27.94 182.88) (xy 40.64 182.88)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "3c6d2e89-2b3d-4d7c-b9ba-3fa73331cff1")
-	)
-	(wire
-		(pts
 			(xy 154.94 83.82) (xy 157.48 83.82)
 		)
 		(stroke
@@ -4132,7 +4260,7 @@
 	)
 	(wire
 		(pts
-			(xy 40.64 182.88) (xy 45.72 182.88)
+			(xy 27.94 182.88) (xy 45.72 182.88)
 		)
 		(stroke
 			(width 0)
@@ -4919,16 +5047,6 @@
 			(type default)
 		)
 		(uuid "b0d4ad71-f0df-4299-8606-d9c5b5054a90")
-	)
-	(wire
-		(pts
-			(xy 22.86 182.88) (xy 27.94 182.88)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "b11ba4ad-18cb-4f9f-9a45-a486576519fc")
 	)
 	(wire
 		(pts
@@ -7014,32 +7132,33 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:R_Potentiometer_MountingPin")
+		(lib_id "Device:R_Potentiometer")
 		(at 27.94 179.07 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "0ff960cc-614a-4d3c-b4b8-a704111851cd")
 		(property "Reference" "RV201"
-			(at 34.29 172.6498 0)
+			(at 35.56 172.72 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify right)
 			)
 		)
 		(property "Value" "10k"
-			(at 34.29 175.1898 0)
+			(at 35.56 175.26 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify right)
 			)
 		)
-		(property "Footprint" "Mylib:Potentiometer_9mm_MP"
+		(property "Footprint" "Mylib:Potentiometer-Basic"
 			(at 27.94 179.07 0)
 			(effects
 				(font
@@ -7057,7 +7176,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Potentiometer with a mounting pin"
+		(property "Description" "Potentiometer"
 			(at 27.94 179.07 0)
 			(effects
 				(font
@@ -7104,9 +7223,6 @@
 		)
 		(pin "2"
 			(uuid "91fff051-8e0b-46d5-aa80-8fc4aa2aba13")
-		)
-		(pin "MP"
-			(uuid "d4f142bf-ee4d-4a31-b5e1-6e55ea559511")
 		)
 		(pin "3"
 			(uuid "dd3f7cbe-8cbe-4405-a7d7-2d6994453ce0")
@@ -9951,32 +10067,33 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:R_Potentiometer_MountingPin")
+		(lib_id "Device:R_Potentiometer")
 		(at 45.72 179.07 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "da1e2aab-7ac6-44c6-81b1-34511ea4a58c")
 		(property "Reference" "RV202"
-			(at 52.07 172.6498 0)
+			(at 53.848 172.466 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify right)
 			)
 		)
 		(property "Value" "10k"
-			(at 52.07 175.1898 0)
+			(at 53.848 175.006 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify right)
 			)
 		)
-		(property "Footprint" "Mylib:Potentiometer_9mm_MP"
+		(property "Footprint" "Mylib:Potentiometer-Basic"
 			(at 45.72 179.07 0)
 			(effects
 				(font
@@ -9994,7 +10111,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Potentiometer with a mounting pin"
+		(property "Description" "Potentiometer"
 			(at 45.72 179.07 0)
 			(effects
 				(font
@@ -10041,9 +10158,6 @@
 		)
 		(pin "2"
 			(uuid "f73db8b6-72e1-4b47-a974-86c6f2c943f5")
-		)
-		(pin "MP"
-			(uuid "47ec6b6f-8895-436a-bdc4-40b8762226e9")
 		)
 		(pin "3"
 			(uuid "8a9c7c95-03b8-4d42-afb0-3e539832819e")
