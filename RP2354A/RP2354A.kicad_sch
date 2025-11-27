@@ -5560,9 +5560,9 @@
 		(at 140.97 31.75 0)
 		(unit 1)
 		(exclude_from_sim yes)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
-		(dnp yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "722a70cb-ce23-41e6-9247-9eb40f73fd3c")
 		(property "Reference" "J2"
@@ -6343,9 +6343,9 @@
 		(at 140.97 52.07 0)
 		(unit 1)
 		(exclude_from_sim yes)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
-		(dnp yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "b98d092b-2011-4c33-a9fb-c47e43bc4dd1")
 		(property "Reference" "J3"

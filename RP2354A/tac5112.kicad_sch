@@ -2939,7 +2939,7 @@
 		(exclude_from_sim yes)
 		(in_bom yes)
 		(on_board yes)
-		(dnp yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "f1f3c249-fec3-4cd8-96e3-9472fe469815")
 		(property "Reference" "U4"
@@ -2987,7 +2987,7 @@
 				(hide yes)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "JLCPCB" "C44853692"
 			(at 86.36 93.98 0)
 			(effects
 				(font
