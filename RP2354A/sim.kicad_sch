@@ -1591,7 +1591,7 @@
 		(on_board no)
 		(dnp no)
 		(uuid "1fa04d26-2a0a-4471-b355-52998c148b5b")
-		(property "Reference" "V406"
+		(property "Reference" "V6"
 			(at 130.81 105.2801 0)
 			(effects
 				(font
@@ -1673,6 +1673,15 @@
 				(hide yes)
 			)
 		)
+		(property "JLCPCB" ""
+			(at 127 107.95 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "cdb69768-14ec-4d83-9684-1ee1f3b05d8a")
 		)
@@ -1682,7 +1691,7 @@
 		(instances
 			(project "Stomp"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "V406")
+					(reference "V6")
 					(unit 1)
 				)
 			)
@@ -1697,7 +1706,7 @@
 		(on_board no)
 		(dnp no)
 		(uuid "2264fad4-81dc-4bfa-8b78-af898eace22a")
-		(property "Reference" "V408"
+		(property "Reference" "V8"
 			(at 207.01 48.1301 0)
 			(effects
 				(font
@@ -1770,6 +1779,15 @@
 				(justify left)
 			)
 		)
+		(property "JLCPCB" ""
+			(at 203.2 50.8 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "77256d2f-c7f8-498b-91c6-1cc4c9c0a64d")
 		)
@@ -1779,7 +1797,7 @@
 		(instances
 			(project "Stomp"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "V408")
+					(reference "V8")
 					(unit 1)
 				)
 			)
@@ -1795,7 +1813,7 @@
 		(dnp yes)
 		(fields_autoplaced yes)
 		(uuid "376232b6-3b2c-47e9-9b26-4eeeb140e0e7")
-		(property "Reference" "R401"
+		(property "Reference" "R18"
 			(at 44.45 132.08 90)
 			(effects
 				(font
@@ -1838,6 +1856,15 @@
 				(hide yes)
 			)
 		)
+		(property "JLCPCB" ""
+			(at 44.45 138.43 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "b5bd0d89-b571-49b1-bd6e-8b8749d0c37d")
 		)
@@ -1847,7 +1874,7 @@
 		(instances
 			(project "Stomp"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "R401")
+					(reference "R18")
 					(unit 1)
 				)
 			)
@@ -1863,7 +1890,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "3cf017e0-b090-481f-b89a-31c426c289cb")
-		(property "Reference" "V405"
+		(property "Reference" "V5"
 			(at 58.42 45.5901 0)
 			(effects
 				(font
@@ -1936,6 +1963,15 @@
 				(hide yes)
 			)
 		)
+		(property "JLCPCB" ""
+			(at 54.61 46.99 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "b0ce16aa-08bd-46ec-bca4-c9d3ad6a1d64")
 		)
@@ -1945,7 +1981,7 @@
 		(instances
 			(project "RP2354A"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "V405")
+					(reference "V5")
 					(unit 1)
 				)
 			)
@@ -1960,7 +1996,7 @@
 		(on_board no)
 		(dnp no)
 		(uuid "44e0286a-85e9-4510-b0ae-5b62e5cf0b3b")
-		(property "Reference" "V402"
+		(property "Reference" "V2"
 			(at 34.29 57.0201 0)
 			(effects
 				(font
@@ -2042,6 +2078,15 @@
 				(justify left)
 			)
 		)
+		(property "JLCPCB" ""
+			(at 30.48 59.69 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "d74058e9-a04d-40ea-af60-eaaf72246907")
 		)
@@ -2051,7 +2096,7 @@
 		(instances
 			(project "Stomp"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "V402")
+					(reference "V2")
 					(unit 1)
 				)
 			)
@@ -2199,7 +2244,7 @@
 		(on_board no)
 		(dnp yes)
 		(uuid "7adec729-87a2-4cd0-bc68-db9c57712698")
-		(property "Reference" "R402"
+		(property "Reference" "R19"
 			(at 41.91 144.7799 90)
 			(effects
 				(font
@@ -2361,6 +2406,15 @@
 				(hide yes)
 			)
 		)
+		(property "JLCPCB" ""
+			(at 44.45 151.13 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "81500564-c3ba-42dd-911d-f899fa135941")
 		)
@@ -2370,7 +2424,7 @@
 		(instances
 			(project "Stomp"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "R402")
+					(reference "R19")
 					(unit 1)
 				)
 			)
@@ -2385,7 +2439,7 @@
 		(on_board no)
 		(dnp no)
 		(uuid "823a8b65-67ee-4ad6-b0ac-fff95ea077f2")
-		(property "Reference" "V407"
+		(property "Reference" "V7"
 			(at 132.08 48.1301 0)
 			(effects
 				(font
@@ -2467,6 +2521,15 @@
 				(justify left)
 			)
 		)
+		(property "JLCPCB" ""
+			(at 128.27 50.8 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "8d63fb75-9844-4e14-a990-902b5bfe6443")
 		)
@@ -2476,7 +2539,7 @@
 		(instances
 			(project "Stomp"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "V407")
+					(reference "V7")
 					(unit 1)
 				)
 			)
@@ -2558,7 +2621,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "9e1ce8b6-a66a-4b99-9bdc-96f6ae67becc")
-		(property "Reference" "V401"
+		(property "Reference" "V1"
 			(at 34.29 45.5901 0)
 			(effects
 				(font
@@ -2631,6 +2694,15 @@
 				(hide yes)
 			)
 		)
+		(property "JLCPCB" ""
+			(at 30.48 46.99 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "e178a33c-9c49-43db-b786-b80eb5266fcd")
 		)
@@ -2640,7 +2712,7 @@
 		(instances
 			(project "Stomp"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "V401")
+					(reference "V1")
 					(unit 1)
 				)
 			)
@@ -2721,7 +2793,7 @@
 		(on_board no)
 		(dnp no)
 		(uuid "b8333846-4f92-4277-acd9-759061ee32fd")
-		(property "Reference" "V404"
+		(property "Reference" "V4"
 			(at 34.29 81.1501 0)
 			(effects
 				(font
@@ -2803,6 +2875,15 @@
 				(justify left)
 			)
 		)
+		(property "JLCPCB" ""
+			(at 30.48 83.82 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "76c908a3-02d0-4cc1-a2ea-613474532ce9")
 		)
@@ -2812,7 +2893,7 @@
 		(instances
 			(project "Stomp"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "V404")
+					(reference "V4")
 					(unit 1)
 				)
 			)
@@ -2827,7 +2908,7 @@
 		(on_board no)
 		(dnp no)
 		(uuid "bf72e94a-fc99-44d6-9163-faeaeabb2b87")
-		(property "Reference" "V403"
+		(property "Reference" "V3"
 			(at 34.29 69.7201 0)
 			(effects
 				(font
@@ -2909,6 +2990,15 @@
 				(justify left)
 			)
 		)
+		(property "JLCPCB" ""
+			(at 30.48 72.39 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "f9f566e8-002e-496a-a0b8-45cabdca5d58")
 		)
@@ -2918,7 +3008,7 @@
 		(instances
 			(project "Stomp"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "V403")
+					(reference "V3")
 					(unit 1)
 				)
 			)
@@ -3000,7 +3090,7 @@
 		(dnp yes)
 		(fields_autoplaced yes)
 		(uuid "fcb40721-8c72-4ffe-95cf-ecf5ed6bf46b")
-		(property "Reference" "R403"
+		(property "Reference" "R20"
 			(at 44.45 157.48 90)
 			(effects
 				(font
@@ -3043,6 +3133,15 @@
 				(hide yes)
 			)
 		)
+		(property "JLCPCB" ""
+			(at 44.45 163.83 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "717cc8a3-e8f9-469c-a0a1-af446c9ff618")
 		)
@@ -3052,7 +3151,7 @@
 		(instances
 			(project "Boost"
 				(path "/9e337e0b-885b-4d2b-99a2-62cdd082c615/a1084b87-85fd-4b63-8fe4-8749c999d338"
-					(reference "R403")
+					(reference "R20")
 					(unit 1)
 				)
 			)
