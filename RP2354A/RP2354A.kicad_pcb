@@ -363,7 +363,7 @@
 				)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "LCSC PN" ""
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -613,7 +613,7 @@
 				)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "LCSC PN" ""
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -981,7 +981,7 @@
 				)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "LCSC PN" ""
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -1231,7 +1231,7 @@
 				)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "LCSC PN" ""
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -1548,7 +1548,7 @@
 				)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "LCSC PN" ""
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -1865,7 +1865,7 @@
 				)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "LCSC PN" ""
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -2145,7 +2145,7 @@
 				)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "LCSC PN" ""
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -2460,7 +2460,7 @@
 				)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "LCSC PN" ""
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -2695,7 +2695,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C25105"
+		(property "LCSC PN" "C25105"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -2913,7 +2913,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C519560"
+		(property "LCSC PN" "C519560"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -3131,7 +3131,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C91606"
+		(property "LCSC PN" "C91606"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -3348,7 +3348,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C20625731"
+		(property "LCSC PN" "C20625731"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -3713,7 +3713,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C519560"
+		(property "LCSC PN" "C519560"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -3933,7 +3933,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C393939"
+		(property "LCSC PN" "C393939"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -4369,7 +4369,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C91606"
+		(property "LCSC PN" "C91606"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -4587,7 +4587,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C1525"
+		(property "LCSC PN" "C1525"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -4809,7 +4809,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C44853692"
+		(property "LCSC PN" "C44853692"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -5238,7 +5238,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C1525"
+		(property "LCSC PN" "C1525"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -5456,7 +5456,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C1525"
+		(property "LCSC PN" "C1525"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -5856,7 +5856,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C11702"
+		(property "LCSC PN" "C11702"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -6256,7 +6256,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C26083"
+		(property "LCSC PN" "C26083"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -6474,7 +6474,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C1525"
+		(property "LCSC PN" "C1525"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -6874,7 +6874,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C11702"
+		(property "LCSC PN" "C11702"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -7092,7 +7092,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C519560"
+		(property "LCSC PN" "C519560"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -7492,7 +7492,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C11702"
+		(property "LCSC PN" "C11702"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -7710,7 +7710,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C25105"
+		(property "LCSC PN" "C25105"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -7928,7 +7928,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C91606"
+		(property "LCSC PN" "C91606"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -8328,7 +8328,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C91606"
+		(property "LCSC PN" "C91606"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -8728,7 +8728,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C519560"
+		(property "LCSC PN" "C519560"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -8946,7 +8946,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C22399629"
+		(property "LCSC PN" "C22399629"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -9164,7 +9164,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C1525"
+		(property "LCSC PN" "C1525"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -9384,7 +9384,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C26537"
+		(property "LCSC PN" "C26537"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -9666,7 +9666,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C22399629"
+		(property "LCSC PN" "C22399629"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -9886,7 +9886,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "LCSC PN" ""
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -10335,7 +10335,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C1525"
+		(property "LCSC PN" "C1525"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -10553,7 +10553,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C11702"
+		(property "LCSC PN" "C11702"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -10771,7 +10771,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C1548"
+		(property "LCSC PN" "C1548"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -10989,7 +10989,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C1525"
+		(property "LCSC PN" "C1525"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -11207,7 +11207,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C1525"
+		(property "LCSC PN" "C1525"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -11425,7 +11425,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C22399629"
+		(property "LCSC PN" "C22399629"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -11825,7 +11825,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C25905"
+		(property "LCSC PN" "C25905"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -12099,7 +12099,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C96626"
+		(property "LCSC PN" "C96626"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -12462,7 +12462,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C91606"
+		(property "LCSC PN" "C91606"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -12862,7 +12862,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C11702"
+		(property "LCSC PN" "C11702"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -13080,7 +13080,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C1525"
+		(property "LCSC PN" "C1525"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -13298,7 +13298,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C1525"
+		(property "LCSC PN" "C1525"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -13698,7 +13698,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C519560"
+		(property "LCSC PN" "C519560"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -13916,7 +13916,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C1525"
+		(property "LCSC PN" "C1525"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -14316,7 +14316,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C710836"
+		(property "LCSC PN" "C710836"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -14716,7 +14716,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C710836"
+		(property "LCSC PN" "C710836"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -14934,7 +14934,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C41378174"
+		(property "LCSC PN" "C41378174"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -16011,7 +16011,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C25905"
+		(property "LCSC PN" "C25905"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -16233,7 +16233,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C42411119"
+		(property "LCSC PN" "C42411119"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -16363,7 +16363,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C91606"
+		(property "LCSC PN" "C91606"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -16581,7 +16581,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C1525"
+		(property "LCSC PN" "C1525"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -16799,7 +16799,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C22399629"
+		(property "LCSC PN" "C22399629"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -17017,7 +17017,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C1548"
+		(property "LCSC PN" "C1548"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -17277,7 +17277,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C160479"
+		(property "LCSC PN" "C160479"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -17508,7 +17508,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C1525"
+		(property "LCSC PN" "C1525"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -17908,7 +17908,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C25905"
+		(property "LCSC PN" "C25905"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -18126,7 +18126,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C25105"
+		(property "LCSC PN" "C25105"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -18344,7 +18344,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C11702"
+		(property "LCSC PN" "C11702"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -18744,7 +18744,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C26083"
+		(property "LCSC PN" "C26083"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -19144,7 +19144,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C11702"
+		(property "LCSC PN" "C11702"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -19362,7 +19362,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C25905"
+		(property "LCSC PN" "C25905"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -19762,7 +19762,7 @@
 				(justify mirror)
 			)
 		)
-		(property "JLCPCB" "C26083"
+		(property "LCSC PN" "C26083"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")

@@ -1673,7 +1673,7 @@
 				(hide yes)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "LCSC PN" ""
 			(at 127 107.95 0)
 			(effects
 				(font
@@ -1779,7 +1779,7 @@
 				(justify left)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "LCSC PN" ""
 			(at 203.2 50.8 0)
 			(effects
 				(font
@@ -1856,7 +1856,7 @@
 				(hide yes)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "LCSC PN" ""
 			(at 44.45 138.43 90)
 			(effects
 				(font
@@ -1963,7 +1963,7 @@
 				(hide yes)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "LCSC PN" ""
 			(at 54.61 46.99 0)
 			(effects
 				(font
@@ -2078,7 +2078,7 @@
 				(justify left)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "LCSC PN" ""
 			(at 30.48 59.69 0)
 			(effects
 				(font
@@ -2406,7 +2406,7 @@
 				(hide yes)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "LCSC PN" ""
 			(at 44.45 151.13 90)
 			(effects
 				(font
@@ -2521,7 +2521,7 @@
 				(justify left)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "LCSC PN" ""
 			(at 128.27 50.8 0)
 			(effects
 				(font
@@ -2694,7 +2694,7 @@
 				(hide yes)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "LCSC PN" ""
 			(at 30.48 46.99 0)
 			(effects
 				(font
@@ -2875,7 +2875,7 @@
 				(justify left)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "LCSC PN" ""
 			(at 30.48 83.82 0)
 			(effects
 				(font
@@ -2990,7 +2990,7 @@
 				(justify left)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "LCSC PN" ""
 			(at 30.48 72.39 0)
 			(effects
 				(font
@@ -3133,7 +3133,7 @@
 				(hide yes)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "LCSC PN" ""
 			(at 44.45 163.83 90)
 			(effects
 				(font
