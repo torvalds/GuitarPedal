@@ -2788,6 +2788,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC PN" "C519560"
+			(at 53.34 96.52 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "44ebe2d5-c3a7-4f54-81ea-39ff68073dbd")
 		)
@@ -3039,6 +3048,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC PN" "C25890"
+			(at 29.21 158.75 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "4dd3ae43-c0e3-4c05-9a71-052f1ec8c974")
 		)
@@ -3226,6 +3244,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC PN" "C1523"
+			(at 176.53 102.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "5e1e16bc-9824-42d3-a2d9-bde06fbd939c")
 		)
@@ -3403,6 +3430,15 @@
 		)
 		(property "VENDOR" ""
 			(at 64.77 96.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" "C11702"
+			(at 64.77 96.52 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3729,6 +3765,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC PN" "C710836"
+			(at 73.66 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "5704b888-e6de-490b-a329-6d9634337d93")
 		)
@@ -4039,6 +4084,15 @@
 			)
 		)
 		(property "VENDOR" ""
+			(at 29.21 34.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" ""
 			(at 29.21 34.29 0)
 			(effects
 				(font
@@ -4502,6 +4556,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC PN" "C91606"
+			(at 88.9 44.45 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "6efbca98-8909-4b93-92c7-cccd54402369")
 		)
@@ -4822,6 +4885,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC PN" "C25744"
+			(at 196.85 111.76 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "7c9f2dba-7cff-4d98-9ffa-dfbf20f41f4e")
 		)
@@ -5007,6 +5079,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC PN" "C25890"
+			(at 165.1 93.98 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "1419258c-694e-4f98-b220-e2749bb78b38")
 		)
@@ -5167,6 +5248,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC PN" ""
+			(at 49.53 156.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "53227bd2-e0f0-4e11-97c7-a84de5515aff")
 		)
@@ -5227,6 +5317,15 @@
 			)
 		)
 		(property "Description" "Audio Jack, 2 Poles (Mono / TS), Switched T Pole (Normalling)"
+			(at 168.91 45.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" ""
 			(at 168.91 45.72 0)
 			(effects
 				(font
@@ -5402,6 +5501,15 @@
 			)
 		)
 		(property "Sim.Params" "r=100k pos=0.1"
+			(at 196.85 102.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" ""
 			(at 196.85 102.87 0)
 			(effects
 				(font
@@ -5603,6 +5711,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC PN" "C25741"
+			(at 72.39 46.99 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "87c0fca9-d520-4152-8764-5b2f7cfbdae3")
 		)
@@ -5790,6 +5907,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC PN" "C91606"
+			(at 116.84 48.26 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "e8c1e0a7-d80a-4ebe-aa3f-0ec5ae98ea59")
 		)
@@ -5850,6 +5976,15 @@
 			)
 		)
 		(property "Description" "Switch, dual pole double throw, separate symbols"
+			(at 39.37 156.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" ""
 			(at 39.37 156.21 0)
 			(effects
 				(font
@@ -5996,6 +6131,15 @@
 			)
 		)
 		(property "Description" "Audio Jack, 2 Poles (Mono / TS), Switched T Pole (Normalling)"
+			(at 198.12 45.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" ""
 			(at 198.12 45.72 0)
 			(effects
 				(font
@@ -6186,6 +6330,15 @@
 			)
 		)
 		(property "VENDOR" ""
+			(at 116.84 38.1 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" "C25105"
 			(at 116.84 38.1 0)
 			(effects
 				(font
@@ -6511,6 +6664,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC PN" "C519560"
+			(at 153.67 93.98 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "88ca5957-4e78-4838-b457-3ab608594f8b")
 		)
@@ -6571,6 +6733,15 @@
 			)
 		)
 		(property "Description" "Switch, dual pole double throw, separate symbols"
+			(at 83.82 156.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" ""
 			(at 83.82 156.21 0)
 			(effects
 				(font
@@ -6688,6 +6859,15 @@
 		)
 		(property "Sim.Pins" "1=GATE 2=SOURCE 3=DRAIN"
 			(at 72.39 58.42 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" "C15127"
+			(at 72.39 35.56 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6944,6 +7124,15 @@
 			)
 		)
 		(property "VENDOR" ""
+			(at 45.72 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" "C26083"
 			(at 45.72 104.14 0)
 			(effects
 				(font

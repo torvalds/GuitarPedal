@@ -2723,6 +2723,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC PN" "C710836"
+			(at 115.57 127 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "0d99795b-32f9-48d1-a69d-573c05e3d746")
 		)
@@ -2822,6 +2831,15 @@
 		)
 		(property "Sim.Pins" "1=1 2=2 3=3 4=4 5=5 6=6"
 			(at 124.714 66.802 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" "C154733"
+			(at 139.7 39.37 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2940,6 +2958,15 @@
 		)
 		(property "Sim.Pins" "1=1 2=2 3=3 4=4 5=5 6=6"
 			(at 218.694 103.632 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" "C154733"
+			(at 233.68 76.2 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3066,6 +3093,15 @@
 			)
 		)
 		(property "Sim.Pins" "1=D 2=S 3=G"
+			(at 50.8 78.74 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" "C58012"
 			(at 50.8 78.74 0)
 			(effects
 				(font
@@ -3239,6 +3275,15 @@
 			)
 		)
 		(property "Sim.Params" "r=10k pos=0"
+			(at 53.34 99.06 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" ""
 			(at 53.34 99.06 0)
 			(effects
 				(font
@@ -3491,6 +3536,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC PN" "C154733"
+			(at 246.38 76.2 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "90e3c34c-abe1-499c-a86e-9e71b11ec81e")
 		)
@@ -3681,6 +3735,15 @@
 		)
 		(property "VENDOR" ""
 			(at 115.57 137.16 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" "C25741"
+			(at 115.57 137.16 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3920,7 +3983,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "BC847C"
+		(property "Value" "BC849C"
 			(at 63.5 172.7199 0)
 			(effects
 				(font
@@ -3958,7 +4021,7 @@
 				(hide yes)
 			)
 		)
-		(property "Sim.Library" "spice/BC847C.lib"
+		(property "Sim.Library" "spice/BC849C.lib"
 			(at 58.42 186.69 0)
 			(effects
 				(font
@@ -3967,7 +4030,7 @@
 				(hide yes)
 			)
 		)
-		(property "Sim.Name" "BC847C"
+		(property "Sim.Name" "BC849C"
 			(at 59.69 189.23 0)
 			(effects
 				(font
@@ -3987,8 +4050,17 @@
 				(hide yes)
 			)
 		)
-		(property "Sim.Pins" "1=B 2=E 3=C"
+		(property "Sim.Pins" "1=2 2=3 3=1"
 			(at 58.42 191.77 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" "C334244"
+			(at 58.42 171.45 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4032,7 +4104,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "5k6"
+		(property "Value" "5k1"
 			(at 234.95 48.26 0)
 			(effects
 				(font
@@ -4185,6 +4257,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC PN" "C25905"
+			(at 232.41 46.99 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "d36f9f21-afd3-4fde-81d3-e2e903255aa8")
 		)
@@ -4284,6 +4365,15 @@
 		)
 		(property "Sim.Pins" "1=1 2=2 3=3 4=4 5=5 6=6"
 			(at 261.366 65.532 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" "C154733"
+			(at 246.38 38.1 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4490,6 +4580,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC PN" "C91606"
+			(at 128.27 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "34f6bdf0-a4ca-4cbe-99bb-df8df645da48")
 		)
@@ -4588,6 +4687,15 @@
 		)
 		(property "Sim.Pins" "1=1 2=2 3=3 4=4 5=5 6=6"
 			(at 136.906 66.802 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" "C154733"
+			(at 121.92 39.37 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4779,6 +4887,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC PN" "C154733"
+			(at 233.68 38.1 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "d35f686d-0680-4764-8ef5-24a9e21ba7bc")
 		)
@@ -4824,7 +4941,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "5k6"
+		(property "Value" "5k1"
 			(at 234.95 86.36 0)
 			(effects
 				(font
@@ -4969,6 +5086,15 @@
 			)
 		)
 		(property "VENDOR" ""
+			(at 232.41 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" "C25905"
 			(at 232.41 85.09 0)
 			(effects
 				(font
@@ -5229,6 +5355,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC PN" "C25879"
+			(at 53.34 90.17 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "d407731b-94df-4f7e-ba40-793f81761d97")
 		)
@@ -5407,6 +5542,15 @@
 			)
 		)
 		(property "VENDOR" ""
+			(at 128.27 143.51 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" "C25744"
 			(at 128.27 143.51 0)
 			(effects
 				(font
@@ -5600,6 +5744,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC PN" "C1523"
+			(at 57.15 162.56 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "2ab71c6b-7f40-4ba2-a597-beb6ba251d20")
 		)
@@ -5699,6 +5852,15 @@
 		)
 		(property "Sim.Pins" "1=1 2=2 3=3 4=4 5=5 6=6"
 			(at 145.288 82.296 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" "C445514"
+			(at 137.16 58.42 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5817,6 +5979,15 @@
 		)
 		(property "Sim.Pins" "1=1 2=2 3=3 4=4 5=5 6=6"
 			(at 116.332 82.296 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" "C445514"
+			(at 124.46 58.42 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6015,6 +6186,15 @@
 			)
 		)
 		(property "VENDOR" ""
+			(at 44.45 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC PN" "C26083"
 			(at 44.45 85.09 0)
 			(effects
 				(font

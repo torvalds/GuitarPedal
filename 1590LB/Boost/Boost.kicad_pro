@@ -726,6 +726,12 @@
           "label": "Sim.Library",
           "name": "Sim.Library",
           "show": false
+        },
+        {
+          "group_by": false,
+          "label": "LCSC PN",
+          "name": "LCSC PN",
+          "show": true
         }
       ],
       "filter_string": "",
