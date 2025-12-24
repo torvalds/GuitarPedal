@@ -14,8 +14,11 @@ add_executable(blink
     blink.c
 )
 
-# Add pico_stdlib library which aggregates commonly used features
-target_link_libraries(blink pico_stdlib hardware_adc)
+# pico_stdlib includes the basics like sleeping and core gpio
+# We'll also need PWM, ADC and i2c support (and eventually i2s..)
+target_link_libraries(blink pico_stdlib
+	hardware_pwm hardware_adc
+	hardware_i2c hardware_watchdog)
 
 # create map/bin/hex/uf2 file in addition to ELF.
 pico_add_extra_outputs(blink)

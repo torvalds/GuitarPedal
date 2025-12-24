@@ -1,9 +1,19 @@
 #include "pico/stdlib.h"
-#include "hardware/gpio.h"
+#include "hardware/pwm.h"
 #include "hardware/adc.h"
+#include "hardware/i2c.h"
+#include "hardware/watchdog.h"
 
 #define STOMP_PIN	0
 #define LED_PIN		1
+
+#define I2C_SDA		4
+#define I2C_SCL		5
+
+#define I2S_BCLK	8
+#define I2S_FSYNC	9
+#define I2S_DIN		10
+#define I2S_DOUT	11
 
 // NOTE! The pots are reversed, so the 12-bit ADC read will read 4095 -> 0 clockwise
 #define POT1		26
@@ -11,33 +21,105 @@
 #define POT3		28
 #define POT4		29
 
+#define TAC5112_ADDR	0x50
+
+volatile int enabled = 0;
+
+// The stomp switch irq starts the watchdog on a falling edge
+// We'll reboot for programming if you hold it for five seconds.
+//
+// Very short presses are ignored for debouncing.
+// Shorter presses change the state.
+// 1s+ press for long-press.
+// 5s press for reboot.
+#define WATCHDOG_TIMEOUT 5000
+void stomp_irq(uint gpio, uint32_t event_mask)
+{
+	int val;
+
+	if (event_mask & GPIO_IRQ_EDGE_FALL) {
+		watchdog_enable(WATCHDOG_TIMEOUT, 1);
+		return;
+	}
+
+	val = WATCHDOG_TIMEOUT - watchdog_get_time_remaining_ms();
+	watchdog_disable();
+
+	// Arbitrary 5ms debounce time
+	if (val < 5)
+		return;
+
+	// Regular short-press?
+	if (val < 1000) {
+		enabled = enabled != 1;
+		return;
+	}
+
+	// Do something more interesting for long-press?
+	enabled = 2;
+}
+
 int main()
 {
+	watchdog_reboot(0, 0, WATCHDOG_TIMEOUT);
+	watchdog_start_tick(12);
+	watchdog_enable(WATCHDOG_TIMEOUT, 1);
+
+	// STOMP_PIN is a plain input GPIO, pulled down
+	// by by the momentary stomp switch. Maybe do it
+	// as an interrupt source eventually, but for
+	// now just read it with 'gpio_get()'.
 	gpio_init(STOMP_PIN);
 	gpio_set_dir(STOMP_PIN, GPIO_IN);
 	gpio_pull_up(STOMP_PIN);
+	gpio_set_irq_enabled_with_callback(STOMP_PIN, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, stomp_irq);
 
-	gpio_init(LED_PIN);
-	gpio_set_dir(LED_PIN, GPIO_OUT);
+	// The LED is done as a plain GPIO output. I
+	// think I want to try to just PWM it, but
+	// that's for later.
+	pwm_config pwm = pwm_get_default_config();
+	int pwm_slice = pwm_gpio_to_slice_num(LED_PIN);
+	pwm_config_set_wrap(&pwm, 4096);
+	pwm_init(pwm_slice, &pwm, true);
+	gpio_set_function(LED_PIN, GPIO_FUNC_PWM);
+	pwm_set_gpio_level(LED_PIN, 2048);
+	pwm_set_enabled(pwm_slice, true);
 
+	// We use all four ADC's, set up as round
+	// robin. Use mask 0xf to ignore the onboard
+	// temperature sensor.
 	adc_init();
 	adc_gpio_init(POT1);
 	adc_select_input(0);
-
-	// Let's read the ADC's one at a time in order
 	adc_set_round_robin(0xf);
+
+	// The TAC5112 is programmed over i2c, connected
+	// to pins 4 (SDA) and 5 (SCL). There are pull-ups
+	// on the board, but we'll do them here too.
+	//
+	// The TAC5112 can do 100/400/1000 kHz i2c, but
+	// we really don't care. So use 100kHz standard
+	// mode.
+	i2c_init(i2c_default, 100 * 1000);
+	gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
+	gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
+	gpio_pull_up(I2C_SDA);
+	gpio_pull_up(I2C_SCL);
+
+	// Do a dummy one-byte read to see if it's there
+	int ret;
+	char rxdata;
+	ret = i2c_read_blocking(i2c_default, TAC5112_ADDR, &rxdata, 1, false);
+	if (ret < 0)
+		for (;;);
 
 	// This tests all four pots, the stomp switch, and the LED
 	while (true) {
-		int delay = 4095 & ~adc_read();
+		int delay = 100;
 
-		delay /= 2;
-		if (gpio_get(STOMP_PIN))
-			delay /= 2;
+		int level = enabled ? enabled > 1 ? 4095 : 4095 & ~adc_read() : 50;
 
-		gpio_put(LED_PIN, 1);
-		sleep_ms(delay);
-		gpio_put(LED_PIN, 0);
+		pwm_set_gpio_level(LED_PIN, level);
 		sleep_ms(delay);
 	}
 }
