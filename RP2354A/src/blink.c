@@ -67,37 +67,58 @@ static int tac5112_read(void)
 	return i2c_read_blocking(i2c_default, TAC5112_ADDR, &rxdata, 1, false);
 }
 
-static int tac5112_write(const unsigned char *data, int len)
+static inline int tac5112_write(const unsigned char *data, int len)
 {
 	i2c_write_blocking(i2c_default, TAC5112_ADDR, data, len, false);
 }
 
+static int __tac5112_array_write(const unsigned char arr[][2], int nr)
+{
+	for (int i = 0; i < nr; i++)
+		tac5112_write(arr[i], 2);
+}
+#define tac5112_array_write(arr) __tac5112_array_write(arr, ARRAY_SIZE(arr))
+
+// TAC5112 Datasheet 9.2.5:
+// Example Device Register Configuration Script for EVM Setup
+// Stereo differential AC-coupled analog recording and line output playback
+//
+// Except we do I2S instead of TDM, and single-ended mono input/output
 static void tac5112_init(void)
 {
-	int ret;
-	char rxdata;
-
-	static const unsigned char regwrite[][2] = {
-		{ 0x02, 0x01 },	// DEV_MISC_CFG (2): Device not in sleep mode
-		{ 0x64, 0x48 },	// OUT1x_CFG0: 01001000 output from analog bypass, mono single-ended OUT1P
-		{ 0x65, 0x22 },	// OUT1x_CGF1: 00100010 300 Ohm output impedance, 0 dB level, 4.4k input impedance, single-ended input
-		{ 0x66, 0x20 },	// OUT1x_CFG2: 00100000 300 Ohm OUT1M output, 0 dB, 4k4 input impedance
-		{ 0x76, 0x88 },	// PWR_CFG 0x78: Input channel 1 and output 1 enabled
-		{ 0x78, 0xe0 },	// PWR_CFG 0x78: 11100000: power up ADC DAC and MICBIAS
-	};
-
 	// Do a dummy one-byte read to see if it's there
 	if (tac5112_read() < 0)
 		for (;;);
 
-	// Write 0 0 1 to the TAC5112: set PAGE_CFG 0, do a software reset
-	tac5112_write("\0\0\001", 3);
+	static const unsigned char tac_reset[][2] = {
+		{ 0x00, 0x00 },	// Page 0
+		{ 0x01, 0x01 }, // SW reset
+	};
+	tac5112_array_write(tac_reset);
+
 	// Wait for it to take effect
 	sleep_ms(10);
 	tac5112_read();
 
-	for (int i = 0; i < ARRAY_SIZE(regwrite); i++)
-		tac5112_write(regwrite[i], 2);
+	static const unsigned char regwrite[][2] = {
+		{ 0x00, 0b00000000 },	// Page 0
+		{ 0x02, 0b00000001 },	// Exit Sleep Mode with DREG and VREF Enabled
+		{ 0x1a, 0b01110000 },	// I2S protocol with 32-bit word length
+		{ 0x4d, 0b00000000 },	// VREF and MICBIAS set to 2.75V for 1V_{rms} single-ended input
+		{ 0x50, 0b01000000 },	// ADC Channel 1 configured for AC-coupled single-ended input with 5kOhm input impedance and audio bandwidth
+		{ 0x55, 0b01000000 },	// ADC Channel 2 configured for AC-coupled single-ended input with 5kOhm input impedance and audio bandwidth
+		{ 0x64, 0b01001000 },	// Out 1 source is analog bypass, mono single-ended on OUT1P only
+		{ 0x65, 0b00100010 },	// DAC OUT1P configured for line out driver and audio bandwidth, Analog input is single-ended
+		{ 0x66, 0b00100000 },	// DAC OUT1M configured for line out driver and audio bandwidth, AIN1P impedance 4k4
+		{ 0x6b, 0b01001000 },	// DAC Channel 2 configured for AC-coupled single-ended mono output with 0.6*Vref as common mode
+		{ 0x6c, 0b00100010 },	// DAC OUT2P configured for line out driver and audio bandwidth, Analog input is single-ended
+		{ 0x6d, 0b00100000 },	// DAC OUT2M configured for line out driver and audio bandwidth, AIN2P impedance 4k4
+		{ 0x76, 0b10001000 },	// Input Channel 1 enabled; Output Channel 1 enabled
+		{ 0x78, 0b11100000 },	// ADC, DAC and MICBIAS Powered Up
+	};
+	// Apply FSYNC = 48 kHz and BCLK = 12.288 MHz and
+	// Start recording/playback data by host on ASI bus with TDM protocol 32-bits channel wordlength
+	tac5112_array_write(regwrite);
 }
 
 int main()
