@@ -15,8 +15,8 @@
 ; The actual data is transmitted one cycle after FSYNC
 ; goes low
 ;
-.pio_version 0
-.program bclk
+.pio_version 1
+.program i2s_tx
 .side_set 2
 
 
@@ -41,30 +41,66 @@ loop_high:
 // 'pin+2' is DIN	(MCU output! It's DIN from the CODEC standpoint!)
 // 'pin+3' is DOUT	(MCU input! It's DOUT from the CODEC standpoint!)
 //
-static inline void bclk_program_init(PIO pio, uint sm, uint offset, uint pin)
+static inline void i2s_tx_program_init(PIO pio, uint sm, uint offset, uint pin)
 {
-	pio_sm_config c = bclk_program_get_default_config(offset);
+	pio_sm_config c = i2s_tx_program_get_default_config(offset);
 
 	pio_gpio_init(pio, pin);
 	pio_gpio_init(pio, pin+1);
 	pio_gpio_init(pio, pin+2);
 	pio_gpio_init(pio, pin+3);
 
-	// set pin directions for all four pins: three outputs, one input
+	// three output pins, one input
 	pio_sm_set_pindirs_with_mask(pio, sm, 0b0111 << pin, 0b1111 << pin);
 
 	// BCLK and FSYNC using sideset
 	sm_config_set_sideset_pin_base(&c, pin);
 	// DOUT using 'OUT' instruction
 	sm_config_set_out_pins(&c, pin+2, 1);
-	// DIN will need a different program, I suspect
-	sm_config_set_in_pins(&c, pin+3);
 
 	// i2s is MSB first, so shift right
 	sm_config_set_out_shift(&c,
 		false,		// shift_right
 		false,		// autopull
 		32);		// pull threshold in bits (ignored)
+
+	// Load and the program
+	pio_sm_init(pio, sm, offset, &c);
+
+	// 150MHz -> 2*2.304MHz
+	pio_sm_set_clkdiv(pio, sm, 150/(2*2.304));
+
+	pio_sm_set_enabled(pio, sm, true);
+}
+%}
+
+.program i2s_rx
+.wrap_target
+	set x,23
+	wait 0 jmppin [2]		; wait for FSYNC going low
+					; two half-cycles delay
+
+loop_in:
+	in pins,1			; read DIN every cycle
+	jmp x-- loop_in
+
+	push noblock [14]		; write result and delay before looping
+.wrap
+
+% c-sdk {
+static inline void i2s_rx_program_init(PIO pio, uint sm, uint offset, uint pin)
+{
+	pio_sm_config c = i2s_tx_program_get_default_config(offset);
+
+	pio_gpio_init(pio, pin+3);
+	sm_config_set_jmp_pin(&c, pin+1);	// FSYNC
+	sm_config_set_in_pins(&c, pin+3);	// DOUT
+
+	// i2s is MSB first, so shift right
+	sm_config_set_in_shift(&c,
+		false,		// shift_right
+		false,		// autopush
+		32);		// push threshold in bits (ignored)
 
 	// Load and the program
 	pio_sm_init(pio, sm, offset, &c);

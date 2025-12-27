@@ -126,7 +126,7 @@ static void tac5112_init(void)
 
 #define STEPS (48000 / 480)
 
-static inline void make_noise(PIO pio, uint sm)
+static inline void make_noise(PIO pio, uint tx, uint rx)
 {
 	static int array[STEPS];
 
@@ -138,27 +138,31 @@ static inline void make_noise(PIO pio, uint sm)
 	for (;;) {
 		uint pot1 = 4095 & ~adc_read();
 		float multiplier = pot1 / 4096.0;
-		for (int i = 0; i < STEPS; i++)
-			pio_sm_put_blocking(pio, sm, (int)(multiplier * array[i]));
+		for (int i = 0; i < STEPS; i++) {
+			int val;
+			if (pio_sm_get_rx_fifo_level(pio, rx))
+				val = pio_sm_get(pio, rx) << 8;
+			else
+				val = array[i];
+			pio_sm_put_blocking(pio, tx, (int)(multiplier * val));
+		}
 	}
 }
 
 // Start our dummy "i2s" program
 static void i2s_init(void)
 {
-	PIO pio;
-	uint sm, offset;
-	bool success;
+	PIO pio = pio0;
+	uint tx_offset, rx_offset;
 
-	success = pio_claim_free_sm_and_add_program_for_gpio_range(
-		&bclk_program, &pio, &sm, &offset,
-		I2S_BCLK, 4, true);
-	if (!success)
-		for (;;);
+	tx_offset = pio_add_program(pio, &i2s_tx_program);
+	rx_offset = pio_add_program(pio, &i2s_rx_program);
 
-	bclk_program_init(pio, sm, offset, I2S_BCLK);
+	i2s_tx_program_init(pio, 0, tx_offset, I2S_BCLK);
+	i2s_rx_program_init(pio, 1, rx_offset, I2S_BCLK);
 
-	make_noise(pio, sm);
+	// Do something
+	make_noise(pio, 0, 1);
 }
 
 
