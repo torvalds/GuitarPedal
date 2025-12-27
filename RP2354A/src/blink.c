@@ -105,7 +105,7 @@ static void tac5112_init(void)
 	static const unsigned char regwrite[][2] = {
 		{ 0x00, 0b00000000 },	// Page 0
 		{ 0x02, 0b00000001 },	// Exit Sleep Mode with DREG and VREF Enabled
-		{ 0x1a, 0b01110000 },	// I2S protocol with 32-bit word length
+		{ 0x1a, 0b01100000 },	// I2S protocol with 24-bit word length
 		{ 0x4d, 0b00000000 },	// VREF and MICBIAS set to 2.75V for 1V_{rms} single-ended input
 		{ 0x50, 0b01000000 },	// ADC Channel 1 configured for AC-coupled single-ended input with 5kOhm input impedance and audio bandwidth
 		{ 0x55, 0b01000000 },	// ADC Channel 2 configured for AC-coupled single-ended input with 5kOhm input impedance and audio bandwidth
@@ -132,7 +132,7 @@ static void i2s_init(void)
 
 	success = pio_claim_free_sm_and_add_program_for_gpio_range(
 		&bclk_program, &pio, &sm, &offset,
-		I2S_BCLK, 1, true);
+		I2S_BCLK, 2, true);
 	if (!success)
 		for (;;);
 

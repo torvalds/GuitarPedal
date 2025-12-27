@@ -2,27 +2,28 @@
 ; This is very optimistically named 'i2s.pio'
 ;
 ; At least for now it is nothing like that at all, it
-; is just my first attempt at a silly BCLK pio program.
-;
-; I *think* I should do the BCLK as a "side-set" thing,
-; concurrently with the "real code", but let's start out
-; simple and stupid rather than try anything fancy.
+; is just my first attempt at a silly pio program.
 ;
 ; Anyway, this is intended to just drive BCLK (GPIO8)
-; at a square wave (eventually at 1.536MHz, for a
-; 32-cycle 48kHz mono signal)
-;
-; For now, the actual frequency doesn't really matter,
-; I just want to see that pin wiggle.
+; at 64*FSYNC (GPIO9): 3.072MHz and 48kHz respectively
 ;
 
 .pio_version 0
 .program bclk
+.side_set 1
 
-	set pindirs, 1
 .wrap_target
-	set pins, 1
-	set pins, 0
+	set pins, 1		side 0
+	set x,30		side 1
+loop_high:
+	nop			side 0
+	jmp x-- loop_high	side 1
+
+	set pins, 0		side 0
+	set x,30		side 1
+loop_low:
+	nop			side 0
+	jmp x-- loop_low	side 1
 .wrap
 
 % c-sdk {
@@ -30,16 +31,19 @@ static inline void bclk_program_init(PIO pio, uint sm, uint offset, uint pin) {
 	pio_sm_config c = bclk_program_get_default_config(offset);
 
 	pio_gpio_init(pio, pin);
-	pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
+	pio_gpio_init(pio, pin+1);
+	pio_sm_set_consecutive_pindirs(pio, sm, pin, 2, true);
 
-	// BCLK on a single pin using 'SET' instructions only
-	sm_config_set_set_pins(&c, pin, 1);
+	// BCLK using sideset
+	sm_config_set_sideset_pins(&c, pin);
+	// FSYNC using 'SET' instruction
+	sm_config_set_set_pins(&c, pin+1, 1);
 
 	// Load and the program
 	pio_sm_init(pio, sm, offset, &c);
 
-	// 150MHz -> 2 * 1.536MHz
-	pio_sm_set_clkdiv(pio, sm, 150/(2*1.536));
+	// 150MHz -> 2*3.072MHz
+	pio_sm_set_clkdiv(pio, sm, 150/(2*3.072));
 
 	pio_sm_set_enabled(pio, sm, true);
 }
