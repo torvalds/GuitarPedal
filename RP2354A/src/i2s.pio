@@ -7,37 +7,64 @@
 ; Anyway, this is intended to just drive BCLK (GPIO8)
 ; at 64*FSYNC (GPIO9): 3.072MHz and 48kHz respectively
 ;
-
+; i2s: FSYNC and each data bit is transmitted on the
+; falling edge of BCLK, so we set those bits the cycle
+; when BCLK goes low ("side 0") so that they are stable
+; on the rising edge ("side 1").
+;
+; The actual data is transmitted one cycle after FSYNC
+; goes low
+;
 .pio_version 0
 .program bclk
-.side_set 1
+.side_set 2
+
 
 .wrap_target
-	set pins, 1		side 0
-	set x,30		side 1
-loop_high:
-	nop			side 0
-	jmp x-- loop_high	side 1
-
-	set pins, 0		side 0
-	set x,30		side 1
+	pull noblock		side 0b00	; cycle 0: FSYNC goes LOW
+	set x,30		side 0b01
 loop_low:
-	nop			side 0
-	jmp x-- loop_low	side 1
+	out pins,1		side 0b00	; cycles 1..31: DOUT wiggles
+	jmp x-- loop_low	side 0b01
+
+	out pins,1		side 0b10	; cycle 32: FSYNC goes HIGH
+	set x,30		side 0b11
+loop_high:
+	nop			side 0b10	; cycles 33-63
+	jmp x-- loop_high	side 0b11
 .wrap
 
 % c-sdk {
-static inline void bclk_program_init(PIO pio, uint sm, uint offset, uint pin) {
+//
+// 'pin'   is BCLK	(MCU output)
+// 'pin+1' is FSYNC	(MCU output)
+// 'pin+2' is DIN	(MCU output! It's DIN from the CODEC standpoint!)
+// 'pin+3' is DOUT	(MCU input! It's DOUT from the CODEC standpoint!)
+//
+static inline void bclk_program_init(PIO pio, uint sm, uint offset, uint pin)
+{
 	pio_sm_config c = bclk_program_get_default_config(offset);
 
 	pio_gpio_init(pio, pin);
 	pio_gpio_init(pio, pin+1);
-	pio_sm_set_consecutive_pindirs(pio, sm, pin, 2, true);
+	pio_gpio_init(pio, pin+2);
+	pio_gpio_init(pio, pin+3);
 
-	// BCLK using sideset
-	sm_config_set_sideset_pins(&c, pin);
-	// FSYNC using 'SET' instruction
-	sm_config_set_set_pins(&c, pin+1, 1);
+	// set pin directions for all four pins: three outputs, one input
+	pio_sm_set_pindirs_with_mask(pio, sm, 0b0111 << pin, 0b1111 << pin);
+
+	// BCLK and FSYNC using sideset
+	sm_config_set_sideset_pin_base(&c, pin);
+	// DOUT using 'OUT' instruction
+	sm_config_set_out_pins(&c, pin+2, 1);
+	// DIN will need a different program, I suspect
+	sm_config_set_in_pins(&c, pin+3);
+
+	// i2s is MSB first, so shift right
+	sm_config_set_out_shift(&c,
+		false,		// shift_right
+		false,		// autopull
+		32);		// pull threshold in bits (ignored)
 
 	// Load and the program
 	pio_sm_init(pio, sm, offset, &c);

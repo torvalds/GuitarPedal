@@ -132,11 +132,23 @@ static void i2s_init(void)
 
 	success = pio_claim_free_sm_and_add_program_for_gpio_range(
 		&bclk_program, &pio, &sm, &offset,
-		I2S_BCLK, 2, true);
+		I2S_BCLK, 4, true);
 	if (!success)
 		for (;;);
 
 	bclk_program_init(pio, sm, offset, I2S_BCLK);
+
+	// Instead of blinking the LED, we just test DOUT
+	// with various bit patterns.
+	//
+	// 24-bit data. MSB first.
+	for (;;) {
+		pio_sm_put_blocking(pio, sm, 0xffffff00);
+		pio_sm_put_blocking(pio, sm, 0xaaaaaa00);
+		pio_sm_put_blocking(pio, sm, 0xcccccc00);
+		pio_sm_put_blocking(pio, sm, 0x88888800);
+		pio_sm_put_blocking(pio, sm, 0x80808000);
+	}
 }
 
 
