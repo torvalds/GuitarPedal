@@ -1,3 +1,4 @@
+#include <math.h>
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
 #include "hardware/adc.h"
@@ -109,7 +110,7 @@ static void tac5112_init(void)
 		{ 0x4d, 0b00000000 },	// VREF and MICBIAS set to 2.75V for 1V_{rms} single-ended input
 		{ 0x50, 0b01000000 },	// ADC Channel 1 configured for AC-coupled single-ended input with 5kOhm input impedance and audio bandwidth
 		{ 0x55, 0b01000000 },	// ADC Channel 2 configured for AC-coupled single-ended input with 5kOhm input impedance and audio bandwidth
-		{ 0x64, 0b01001000 },	// Out 1 source is analog bypass, mono single-ended on OUT1P only
+		{ 0x64, 0b00101000 },	// Out 1 source is DAC signal chain, mono single-ended on OUT1P only
 		{ 0x65, 0b00100010 },	// DAC OUT1P configured for line out driver and audio bandwidth, Analog input is single-ended
 		{ 0x66, 0b00100000 },	// DAC OUT1M configured for line out driver and audio bandwidth, AIN1P impedance 4k4
 		{ 0x6b, 0b01001000 },	// DAC Channel 2 configured for AC-coupled single-ended mono output with 0.6*Vref as common mode
@@ -121,6 +122,25 @@ static void tac5112_init(void)
 	// Apply FSYNC = 48 kHz and BCLK = 12.288 MHz and
 	// Start recording/playback data by host on ASI bus with TDM protocol 32-bits channel wordlength
 	tac5112_array_write(regwrite);
+}
+
+#define STEPS (48000 / 480)
+
+static inline void make_noise(PIO pio, uint sm)
+{
+	static int array[STEPS];
+
+	for (int i = 0 ; i < STEPS; i++)
+		array[i] = 0x7fffffff * sin(i * 6.2831853/STEPS);
+
+	// Instead of blinking the LED, we just test DOUT
+	// with a 220Hz triangle wave
+	for (;;) {
+		uint pot1 = 4095 & ~adc_read();
+		float multiplier = pot1 / 4096.0;
+		for (int i = 0; i < STEPS; i++)
+			pio_sm_put_blocking(pio, sm, (int)(multiplier * array[i]));
+	}
 }
 
 // Start our dummy "i2s" program
@@ -138,17 +158,7 @@ static void i2s_init(void)
 
 	bclk_program_init(pio, sm, offset, I2S_BCLK);
 
-	// Instead of blinking the LED, we just test DOUT
-	// with various bit patterns.
-	//
-	// 24-bit data. MSB first.
-	for (;;) {
-		pio_sm_put_blocking(pio, sm, 0xffffff00);
-		pio_sm_put_blocking(pio, sm, 0xaaaaaa00);
-		pio_sm_put_blocking(pio, sm, 0xcccccc00);
-		pio_sm_put_blocking(pio, sm, 0x88888800);
-		pio_sm_put_blocking(pio, sm, 0x80808000);
-	}
+	make_noise(pio, sm);
 }
 
 
@@ -184,7 +194,7 @@ int main()
 	adc_init();
 	adc_gpio_init(POT1);
 	adc_select_input(0);
-	adc_set_round_robin(0xf);
+//	adc_set_round_robin(0xf);
 
 	// The TAC5112 is programmed over i2c, connected
 	// to pins 4 (SDA) and 5 (SCL). There are pull-ups
