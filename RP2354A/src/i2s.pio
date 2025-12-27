@@ -5,7 +5,7 @@
 ; is just my first attempt at a silly pio program.
 ;
 ; Anyway, this is intended to just drive BCLK (GPIO8)
-; at 64*FSYNC (GPIO9): 3.072MHz and 48kHz respectively
+; at 48*FSYNC (GPIO9): 2.304MHz and 48kHz respectively
 ;
 ; i2s: FSYNC and each data bit is transmitted on the
 ; falling edge of BCLK, so we set those bits the cycle
@@ -22,15 +22,15 @@
 
 .wrap_target
 	pull noblock		side 0b00	; cycle 0: FSYNC goes LOW
-	set x,30		side 0b01
+	set x,22		side 0b01
 loop_low:
-	out pins,1		side 0b00	; cycles 1..31: DOUT wiggles
+	out pins,1		side 0b00	; cycles 1..23: DOUT wiggles
 	jmp x-- loop_low	side 0b01
 
-	out pins,1		side 0b10	; cycle 32: FSYNC goes HIGH
-	set x,30		side 0b11
+	out pins,1		side 0b10	; cycle 24: FSYNC goes HIGH
+	set x,22		side 0b11
 loop_high:
-	nop			side 0b10	; cycles 33-63
+	nop			side 0b10	; cycles 25-47
 	jmp x-- loop_high	side 0b11
 .wrap
 
@@ -69,8 +69,8 @@ static inline void bclk_program_init(PIO pio, uint sm, uint offset, uint pin)
 	// Load and the program
 	pio_sm_init(pio, sm, offset, &c);
 
-	// 150MHz -> 2*3.072MHz
-	pio_sm_set_clkdiv(pio, sm, 150/(2*3.072));
+	// 150MHz -> 2*2.304MHz
+	pio_sm_set_clkdiv(pio, sm, 150/(2*2.304));
 
 	pio_sm_set_enabled(pio, sm, true);
 }
