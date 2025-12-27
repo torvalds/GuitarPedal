@@ -9,16 +9,14 @@ project(rp2354a)
 # initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-# rest of your project
-add_executable(blink
-    blink.c
-)
+add_executable(blink)
+pico_generate_pio_header(blink ${CMAKE_CURRENT_SOURCE_DIR}/i2s.pio)
 
-# pico_stdlib includes the basics like sleeping and core gpio
-# We'll also need PWM, ADC and i2c support (and eventually i2s..)
+target_sources(blink PRIVATE blink.c i2s.pio.h)
 target_link_libraries(blink pico_stdlib
 	hardware_pwm hardware_adc
-	hardware_i2c hardware_watchdog)
+	hardware_i2c hardware_watchdog
+	hardware_pio)
 
 # create map/bin/hex/uf2 file in addition to ELF.
 pico_add_extra_outputs(blink)

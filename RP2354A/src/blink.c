@@ -4,6 +4,8 @@
 #include "hardware/i2c.h"
 #include "hardware/watchdog.h"
 
+#include "i2s.pio.h"
+
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 #define STOMP_PIN	0
@@ -121,6 +123,23 @@ static void tac5112_init(void)
 	tac5112_array_write(regwrite);
 }
 
+// Start our dummy "i2s" program
+static void i2s_init(void)
+{
+	PIO pio;
+	uint sm, offset;
+	bool success;
+
+	success = pio_claim_free_sm_and_add_program_for_gpio_range(
+		&bclk_program, &pio, &sm, &offset,
+		I2S_BCLK, 1, true);
+	if (!success)
+		for (;;);
+
+	bclk_program_init(pio, sm, offset, I2S_BCLK);
+}
+
+
 int main()
 {
 	watchdog_reboot(0, 0, WATCHDOG_TIMEOUT);
@@ -169,6 +188,7 @@ int main()
 	gpio_pull_up(I2C_SCL);
 
 	tac5112_init();
+	i2s_init();
 
 	// This tests all four pots, the stomp switch, and the LED
 	while (true) {

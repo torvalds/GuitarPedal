@@ -1,5 +1,7 @@
-build: blink.c
+build:
 	cmake --build build --target blink
+
+.PHONY: build
 
 flash:
 	picotool load build/blink.elf && picotool reboot
