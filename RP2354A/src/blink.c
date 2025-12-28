@@ -87,6 +87,16 @@ static int __tac5112_array_write(const unsigned char arr[][2], int nr)
 // Stereo differential AC-coupled analog recording and line output playback
 //
 // Except we do I2S instead of TDM, and single-ended mono input/output
+//
+// The analog bypass doesn't work the way I expected: it bypasses IN1P to
+// OUT1M and IN1M to OUT1P.
+//
+// I have no idea why the analog bypass switches the "polarity" of the
+// signals, but it means it won't work on my board that doesn't connect
+// IN1M to anything.
+//
+// There is presumably some reason why TI did this, but I find it rather
+// surprising
 static void tac5112_init(void)
 {
 	// Do a dummy one-byte read to see if it's there
