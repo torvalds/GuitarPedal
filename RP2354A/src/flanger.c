@@ -1,0 +1,84 @@
+// Flanger effect based on the MIT-licensed DaisySP library by Electrosmith
+// which in turn seems to be based on Soundpipe by Paul Batchelor
+
+#define SAMPLES_PER_SEC 48000
+#define SAMPLES_PER_MSEC 48
+
+// ~10ms at 48kHz
+#define ARRAY_SIZE 512
+#define ARRAY_MASK (ARRAY_SIZE-1)
+static float array[ARRAY_SIZE];
+static int array_index;
+
+static float lfo_phase = 0.0;
+static float lfo_freq = 0.2;
+
+static float feedback = 0.2;
+static float delay = 0.75 * SAMPLES_PER_MSEC;	// 0.75ms in samples
+static float depth = 0.9;
+
+static float target_delay = 0.75 * SAMPLES_PER_MSEC;
+
+void flanger_set_depth(float d)
+{
+	if (d > 0 && d < 1)
+		depth = d;
+}
+
+void flanger_set_feedback(float fb)
+{
+	if (fb >= 0 && fb < 1)
+		feedback = fb;
+}
+
+void flanger_set_delay(float ms)
+{
+	float samples = ms * SAMPLES_PER_MSEC;
+
+	if (samples > 0 && samples < ARRAY_SIZE)
+		target_delay = samples;
+}
+
+static void array_write(float val)
+{
+	array[ARRAY_MASK & ++array_index] = val;
+}
+
+static float array_read(float delay)
+{
+	int i = delay;
+	int frac = delay - i;
+	int idx = array_index - i;
+
+	float a = array[ARRAY_MASK & idx];
+	float b = array[ARRAY_MASK & ++idx];
+	return a + (b-a)*frac;
+}
+
+/* LFO is a triangle wave from 0..1 at lfo_freq per sample */
+static float flanger_lfo_step(void)
+{
+	lfo_phase += lfo_freq;
+	if (lfo_phase > 2) {
+		lfo_freq = -lfo_freq;
+		lfo_phase = 4 - lfo_phase;
+	} else if (lfo_phase < 0) {
+		lfo_freq = -lfo_freq;
+		lfo_phase = -lfo_phase;
+	}
+	return lfo_phase;
+}
+
+#define UPDATE(x) x += 0.001 * (target_##x - x)
+
+float flanger_step(float in)
+{
+	UPDATE(delay);
+
+	float d = 1 + flanger_lfo_step() * depth * delay;
+	float out;
+
+	out = array_read(d);
+	array_write(in + out * feedback);
+	return (in + out) / 2;
+}

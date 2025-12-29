@@ -6,6 +6,7 @@
 #include "hardware/watchdog.h"
 
 #include "i2s.pio.h"
+#include "flanger.h"
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
@@ -50,8 +51,8 @@ void stomp_irq(uint gpio, uint32_t event_mask)
 	val = WATCHDOG_TIMEOUT - watchdog_get_time_remaining_ms();
 	watchdog_disable();
 
-	// Arbitrary 5ms debounce time
-	if (val < 5)
+	// Arbitrary 2ms debounce time
+	if (val < 2)
 		return;
 
 	// Regular short-press?
@@ -134,28 +135,47 @@ static void tac5112_init(void)
 	tac5112_array_write(regwrite);
 }
 
-#define STEPS (48000 / 480)
+extern float flanger_step(float);
+
+static inline void make_one_noise(PIO pio, uint tx, uint rx, float volume)
+{
+	for (int i = 0; i < 100; i++) {
+		int v = pio_sm_get_blocking(pio, rx) << 8;
+		float val = v / (float) 0x80000000;
+
+		val = flanger_step(val) * volume;
+
+		pio_sm_put_blocking(pio, tx, (int)(0x80000000 * val));
+	}
+}
 
 static inline void make_noise(PIO pio, uint tx, uint rx)
 {
-	static int array[STEPS];
-
-	for (int i = 0 ; i < STEPS; i++)
-		array[i] = 0x7fffffff * sin(i * 6.2831853/STEPS);
-
-	// Instead of blinking the LED, we just test DOUT
-	// with a 220Hz triangle wave
 	for (;;) {
-		uint pot1 = 4095 & ~adc_read();
-		float multiplier = pot1 / 4096.0;
-		for (int i = 0; i < STEPS; i++) {
-			int val;
-			if (pio_sm_get_rx_fifo_level(pio, rx))
-				val = pio_sm_get(pio, rx) << 8;
-			else
-				val = array[i];
-			pio_sm_put_blocking(pio, tx, (int)(multiplier * val));
+		if (!enabled) {
+			pwm_set_gpio_level(LED_PIN, 0);
+			while (!enabled) {
+				int v = pio_sm_get_blocking(pio, rx) << 8;
+				pio_sm_put_blocking(pio, tx, v);
+			}
+			pwm_set_gpio_level(LED_PIN, 2048);
 		}
+
+		uint pot1 = 4095 & ~adc_read();
+		float volume = pot1 / 2048.0;		// vol = 0 .. 2.0
+		make_one_noise(pio, tx, rx, volume);
+
+		uint pot2 = 4095 & ~adc_read();
+		flanger_set_delay(pot2 / 1000.0);	// delay = 0..4 ms
+		make_one_noise(pio, tx, rx, volume);
+
+		uint pot3 = 4095 & ~adc_read();
+		flanger_set_depth(pot3 / 4096.0);	// depth = 0 .. 1.0
+		make_one_noise(pio, tx, rx, volume);
+
+		uint pot4 = 4095 & ~adc_read();
+		flanger_set_feedback(pot4 / 4096.0);	// feedback = 0 .. 1.0
+		make_one_noise(pio, tx, rx, volume);
 	}
 }
 
@@ -208,7 +228,7 @@ int main()
 	adc_init();
 	adc_gpio_init(POT1);
 	adc_select_input(0);
-//	adc_set_round_robin(0xf);
+	adc_set_round_robin(0xf);
 
 	// The TAC5112 is programmed over i2c, connected
 	// to pins 4 (SDA) and 5 (SCL). There are pull-ups
