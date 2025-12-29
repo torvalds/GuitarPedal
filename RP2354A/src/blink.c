@@ -137,13 +137,18 @@ static void tac5112_init(void)
 
 extern float flanger_step(float);
 
-static inline void make_one_noise(PIO pio, uint tx, uint rx, float volume)
+static inline float read_pot(void)
+{
+	return (4095 & ~adc_read()) * (1.0 / 4096);
+}
+
+static inline void make_one_noise(PIO pio, uint tx, uint rx)
 {
 	for (int i = 0; i < 100; i++) {
 		int v = pio_sm_get_blocking(pio, rx) << 8;
 		float val = v / (float) 0x80000000;
 
-		val = flanger_step(val) * volume;
+		val = flanger_step(val);
 
 		pio_sm_put_blocking(pio, tx, (int)(0x80000000 * val));
 	}
@@ -161,21 +166,18 @@ static inline void make_noise(PIO pio, uint tx, uint rx)
 			pwm_set_gpio_level(LED_PIN, 2048);
 		}
 
-		uint pot1 = 4095 & ~adc_read();
-		float volume = pot1 / 2048.0;		// vol = 0 .. 2.0
-		make_one_noise(pio, tx, rx, volume);
+		float pot1 = read_pot();
+		flanger_set_lfo(pot1*pot1*10);		// lfo = 0 .. 10s
+		make_one_noise(pio, tx, rx);
 
-		uint pot2 = 4095 & ~adc_read();
-		flanger_set_delay(pot2 / 1000.0);	// delay = 0..4 ms
-		make_one_noise(pio, tx, rx, volume);
+		flanger_set_delay(read_pot() * 4);	// delay = 0..4 ms
+		make_one_noise(pio, tx, rx);
 
-		uint pot3 = 4095 & ~adc_read();
-		flanger_set_depth(pot3 / 4096.0);	// depth = 0 .. 1.0
-		make_one_noise(pio, tx, rx, volume);
+		flanger_set_depth(read_pot());		// depth = 0 .. 1.0
+		make_one_noise(pio, tx, rx);
 
-		uint pot4 = 4095 & ~adc_read();
-		flanger_set_feedback(pot4 / 4096.0);	// feedback = 0 .. 1.0
-		make_one_noise(pio, tx, rx, volume);
+		flanger_set_feedback(read_pot());	// feedback = 0 .. 1.0
+		make_one_noise(pio, tx, rx);
 	}
 }
 
