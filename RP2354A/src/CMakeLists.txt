@@ -12,7 +12,7 @@ pico_sdk_init()
 add_executable(blink)
 pico_generate_pio_header(blink ${CMAKE_CURRENT_SOURCE_DIR}/i2s.pio)
 
-target_sources(blink PRIVATE blink.c flanger.c i2s.pio.h)
+target_sources(blink PRIVATE blink.c flanger.c lfo.c i2s.pio.h)
 target_link_libraries(blink pico_stdlib
 	hardware_pwm hardware_adc
 	hardware_i2c hardware_watchdog

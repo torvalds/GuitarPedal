@@ -6,6 +6,8 @@
 #include "hardware/watchdog.h"
 
 #include "i2s.pio.h"
+
+#include "lfo.h"
 #include "flanger.h"
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -156,6 +158,7 @@ static inline void make_one_noise(PIO pio, uint tx, uint rx)
 
 static inline void make_noise(PIO pio, uint tx, uint rx)
 {
+	set_lfo_type(lfo_sinewave);
 	for (;;) {
 		if (!enabled) {
 			pwm_set_gpio_level(LED_PIN, 0);

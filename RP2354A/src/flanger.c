@@ -1,6 +1,9 @@
 // Flanger effect based on the MIT-licensed DaisySP library by Electrosmith
 // which in turn seems to be based on Soundpipe by Paul Batchelor
 
+#include "flanger.h"
+#include "lfo.h"
+
 #define SAMPLES_PER_SEC 48000
 #define SAMPLES_PER_MSEC 48
 
@@ -9,9 +12,6 @@
 #define ARRAY_MASK (ARRAY_SIZE-1)
 static float array[ARRAY_SIZE];
 static int array_index;
-
-static float lfo_phase = 0.0;
-static float lfo_freq = 0.1;
 
 static float feedback = 0.2;
 static float delay = 0.75 * SAMPLES_PER_MSEC;	// 0.75ms in samples
@@ -33,14 +33,7 @@ static float limit_value(float x)
 
 void flanger_set_lfo(float f)
 {
-	if (f < 0)
-		return;
-	f = f * (4.0 / SAMPLES_PER_SEC);
-	if (f > 0.25)
-		f = 0.25;
-	if (lfo_freq < 0)
-		f = -f;
-	lfo_freq = f;
+	set_lfo_freq(f);
 }
 
 void flanger_set_depth(float d)
@@ -79,27 +72,13 @@ static float array_read(float delay)
 	return a + (b-a)*frac;
 }
 
-/* LFO is a triangle wave from 0..2 at lfo_freq per sample */
-static float flanger_lfo_step(void)
-{
-	lfo_phase += lfo_freq;
-	if (lfo_phase > 2) {
-		lfo_freq = -lfo_freq;
-		lfo_phase = 4 - lfo_phase;
-	} else if (lfo_phase < 0) {
-		lfo_freq = -lfo_freq;
-		lfo_phase = -lfo_phase;
-	}
-	return lfo_phase;
-}
-
 #define UPDATE(x) x += 0.001 * (target_##x - x)
 
 float flanger_step(float in)
 {
 	UPDATE(delay);
 
-	float d = 1 + flanger_lfo_step() * depth * delay;
+	float d = 1 + delay + lfo_step() * depth * delay;
 	float out;
 
 	out = array_read(d);
