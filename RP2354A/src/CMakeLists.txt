@@ -18,6 +18,17 @@ target_link_libraries(blink pico_stdlib
 	hardware_i2c hardware_watchdog
 	hardware_pio)
 
+#
+# We really don't care about IEEE precision, nor
+# do we want double-precision math just because
+# of some random constant (and adding ".0f" to them
+# everywhere is just cray-cray)
+#
+target_compile_options(blink PRIVATE
+	-ffast-math
+	-fsingle-precision-constant
+	-Wdouble-promotion)
+
 # create map/bin/hex/uf2 file in addition to ELF.
 pico_add_extra_outputs(blink)
 

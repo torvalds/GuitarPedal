@@ -71,7 +71,7 @@ static void array_write(float val)
 static float array_read(float delay)
 {
 	int i = delay;
-	int frac = delay - i;
+	float frac = delay - i;
 	int idx = array_index - i;
 
 	float a = array[ARRAY_MASK & idx];
