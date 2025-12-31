@@ -1,6 +1,9 @@
 // Flanger effect based on the MIT-licensed DaisySP library by Electrosmith
 // which in turn seems to be based on Soundpipe by Paul Batchelor
 
+#include "pico/stdlib.h"
+
+#include "util.h"
 #include "flanger.h"
 #include "lfo.h"
 
@@ -19,36 +22,26 @@ static float depth = 0.9;
 
 static float target_delay = 0.75 * SAMPLES_PER_MSEC;
 
-// Very random - but quick - function to smoothly
-// limit x to -1 .. 1 when it approaches -2..2
-//
-// So you can add two values in the -1..1 range and
-// then limit the sum to that range too.
-static float limit_value(float x)
+static struct lfo_state flanger_lfo = { .type = lfo_sinewave };
+
+static inline void flanger_set_lfo(float f)
 {
-	float x2 = x*x;
-	float x4 = x2*x2;
-	return x*(1 - 0.19*x2 + 0.0162*x4);
+	set_lfo_freq(&flanger_lfo, f);
 }
 
-void flanger_set_lfo(float f)
-{
-	set_lfo_freq(f);
-}
-
-void flanger_set_depth(float d)
+static inline void flanger_set_depth(float d)
 {
 	if (d > 0 && d < 1)
 		depth = d;
 }
 
-void flanger_set_feedback(float fb)
+static inline void flanger_set_feedback(float fb)
 {
 	if (fb >= 0 && fb < 1)
 		feedback = fb;
 }
 
-void flanger_set_delay(float ms)
+static inline void flanger_set_delay(float ms)
 {
 	float samples = ms * SAMPLES_PER_MSEC;
 
@@ -63,7 +56,7 @@ static void array_write(float val)
 
 static float array_read(float delay)
 {
-	int i = delay;
+	int i = (int) delay;
 	float frac = delay - i;
 	int idx = array_index - i;
 
@@ -86,7 +79,7 @@ float flanger_step(float in)
 {
 	UPDATE(delay);
 
-	float d = 1 + delay + lfo_step() * depth * delay;
+	float d = 1 + delay + lfo_step(&flanger_lfo) * depth * delay;
 	float out;
 
 	out = array_read(d);
@@ -95,14 +88,14 @@ float flanger_step(float in)
 	return (in + out) / 2;
 }
 
-static float delay_dry;
+static struct lfo_state delay_lfo = { .type = lfo_sinewave };
+static float delay_feedback;
 
 void delay_init(float pot1, float pot2, float pot3, float pot4)
 {
-	delay_dry = pot1;
-	flanger_set_delay(pot2 * 1000);	// delay = 0 .. 1s
-	set_lfo_ms(pot3*4);		// LFO = 0 .. 4ms
-	flanger_set_feedback(pot4);	// feedback = 0 .. 100%
+	flanger_set_delay(pot1 * 1000);	// delay = 0 .. 1s
+	set_lfo_ms(&delay_lfo, pot3*4);	// LFO = 0 .. 4ms
+	delay_feedback = pot4;		// feedback = 0 .. 100%
 }
 
 float delay_step(float in)

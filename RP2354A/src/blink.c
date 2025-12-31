@@ -7,6 +7,7 @@
 
 #include "i2s.pio.h"
 
+#include "util.h"
 #include "lfo.h"
 #include "flanger.h"
 
@@ -158,23 +159,44 @@ static void tac5112_init(void)
 
 extern float flanger_step(float);
 
+static struct lfo_state base_lfo, modulator_lfo;
+static float base_freq, freq_range;
+
+static void fm_init(float pot1, float pot2, float pot3, float pot4)
+{
+	base_freq = 20 + pot1*pot1*pot1 * 20000;	// 20 .. 20kHz
+	freq_range = (base_freq - 20) * pot2;
+	set_lfo_freq(&modulator_lfo, 1 + 10*pot3);	// 1..11 Hz
+}
+
+static float fm_step(float in)
+{
+	float freq = lfo_step(&modulator_lfo) * freq_range + base_freq;
+	set_lfo_freq(&base_lfo, freq);
+	return lfo_step(&base_lfo) * 0.3;
+}
+
 struct effect {
 	void (*init)(float, float, float, float);
 	float (*step)(float);
 } effects[] = {
 	{ flanger_init, flanger_step },
 	{ delay_init, delay_step },
+	{ fm_init, fm_step },
+};
+
+static struct lfo_state beep_state = {
+	.type = lfo_sinewave,
+	LFO_FREQ(330),
 };
 
 static void beep_init(float pot1, float pot2, float pot3, float pot4)
 {
-	set_lfo_type(lfo_sinewave);
-	set_lfo_freq(330);
 }
 
 static float beep_step(float val)
 {
-	return lfo_step() * 0.2;
+	return lfo_step(&beep_state) * 0.2;
 }
 
 struct effect beep_effect = { beep_init, beep_step };
@@ -201,7 +223,6 @@ static inline void make_noise(PIO pio, uint tx, uint rx)
 	int current_effect = 0;
 	struct effect *eff = effects;
 
-	set_lfo_type(lfo_sinewave);
 	float pot1 = read_pot();
 	float pot2 = read_pot();
 	float pot3 = read_pot();

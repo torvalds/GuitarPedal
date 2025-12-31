@@ -3,6 +3,9 @@
 // and when it overflows it changes the quarter counter, which
 // then turns 0..1 into a series of [ 0..1 , 1..0 , 0..-1, -1..0 ]
 //
+// The quarter information is naturally in the two high
+// bits of the index
+//
 // Every audio cycle (48kHz), we update the LFO counter
 // by 'lfo_step', so the cycle of one quarter is
 //
@@ -18,62 +21,40 @@
 //	ms = 1000 * T = 1000 * F_STEP / lfo_step
 //		=> lfo_step = 1000 * F_STEP / ms
 //
-#define TWO_POW_32 (4294967296.0f)
-#define F_STEP (TWO_POW_32/48000.0)
 
 #include <math.h>
 #include "pico/stdlib.h"
-#include "gensin.h"
+
+#include "util.h"
 #include "lfo.h"
+#include "gensin.h"
 
-//
-// The quarter information is naturally in the two high
-// bits of the index
-//
-static uint lfo_idx;
-static uint lfo_idx_step;
-static enum lfo_type lfo_type = lfo_triangle;
-
-static inline float uint_to_fraction(uint val)
+static inline void set_lfo_step(struct lfo_state *lfo, float step)
 {
-	return (1.0/TWO_POW_32) * val;
+	lfo->step = (uint) rintf(step);
 }
 
-static inline uint fraction_to_uint(float val)
+void set_lfo_freq(struct lfo_state *lfo, float freq)
 {
-	return val * TWO_POW_32;
+	set_lfo_step(lfo, freq * F_STEP);
 }
 
-static inline void set_lfo_step(float step)
+void set_lfo_ms(struct lfo_state *lfo, float ms)
 {
-	lfo_idx_step = rintf(step);
-}
-
-void set_lfo_freq(float freq)
-{
-	set_lfo_step(freq * F_STEP);
-}
-
-void set_lfo_ms(float ms)
-{
+	// Max 10kHz
 	if (ms < 0.1)
 		ms = 0.1;
-	set_lfo_step(1000 * F_STEP / ms);
+	set_lfo_step(lfo, 1000 * F_STEP / ms);
 }
 
-void set_lfo_type(enum lfo_type type)
+float lfo_step(struct lfo_state *lfo)
 {
-	lfo_type = type;
-}
+	uint now = lfo->idx;
+	uint next = now + lfo->step;
 
-float lfo_step(void)
-{
-	uint now = lfo_idx;
-	uint next = now + lfo_idx_step;
+	lfo->idx = next;
 
-	lfo_idx = next;
-
-	if (lfo_type == lfo_sawtooth)
+	if (lfo->type == lfo_sawtooth)
 		return uint_to_fraction(now);
 
 	float val;
@@ -84,7 +65,7 @@ float lfo_step(void)
 	if (quarter & 1)
 		now = ~now;
 
-	if (lfo_type == lfo_sinewave) {
+	if (lfo->type == lfo_sinewave) {
 		uint idx = now >> (32-QUARTER_SINE_STEP_SHIFT);
 		float a = quarter_sin[idx];
 		float b = quarter_sin[idx+1];
