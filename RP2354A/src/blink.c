@@ -33,38 +33,57 @@
 
 volatile int enabled = 1;
 
+static int64_t alarm_callback(alarm_id_t id, void *user_data)
+{
+	// It should have been cancelled?
+	if (gpio_get(STOMP_PIN))
+		return 0;
+
+	enabled = 2;
+	return 0;
+}
+
 // The stomp switch irq starts the watchdog on a falling edge
 // We'll reboot for programming if you hold it for five seconds.
 //
 // Very short presses are ignored for debouncing.
 // Shorter presses change the state.
-// 1s+ press for long-press.
+// 1s+ press for effect switch
 // 5s press for reboot.
-#define WATCHDOG_TIMEOUT 2000
-void stomp_irq(uint gpio, uint32_t event_mask)
+#define WATCHDOG_TIMEOUT 5000
+static void stomp_irq(uint gpio, uint32_t event_mask)
 {
-	int val;
+	static absolute_time_t last_time;
+	static alarm_id_t alarm_id = -1;
+	absolute_time_t now = get_absolute_time();
 
-	if (event_mask & GPIO_IRQ_EDGE_FALL) {
-		watchdog_enable(WATCHDOG_TIMEOUT, 1);
-		return;
-	}
-
-	val = WATCHDOG_TIMEOUT - watchdog_get_time_remaining_ms();
 	watchdog_disable();
+	cancel_alarm(alarm_id);
 
-	// Arbitrary 2ms debounce time
-	if (val < 2)
-		return;
+	// Stomp switch released
+	if (gpio_get(STOMP_PIN)) {
+		int64_t us_diff;
 
-	// Regular short-press?
-	if (val < 1000) {
-		enabled = enabled != 1;
+		if (is_nil_time(last_time))
+			return;
+		us_diff = absolute_time_diff_us(last_time, now);
+
+		// Assume a _really_ short press was noise
+		if (us_diff < 1000)
+			return;
+
+		// Long press should already have been dealt with
+		if (us_diff > 1000000)
+			return;
+
+		enabled = !enabled;
 		return;
 	}
 
-	// Do something more interesting for long-press?
-	enabled = 2;
+	// Stomp switch pressed. Add alarms
+	last_time = now;
+	alarm_id = add_alarm_in_ms(1000, alarm_callback, NULL, false);
+	watchdog_enable(WATCHDOG_TIMEOUT, 1);
 }
 
 static int tac5112_read(void)
