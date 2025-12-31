@@ -72,6 +72,14 @@ static float array_read(float delay)
 	return a + (b-a)*frac;
 }
 
+void flanger_init(float pot1, float pot2, float pot3, float pot4)
+{
+	flanger_set_lfo(pot1*pot1*10);	// lfo = 0 .. 10Hz
+	flanger_set_delay(pot2 * 4);	// delay = 0 .. 4 ms
+	flanger_set_depth(pot3);	// depth = 0 .. 100%
+	flanger_set_feedback(pot4);	// feedback = 0 .. 100%
+}
+
 #define UPDATE(x) x += 0.001 * (target_##x - x)
 
 float flanger_step(float in)
@@ -85,4 +93,27 @@ float flanger_step(float in)
 	array_write(limit_value(in + out * feedback));
 
 	return (in + out) / 2;
+}
+
+static float delay_dry;
+
+void delay_init(float pot1, float pot2, float pot3, float pot4)
+{
+	delay_dry = pot1;
+	flanger_set_delay(pot2 * 1000);	// delay = 0 .. 1s
+	set_lfo_ms(pot3*4);		// LFO = 0 .. 4ms
+	flanger_set_feedback(pot4);	// feedback = 0 .. 100%
+}
+
+float delay_step(float in)
+{
+	UPDATE(delay);
+
+	float d = 1 + delay;
+	float out;
+
+	out = array_read(d);
+	array_write(limit_value(in + out * feedback));
+
+	return (in + out)/ 2;
 }

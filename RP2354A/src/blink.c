@@ -158,18 +158,39 @@ static void tac5112_init(void)
 
 extern float flanger_step(float);
 
+struct effect {
+	void (*init)(float, float, float, float);
+	float (*step)(float);
+} effects[] = {
+	{ flanger_init, flanger_step },
+	{ delay_init, delay_step },
+};
+
+static void beep_init(float pot1, float pot2, float pot3, float pot4)
+{
+	set_lfo_type(lfo_sinewave);
+	set_lfo_freq(330);
+}
+
+static float beep_step(float val)
+{
+	return lfo_step() * 0.2;
+}
+
+struct effect beep_effect = { beep_init, beep_step };
+
 static inline float read_pot(void)
 {
 	return (4095 & ~adc_read()) * (1.0 / 4096);
 }
 
-static inline void make_one_noise(PIO pio, uint tx, uint rx)
+static inline void make_one_noise(PIO pio, uint tx, uint rx, struct effect *eff)
 {
-	for (int i = 0; i < 100; i++) {
+	for (int i = 0; i < 200; i++) {
 		int v = pio_sm_get_blocking(pio, rx) << 8;
 		float val = v / (float) 0x80000000;
 
-		val = flanger_step(val);
+		val = eff->step(val);
 
 		pio_sm_put_blocking(pio, tx, (int)(0x80000000 * val));
 	}
@@ -177,29 +198,59 @@ static inline void make_one_noise(PIO pio, uint tx, uint rx)
 
 static inline void make_noise(PIO pio, uint tx, uint rx)
 {
+	int current_effect = 0;
+	struct effect *eff = effects;
+
 	set_lfo_type(lfo_sinewave);
+	float pot1 = read_pot();
+	float pot2 = read_pot();
+	float pot3 = read_pot();
+	float pot4 = read_pot();
+
 	for (;;) {
-		if (!enabled) {
+		switch (enabled) {
+		case 0:
 			pwm_set_gpio_level(LED_PIN, 0);
 			while (!enabled) {
 				int v = pio_sm_get_blocking(pio, rx) << 8;
 				pio_sm_put_blocking(pio, tx, v);
 			}
 			pwm_set_gpio_level(LED_PIN, 2048);
+			continue;
+
+		case 2:
+			pwm_set_gpio_level(LED_PIN, 4095);
+			enabled = 3;
+			eff = &beep_effect;
+			break;
+
+		case 3:
+			pwm_set_gpio_level(LED_PIN, 2048);
+			enabled = 1;
+			current_effect++;
+			if (current_effect >= ARRAY_SIZE(effects))
+				current_effect = 0;
+			eff = effects+current_effect;
+			break;
+
+		default:
+			break;
 		}
 
-		float pot1 = read_pot();
-		flanger_set_lfo(pot1*pot1*10);		// lfo = 0 .. 10s
-		make_one_noise(pio, tx, rx);
+		eff->init(pot1, pot2, pot3, pot4);
+		make_one_noise(pio, tx, rx, eff);
 
-		flanger_set_delay(read_pot() * 4);	// delay = 0..4 ms
-		make_one_noise(pio, tx, rx);
+		pot1 = read_pot();
+		make_one_noise(pio, tx, rx, eff);
 
-		flanger_set_depth(read_pot());		// depth = 0 .. 1.0
-		make_one_noise(pio, tx, rx);
+		pot2 = read_pot();
+		make_one_noise(pio, tx, rx, eff);
 
-		flanger_set_feedback(read_pot());	// feedback = 0 .. 1.0
-		make_one_noise(pio, tx, rx);
+		pot3 = read_pot();
+		make_one_noise(pio, tx, rx, eff);
+
+		pot4 = read_pot();
+		make_one_noise(pio, tx, rx, eff);
 	}
 }
 
