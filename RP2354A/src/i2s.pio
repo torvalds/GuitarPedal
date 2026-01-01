@@ -5,7 +5,7 @@
 ; is just my first attempt at a silly pio program.
 ;
 ; Anyway, this is intended to just drive BCLK (GPIO8)
-; at 48*FSYNC (GPIO9): 2.304MHz and 48kHz respectively
+; at 48*FSYNC (GPIO9): 2.5MHz and ~52kHz respectively
 ;
 ; i2s: FSYNC and each data bit is transmitted on the
 ; falling edge of BCLK, so we set those bits the cycle
@@ -67,8 +67,8 @@ static inline void i2s_tx_program_init(PIO pio, uint sm, uint offset, uint pin)
 	// Load and the program
 	pio_sm_init(pio, sm, offset, &c);
 
-	// 150MHz -> 2*2.304MHz
-	pio_sm_set_clkdiv(pio, sm, 150/(2*2.304));
+	// 150MHz -> 5MHz gives a ~52kHz sample rate
+	pio_sm_set_clkdiv(pio, sm, 30);
 
 	pio_sm_set_enabled(pio, sm, true);
 }
@@ -105,8 +105,8 @@ static inline void i2s_rx_program_init(PIO pio, uint sm, uint offset, uint pin)
 	// Load and the program
 	pio_sm_init(pio, sm, offset, &c);
 
-	// 150MHz -> 2*2.304MHz
-	pio_sm_set_clkdiv(pio, sm, 150/(2*2.304));
+	// 150MHz -> 5MHz gives a ~52kHz sample rate
+	pio_sm_set_clkdiv(pio, sm, 30);
 
 	pio_sm_set_enabled(pio, sm, true);
 }

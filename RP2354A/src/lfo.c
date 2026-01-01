@@ -6,14 +6,14 @@
 // The quarter information is naturally in the two high
 // bits of the index
 //
-// Every audio cycle (48kHz), we update the LFO counter
-// by 'lfo_step', so the cycle of one quarter is
+// Every audio cycle we update the LFO counter by 'lfo_step',
+// so the cycle of one quarter is
 //
-//	t = 1/48000 * 2**30 / lfo_step
+//	t = 2**30 / SAMPLES_PER_SEC / lfo_step
 //
 // and a full cycle is four times that (ie the full 32-bit cycle).
 //
-// Calling that (2**32)/48k "F_STEP", we get
+// Calling that (2**32)/SAMPLES_PER_SEC "F_STEP", we get
 //
 //	T = F_STEP / lfo_step
 //	freq = lfo_step / F_STEP

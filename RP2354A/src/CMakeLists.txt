@@ -10,6 +10,10 @@ project(rp2354a)
 pico_sdk_init()
 
 add_executable(blink)
+
+# A 5MHz PIO clock gives a 2.5MHz BCLK, gives a ~52kHz sample rate
+target_compile_definitions(blink PRIVATE SAMPLES_PER_SEC=52083.33333f)
+
 pico_generate_pio_header(blink ${CMAKE_CURRENT_SOURCE_DIR}/i2s.pio)
 
 target_sources(blink PRIVATE blink.c flanger.c lfo.c i2s.pio.h

@@ -152,8 +152,6 @@ static void tac5112_init(void)
 		{ 0x76, 0b10001000 },	// Input Channel 1 enabled; Output Channel 1 enabled
 		{ 0x78, 0b11100000 },	// ADC, DAC and MICBIAS Powered Up
 	};
-	// Apply FSYNC = 48 kHz and BCLK = 12.288 MHz and
-	// Start recording/playback data by host on ASI bus with TDM protocol 32-bits channel wordlength
 	tac5112_array_write(regwrite);
 }
 

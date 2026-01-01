@@ -7,20 +7,17 @@
 #include "flanger.h"
 #include "lfo.h"
 
-#define SAMPLES_PER_SEC 48000
-#define SAMPLES_PER_MSEC 48
-
-// Max ~1.3s delays at 48kHz
+// Max ~1.25s delays at ~52kHz
 #define ARRAY_SIZE 65536
 #define ARRAY_MASK (ARRAY_SIZE-1)
 static float array[ARRAY_SIZE];
 static int array_index;
 
 static float feedback = 0.2;
-static float delay = 0.75 * SAMPLES_PER_MSEC;	// 0.75ms in samples
+static float delay = 0.0;
 static float depth = 0.9;
 
-static float target_delay = 0.75 * SAMPLES_PER_MSEC;
+static float target_delay = 0.0;
 
 static struct lfo_state flanger_lfo = { .type = lfo_sinewave };
 
@@ -43,7 +40,7 @@ static inline void flanger_set_feedback(float fb)
 
 static inline void flanger_set_delay(float ms)
 {
-	float samples = ms * SAMPLES_PER_MSEC;
+	float samples = ms * (SAMPLES_PER_SEC * 0.001);
 
 	if (samples > 0 && samples < ARRAY_SIZE)
 		target_delay = samples;

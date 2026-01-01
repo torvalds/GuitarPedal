@@ -1,4 +1,4 @@
-#define F_STEP (TWO_POW_32/48000.0)
+#define F_STEP (TWO_POW_32/SAMPLES_PER_SEC)
 
 enum lfo_type {
 	lfo_sinewave,
