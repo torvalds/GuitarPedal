@@ -15,13 +15,12 @@
 // Core utility functions and helpers
 #include "util.h"
 #include "lfo.h"
+#include "effect.h"
 
-// Effect
+// Effects
 #include "flanger.h"
-
-// This is our delay-line, shared across all effects
-float sample_array[SAMPLE_ARRAY_SIZE];
-int sample_array_index;
+#include "echo.h"
+#include "fm.h"
 
 volatile int enabled = 1;
 
@@ -78,32 +77,12 @@ static void stomp_irq(uint gpio, uint32_t event_mask)
 	watchdog_enable(WATCHDOG_TIMEOUT, 1);
 }
 
-extern float flanger_step(float);
-
-static struct lfo_state base_lfo, modulator_lfo;
-static float base_freq, freq_range;
-
-static void fm_init(float pot1, float pot2, float pot3, float pot4)
-{
-	base_freq = 20 + fastpow(10000.0, pot1);	// 20 .. 10kHz
-	freq_range = pot2;
-	set_lfo_freq(&modulator_lfo, 1 + 10*pot3);	// 1..11 Hz
-}
-
-static float fm_step(float in)
-{
-	float multiplier = 1 + lfo_step(&modulator_lfo) * freq_range;
-	float freq = base_freq * multiplier;
-	set_lfo_freq(&base_lfo, freq);
-	return lfo_step(&base_lfo) * 0.3;
-}
-
 struct effect {
 	void (*init)(float, float, float, float);
 	float (*step)(float);
 } effects[] = {
 	{ flanger_init, flanger_step },
-	{ delay_init, delay_step },
+	{ echo_init, echo_step },
 	{ fm_init, fm_step },
 };
 
@@ -123,9 +102,20 @@ static float beep_step(float val)
 
 struct effect beep_effect = { beep_init, beep_step };
 
+// To avoid crackling, the low-level delay
+// must not change abruptly when the pot is
+// turned (or when the pot value just randomly
+// fluctuates).
+//
+// So we take the requested delay as a target
+// that we approach smoothly
+#define UPDATE(x) x += 0.001 * (target_##x - x)
+
 static inline void make_one_noise(PIO pio, uint tx, uint rx, struct effect *eff)
 {
 	for (int i = 0; i < 200; i++) {
+		UPDATE(effect_delay);
+
 		int v = pio_sm_get_blocking(pio, rx) << 8;
 		float val = v / (float) 0x80000000;
 
