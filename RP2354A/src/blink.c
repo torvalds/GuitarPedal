@@ -5,36 +5,23 @@
 #include "hardware/i2c.h"
 #include "hardware/watchdog.h"
 
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+
+// Basic hardware initializations and PIO code
+#include "board.h"
+#include "tac5112.h"
 #include "i2s.pio.h"
 
+// Core utility functions and helpers
 #include "util.h"
 #include "lfo.h"
+
+// Effect
 #include "flanger.h"
 
 // This is our delay-line, shared across all effects
 float sample_array[SAMPLE_ARRAY_SIZE];
 int sample_array_index;
-
-#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
-
-#define STOMP_PIN	0
-#define LED_PIN		1
-
-#define I2C_SDA		4
-#define I2C_SCL		5
-
-#define I2S_BCLK	8
-#define I2S_FSYNC	9
-#define I2S_DIN		10
-#define I2S_DOUT	11
-
-// NOTE! The pots are reversed, so the 12-bit ADC read will read 4095 -> 0 clockwise
-#define POT1		26
-#define POT2		27
-#define POT3		28
-#define POT4		29
-
-#define TAC5112_ADDR	0x50
 
 volatile int enabled = 1;
 
@@ -91,74 +78,6 @@ static void stomp_irq(uint gpio, uint32_t event_mask)
 	watchdog_enable(WATCHDOG_TIMEOUT, 1);
 }
 
-static int tac5112_read(void)
-{
-	char rxdata;
-	return i2c_read_blocking(i2c_default, TAC5112_ADDR, &rxdata, 1, false);
-}
-
-static inline int tac5112_write(const unsigned char *data, int len)
-{
-	i2c_write_blocking(i2c_default, TAC5112_ADDR, data, len, false);
-}
-
-static int __tac5112_array_write(const unsigned char arr[][2], int nr)
-{
-	for (int i = 0; i < nr; i++)
-		tac5112_write(arr[i], 2);
-}
-#define tac5112_array_write(arr) __tac5112_array_write(arr, ARRAY_SIZE(arr))
-
-// TAC5112 Datasheet 9.2.5:
-// Example Device Register Configuration Script for EVM Setup
-// Stereo differential AC-coupled analog recording and line output playback
-//
-// Except we do I2S instead of TDM, and single-ended mono input/output
-//
-// The analog bypass doesn't work the way I expected: it bypasses IN1P to
-// OUT1M and IN1M to OUT1P.
-//
-// I have no idea why the analog bypass switches the "polarity" of the
-// signals, but it means it won't work on my board that doesn't connect
-// IN1M to anything.
-//
-// There is presumably some reason why TI did this, but I find it rather
-// surprising
-static void tac5112_init(void)
-{
-	// Do a dummy one-byte read to see if it's there
-	if (tac5112_read() < 0)
-		for (;;);
-
-	static const unsigned char tac_reset[][2] = {
-		{ 0x00, 0x00 },	// Page 0
-		{ 0x01, 0x01 }, // SW reset
-	};
-	tac5112_array_write(tac_reset);
-
-	// Wait for it to take effect
-	sleep_ms(10);
-	tac5112_read();
-
-	static const unsigned char regwrite[][2] = {
-		{ 0x00, 0b00000000 },	// Page 0
-		{ 0x02, 0b00000001 },	// Exit Sleep Mode with DREG and VREF Enabled
-		{ 0x1a, 0b01100000 },	// I2S protocol with 24-bit word length
-		{ 0x4d, 0b00000000 },	// VREF and MICBIAS set to 2.75V for 1V_{rms} single-ended input
-		{ 0x50, 0b01000000 },	// ADC Channel 1 configured for AC-coupled single-ended input with 5kOhm input impedance and audio bandwidth
-		{ 0x55, 0b01000000 },	// ADC Channel 2 configured for AC-coupled single-ended input with 5kOhm input impedance and audio bandwidth
-		{ 0x64, 0b00101000 },	// Out 1 source is DAC signal chain, mono single-ended on OUT1P only
-		{ 0x65, 0b00100010 },	// DAC OUT1P configured for line out driver and audio bandwidth, Analog input is single-ended
-		{ 0x66, 0b00100000 },	// DAC OUT1M configured for line out driver and audio bandwidth, AIN1P impedance 4k4
-		{ 0x6b, 0b01001000 },	// DAC Channel 2 configured for AC-coupled single-ended mono output with 0.6*Vref as common mode
-		{ 0x6c, 0b00100010 },	// DAC OUT2P configured for line out driver and audio bandwidth, Analog input is single-ended
-		{ 0x6d, 0b00100000 },	// DAC OUT2M configured for line out driver and audio bandwidth, AIN2P impedance 4k4
-		{ 0x76, 0b10001000 },	// Input Channel 1 enabled; Output Channel 1 enabled
-		{ 0x78, 0b11100000 },	// ADC, DAC and MICBIAS Powered Up
-	};
-	tac5112_array_write(regwrite);
-}
-
 extern float flanger_step(float);
 
 static struct lfo_state base_lfo, modulator_lfo;
@@ -204,11 +123,6 @@ static float beep_step(float val)
 
 struct effect beep_effect = { beep_init, beep_step };
 
-static inline float read_pot(void)
-{
-	return (4095 & ~adc_read()) * (1.0 / 4096);
-}
-
 static inline void make_one_noise(PIO pio, uint tx, uint rx, struct effect *eff)
 {
 	for (int i = 0; i < 200; i++) {
@@ -239,17 +153,17 @@ static inline void make_noise(PIO pio, uint tx, uint rx)
 				int v = pio_sm_get_blocking(pio, rx) << 8;
 				pio_sm_put_blocking(pio, tx, v);
 			}
-			pwm_set_gpio_level(LED_PIN, 2048);
+			pwm_set_gpio_level(LED_PIN, PWM_50);
 			continue;
 
 		case 2:
-			pwm_set_gpio_level(LED_PIN, 4095);
+			pwm_set_gpio_level(LED_PIN, PWM_100);
 			enabled = 3;
 			eff = &beep_effect;
 			break;
 
 		case 3:
-			pwm_set_gpio_level(LED_PIN, 2048);
+			pwm_set_gpio_level(LED_PIN, PWM_50);
 			enabled = 1;
 			current_effect++;
 			if (current_effect >= ARRAY_SIZE(effects))
@@ -315,10 +229,10 @@ int main()
 	// that's for later.
 	pwm_config pwm = pwm_get_default_config();
 	int pwm_slice = pwm_gpio_to_slice_num(LED_PIN);
-	pwm_config_set_wrap(&pwm, 4096);
+	pwm_config_set_wrap(&pwm, PWM_100);
 	pwm_init(pwm_slice, &pwm, true);
 	gpio_set_function(LED_PIN, GPIO_FUNC_PWM);
-	pwm_set_gpio_level(LED_PIN, 2048);
+	pwm_set_gpio_level(LED_PIN, PWM_50);
 	pwm_set_enabled(pwm_slice, true);
 
 	// We use all four ADC's, set up as round
