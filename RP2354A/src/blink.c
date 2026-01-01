@@ -11,6 +11,10 @@
 #include "lfo.h"
 #include "flanger.h"
 
+// This is our delay-line, shared across all effects
+float sample_array[SAMPLE_ARRAY_SIZE];
+int sample_array_index;
+
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 #define STOMP_PIN	0

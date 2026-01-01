@@ -46,4 +46,25 @@ static inline uint fraction_to_uint(float val)
 	return (uint) (val * TWO_POW_32);
 }
 
+// Max ~1.25s delays at ~52kHz
+#define SAMPLE_ARRAY_SIZE 65536
+#define SAMPLE_ARRAY_MASK (SAMPLE_ARRAY_SIZE-1)
+extern float sample_array[SAMPLE_ARRAY_SIZE];
+extern int sample_array_index;
 
+static inline void sample_array_write(float val)
+{
+	uint idx = SAMPLE_ARRAY_MASK & ++sample_array_index;
+	sample_array[idx] = val;
+}
+
+static inline float sample_array_read(float delay)
+{
+	int i = (int) delay;
+	float frac = delay - i;
+	int idx = sample_array_index - i;
+
+	float a = sample_array[SAMPLE_ARRAY_MASK & idx];
+	float b = sample_array[SAMPLE_ARRAY_MASK & ++idx];
+	return a + (b-a)*frac;
+}

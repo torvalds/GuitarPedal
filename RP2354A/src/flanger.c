@@ -7,19 +7,10 @@
 #include "flanger.h"
 #include "lfo.h"
 
-// Max ~1.25s delays at ~52kHz
-#define ARRAY_SIZE 65536
-#define ARRAY_MASK (ARRAY_SIZE-1)
-static float array[ARRAY_SIZE];
-static int array_index;
-
-static float feedback = 0.2;
-static float delay = 0.0;
-static float depth = 0.9;
-
-static float target_delay = 0.0;
-
-static struct lfo_state flanger_lfo = { .type = lfo_sinewave };
+static float feedback;
+static float delay, target_delay;
+static float depth;
+static struct lfo_state flanger_lfo;
 
 static inline void flanger_set_lfo(float f)
 {
@@ -42,24 +33,8 @@ static inline void flanger_set_delay(float ms)
 {
 	float samples = ms * (SAMPLES_PER_SEC * 0.001);
 
-	if (samples > 0 && samples < ARRAY_SIZE)
+	if (samples > 0 && samples < SAMPLE_ARRAY_SIZE)
 		target_delay = samples;
-}
-
-static void array_write(float val)
-{
-	array[ARRAY_MASK & ++array_index] = val;
-}
-
-static float array_read(float delay)
-{
-	int i = (int) delay;
-	float frac = delay - i;
-	int idx = array_index - i;
-
-	float a = array[ARRAY_MASK & idx];
-	float b = array[ARRAY_MASK & ++idx];
-	return a + (b-a)*frac;
 }
 
 void flanger_init(float pot1, float pot2, float pot3, float pot4)
@@ -70,22 +45,29 @@ void flanger_init(float pot1, float pot2, float pot3, float pot4)
 	flanger_set_feedback(pot4);	// feedback = 0 .. 100%
 }
 
+// To avoid crackling, the low-level delay
+// must not change abruptly when the pot is
+// turned (or when the pot value just randomly
+// fluctuates).
+//
+// So we take the requested delay as a target
+// that we approach smoothly
 #define UPDATE(x) x += 0.001 * (target_##x - x)
 
 float flanger_step(float in)
 {
 	UPDATE(delay);
 
-	float d = 1 + delay + lfo_step(&flanger_lfo) * depth * delay;
+	float d = 1 + delay * (1 + lfo_step(&flanger_lfo) * depth);
 	float out;
 
-	out = array_read(d);
-	array_write(limit_value(in + out * feedback));
+	out = sample_array_read(d);
+	sample_array_write(limit_value(in + out * feedback));
 
 	return (in + out) / 2;
 }
 
-static struct lfo_state delay_lfo = { .type = lfo_sinewave };
+static struct lfo_state delay_lfo;
 static float delay_feedback;
 
 void delay_init(float pot1, float pot2, float pot3, float pot4)
@@ -102,8 +84,8 @@ float delay_step(float in)
 	float d = 1 + delay;
 	float out;
 
-	out = array_read(d);
-	array_write(limit_value(in + out * feedback));
+	out = sample_array_read(d);
+	sample_array_write(limit_value(in + out * delay_feedback));
 
 	return (in + out)/ 2;
 }
