@@ -164,14 +164,15 @@ static float base_freq, freq_range;
 
 static void fm_init(float pot1, float pot2, float pot3, float pot4)
 {
-	base_freq = 20 + pot1*pot1*pot1 * 20000;	// 20 .. 20kHz
-	freq_range = (base_freq - 20) * pot2;
+	base_freq = 20 + fastpow(10000.0, pot1);	// 20 .. 10kHz
+	freq_range = pot2;
 	set_lfo_freq(&modulator_lfo, 1 + 10*pot3);	// 1..11 Hz
 }
 
 static float fm_step(float in)
 {
-	float freq = lfo_step(&modulator_lfo) * freq_range + base_freq;
+	float multiplier = 1 + lfo_step(&modulator_lfo) * freq_range;
+	float freq = base_freq * multiplier;
 	set_lfo_freq(&base_lfo, freq);
 	return lfo_step(&base_lfo) * 0.3;
 }

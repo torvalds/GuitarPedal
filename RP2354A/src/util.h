@@ -17,6 +17,13 @@ static inline float fastpow2_m1(float x)
 	return c1*x + c2*x2 + c3*x3;
 }
 
+static inline float fastpow(float a, float b)
+{
+	union { float f; int i; } u = { a };
+	u.i = (int) (b * (u.i - 1072632447) + 1072632447.0f);
+	return u.f;
+}
+
 // Very random - but quick - function to smoothly
 // limit x to -1 .. 1 when it approaches -2..2
 //
