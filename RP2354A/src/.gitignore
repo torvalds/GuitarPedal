@@ -1,3 +1,4 @@
 build/
 gensin
 gensin.h
+test_sincos

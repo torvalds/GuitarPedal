@@ -1,6 +1,8 @@
 // Various utility functions mainly for
 // imprecise but fast floating point
 
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+
 #define TWO_POW_32 (4294967296.0f)
 #define LN2 0.69314718055994530942
 
@@ -67,4 +69,48 @@ static inline float sample_array_read(float delay)
 	float a = sample_array[SAMPLE_ARRAY_MASK & idx];
 	float b = sample_array[SAMPLE_ARRAY_MASK & ++idx];
 	return a + (b-a)*frac;
+}
+
+// We can calculate sin/cos at the same time using
+// the table lookup. It's "GoodEnough(tm)" and with
+// 256 entries it's good to about 4.5 digits of
+// precision if I tested it right.
+//
+// Don't use this for real work. For audio? It's fine.
+#include "gensin.h"
+
+#define QUARTER_SINE_STEPS (1<< QUARTER_SINE_STEP_SHIFT)
+
+struct sincos { float sin, cos; };
+
+// positive phase numbers only, please..
+struct sincos fastsincos(float phase)
+{
+	phase *= 4;
+	int quadrant = (int)phase;
+	phase -= quadrant;
+
+	phase *= QUARTER_SINE_STEPS;
+	int idx = (int) phase;
+	phase -= idx;
+
+	float a = quarter_sin[idx];
+	float b = quarter_sin[idx+1];
+
+	float x = a + (b-a)*phase;
+
+	idx = QUARTER_SINE_STEPS - idx;
+	a = quarter_sin[idx];
+	b = quarter_sin[idx+1];
+
+	float y = a + (a - b)*phase;
+
+	if (quadrant & 1) {
+		float tmp = -x; x = y; y = tmp;
+	}
+	if (quadrant & 2) {
+		x = -x; y = -y;
+	}
+
+	return (struct sincos) { x, y };
 }

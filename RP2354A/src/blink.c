@@ -5,18 +5,16 @@
 #include "hardware/i2c.h"
 #include "hardware/watchdog.h"
 
-#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+// Core utility functions and helpers
+#include "util.h"
+#include "lfo.h"
+#include "effect.h"
 
 // Basic hardware initializations and PIO code
 #include "board.h"
 #include "tac5112.h"
 #include "i2s.pio.h"
 #include "biquad.h"
-
-// Core utility functions and helpers
-#include "util.h"
-#include "lfo.h"
-#include "effect.h"
 
 // Effects
 #include "flanger.h"

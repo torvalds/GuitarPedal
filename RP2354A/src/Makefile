@@ -1,7 +1,5 @@
-build:
+build: gensin.h
 	cmake --build build --target blink
-
-.PHONY: build
 
 flash:
 	picotool load build/blink.elf && picotool reboot
@@ -14,3 +12,11 @@ gensin.h: gensin
 
 gensin: gensin.c
 	$(CC) gensin.c -o gensin -lm
+
+test_sincos: gensin.h test_sincos.c
+	 $(CC) test_sincos.c -o test_sincos -lm
+
+test: test_sincos
+	./test_sincos
+
+.PHONY: build test

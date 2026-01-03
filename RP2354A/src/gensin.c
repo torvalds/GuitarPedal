@@ -1,7 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 
-#define STEP_SHIFT 6
+#define STEP_SHIFT 8
 #define STEPS (1 << STEP_SHIFT)
 
 int main(int argc, char **argv)
@@ -15,5 +15,5 @@ int main(int argc, char **argv)
 			sin(i*M_PI/STEPS/2));
 	}
 
-	printf("\n};\n");
+	printf(" %+.8ff\n};\n", 1.0);
 }

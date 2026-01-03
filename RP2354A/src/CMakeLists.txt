@@ -16,7 +16,7 @@ target_compile_definitions(blink PRIVATE SAMPLES_PER_SEC=52083.33333f)
 
 pico_generate_pio_header(blink ${CMAKE_CURRENT_SOURCE_DIR}/i2s.pio)
 
-target_sources(blink PRIVATE blink.c lfo.c i2s.pio.h
+target_sources(blink PRIVATE blink.c i2s.pio.h
 	util.h lfo.h
 	flanger.h echo.h fm.h)
 target_link_libraries(blink pico_stdlib
