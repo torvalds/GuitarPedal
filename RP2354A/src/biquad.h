@@ -51,6 +51,45 @@ static void biquad_notch_filter(struct biquad *res, float f, float Q)
 	res->a2 = (1 - alpha)	/ a0;
 }
 
+static void biquad_bpf_peak(struct biquad *res, float f, float Q)
+{
+	float w0 = 2*M_PI*f/SAMPLES_PER_SEC;
+	float alpha = sinf(w0)/(2*Q);
+	float a0 = 1 + alpha;
+
+	res->b0 = Q*alpha	/ a0;
+	res->b1 = 0;
+	res->b2 = -Q*alpha	/ a0;
+	res->a1 = -2*cosf(w0)	/ a0;
+	res->a2 = (1 - alpha)	/ a0;
+}
+
+static void biquad_bpf(struct biquad *res, float f, float Q)
+{
+	float w0 = 2*M_PI*f/SAMPLES_PER_SEC;
+	float alpha = sinf(w0)/(2*Q);
+	float a0 = 1 + alpha;
+
+	res->b0 = alpha		/ a0;
+	res->b1 = 0;
+	res->b2 = -alpha	/ a0;
+	res->a1 = -2*cosf(w0)	/ a0;
+	res->a2 = (1 - alpha)	/ a0;
+}
+
+static void biquad_allpass_filter(struct biquad *res, float f, float Q)
+{
+	float w0 = 2*M_PI*f/SAMPLES_PER_SEC;
+	float alpha = sinf(w0)/(2*Q);
+	float a0 = 1 + alpha;
+
+	res->b0 = (1 - alpha)	/ a0;
+	res->b1 = (-2*cosf(w0))	/ a0;
+	res->b2 = 1;		// Same as a0
+	res->a1 = res->b1;
+	res->a2 = res->b0;
+}
+
 static void bq_convert(float f, char *buf)
 {
 	int val = (int)rintf(f * (float)0x7fffffff);
@@ -80,19 +119,21 @@ static void tac_write_biquad(const struct biquad *bq, int page, int reg)
 }
 
 //
-// Notch filter for testing
-// Set a 330Hz notch filter with Q=4.
+// Various silly filters for testing
 //
-// This is absolutely ridiculous, but good for seeing
-// that it's enabled (set the signal generator to 330Hz
-// and see it basically disappear).
 static void tac_silly_notch(void)
 {
 	struct biquad bq;
+
+	// ADC input filters
 	biquad_notch_filter(&bq, 330, 4);
 	tac_write_biquad(&bq, BIQUAD_IN1);
 	biquad_lpf(&bq, 1000, 1);
 	tac_write_biquad(&bq, BIQUAD_IN2);
 	biquad_hpf(&bq, 220, 1);
 	tac_write_biquad(&bq, BIQUAD_IN3);
+
+	// DAC output filters
+	biquad_bpf_peak(&bq, 440, 2);
+	tac_write_biquad(&bq, BIQUAD_OUT1);
 }
