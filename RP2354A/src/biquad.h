@@ -8,6 +8,36 @@ struct biquad {
 	float a1, a2;
 };
 
+static void biquad_lpf(struct biquad *res, float f, float Q)
+{
+	float w0 = 2*M_PI*f/SAMPLES_PER_SEC;
+	float alpha = sinf(w0)/(2*Q);
+	float cos = cosf(w0);
+	float a0 = 1 + alpha;
+	float b1 = (1 - cos) / a0;
+
+	res->b0 = b1 / 2;
+	res->b1 = b1;
+	res->b2 = b1 / 2;
+	res->a1 = -2*cos	/ a0;
+	res->a2 = (1 - alpha)	/ a0;
+}
+
+static void biquad_hpf(struct biquad *res, float f, float Q)
+{
+	float w0 = 2*M_PI*f/SAMPLES_PER_SEC;
+	float alpha = sinf(w0)/(2*Q);
+	float cos = cosf(w0);
+	float a0 = 1 + alpha;
+	float b1 = (1 + cos) / a0;
+
+	res->b0 = b1 / 2;
+	res->b1 = -b1;
+	res->b2 = b1 / 2;
+	res->a1 = -2*cos	/ a0;
+	res->a2 = (1 - alpha)	/ a0;
+}
+
 static void biquad_notch_filter(struct biquad *res, float f, float Q)
 {
 	float w0 = 2*M_PI*f/SAMPLES_PER_SEC;
@@ -61,4 +91,8 @@ static void tac_silly_notch(void)
 	struct biquad bq;
 	biquad_notch_filter(&bq, 330, 4);
 	tac_write_biquad(&bq, BIQUAD_IN1);
+	biquad_lpf(&bq, 1000, 1);
+	tac_write_biquad(&bq, BIQUAD_IN2);
+	biquad_hpf(&bq, 220, 1);
+	tac_write_biquad(&bq, BIQUAD_IN3);
 }

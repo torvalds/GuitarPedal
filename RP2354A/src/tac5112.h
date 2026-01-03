@@ -107,6 +107,8 @@ static void tac5112_init(void)
 		{ 0x6b, 0b01001000 },	// DAC Channel 2 configured for AC-coupled single-ended mono output with 0.6*Vref as common mode
 		{ 0x6c, 0b00100010 },	// DAC OUT2P configured for line out driver and audio bandwidth, Analog input is single-ended
 		{ 0x6d, 0b00100000 },	// DAC OUT2M configured for line out driver and audio bandwidth, AIN2P impedance 4k4
+		{ 0x72, 0b00011100 },	// Three biquads per ADC channel
+		{ 0x73, 0b00011100 },	// Three biquads per DAC channel
 		{ 0x76, 0b10001000 },	// Input Channel 1 enabled; Output Channel 1 enabled
 		{ 0x78, 0b11100000 },	// ADC, DAC and MICBIAS Powered Up
 	};
