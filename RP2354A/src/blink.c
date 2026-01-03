@@ -88,7 +88,6 @@ struct effect {
 };
 
 static struct lfo_state beep_state = {
-	.type = lfo_sinewave,
 	LFO_FREQ(330),
 };
 
@@ -98,7 +97,7 @@ static void beep_init(float pot1, float pot2, float pot3, float pot4)
 
 static float beep_step(float val)
 {
-	return lfo_step(&beep_state) * 0.2;
+	return lfo_step(&beep_state, lfo_sinewave) * 0.2;
 }
 
 struct effect beep_effect = { beep_init, beep_step };

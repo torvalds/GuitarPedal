@@ -11,7 +11,7 @@ static void flanger_init(float pot1, float pot2, float pot3, float pot4)
 
 static float flanger_step(float in)
 {
-	float d = 1 + effect_delay * (1 + lfo_step(&effect_lfo) * effect_depth);
+	float d = 1 + effect_delay * (1 + lfo_step(&effect_lfo, lfo_sinewave) * effect_depth);
 	float out;
 
 	out = sample_array_read(d);

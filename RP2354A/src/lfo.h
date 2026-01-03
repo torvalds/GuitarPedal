@@ -31,7 +31,6 @@ enum lfo_type {
 
 struct lfo_state {
 	uint idx, step;
-	enum lfo_type type;
 };
 
 // Use this for LFO initializers.
@@ -55,14 +54,14 @@ void set_lfo_ms(struct lfo_state *lfo, float ms)
 	set_lfo_step(lfo, 1000 * F_STEP / ms);
 }
 
-float lfo_step(struct lfo_state *lfo)
+float lfo_step(struct lfo_state *lfo, enum lfo_type type)
 {
 	uint now = lfo->idx;
 	uint next = now + lfo->step;
 
 	lfo->idx = next;
 
-	if (lfo->type == lfo_sawtooth)
+	if (type == lfo_sawtooth)
 		return uint_to_fraction(now);
 
 	float val;
@@ -73,7 +72,7 @@ float lfo_step(struct lfo_state *lfo)
 	if (quarter & 1)
 		now = ~now;
 
-	if (lfo->type == lfo_sinewave) {
+	if (type == lfo_sinewave) {
 		uint idx = now >> (32-QUARTER_SINE_STEP_SHIFT);
 		float a = quarter_sin[idx];
 		float b = quarter_sin[idx+1];

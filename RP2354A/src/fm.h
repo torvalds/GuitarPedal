@@ -16,8 +16,9 @@ static void fm_init(float pot1, float pot2, float pot3, float pot4)
 
 static float fm_step(float in)
 {
-	float multiplier = fastpow2_m1(lfo_step(&modulator_lfo) * fm_freq_range) + 1;
+	float lfo = lfo_step(&modulator_lfo, lfo_sinewave);
+	float multiplier = fastpow2_m1(lfo * fm_freq_range) + 1;
 	float freq = fm_base_freq * multiplier;
 	set_lfo_freq(&base_lfo, freq);
-	return lfo_step(&base_lfo) * fm_volume;
+	return lfo_step(&base_lfo, lfo_sinewave) * fm_volume;
 }
