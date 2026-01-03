@@ -11,6 +11,7 @@
 #include "board.h"
 #include "tac5112.h"
 #include "i2s.pio.h"
+#include "biquad.h"
 
 // Core utility functions and helpers
 #include "util.h"
@@ -247,6 +248,7 @@ int main()
 	gpio_pull_up(I2C_SCL);
 
 	tac5112_init();
+	tac_silly_notch();
 	i2s_init();
 
 	// This tests all four pots, the stomp switch, and the LED

@@ -3,6 +3,38 @@
 //
 #define TAC5112_ADDR	0x50
 
+// Page and register address for biquad filter
+// coefficients for the ADC record output channel 1
+//
+// NOTE! The 5112 could clone ADC channel 1 to
+// channel 3, and then have a separate set of
+// volume and three biquad filters for that
+// channel too.
+//
+// Then we could mix them in using the ADC digital
+// mixer coefficients (page 10), so we'd have two
+// independent sets of three biquad filters on the
+// input
+//
+#define BIQUAD_IN1 8,8
+#define BIQUAD_IN2 8,88
+#define BIQUAD_IN3 9,48
+
+// Page and register address for biquad filter
+// coefficients for the DAC output channel 1
+//
+// I think we could use the DAC mixer registers
+// (on page 17) to mix in ADC loopback and
+// signal generator data. Not the analog loopback
+// I was looking for, but..
+//
+// The TAC5112 can do a whole lot more than I'm
+// really using...
+//
+#define BIQUAD_OUT1 15,8
+#define BIQUAD_OUT2 15,88
+#define BIQUAD_OUT3 16,48
+
 static int tac5112_read(void)
 {
 	char rxdata;
@@ -20,6 +52,16 @@ static int __tac5112_array_write(const unsigned char arr[][2], int nr)
 		tac5112_write(arr[i], 2);
 }
 #define tac5112_array_write(arr) __tac5112_array_write(arr, ARRAY_SIZE(arr))
+
+static void tac5112_set_page(int page)
+{
+	static int current = -1;
+	if (page != current) {
+		char bytes[2] = { 0, page };
+		current = page;
+		tac5112_write(bytes, 2);
+	}
+}
 
 // TAC5112 Datasheet 9.2.5:
 // Example Device Register Configuration Script for EVM Setup
