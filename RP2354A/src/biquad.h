@@ -3,12 +3,27 @@
 //
 // Some of this is generic biquad, but some of it
 // is then TAC5112-specific
-struct biquad {
+struct biquad_coeff {
 	float b0, b1, b2;
 	float a1, a2;
 };
 
-static void biquad_lpf(struct biquad *res, float f, float Q)
+struct biquad {
+	struct biquad_coeff coeff;
+	float w1, w2;
+};
+
+static inline float biquad_step(struct biquad *bq, float x0)
+{
+	float w0, y0;
+
+	w0 = x0 - bq->coeff.a1 * bq->w1 - bq->coeff.a2 * bq->w2;
+	y0 = bq->coeff.b0 * w0 + bq->coeff.b1 * bq->w1 + bq->coeff.b2 * bq->w2;
+	bq->w2 = bq->w1; bq->w1 = w0;
+	return y0;
+}
+
+static void biquad_lpf(struct biquad_coeff *res, float f, float Q)
 {
 	float w0 = 2*M_PI*f/SAMPLES_PER_SEC;
 	float alpha = sinf(w0)/(2*Q);
@@ -23,7 +38,7 @@ static void biquad_lpf(struct biquad *res, float f, float Q)
 	res->a2 = (1 - alpha)	/ a0;
 }
 
-static void biquad_hpf(struct biquad *res, float f, float Q)
+static void biquad_hpf(struct biquad_coeff *res, float f, float Q)
 {
 	float w0 = 2*M_PI*f/SAMPLES_PER_SEC;
 	float alpha = sinf(w0)/(2*Q);
@@ -38,7 +53,7 @@ static void biquad_hpf(struct biquad *res, float f, float Q)
 	res->a2 = (1 - alpha)	/ a0;
 }
 
-static void biquad_notch_filter(struct biquad *res, float f, float Q)
+static void biquad_notch_filter(struct biquad_coeff *res, float f, float Q)
 {
 	float w0 = 2*M_PI*f/SAMPLES_PER_SEC;
 	float alpha = sinf(w0)/(2*Q);
@@ -51,7 +66,7 @@ static void biquad_notch_filter(struct biquad *res, float f, float Q)
 	res->a2 = (1 - alpha)	/ a0;
 }
 
-static void biquad_bpf_peak(struct biquad *res, float f, float Q)
+static void biquad_bpf_peak(struct biquad_coeff *res, float f, float Q)
 {
 	float w0 = 2*M_PI*f/SAMPLES_PER_SEC;
 	float alpha = sinf(w0)/(2*Q);
@@ -64,7 +79,7 @@ static void biquad_bpf_peak(struct biquad *res, float f, float Q)
 	res->a2 = (1 - alpha)	/ a0;
 }
 
-static void biquad_bpf(struct biquad *res, float f, float Q)
+static void biquad_bpf(struct biquad_coeff *res, float f, float Q)
 {
 	float w0 = 2*M_PI*f/SAMPLES_PER_SEC;
 	float alpha = sinf(w0)/(2*Q);
@@ -77,7 +92,7 @@ static void biquad_bpf(struct biquad *res, float f, float Q)
 	res->a2 = (1 - alpha)	/ a0;
 }
 
-static void biquad_allpass_filter(struct biquad *res, float f, float Q)
+static void biquad_allpass_filter(struct biquad_coeff *res, float f, float Q)
 {
 	float w0 = 2*M_PI*f/SAMPLES_PER_SEC;
 	float alpha = sinf(w0)/(2*Q);
@@ -103,7 +118,7 @@ static void bq_convert(float f, char *buf)
 	buf[3] = val;
 }
 
-static void tac_write_biquad(const struct biquad *bq, int page, int reg)
+static void tac_write_biquad(const struct biquad_coeff *bq, int page, int reg)
 {
 	char buf[1+5*4];
 
@@ -116,24 +131,4 @@ static void tac_write_biquad(const struct biquad *bq, int page, int reg)
 
 	tac5112_set_page(page);
 	tac5112_write(buf, sizeof(buf));
-}
-
-//
-// Various silly filters for testing
-//
-static void tac_silly_notch(void)
-{
-	struct biquad bq;
-
-	// ADC input filters
-	biquad_notch_filter(&bq, 330, 4);
-	tac_write_biquad(&bq, BIQUAD_IN1);
-	biquad_lpf(&bq, 1000, 1);
-	tac_write_biquad(&bq, BIQUAD_IN2);
-	biquad_hpf(&bq, 220, 1);
-	tac_write_biquad(&bq, BIQUAD_IN3);
-
-	// DAC output filters
-	biquad_bpf_peak(&bq, 440, 2);
-	tac_write_biquad(&bq, BIQUAD_OUT1);
 }

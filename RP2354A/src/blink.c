@@ -22,6 +22,7 @@
 #include "flanger.h"
 #include "echo.h"
 #include "fm.h"
+#include "notch.h"
 
 volatile int enabled = 1;
 
@@ -82,6 +83,7 @@ struct effect {
 	void (*init)(float, float, float, float);
 	float (*step)(float);
 } effects[] = {
+	{ notch_init, notch_step },
 	{ flanger_init, flanger_step },
 	{ echo_init, echo_step },
 	{ fm_init, fm_step },
@@ -248,7 +250,6 @@ int main()
 	gpio_pull_up(I2C_SCL);
 
 	tac5112_init();
-	tac_silly_notch();
 	i2s_init();
 
 	// This tests all four pots, the stomp switch, and the LED
