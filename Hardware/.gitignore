@@ -1,0 +1,9 @@
+fp-info-cache
+gerbers/
+manufacturing/
+*-backups/
+*-bak
+*.bak
+bom
+~*.lck
+
