@@ -1,0 +1,309 @@
+//
+// This is the "ui" for now - really just for very random testing
+//
+#include "eeprom.h"
+
+static void move_pot(struct effect *effect, int dir)
+{
+	if (!dir)
+		return;
+
+	int new_active = effect->active_pot;
+	do {
+		new_active += dir;
+		if (new_active < 0)
+			new_active = 9;
+		else if (new_active > 9)
+			new_active = 0;
+		if (new_active == effect->active_pot)
+			return;
+	} while (!effect->pots[new_active].label);
+	effect->active_pot = new_active;
+}
+
+// Note that the "__atomic" part isn't actually about SMP, just the
+// interrupts
+//
+// Also note how the 'select' rotary low bits are ignored but allowed
+// to accumulate - but cleared if something else happens.
+static bool read_pots(struct effect *effect, signed char *pots)
+{
+	int val = __atomic_exchange_n(&rotary_value, 0, __ATOMIC_RELAXED);
+
+	if (!val) {
+		// Ignore low two bits of rotary select
+		int select = __atomic_fetch_and(&rotary_select, 3, __ATOMIC_RELAXED);
+		select &= ~3;
+
+		if (select) {
+			int dir = (select < 0) ? -1 : 1;
+
+			move_pot(effect, dir);
+			return true;
+		}
+
+		// No rotary changes. Switch pressed?
+		//
+		// Clear and ignore long-press, it's the result
+		// of "hold and rotate"
+		unsigned int sw = __atomic_fetch_and(&switch_val, ~0x10001, __ATOMIC_RELAXED);
+		sw &= 1;
+		if (!sw)
+			return false;
+		move_pot(effect, 1);
+		return true;
+	}
+
+	val += pots[effect->active_pot];
+	if (val < -100)
+		val = -100;
+	else if (val > 100)
+		val = 100;
+
+	pots[effect->active_pot] = val;
+
+	return true;
+}
+
+static char *to_ascii(unsigned char term, uint32_t val, char *p, int digits, int decimals)
+{
+	digits += decimals;
+	*--p = term;
+	do {
+		*--p = '0' + val % 10;
+		val /= 10;
+		if (!--decimals)
+			*--p = '.';
+		digits--;
+	} while (val || digits > 0);
+	return p;
+}
+
+static void list_effects(struct effect *active)
+{
+	int x = 3;
+	int y = 116;
+
+	int pos = 0, mid = 0;
+	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
+		struct effect *effect = effects[i];
+		const char *name = effect->short_name;
+		int width = strlen(name)*6 + 6;
+
+		if (effect == active)
+			mid = pos + width / 2;
+		pos += width;
+	}
+
+	if (mid > 64) {
+		int diff = mid - 64;
+		if (pos - diff < 128)
+			diff = pos - 128;
+		x -= diff;
+	}
+
+	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
+		struct effect *effect = effects[i];
+		const char *name = effect->short_name;
+		int width = strlen(name)*6;
+
+		if (effect == active)
+			sh1106_rectangle(x-3, y-3, width+6, 8+6, rect_border);
+		sh1106_puts_6x8(x,y,name);
+		if (effect->target) {
+			static const unsigned int zero[32] = { 0, };
+			static const unsigned int bits[32] = { [0 ... 31] = 0x3ff };
+			sh1106_sprite(x-1, y-1, width+2, zero, bits);
+		}
+		x += width+6;
+	}
+}
+
+static void pot_describe(const struct pot_descr *pot, int val, int posY)
+{
+	// 8 characters for label
+	// 7 characters for numerical value
+	// 5 characters for units
+	char desc[22] = "                     ";
+	char *end = desc+16;
+	int decimals = 0;
+
+	if (pot->describe) {
+		const char *unit = pot->describe(val);
+		int len = strlen(unit);
+		if (len > 5) len = 5;
+		memcpy(end, unit, len);
+	}
+
+	if (pot->convert) {
+		float fval = pot->convert(val);
+		if (fabsf(fval) < 100) {
+			fval *= 10;
+			decimals = 1;
+			if (fabsf(fval) < 100) {
+				fval *= 10;
+				decimals = 2;
+			}
+		}
+		val = (int) rintf(fval);
+		if (decimals > 1 && !(val % 100)) {
+			end--;
+			decimals--;
+			val /= 10;
+		}
+	}
+	end = to_ascii(' ', abs(val), end, 1, decimals);
+	if (val < 0)
+		*--end = '-';
+
+	const char *label = pot->label;
+	int len = strlen(label);
+	if (len > 8) len = 8;
+	memcpy(desc, label, len);
+	desc[len] = ':';
+	sh1106_puts_6x8(10, posY, desc);
+}
+
+static int switch_effect(int idx)
+{
+	// Ignore low two bits of rotary select
+	int select = __atomic_fetch_and(&rotary_effect, 3, __ATOMIC_RELAXED);
+	select &= ~3;
+	if (!select)
+		return idx;
+
+	idx += (select < 0) ? -1 : 1;
+	if (idx < 0)
+		idx = 0;
+	if (idx >= ARRAY_SIZE(effects))
+		idx = ARRAY_SIZE(effects)-1;
+	return idx;
+}
+
+// 'update_ui()' is called every few ms to react to user events.
+static void update_ui(uint32_t ms_since_boot)
+{
+	static int effect_idx = 0;
+	static int init = 0;
+
+	if (!init) {
+		if (sh1106_read() < 0)
+			return;
+		init = 1;
+		sh1106_init();
+		return;
+	}
+
+	struct effect *effect = effects[effect_idx];
+	bool update_screen = false;
+
+	// Right stomp long-ress: switch to secondary values perhaps?
+	if (switch_pressed(LONGPRESS(2))) {
+		switch_clear(LONGPRESS(2));
+		update_screen = true;
+		// Do something
+	}
+
+	// Left stomp (or bottom rotary):
+	// enable/disable current effect
+	if (switch_pressed(1) || switch_pressed(3)) {
+		switch_clear(1); switch_clear(3);
+		effect->target = EFF_ENABLE_STEPS * !effect->target;
+		update_screen = true;
+		last_effect = NULL;	// Force list_effects();
+		effect->seq += 2;	// Force saving
+	}
+
+	// Right stomp: enable/disable all effects
+	if (switch_pressed(2)) {
+		switch_clear(2);
+		disable_all = EFF_ENABLE_STEPS * !disable_all;
+	}
+
+	// Effect switching: lower rotary
+	int idx = switch_effect(effect_idx);
+	if (idx != effect_idx) {
+		// Save the state of the effect we're leaving
+		// if it has been modified
+		if (effect->seq) {
+			unsigned int seq = effect->seq;
+			signed char *cur_pot = effect->pot_values[seq & 1];
+			signed char *new_pot = effect->pot_values[!(seq & 1)];
+			memcpy(new_pot, cur_pot, 10);
+			effect->seq = 0;
+
+			save_effect_state(effect_idx, effects[effect_idx]);
+		}
+
+		effect_idx = idx;
+		effect = effects[idx];
+
+		update_screen = true;
+	}
+
+	// The LED mappings have changed between boards
+	pwm_set_gpio_level(PWM_PIN1, PWM_100/30 * (!disable_all + 8*!!clipping));
+	pwm_set_gpio_level(PWM_PIN2, PWM_100/30 * (!!effect->target + 8*!!effect->intense));
+
+	effect->intense = 0;
+	clipping = 0;
+
+	unsigned int seq = effect->seq;
+	signed char *cur_pot = effect->pot_values[seq & 1];
+	signed char *new_pot = effect->pot_values[!(seq & 1)];
+	memcpy(new_pot, cur_pot, 10);
+
+	// If something changed, let the other CPU know
+	if (read_pots(effect, new_pot)) {
+		effect->seq++;
+		update_screen = true;
+	}
+
+	if (effect != last_effect) {
+		last_effect = effect;
+		sh1106_clear(0, 0, 128, 128);
+		sh1106_puts_8x16(10, 70, effect->name);
+		list_effects(effect);
+		update_screen = true;
+	}
+
+	if (!update_screen)
+		return;
+
+#if 0
+	char buffer[16], *end = buffer+sizeof(buffer);
+	char *p = to_ascii(0, dropped, end, 1);
+	sh1106_puts_6x8(126-6*(end-p-1),118,p);
+#endif
+
+	int active = effect->active_pot;
+	if (effect->graph) {
+		effect->graph(effect, active, new_pot);
+	} else {
+		for (int i = 0; i < 5; i++) {
+			const struct pot_descr *pot = effect->pots + i;
+			if (!pot->label)
+				break;
+			pot_describe(pot, new_pot[i], 12*i);
+			sh1106_puts_6x8(0,12*i, (i == active) ? ">" : " ");
+		}
+	}
+
+	const struct pot_descr *pot = effect->pots + active;
+	const char *label = pot->label;
+	if (label) {
+		int val = new_pot[active];	// -100..100
+		int posY = 100;
+
+		pot_describe(pot, val, 90);
+
+		int x = 64 + 64*val/100;
+		int def_x = 64 + 64*pot->def_val/100;
+
+		sh1106_rectangle(0,posY,128,11,rect_clear);
+		sh1106_rectangle(def_x,posY,1,11,rect_lines);
+		sh1106_rectangle(x-3,posY,7,11,rect_lines);
+	}
+
+	sh1106_draw();
+}

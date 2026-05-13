@@ -1,0 +1,345 @@
+#include "pico/stdlib.h"
+#include "pico.h"
+
+#include "board.h"
+#include "tusb.h"
+
+#include "usb-audio.h"
+
+//--------------------------------------------------------------------+
+// Device Descriptors
+//--------------------------------------------------------------------+
+static tusb_desc_device_t const desc_device =
+{
+	.bLength		= sizeof(tusb_desc_device_t),
+	.bDescriptorType	= TUSB_DESC_DEVICE,
+	.bcdUSB			= 0x0200,
+
+	// Use Interface Association Descriptor (IAD) for Audio
+	.bDeviceClass		= TUSB_CLASS_MISC,
+	.bDeviceSubClass	= MISC_SUBCLASS_COMMON,
+	.bDeviceProtocol	= MISC_PROTOCOL_IAD,
+	.bMaxPacketSize0	= CFG_TUD_ENDPOINT0_SIZE,
+
+	.idVendor		= 0xFFFF,
+	.idProduct		= 0x0002, // Changed from HID 0x0001
+	.bcdDevice		= 0x0100,
+
+	.iManufacturer		= 0x01,
+	.iProduct		= 0x02,
+	.iSerialNumber		= 0x03,
+
+	.bNumConfigurations	= 0x01
+};
+
+uint8_t const * tud_descriptor_device_cb(void)
+{
+	return (uint8_t const *) &desc_device;
+}
+
+//--------------------------------------------------------------------+
+// Configuration Descriptor
+//--------------------------------------------------------------------+
+enum {
+	ITF_NUM_AUDIO_CONTROL = 0,
+	ITF_NUM_AUDIO_STREAMING,
+	ITF_NUM_TOTAL
+};
+
+#define TUD_AUDIO20_MIC_TWO_CH_DESC_LEN (TUD_AUDIO20_DESC_IAD_LEN	\
+		+ TUD_AUDIO20_DESC_STD_AC_LEN				\
+		+ TUD_AUDIO20_DESC_CS_AC_LEN				\
+		+ TUD_AUDIO20_DESC_CLK_SRC_LEN				\
+		+ TUD_AUDIO20_DESC_INPUT_TERM_LEN			\
+		+ TUD_AUDIO20_DESC_OUTPUT_TERM_LEN			\
+		+ TUD_AUDIO20_DESC_FEATURE_UNIT_LEN(2)			\
+		+ TUD_AUDIO20_DESC_STD_AS_LEN				\
+		+ TUD_AUDIO20_DESC_STD_AS_LEN				\
+		+ TUD_AUDIO20_DESC_CS_AS_INT_LEN			\
+		+ TUD_AUDIO20_DESC_TYPE_I_FORMAT_LEN			\
+		+ TUD_AUDIO20_DESC_STD_AS_ISO_EP_LEN			\
+		+ TUD_AUDIO20_DESC_CS_AS_ISO_EP_LEN)
+
+#define TUD_AUDIO20_MIC_TWO_CH_DESCRIPTOR(_itfnum, _stridx, _nBytesPerSample, _nBitsUsedPerSample, _epin, _epsize) \
+	/* Standard Interface Association Descriptor (IAD) */				\
+	TUD_AUDIO20_DESC_IAD(/*_firstitf*/ _itfnum, /*_nitfs*/ 0x02,			\
+		/*_stridx*/ 0x00),							\
+	/* Standard AC Interface Descriptor(4.7.1) */					\
+	TUD_AUDIO20_DESC_STD_AC(							\
+		/*_itfnum*/ _itfnum, 							\
+		/*_nEPs*/ 0x00,								\
+		/*_stridx*/ _stridx),							\
+	/* Class-Specific AC Interface Header Descriptor(4.7.2) */			\
+	TUD_AUDIO20_DESC_CS_AC(/*_bcdADC*/ 0x0200,					\
+		/*_category*/ AUDIO20_FUNC_MICROPHONE,					\
+		/*_totallen*/ TUD_AUDIO20_DESC_CLK_SRC_LEN				\
+				+TUD_AUDIO20_DESC_INPUT_TERM_LEN			\
+				+TUD_AUDIO20_DESC_OUTPUT_TERM_LEN			\
+				+TUD_AUDIO20_DESC_FEATURE_UNIT_LEN(2),			\
+		/*_ctrl*/ AUDIO20_CS_AS_INTERFACE_CTRL_LATENCY_POS),			\
+	/* Clock Source Descriptor(4.7.2.1) */						\
+	TUD_AUDIO20_DESC_CLK_SRC(/*_clkid*/ 0x04,					\
+		/*_attr*/ AUDIO20_CLOCK_SOURCE_ATT_INT_FIX_CLK,				\
+		/*_ctrl*/ (AUDIO20_CTRL_R << AUDIO20_CLOCK_SOURCE_CTRL_CLK_FRQ_POS),	\
+		/*_assocTerm*/ 0x01,  /*_stridx*/ 0x00),				\
+	/* Input Terminal Descriptor(4.7.2.4) */					\
+	TUD_AUDIO20_DESC_INPUT_TERM(/*_termid*/ 0x01,					\
+		/*_termtype*/ AUDIO_TERM_TYPE_IN_GENERIC_MIC,				\
+		/*_assocTerm*/ 0x03, /*_clkid*/ 0x04,					\
+		/*_nchannelslogical*/ 0x02,						\
+		/*_channelcfg*/ AUDIO20_CHANNEL_CONFIG_NON_PREDEFINED,			\
+		/*_idxchannelnames*/ 0x00,						\
+		/*_ctrl*/ AUDIO20_CTRL_R << AUDIO20_IN_TERM_CTRL_CONNECTOR_POS,		\
+		/*_stridx*/ 0x00),							\
+	/* Output Terminal Descriptor(4.7.2.5) */					\
+	TUD_AUDIO20_DESC_OUTPUT_TERM(/*_termid*/ 0x03,					\
+		/*_termtype*/ AUDIO_TERM_TYPE_USB_STREAMING,				\
+		/*_assocTerm*/ 0x01,							\
+		/*_srcid*/ 0x02,							\
+		/*_clkid*/ 0x04,							\
+		/*_ctrl*/ 0x0000,							\
+		/*_stridx*/ 0x00),							\
+	/* Feature Unit Descriptor(4.7.2.8) */						\
+	TUD_AUDIO20_DESC_FEATURE_UNIT(							\
+		/*_unitid*/ 0x02,							\
+		/*_srcid*/ 0x01,							\
+		/*_stridx*/ 0x00,							\
+		/*_ctrlch0master*/ AUDIO20_CTRL_RW << AUDIO20_FEATURE_UNIT_CTRL_MUTE_POS \
+			| AUDIO20_CTRL_RW << AUDIO20_FEATURE_UNIT_CTRL_VOLUME_POS,	\
+		/*_ctrlch1*/ AUDIO20_CTRL_RW << AUDIO20_FEATURE_UNIT_CTRL_MUTE_POS	\
+			| AUDIO20_CTRL_RW << AUDIO20_FEATURE_UNIT_CTRL_VOLUME_POS,	\
+		/*_ctrlch2*/ AUDIO20_CTRL_RW << AUDIO20_FEATURE_UNIT_CTRL_MUTE_POS	\
+			| AUDIO20_CTRL_RW << AUDIO20_FEATURE_UNIT_CTRL_VOLUME_POS),	\
+	/* Standard AS Interface Descriptor(4.9.1) */					\
+	/* Interface 1, Alternate 0 - default alternate setting with 0 bandwidth */	\
+	TUD_AUDIO20_DESC_STD_AS_INT(							\
+		/*_itfnum*/ (uint8_t)((_itfnum)+1),					\
+		/*_altset*/ 0x00,							\
+		/*_nEPs*/ 0x00,								\
+		/*_stridx*/ 0x00),							\
+	/* Standard AS Interface Descriptor(4.9.1) */					\
+	/* Interface 1, Alternate 1 - alternate interface for data streaming */		\
+	TUD_AUDIO20_DESC_STD_AS_INT(							\
+		/*_itfnum*/ (uint8_t)((_itfnum)+1),					\
+		/*_altset*/ 0x01,							\
+		/*_nEPs*/ 0x01,								\
+		/*_stridx*/ 0x00),							\
+	/* Class-Specific AS Interface Descriptor(4.9.2) */				\
+	TUD_AUDIO20_DESC_CS_AS_INT(							\
+		/*_termid*/ 0x03,							\
+		/*_ctrl*/ AUDIO20_CTRL_NONE,						\
+		/*_formattype*/ AUDIO20_FORMAT_TYPE_I,					\
+		/*_formats*/ AUDIO20_DATA_FORMAT_TYPE_I_PCM,				\
+		/*_nchannelsphysical*/ 0x02,						\
+		/*_channelcfg*/ AUDIO20_CHANNEL_CONFIG_NON_PREDEFINED,			\
+		/*_stridx*/ 0x00),							\
+	/* Type I Format Type Descriptor(2.3.1.6 - Audio Formats) */			\
+	TUD_AUDIO20_DESC_TYPE_I_FORMAT(_nBytesPerSample, _nBitsUsedPerSample),		\
+	/* Standard AS Isochronous Audio Data Endpoint Descriptor(4.10.1.1) */		\
+	TUD_AUDIO20_DESC_STD_AS_ISO_EP(							\
+		/*_ep*/ _epin,								\
+		/*_attr*/ (uint8_t) ((uint8_t)TUSB_XFER_ISOCHRONOUS			\
+			| (uint8_t) TUSB_ISO_EP_ATT_ASYNCHRONOUS			\
+			| (uint8_t) TUSB_ISO_EP_ATT_DATA),				\
+		/*_maxEPsize*/ _epsize,							\
+		/*_interval*/ 0x01),							\
+	/* Class-Specific AS Isochronous Audio Data Endpoint Descriptor(4.10.1.2) */	\
+	TUD_AUDIO20_DESC_CS_AS_ISO_EP(							\
+		/*_attr*/ AUDIO20_CS_AS_ISO_DATA_EP_ATT_NON_MAX_PACKETS_OK,		\
+		/*_ctrl*/ AUDIO20_CTRL_NONE,						\
+		/*_lockdelayunit*/ AUDIO20_CS_AS_ISO_DATA_EP_LOCK_DELAY_UNIT_UNDEFINED,	\
+		/*_lockdelay*/ 0x0000)
+
+#define CONFIG_TOTAL_LEN (TUD_CONFIG_DESC_LEN + CFG_TUD_AUDIO * TUD_AUDIO20_MIC_TWO_CH_DESC_LEN)
+
+#define EPNUM_AUDIO 0x81
+
+uint8_t const desc_configuration[] =
+{
+	// Config number, interface count, string index, total length, attribute, power in mA
+	TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 100),
+
+	// Interface number, string index, EP Out & EP In address, EP size
+	TUD_AUDIO20_MIC_TWO_CH_DESCRIPTOR(
+		/*_itfnum*/ ITF_NUM_AUDIO_CONTROL,
+		/*_stridx*/ 0,
+		/*_nBytesPerSample*/ CFG_TUD_AUDIO_FUNC_1_FORMAT_1_N_BYTES_PER_SAMPLE_TX,
+		/*_nBitsUsedPerSample*/ CFG_TUD_AUDIO_FUNC_1_FORMAT_1_RESOLUTION_TX,
+		/*_epin*/ EPNUM_AUDIO,
+		/*_epsize*/ CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX)
+};
+
+uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
+{
+	return desc_configuration;
+}
+
+//--------------------------------------------------------------------+
+// String Descriptors
+//--------------------------------------------------------------------+
+enum {
+	STRID_LANGID = 0,
+	STRID_MANUFACTURER,
+	STRID_PRODUCT,
+	STRID_SERIAL,
+	STRID_AUDIO_INTERFACE
+};
+
+#define DESC_STRING(len) (2*((len)+1)+(TUSB_DESC_STRING<<8))
+uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
+{
+	static const uint16_t reply[5][15] = {
+		{ DESC_STRING(1), 0x0409 }, // English
+		{ DESC_STRING(5), 'L', 'i', 'n', 'u', 's' },
+		{ DESC_STRING(11), 'L', 'i', 'n', 'u', 's', ' ', 'P', 'e', 'd', 'a', 'l' },
+		{ DESC_STRING(1), '0' },
+		{ DESC_STRING(4), 'U', 'A', 'C', '2' },
+	};
+	if (index >= 5)
+		return NULL;
+	return reply[index];
+}
+
+//--------------------------------------------------------------------+
+// Audio Callbacks
+//--------------------------------------------------------------------+
+
+int init_usb(void)
+{
+	tusb_rhport_init_t dev_init = {
+		.role = TUSB_ROLE_DEVICE,
+		.speed = TUSB_SPEED_AUTO
+	};
+	tusb_init(0, &dev_init);
+	return 0;
+}
+
+// Invoked when audio class specific set request received for an EP
+bool tud_audio_set_req_ep_cb(uint8_t rhport, tusb_control_request_t const * p_request, uint8_t *pBuff)
+{
+	(void) rhport; (void) p_request; (void) pBuff;
+	return false; // We don't support EP requests
+}
+
+// Invoked when audio class specific set request received for an interface
+bool tud_audio_set_req_itf_cb(uint8_t rhport, tusb_control_request_t const * p_request, uint8_t *pBuff)
+{
+	(void) rhport; (void) p_request; (void) pBuff;
+	return false;
+}
+
+static bool mute[3];
+static int16_t volume[3];
+static uint32_t sampFreq = 48000;
+static uint8_t clkValid = 1;
+
+// Invoked when audio class specific set request received for an entity
+bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * p_request, uint8_t *pBuff)
+{
+	(void) rhport;
+	uint8_t channelNum = TU_U16_LOW(p_request->wValue);
+	uint8_t ctrlSel = TU_U16_HIGH(p_request->wValue);
+	uint8_t entityID = TU_U16_HIGH(p_request->wIndex);
+
+	if (p_request->bRequest == AUDIO20_CS_REQ_CUR) {
+		if (entityID == 2) {
+			if (ctrlSel == AUDIO20_FU_CTRL_MUTE) {
+				mute[channelNum] = ((audio20_control_cur_1_t *) pBuff)->bCur;
+				return true;
+			} else if (ctrlSel == AUDIO20_FU_CTRL_VOLUME) {
+				volume[channelNum] = (int16_t) ((audio20_control_cur_2_t *) pBuff)->bCur;
+				return true;
+			}
+		} else if (entityID == 4) {
+			if (ctrlSel == AUDIO20_CS_CTRL_SAM_FREQ) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+// Invoked when audio class specific get request received for an EP
+bool tud_audio_get_req_ep_cb(uint8_t rhport, tusb_control_request_t const * p_request)
+{
+	(void) rhport; (void) p_request;
+	return false;
+}
+
+// Invoked when audio class specific get request received for an interface
+bool tud_audio_get_req_itf_cb(uint8_t rhport, tusb_control_request_t const * p_request)
+{
+	(void) rhport; (void) p_request;
+	return false;
+}
+
+// Invoked when audio class specific get request received for an entity
+bool tud_audio_get_req_entity_cb(uint8_t rhport, tusb_control_request_t const * p_request)
+{
+	uint8_t channelNum = TU_U16_LOW(p_request->wValue);
+	uint8_t ctrlSel = TU_U16_HIGH(p_request->wValue);
+	uint8_t entityID = TU_U16_HIGH(p_request->wIndex);
+
+	if (entityID == 1) { // Input Terminal
+		if (ctrlSel == AUDIO20_TE_CTRL_CONNECTOR) {
+			audio20_desc_channel_cluster_t ret;
+			ret.bNrChannels = 2;
+			ret.bmChannelConfig = (audio20_channel_config_t) 0;
+			ret.iChannelNames = 0;
+			return tud_audio_buffer_and_schedule_control_xfer(rhport, p_request, (void *) &ret, sizeof(ret));
+		}
+	} else if (entityID == 2) { // Feature Unit
+		if (ctrlSel == AUDIO20_FU_CTRL_MUTE) {
+			return tud_audio_buffer_and_schedule_control_xfer(rhport, p_request, &mute[channelNum], 1);
+		} else if (ctrlSel == AUDIO20_FU_CTRL_VOLUME) {
+			if (p_request->bRequest == AUDIO20_CS_REQ_CUR) {
+				return tud_audio_buffer_and_schedule_control_xfer(rhport, p_request, &volume[channelNum], sizeof(volume[channelNum]));
+			} else if (p_request->bRequest == AUDIO20_CS_REQ_RANGE) {
+				audio20_control_range_2_n_t(1) ret;
+				ret.wNumSubRanges = 1;
+				ret.subrange[0].bMin = -90 * 256;	// -90 dB (1/256 dB per step)
+				ret.subrange[0].bMax = 90 * 256;	// +90 dB
+				ret.subrange[0].bRes = 1 * 256;		// 1 dB steps
+				return tud_audio_buffer_and_schedule_control_xfer(rhport, p_request, (void *) &ret, sizeof(ret));
+			}
+		}
+	} else if (entityID == 4) { // Clock Source
+		if (ctrlSel == AUDIO20_CS_CTRL_SAM_FREQ) {
+			if (p_request->bRequest == AUDIO20_CS_REQ_CUR) {
+				return tud_audio_buffer_and_schedule_control_xfer(rhport, p_request, &sampFreq, sizeof(sampFreq));
+			} else if (p_request->bRequest == AUDIO20_CS_REQ_RANGE) {
+				audio20_control_range_4_n_t(1) sampleFreqRng;
+				sampleFreqRng.wNumSubRanges = 1;
+				sampleFreqRng.subrange[0].bMin = 48000;
+				sampleFreqRng.subrange[0].bMax = 48000;
+				sampleFreqRng.subrange[0].bRes = 0;
+				return tud_audio_buffer_and_schedule_control_xfer(rhport, p_request, (void *) &sampleFreqRng, sizeof(sampleFreqRng));
+			}
+		} else if (ctrlSel == AUDIO20_CS_CTRL_CLK_VALID) {
+			return tud_audio_buffer_and_schedule_control_xfer(rhport, p_request, &clkValid, sizeof(clkValid));
+		}
+	}
+
+	return false;
+}
+
+void usb_audio_task(void)
+{
+	tu_fifo_t *ff = tud_audio_get_ep_in_ff();
+	if (!ff) return;
+
+	unsigned bytes_available = tu_fifo_remaining(ff);
+	unsigned max_samples_to_write = bytes_available / (sizeof(int32_t) * 2);
+	if (max_samples_to_write == 0) return;
+
+	if (max_samples_to_write > 48) {
+		max_samples_to_write = 48; // Max per ms at 48kHz
+	}
+
+	int32_t buf[48 * 2];
+	unsigned nr = get_audio_samples(buf, max_samples_to_write);
+
+	if (nr > 0) {
+		tud_audio_write((uint8_t *)buf, nr * 2 * sizeof(int32_t));
+	}
+}

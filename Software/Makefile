@@ -1,0 +1,12 @@
+build:
+	cmake --build build --target blink
+
+flash:
+	picotool load build/blink.elf && picotool reboot
+
+prep:
+	git submodule init
+	git submodule update --recursive
+	cmake -DPICO_PLATFORM=rp2350 -S . -B build
+
+.PHONY: build
