@@ -1,0 +1,82 @@
+;
+; We use a PIO divisor of 15,000 which means that
+; we run the PIO block at 10kHz
+;
+
+.pio_version 1
+.program rotary
+.fifo rx
+.in 2 left
+.clock_div 15000
+
+;
+; This outputs the quadrature data, but waits for the
+; pins to change in order (ie A has to change, then B
+; has to change, then A again..) so that debouncing
+; is a non-issue (famous last words).
+;
+; There are probably much better ways to do this. I'd
+; like to use two jmp pins, but there's only one, so
+; that "test two pins with three jmp y--" is not pretty.
+start:
+	wait 0 pin 0
+.wrap_target
+A0:
+	wait 1 pin 0
+
+Achange:
+	in pins,2
+	push
+
+	jmp pin B1
+
+B0:
+	wait 1 pin 1
+	jmp Bchange
+B1:
+	wait 0 pin 1
+
+Bchange:
+	in pins,2
+	mov y, isr
+	push
+
+	jmp y--,not00
+	jmp A0
+
+; it was one of 01 10 11 before, but has been decremented
+; If it is zero now, A _was_ 1
+not00:
+	jmp y--, not0x
+not10:
+	wait 0 pin 0
+	jmp Achange
+
+not0x:
+	jmp y--, not10
+; It was 10
+.wrap
+
+% c-sdk {
+static inline void rotary_program_init(PIO pio, uint sm, uint offset, uint pin)
+{
+	pio_sm_config c = rotary_program_get_default_config(offset);
+
+	// Two input pins: A/B
+	pio_sm_set_consecutive_pindirs(pio, sm, pin, 2, false);
+
+	// Read 'A' with an IN instruction
+	sm_config_set_in_pins(&c, pin);
+
+	// Read 'B' with a jmp pin.
+	sm_config_set_jmp_pin(&c, pin+1);
+
+	// Load and run the program
+	pio_sm_init(pio, sm, offset, &c);
+	pio_sm_set_enabled(pio, sm, true);
+
+	pio_set_irq0_source_enabled(pio,
+		pio_get_rx_fifo_not_empty_interrupt_source(sm),
+		true);
+}
+%}

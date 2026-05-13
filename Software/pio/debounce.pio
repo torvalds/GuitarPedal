@@ -1,0 +1,74 @@
+;
+; We use a PIO divisor of 15,000 which means that
+; we run the PIO block at 10kHz
+;
+
+.pio_version 1
+.program debounce
+.clock_div 15000
+
+.wrap_target
+start:
+	wait 0 jmppin [10]
+
+	; Ok, we've seen the pin go low.
+	; Now we need to see a stable value
+newzero:
+	set x,31
+Xrepzero:
+	set y,31
+Yrepzero:
+	jmp pin newone [10]
+	jmp y-- Yrepzero
+	jmp x-- Xrepzero
+
+	; We've seen only zeroes for one second: report longpress
+	; x is all ones, push it
+	mov isr, x
+	push block
+
+	; Now wait for it to be released, and then quietly
+	; wait for a new one without sending a new key event
+quietzero:
+	wait 1 jmppin [10]
+quietnewone:
+	set x,31
+quietrepone:
+	jmp pin quietstillone [10]
+	jmp quietzero
+quietstillone:
+	jmp x-- quietrepone
+	jmp start
+
+newone:
+	set x,31
+repone:
+	jmp pin stillone [10]
+	jmp newzero
+stillone:
+	jmp x-- repone
+
+	; We've seen only ones for 30ms: report shortpress
+	; x is all ones, !x is zero
+	mov isr, !x
+	push block
+.wrap
+
+% c-sdk {
+static inline void debounce_program_init(PIO pio, uint sm, uint offset, uint pin)
+{
+	pio_sm_config c = debounce_program_get_default_config(offset);
+
+	// Initialize the pin to be the PIO jmp pin
+	pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, false);
+	sm_config_set_jmp_pin(&c, pin);
+
+	// Load and run the program
+	pio_sm_init(pio, sm, offset, &c);
+	pio_sm_set_enabled(pio, sm, true);
+
+	pio_set_irq0_source_enabled(pio,
+		pio_get_rx_fifo_not_empty_interrupt_source(sm),
+		true);
+}
+%}

@@ -1,0 +1,71 @@
+;
+; from the WS2812B datasheet:
+;
+; Send data at 800Kbps, 24 bits using NZR:
+;   0 = 0.4us high followed by 0.85us low
+;   1 = 0.8us high followed by 0.45us low
+; so that each bit takes 1.25us, and you have
+; a bit rate of 800kbps.
+;
+; Additionally, we need a reset sequence of more
+; than 50us low in between values (otherwise things
+; just get shifted to the "next" LED in sequence,
+; but we only have one single LED here).
+;
+; This is not quite that. This just divides the cycle
+; into ten, and does
+;	0 = 3 cycles high / 7 cycles low
+;	1 = 7 cycles high / 3 cycles low
+; which seems to work just fine.
+;
+; Then we just do use a PIO divisor of 18, giving a
+; bit rate of 150MHZ / 18 / 10 = 833kbps.
+;
+; So it's 0.36us instead of 0.4 / 0.45, and 0.84us
+; instead of 0.8 / 0.85.
+;
+; Yes, we could be closer to the real values, but
+; whatever. Using a fractional clock divider would
+; just make it jitter, and I'm too lazy to test
+; better whole-number divisor values right now.
+;
+; For when I'm less lazy: 150MHz / 188 gives 798kbps
+; and 188 is 4*47. So a PIO clock divisor of 4 and
+; using 47 steps in the state machine might be close:
+;
+;   15+32 steps = 0.4 + 0.8533 us
+;   30+17 steps = 0.8 + 0.45333 us
+;
+; which looks pretty close. Assuming I did my quick
+; math even remotely right.
+;
+
+.program ws2812
+.side_set 1
+.clock_div 18
+.out 1 left auto 24	// Use auto-pull to avoid having to count bits
+
+.wrap_target
+loop:
+	out x,1		side 0 [2]	; 3 cycles of low at the end for everything
+	jmp !x low	side 1 [2]	; 3 cycles high
+	jmp loop	side 1 [3]	; another 4 cycles high
+low:	nop		side 0 [3]	;  ... or 4 cycles low
+.wrap
+
+% c-sdk {
+static inline void ws2812_program_init(PIO pio, uint sm, uint offset, uint pin)
+{
+	// Initialize the pin to PIO output
+	pio_gpio_init(pio, pin);
+	pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
+
+	// Output pin value using sideset
+	pio_sm_config c = ws2812_program_get_default_config(offset);
+	sm_config_set_sideset_pins(&c, pin);
+
+	// Make it happen
+	pio_sm_init(pio, sm, offset, &c);
+	pio_sm_set_enabled(pio, sm, true);
+}
+%}
