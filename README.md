@@ -16,6 +16,11 @@ Anyway, with the update to have a screen and proper rotary encores, the
 thing can now have multiple effects and a sanish UI to them.  Except I'm
 not exactly known for my mad UI designing skillz.  So...
 
+### Images
+
+![Front](Images/front.jpg)
+![Inside](Images/inside.jpg)
+
 ### Basic UI
 
 The pedal has a 128x128 monochrome OLED screen and two rotary encoders
@@ -62,7 +67,7 @@ mode.
 If the pedal is powered on, but not connected over USB (so either using
 the 9V guitar pedal power, or using USB from just a charger), the reset
 sequence will reset all the effects - turn them off, and reset them to
-default values (but see below about the "save" feature)
+default values.
 
 ### Audio effects
 
