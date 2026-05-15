@@ -8,6 +8,7 @@ struct pot_descr {
 	pot_describe_fn describe;
 	pot_convert_fn convert;
 	signed char def_val;
+	const char *const *enum_names;
 };
 
 static inline const char *desc_Hz(signed char pot) { return "Hz"; }

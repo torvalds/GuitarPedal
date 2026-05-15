@@ -21,6 +21,20 @@ static void move_pot(struct effect *effect, int dir)
 	effect->active_pot = new_active;
 }
 
+struct pot_range { int min, max; };
+
+static const struct pot_range get_pot_range(const struct pot_descr *pot)
+{
+	int min = -100, max = 100;
+
+	if (pot->enum_names) {
+		min = 0;
+		for (max = 0; pot->enum_names[max+1]; max++)
+			/* nothing */;
+	}
+	return (struct pot_range) { min, max };
+}
+
 // Note that the "__atomic" part isn't actually about SMP, just the
 // interrupts
 //
@@ -28,7 +42,17 @@ static void move_pot(struct effect *effect, int dir)
 // to accumulate - but cleared if something else happens.
 static bool read_pots(struct effect *effect, signed char *pots)
 {
-	int val = __atomic_exchange_n(&rotary_value, 0, __ATOMIC_RELAXED);
+	const struct pot_descr *pot = effect->pots + effect->active_pot;
+	const struct pot_range range = get_pot_range(pot);
+
+	// For small ranges, don't make the rotary so twitchy
+	int ignore_low_bits = 0;
+	if (range.max - range.min < 10)
+		ignore_low_bits = 2;
+
+	int mask = (1 << ignore_low_bits)-1;
+	int val = __atomic_fetch_and(&rotary_value, mask, __ATOMIC_RELAXED);
+	val >>= ignore_low_bits;
 
 	if (!val) {
 		// Ignore low two bits of rotary select
@@ -55,10 +79,10 @@ static bool read_pots(struct effect *effect, signed char *pots)
 	}
 
 	val += pots[effect->active_pot];
-	if (val < -100)
-		val = -100;
-	else if (val > 100)
-		val = 100;
+	if (val < range.min)
+		val = range.min;
+	else if (val > range.max)
+		val = range.max;
 
 	pots[effect->active_pot] = val;
 
@@ -119,6 +143,46 @@ static void list_effects(struct effect *active)
 	}
 }
 
+static void list_enums(const struct pot_descr *pot, int active_val, int y)
+{
+	int x = 3;
+	int pos = 0, mid = 0;
+	int count = 0;
+
+	sh1106_clear(0,y,128,11);
+
+	while (pot->enum_names[count]) {
+		const char *name = pot->enum_names[count];
+		int width = strlen(name)*6 + 6;
+		if (count == active_val)
+			mid = pos + width / 2;
+		pos += width;
+		count++;
+	}
+
+	if (pos < 128) {
+		x = (128 - pos) / 2;
+	} else if (mid > 64) {
+		int diff = mid - 64;
+		if (pos - diff < 128)
+			diff = pos - 128;
+		x -= diff;
+	}
+
+	for (int i = 0; i < count; i++) {
+		const char *name = pot->enum_names[i];
+		int width = strlen(name)*6;
+
+		sh1106_puts_6x8(x,y+1,name);
+		if (i == active_val) {
+			static const unsigned int zero[32] = { 0, };
+			static const unsigned int bits[32] = { [0 ... 31] = 0x3ff };
+			sh1106_sprite(x-1, y, width+2, zero, bits);
+		}
+		x += width+6;
+	}
+}
+
 static void pot_describe(const struct pot_descr *pot, int val, int posY)
 {
 	// 8 characters for label
@@ -135,26 +199,37 @@ static void pot_describe(const struct pot_descr *pot, int val, int posY)
 		memcpy(end, unit, len);
 	}
 
-	if (pot->convert) {
-		float fval = pot->convert(val);
-		if (fabsf(fval) < 100) {
-			fval *= 10;
-			decimals = 1;
+	if (pot->enum_names) {
+		int e_val = val;
+		if (e_val < 0) e_val = 0;
+		const char *name = pot->enum_names[e_val];
+		if (name) {
+			int len = strlen(name);
+			if (len > 11) len = 11;
+			memcpy(desc + 10, name, len);
+		}
+	} else {
+		if (pot->convert) {
+			float fval = pot->convert(val);
 			if (fabsf(fval) < 100) {
 				fval *= 10;
-				decimals = 2;
+				decimals = 1;
+				if (fabsf(fval) < 100) {
+					fval *= 10;
+					decimals = 2;
+				}
+			}
+			val = (int) rintf(fval);
+			if (decimals > 1 && !(val % 100)) {
+				end--;
+				decimals--;
+				val /= 10;
 			}
 		}
-		val = (int) rintf(fval);
-		if (decimals > 1 && !(val % 100)) {
-			end--;
-			decimals--;
-			val /= 10;
-		}
+		end = to_ascii(' ', abs(val), end, 1, decimals);
+		if (val < 0)
+			*--end = '-';
 	}
-	end = to_ascii(' ', abs(val), end, 1, decimals);
-	if (val < 0)
-		*--end = '-';
 
 	const char *label = pot->label;
 	int len = strlen(label);
@@ -280,29 +355,48 @@ static void update_ui(uint32_t ms_since_boot)
 	if (effect->graph) {
 		effect->graph(effect, active, new_pot);
 	} else {
+		int total_pots = 0;
+		while (total_pots < 10 && effect->pots[total_pots].label)
+			total_pots++;
+
+		int start_pot = active - 2;
+		if (start_pot + 5 > total_pots)
+			start_pot = total_pots - 5;
+		if (start_pot < 0)
+			start_pot = 0;
+
 		for (int i = 0; i < 5; i++) {
-			const struct pot_descr *pot = effect->pots + i;
-			if (!pot->label)
+			int pot_idx = start_pot + i;
+			if (pot_idx >= total_pots)
 				break;
-			pot_describe(pot, new_pot[i], 12*i);
-			sh1106_puts_6x8(0,12*i, (i == active) ? ">" : " ");
+			const struct pot_descr *pot = effect->pots + pot_idx;
+			pot_describe(pot, new_pot[pot_idx], 12*i);
+			sh1106_puts_6x8(0,12*i, (pot_idx == active) ? ">" : " ");
 		}
 	}
 
 	const struct pot_descr *pot = effect->pots + active;
 	const char *label = pot->label;
 	if (label) {
-		int val = new_pot[active];	// -100..100
+		int val = new_pot[active];
 		int posY = 100;
 
 		pot_describe(pot, val, 90);
 
-		int x = 64 + 64*val/100;
-		int def_x = 64 + 64*pot->def_val/100;
+		if (pot->enum_names) {
+			list_enums(pot, val, posY);
+		} else {
+			struct pot_range range = get_pot_range(pot);
 
-		sh1106_rectangle(0,posY,128,11,rect_clear);
-		sh1106_rectangle(def_x,posY,1,11,rect_lines);
-		sh1106_rectangle(x-3,posY,7,11,rect_lines);
+			int half = (range.max - range.min)/2;
+
+			int x = 64 + 64 * (val - range.min - half) / half;
+			int def_x = 64 + 64 * (pot->def_val - range.min - half) / half;
+
+			sh1106_rectangle(0,posY,128,11,rect_clear);
+			sh1106_rectangle(def_x,posY,1,11,rect_lines);
+			sh1106_rectangle(x-3,posY,7,11,rect_lines);
+		}
 	}
 
 	sh1106_draw();
