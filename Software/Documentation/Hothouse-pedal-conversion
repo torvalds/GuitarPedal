@@ -1,0 +1,313 @@
+Some rough conversion guidelines from the open-source hothouse pedals
+that use the C++ abstractions from the daisy seed library to the simple
+direct forms that this pedal model uses:
+
+ - The Hothouse pedal has six analog potentiometers with floating point
+   values in the range [0,1[ and three toggle switches with the states
+   TOGGLESWITCH_UP, TOGGLESWITCH_MIDDLE and TOGGLESWITCH_DOWN.
+
+   This pedal project has a maximum of ten digital "pot" values. For
+   continuous parameters, these use the range [-100,+100] and are often
+   converted using "linear_pot()" or "POT_TO_FLOAT()" into a specific
+   floating point range.
+
+   For toggle switches, the UI supports discrete "enumerations". By
+   providing a NULL-terminated array of string pointers to the
+   `enum_names` field in `struct pot_descr`, the UI will automatically
+   restrict the pot value to the valid range (0, 1, 2, ...) and display
+   the selected option horizontally instead of drawing a slider.
+
+   Furthermore, because this project has a screen UI, it is highly
+   encouraged to provide real-world units for continuous pots instead of
+   just 0 to 1 ranges. The `convert` and `describe` functions in the pot
+   descriptor can use the current effect state (such as the value of an
+   enumeration toggle) to calculate and display the true value (e.g.
+   showing the actual delay time in "ms", or cutoff in "Hz").
+
+ - The Hothouse pedals are C++ code with complex header structures
+   brought in from typically the Daisy Seed open-source DSP library.
+
+   This pedal project instead relies on self-contained C 'headers' that
+   contain all the code itself, somewhat similar to so-called "header
+   libraries". So the effects just get included by the main program and
+   used in one single compilation unit.
+
+   That is not to say that there aren't libraries, but they are other
+   headers, particularly 'audio/util.h' for some core math helpers,
+   'audio/biquad.h' for second-order filters, and 'audio/lfo.h' for some
+   simple low-frequency oscillators. But the effects don't need to
+   include those headers, they are pre-included.
+
+ - The daisy seed library buffers up samples and does stereo signals, so
+   the Hothouse pedal sources use a pattern line
+
+	void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out,
+		   size_t size) {
+	  ...
+	  for (size_t i = 0; i < size; ++i) {
+	    const float dry_in = in[0][i];
+		....
+	    out[0][i] = out[1][i] = preamp_out * dry_gain + wet * wet_gain;
+	  }
+	}
+
+   for the audio effect, while this guitar pedal just does mono, and one
+   sample at a time:
+
+	static inline float effect_step(float in)
+	{
+		float out = ...
+		...
+		return out;
+	}
+
+   instead.
+
+ - There are a lot more abstractions fairly deep in the libraries, so
+   Hothouse pedal source code does things like
+
+	record_lpf.SetCutoff(active->record_fc, sample_rate);
+
+	...
+
+	float record_signal =
+	    record_lpf.Process(preamp_out * s_record_level.current);
+
+   where 'record_lpf' is an object (of type OnePoleLpf) that contains
+   the coefficients for the low-pass filter.
+
+   In contrast, this pedal project uses biquad filters instead, and
+   passes the state as explicit arguments where the biquad coefficients
+   encode the filter, so the equivalent would be
+
+	biquad_lpf(&record_biquad, record_fc, 0.707);
+
+	...
+
+	float record_signal = biquad_step(&record_biquad,
+		preamp_out * s_record_level.current);
+
+   instead. The 0.707 being the Q value for a single-pole filter, and
+   the sample rate is just implicit.
+
+ - The hothouse pedals use the full math library, while this pedal
+   project uses a few specialized functions:
+
+     fastsincos():
+
+	returns both sine and cosine values as a 'struct sincos', and
+	takes a 'phase' argument that is strictly positive.
+
+	So 'sinf(x)' could be written as 'fastsincos(x*2*pi).sin'
+
+     pow2() and log2f():
+
+	These are in powers-of-2, not natural or powers-of-10. There are
+	a couple of related helper macros, like
+
+		#define log10f(x) (log2f(x)/LOG2_10)
+
+		static inline float time_constant(float ms)
+		{
+			return pow2(-1.0 / SAMPLES_PER_MSEC / ms);
+		}
+
+		static inline float db_to_level(float db)
+		{
+			return pow2(LOG2_10 / 20.0f * db);
+		}
+
+	for common special cases.
+
+     u32_to_fraction() and fraction_to_u32():
+
+	These take a 32-bit integer and turn it into a fraction between
+	[0, 1[ (and the reverse). Typically used for the phase calculation
+	for sine/cosine, where the phase calculations are done in 32-bit
+	integers which is not only fast and simple but also gets us the
+	natural wrapping behavior we want.
+
+	For example, the Hothouse EchoKing effect has some code like this:
+
+		// Phase accumulator advance. Subtracting one full period (rather than fmodf
+		// or a zero-reset) keeps the input to sinf() in a well-conditioned range and
+		// avoids discontinuities at the wrap point.
+		static inline void AdvancePhase(float* phase, float inc) {
+		  *phase += inc;
+		  if (*phase >= kTwoPi) *phase -= kTwoPi;
+		}
+
+	but in this pedal project the way you'd do this would be to make
+	the phase and increment be 32-bit unsigned integers, and just
+	rely on the wrapping behavior of the integer math, with the
+	whole phase being that 0..4294967295 range turned into [-0, 1[.
+
+     rintf(), sqrtf(), fabsf() and floorf():
+
+	These - along with the usual addition, subtraction,
+	multiplication and division - are handled by the hardware and
+	are ok to use as-is.
+
+   Any other complex math should be approximated (using EchoKing as an
+   example again uses 'tanhf()': probably best done as a helper inline
+   function. In that case, do something like
+
+	static inline float tanhf(float x)
+	{
+		return limit_value(x);
+	}
+
+   as a first approximation. That particular pattern already exists as
+   'limit_value()', but it's probably better to make it explicit that
+   it's an approximation for tanhf(), in case we want to make it more
+   close to that in the future.
+
+ - WhiteNoise generators: The hothouse pedals may use 'WhiteNoise'
+   objects from the Daisy library.
+
+   This pedal project doesn't have a standard random number generator.
+   For things like tape hiss, a simple Linear Congruential Generator
+   (LCG) is fast and sufficient:
+
+	static uint32_t noise_state = 1;
+	static inline float get_white_noise()
+	{
+		noise_state = noise_state * 1664525 + 1013904223;
+		// return float from -1.0 to 1.0
+		return (float)noise_state / 2147483648.0f - 1.0f;
+	}
+
+
+ - The hothouse pedal code tends to use potentiometer objects:
+
+	Parameter p_blend;
+	...
+	p_blend.Init(hw.knobs[Hothouse::KNOB_1], 0.0f, 1.0f, Parameter::LINEAR);
+
+   whereas this pedal project uses C structures as "objects" for the
+   effect description and the effect itself, but uses a very explicit
+   pot model, typically something like
+
+	struct {
+		float mix;
+		...
+	} boost;
+	...
+	static float boost_mix(signed char pot) { return linear_pot(pot, 0, 1); }
+	...
+	void boost_init(signed char pot[10])
+	{
+		...
+	        boost.mix = boost_mix(pot[4]);
+	}
+
+	static float boost_step(float in)
+	{
+		...
+		return linear(boost.mix, in, out);
+	}
+
+   without that "Parameter" abstraction model.
+
+ - Similarly to the 'Parameter' abstraction model, the Hothouse pedal
+   effects use things like a 'smoothing' abstraction, and the
+   potentiometer value is then smoothed at the sample rate frequency
+   using a model like:
+
+	Smoothed s_blend{0.5f, 0.5f, 0.0008f};
+	...
+	// --- Knob targets ---
+	s_blend.target = p_blend.Process();
+	...
+	s_blend.Tick();
+	...
+	float blend = preamp_only ? 0.0f : s_blend.current;
+
+   in order to avoid strange audio effects when moving the
+   potentiometers (or simply because the potentiometers are analog and
+   the values aren't stable)
+
+   In this pedal project, that smoothing is typically not done and if
+   there's a clicking from the rotation of the rotary switches changing
+   the value, it is acceptable.
+
+   I say "typically", because the delay values can be very noticeable
+   and annoying when they change in big steps, so sometimes there's very
+   explicit smoothing. See audio/echo.h and the 'target_delay' use as an
+   example of this, where we set 'target_delay' at effect init time, and
+   at the sample frequency we smoothly change 'echo.delay' towards that
+   number:
+
+	struct {
+		float delay, target_delay;
+		..
+	} echo;
+	...
+	echo.target_delay = echo_pot0(pot[0]) * SAMPLES_PER_MSEC;
+	...
+	echo.delay = linear(0.001, echo.delay, echo.target_delay);
+
+ - the Hothouse pedal is designed to run one effect at a time, so it has
+   a pattern of
+
+	int main() {
+	  hw.Init();
+	  ...
+
+	  while (true) {
+	    // LED_1 lights when a non-standard mode is active (SOS or Preamp Only).
+	    led_mode.Set((sos_mode || preamp_only) ? 1.0f : 0.0f);
+	    led_bypass.Set(bypass ? 0.0f : 1.0f);
+	    led_mode.Update();
+	    led_bypass.Update();
+
+	    System::Delay(10);
+	    hw.CheckResetToBootloader();
+	  }
+
+	  return 0;
+	}
+
+   but in this pedal project, that is all done outside of the effects.
+   But the effects can set their LED to shine brighter as a status
+   signal like that "non-standard mode" thing, by setting the 'intense'
+   flag in the effect structure. For example, the boost effect will do
+
+        boost_effect.intense = 1;
+
+   when it is clipping the signal.
+
+   The effect initialization is done with the 'init' function that gets
+   called when the code starts or whenever pot values change, and that
+   init code is supposed to take the pot values and turn them into
+   whatever form is efficient to then use at the sample stepping time.
+
+   See 'audio/boost.h' for a simple example of this pattern.
+
+ - Finally: try to transfer over comments that are still relevant after
+   the code conversion.
+
+   So comments about issues specific to the Daisy Seed model or the
+   extra C++ object abstraction layers should just be dropped as
+   irrelevant after the conversion, but comments about the workings of
+   the effect should be converted over (possibly with updates when the
+   implementation changed)
+
+   One special case of comment is the README.md that most of the effects
+   have. The Hothouse source code is structured with each effect in its
+   own subdirectory, while this guiotar pedal project has a "one header
+   file per effect" model.
+
+   So transferring the salient points of the README.md file to be a
+   large comment at the top of the file is probably a good idea, at
+   least within reason.
+
+   And when some particular piece of code changes in big and noticeable
+   ways due to the conversion, that itself would merit a comment with a
+   note about why something is very different in the converted
+   implementation.
+
+   Note that the straightforward direct translations mostly documented
+   above are not worth elaborating on, but when the conversion adds a
+   new feature (like the "add real world units" to the output), that
+   kind of semantic new feature may be worth noting.
