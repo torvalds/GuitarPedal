@@ -6,7 +6,7 @@ horrid analog potentiometers.
 
 There's a 'Hardware' directory with the kicad files.
 
-There's a 'Software' directory that contains the software to make it do
+There's a 'Software' directory that contains the firmware to make it do
 something.
 
 And there's a 'Documentation' directory, which is a very optimistic
@@ -16,12 +16,75 @@ Anyway, with the update to have a screen and proper rotary encores, the
 thing can now have multiple effects and a sane-ish UI to them.  Except
 I'm not exactly known for my mad UI designing skillz.  So...
 
+## Firmware
+
+I've only ever built the firmware on Linux, but it *should* be perfectly
+possible to build on MacOS or Windows too if you just figure out the
+platform requirements. The project depends on the `pico-sdk` and
+`tinyusb` libraries, and has submodules for both, so they get built
+automatically, but the build tools your platform has to provide.
+
+Regardless of platform, you'll need the basics:
+ - git
+ - make
+ - python3
+ - cmake
+
+and a 32-bit arm cross-build environment.  On Linux, that would be
+something like
+ - arm-none-eabi-binutils-cs
+ - arm-none-eabi-gcc-cs
+ - arm-none-eabi-newlib
+
+and if you have all the requirements, doing
+```
+	git clone https://github.com/torvalds/GuitarPedal.git
+	cd GuitarPedal
+	cd Software
+	make prep
+	make
+```
+should get the build going, and you should find the resulting
+`blink.uf2` file in the `build/` subdirectory.  You can just write that
+file to the USB filesystem after you've set the pedal into
+programming mode (see below).
+
+If you have installed picotool with USB support (the pico-sdk build only
+builds a cut-down version without it), you can also just do ``make
+flash`` to flash the image that way.
+
+## Hardware
+
+The kicad design files (and some supporting infrastructure, like the 3D
+printed insert and the enclosure drill rules) are in the ``Hardware``
+subdirectory.
+
+The board files are perhaps somewhat strange, in that there are two
+modular boards for the "core" hardware: the RP2354 microcontroller
+(`Hardware/rp2354`) and the TI TAC5112 codec (`Hardware/codec`)
+respectively. The reason for that is that I wanted to have those
+available as general building blocks, and then try out a lot of
+variations of the simpler boards that hold switches and other IO.
+
+Then there are boards for the audio and 9V DC power jacks
+(`Hardware/audio-jacks`) with a connector for the codec board, and for
+the pedal IO (i2c connector, USB-C programming port, rotary encoders)
+with the connector for the rp2354 microcontroller board.
+
+This modular design is purely so that I could try out different form
+factors, and if you know what you want you should just put the TAC5112
+directly on the audio jack board and the rp2354 on the IO board. The
+modular setup makes for more complicated boards (the core boards have
+components on both sides due to the connector, for example), but allowed
+me to separate out the more complex and slightly more expensive boards
+from the "let's try this layout" boards.
+
 ### Images
 
 ![Front](Images/front.jpg)
 ![Inside](Images/inside.jpg)
 
-### Basic UI
+## Basic UI
 
 The pedal has a 128x128 monochrome OLED screen and two rotary encoders
 you can turn, and both of them also have switches so you can press down
@@ -69,7 +132,7 @@ the 9V guitar pedal power, or using USB from just a charger), the reset
 sequence will reset all the effects - turn them off, and reset them to
 default values.
 
-### Audio effects
+## Audio effects
 
 The current effects are:
 
