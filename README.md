@@ -62,14 +62,23 @@ subdirectory.
 The board files are perhaps somewhat strange, in that there are two
 modular boards for the "core" hardware: the RP2354 microcontroller
 (`Hardware/rp2354`) and the TI TAC5112 codec (`Hardware/codec`)
-respectively. The reason for that is that I wanted to have those
-available as general building blocks, and then try out a lot of
-variations of the simpler boards that hold switches and other IO.
+respectively.
 
 Then there are boards for the audio and 9V DC power jacks
-(`Hardware/audio-jacks`) with a connector for the codec board, and for
-the pedal IO (i2c connector, USB-C programming port, rotary encoders)
-with the connector for the rp2354 microcontroller board.
+(`Hardware/audio-jacks`) with a connector for the codec board, and a
+main board (`Hardware/pedal-board`) for the pedal IO (i2c connector for
+the screen, USB-C programming port, rotary encoders, pin header for
+stomp switches) which then has the connector for the rp2354
+microcontroller board.
+
+I'm using the nice HiRose BM28 series connectors on the modular boards.
+They are absolutely tiny, which makes for a great board footprint but
+admittedly also makes for a slightly more complicated board due to the
+tiny 0.35mm pitch.  I'm not a fan of the traditional pin headers simply
+because they make it so hard to do compact form factors.
+
+The inter-board connector is a 12P 0.5mm FFC cable that carries power
+and data lines (i2c for control, i2s for audio).
 
 This modular design is purely so that I could try out different form
 factors, and if you know what you want you should just put the TAC5112
