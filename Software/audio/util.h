@@ -188,3 +188,17 @@ static inline float db_to_level(float db)
 {
 	return pow2(LOG2_10 / 20.0f * db);
 }
+
+// [𝟓/4]-Padé approximant for tanh
+static inline float tanhf(float x)
+{
+	float x2 = x*x;
+	float n = x * (x2 * (x2 + 105) + 945);
+	float d = x2 * (15 * x2 + 420) + 945;
+
+	// Limit result to ±1 (d is always positive: even exponents)
+	float abs_n = fabsf(n);
+	if (d < abs_n) d = abs_n;
+
+	return n / d;
+}

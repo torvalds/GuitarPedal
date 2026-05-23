@@ -119,6 +119,11 @@ direct forms that this pedal model uses:
 
 	for common special cases.
 
+     tanhf():
+
+	[5/4]-Padé approximant, accurate to within 22 bits in [-1,1] and
+	9.5 bits globally.
+
      u32_to_fraction() and fraction_to_u32():
 
 	These take a 32-bit integer and turn it into a fraction between
@@ -148,19 +153,7 @@ direct forms that this pedal model uses:
 	multiplication and division - are handled by the hardware and
 	are ok to use as-is.
 
-   Any other complex math should be approximated (using EchoKing as an
-   example again uses 'tanhf()': probably best done as a helper inline
-   function. In that case, do something like
-
-	static inline float tanhf(float x)
-	{
-		return limit_value(x);
-	}
-
-   as a first approximation. That particular pattern already exists as
-   'limit_value()', but it's probably better to make it explicit that
-   it's an approximation for tanhf(), in case we want to make it more
-   close to that in the future.
+   Any other complex math should be approximated appropriately.
 
  - WhiteNoise generators: The hothouse pedals may use 'WhiteNoise'
    objects from the Daisy library.
