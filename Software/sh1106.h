@@ -20,8 +20,8 @@
 #define SH1107 1
 
 // Direction of display scanning
-#define SH1106_LEFTRIGHT	0	// 0 - horizongal scan direction
-#define SH1106_UPDOWN		0	// 0 - vertical scan direction
+#define SH1106_LEFTRIGHT	1	// 0 - horizongal scan direction
+#define SH1106_UPDOWN		1	// 0 - vertical scan direction
 
 // The SH1106 controller does 132 columns, might be offset
 // One of the random differences to the SH1306
