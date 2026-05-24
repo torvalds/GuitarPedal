@@ -29,7 +29,7 @@ static inline float flanger_step(float in)
 	float out;
 
 	out = sample_array_read(d, &flanger.idx, flanger.samples);
-	sample_array_write(limit_value(in + out * flanger.feedback), &flanger.idx, flanger.samples);
+	sample_array_write(tanhf(in + out * flanger.feedback), &flanger.idx, flanger.samples);
 
 	return (in + out) / 2;
 }

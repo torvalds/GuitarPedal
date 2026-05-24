@@ -44,14 +44,6 @@ float floorf(float);
 #define linear_pot(pot, a, b)	linear(POT_TO_FLOAT(pot), a, b)
 #define frequency_pot(pot, a, b) cubic(POT_TO_FLOAT(pot), a, b)
 
-//
-// Smoothly limit x to -1 .. 1
-//
-static inline float limit_value(float x)
-{
-	return x / (1 + fabsf(x));
-}
-
 static inline float u32_to_fraction(u32 val)
 {
 	return (1.0/TWO_POW_32) * val;

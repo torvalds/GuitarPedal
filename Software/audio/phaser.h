@@ -34,7 +34,7 @@ float phaser_step(float in)
 	out = biquad_step_df1(&phaser.coeff, out, phaser.s1, phaser.s2);
 	out = biquad_step_df1(&phaser.coeff, out, phaser.s2, phaser.s3);
 
-	return limit_value(in + out);
+	return tanhf(in + out);
 }
 
 static struct effect phaser_effect = {
