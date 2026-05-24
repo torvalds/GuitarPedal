@@ -1,5 +1,7 @@
 #include "lfo.h"
 
+float get_usb_audio_input(void);
+
 typedef float (*pot_convert_fn)(signed char);
 typedef const char *(*pot_describe_fn)(signed char);
 
@@ -134,12 +136,19 @@ static inline void single_sample(float mix)
 
 	int32_t sample = pio_sm_get_blocking(pio, PIO0_I2S_RX_SM) << 8;
 	float in = process_input(sample);
+	float usb_in = get_usb_audio_input();
+
+	if (usb.input == USB_IN_PRE_FX)
+		in += usb_in;
 
 	float out = in;
 	for (int i = 0; i < ARRAY_SIZE(effects); i++)
 		out = do_effect_step(effects[i], out);
 
 	float val = linear(mix, in, out);
+
+	if (usb.input == USB_IN_MIX)
+		val += usb_in;
 
 	sample = process_output(val, sample);
 
