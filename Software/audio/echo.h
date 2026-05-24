@@ -30,25 +30,6 @@ static inline float echo_get_white_noise(void)
 }
 
 //
-// tanhf() approximation. Saturation happens in the Echoplex in places where
-// curve shape matters: the preamp waveshapers and the feedback write-back.
-//
-// limit_value() from util.h is too aggressive and imprecise here. Use a
-// saturation-tuned Pade [5/4] approximation of tanh, clamped at the input.
-// More context at the bottom of the file, but the basic gist is that
-// limit_value has no linear region and adds harmonic distortion too early.
-//
-static inline float echo_tanhf(float x)
-{
-	if (x >  3.0f) x =  3.0f;
-	if (x < -3.0f) x = -3.0f;
-	float x2 = x * x;
-	float x4 = x2 * x2;
-	return x * (945.0f + 120.0f*x2 + 2.0f*x4)
-	     / (945.0f + 435.0f*x2 + 21.0f*x4);
-}
-
-//
 // One-pole low-pass: y[n] = (1-a)*x[n] + a*y[n-1], 6 dB/oct rolloff.
 //
 // The Echoplex tone is shaped by *gentle* 1st-order rolloffs at the record,
@@ -251,10 +232,10 @@ static inline float echo_step(float in)
 	if (model.preamp_asymmetry > 0.05f) {
 		// Tube: asymmetric waveshaper generates even-order harmonics (biased tanhf).
 		float arg = in * model.preamp_drive + model.preamp_asymmetry;
-		preamp_out = echo_tanhf(arg) - echo_tanhf(model.preamp_asymmetry);
+		preamp_out = tanhf(arg) - tanhf(model.preamp_asymmetry);
 	} else {
 		// Solid state: symmetric odd-harmonic clipping (FET/transistor character).
-		preamp_out = echo_tanhf(in * model.preamp_drive);
+		preamp_out = tanhf(in * model.preamp_drive);
 	}
 
 	// 2. Wow and Flutter
@@ -311,9 +292,9 @@ static inline float echo_step(float in)
 	// accumulates indefinitely). The SUSTAIN knob is effectively bypassed in
 	// SOS; RECORD LEVEL controls how aggressively new signal layers over old.
 	float feedback_amt = echo.sos_mode ? 1.0f : echo.sustain * model.max_feedback;
-	// echo_tanhf() (rather than limit_value) keeps the loop bounded without
+	// tanhf() (rather than limit_value) keeps the loop bounded without
 	// distorting at sub-saturation levels; see comment at bottom of file.
-	sample_array_write(echo_tanhf(record_signal + fb * feedback_amt), &echo.idx, echo.array);
+	sample_array_write(tanhf(record_signal + fb * feedback_amt), &echo.idx, echo.array);
 
 	// 7. Tape hiss
 	// Low-level filtered white noise. Scaling by noise_floor keeps it inaudible 
@@ -354,7 +335,7 @@ static struct effect echo_effect = {
 };
 
 //
-// echo_tanhf and echo_onepole helpers vs. limit_value and biquad_lpf.
+// tanhf and echo_onepole helpers vs. limit_value and biquad_lpf.
 //
 // Two stages of the Echoplex signal chain are sensitive to the *shape*
 // of the primitive that models them, not just their endpoints. The
@@ -378,22 +359,22 @@ static struct effect echo_effect = {
 // shaper once in the preamp, then again on every trip around the
 // feedback loop, the fuzz compounds.
 //
-// echo_tanhf is a saturation-tuned Pade [5/4] approximation,
-// x*(945+120x^2+2x^4)/(945+435x^2+21x^4), with the input clamped to +/-3.
-// Indistinguishable from tanh below |x|=1, within 0.1% out to |x|=2, exact
-// slope at zero (small signals stay clean), and reaches exactly +/-1 at
-// the clamp point so the curve and clamp meet smoothly.
+// tanhf is the Padé approximant
 //
-//   x      tanh(x)    echo_tanhf    limit_value    limit_value vs. tanh
-//   0.05   0.0500     0.0500        0.0476            -5%
-//   0.10   0.0997     0.0997        0.0909            -9%
-//   0.30   0.2913     0.2913        0.2308           -21%
-//   0.50   0.4621     0.4621        0.3333           -28%
-//   1.00   0.7616     0.7616        0.5000           -34%
-//   2.00   0.9640     0.9646        0.6667           -31%
-//   3.00   0.9951     1.0000        0.7500           -25%
+//      x^5 + 105x^3 + 945x
+//     --------------------
+//     15x^4 + 420x^2 + 945
 //
-// The right column is what matters. At a 0.1 normalised input a real
+// with the output clamped to ±1.
+//
+// Indistinguishable from tanh below |x|=1 (precise to 6.5 digits),
+//  4.7 digits (0.002%) out to ±2
+//  3.4 digits (0.040%) out to ±3
+//  2.9 digits (0.136%) everywhere
+// and an exact slope at zero (so small signals stay clean)
+//
+// In contrast, the simplistic limit_value() approximation had a 9%
+// error already at a value of 0.1. At a 0.1 normalised input a real
 // preamp passes audio through almost cleanly; limit_value has already
 // trimmed it 9% and added harmonics that the circuit wouldn't create.
 // At unity input the gap is 34%, all of it added harmonic content.
