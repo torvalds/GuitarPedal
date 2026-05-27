@@ -20,15 +20,6 @@
 
 static struct effect echo_effect;
 
-// LCG PRNG for tape noise
-static uint32_t echo_noise_state = 1;
-static inline float echo_get_white_noise(void)
-{
-	echo_noise_state = echo_noise_state * 1664525 + 1013904223;
-	// return float from -1.0 to 1.0
-	return (float)echo_noise_state / 2147483648.0f - 1.0f;
-}
-
 //
 // One-pole low-pass: y[n] = (1-a)*x[n] + a*y[n-1], 6 dB/oct rolloff.
 //
@@ -64,6 +55,7 @@ static inline float echo_onepole_step(struct echo_onepole *lpf, float x)
 #define ECHO_DELAY_MAX_S    0.800f
 // log2(0.800 / 0.050) = log2(16) = 4.0 exactly, used by the log-taper mapping.
 #define ECHO_DELAY_LOG2_RATIO 4.0f
+#define ECHO_WOW_MOD_FREQ     0.15f
 
 struct echo_model {
 	float preamp_drive;
@@ -75,7 +67,6 @@ struct echo_model {
 	float wow_rate;
 	float flutter_scale;
 	float flutter_rate;
-	float noise_floor;
 	float max_feedback;
 	float delay_smooth;
 };
@@ -107,7 +98,6 @@ struct echo_model {
 // wow_rate            1.2f        1.3f        1.5f
 // flutter_scale       1.20f       1.00f       0.60f
 // flutter_rate        8.0f        9.0f        10.5f
-// noise_floor         0.0005f     0.0003f     0.00015f
 // max_feedback        0.95f       1.00f       1.05f
 // delay_smooth        0.00006f    0.00008f    0.00012f
 //
@@ -115,14 +105,13 @@ static const struct echo_model model =
 {
     /*preamp_drive=*/1.27f,
     /*preamp_asymmetry=*/0.15f,
-    /*record_fc=*/7500.0f,
-    /*playback_fc=*/6000.0f,
-    /*feedback_fc=*/5000.0f,
+    /*record_fc=*/6500.0f,
+    /*playback_fc=*/5500.0f,
+    /*feedback_fc=*/4500.0f,
     /*wow_scale=*/0.85f,
     /*wow_rate=*/1.5f,
     /*flutter_scale=*/0.90f,
     /*flutter_rate=*/9.0f,
-    /*noise_floor=*/0.0f, // determines strength of tape noise; none, please
     /*max_feedback=*/1.05f,
     /*delay_smooth=*/0.00012f
 };
@@ -132,7 +121,7 @@ struct {
 	float target_sustain, sustain;
 	float target_delay_s, delay_s;
 	float target_record_level, record_level;
-	float target_tone, tone;
+	float target_tone, tone, last_tone;
 	float target_wow, wow;
 
 	int sos_mode;
@@ -144,7 +133,6 @@ struct {
 	struct echo_onepole record_lpf;
 	struct echo_onepole playback_lpf;
 	struct echo_onepole feedback_lpf;
-	struct echo_onepole noise_lpf;
 
 	unsigned idx;
 	float array[65536];
@@ -152,9 +140,7 @@ struct {
 
 static float echo_blend(signed char pot) { return linear_pot(pot, 0, 1); }
 static float echo_sustain(signed char pot) { return linear_pot(pot, 0, 1.1f); }
-static float echo_time_pot(signed char pot) { return POT_TO_FLOAT(pot); } // 0 to 1
 static float echo_record(signed char pot) { return linear_pot(pot, 0.1f, 2.0f); }
-static float echo_tone_pot(signed char pot) { return linear_pot(pot, 0, 1); }
 static float echo_wow(signed char pot) { return linear_pot(pot, 0, 1); }
 
 //
@@ -188,11 +174,11 @@ static inline void echo_init(signed char pot[10])
 	echo.target_sustain = echo_sustain(pot[1]);
 
 	// Log-taper map of the time pot across ECHO_DELAY_MIN_S..MAX_S.
-	float time_val = echo_time_pot(pot[2]);
+	float time_val = POT_TO_FLOAT(pot[2]);
 	echo.target_delay_s = ECHO_DELAY_MIN_S * pow2(time_val * ECHO_DELAY_LOG2_RATIO);
 
 	echo.target_record_level = echo_record(pot[3]);
-	echo.target_tone = echo_tone_pot(pot[4]);
+	echo.target_tone = POT_TO_FLOAT(pot[4]);
 	echo.target_wow = echo_wow(pot[5]);
 
 	// Mode: 0=Normal, 1=SOS
@@ -202,28 +188,21 @@ static inline void echo_init(signed char pot[10])
 
 	// Initialize LPFs (one-pole, 6 dB/oct; see comments at bottom of file).
 	echo_onepole_set_cutoff(&echo.record_lpf, model.record_fc);
-	echo_onepole_set_cutoff(&echo.playback_lpf, model.playback_fc);
 	echo_onepole_set_cutoff(&echo.feedback_lpf, model.feedback_fc);
-	echo_onepole_set_cutoff(&echo.noise_lpf, 4000.0f);
-}
-
-static inline float echo_smooth(float current, float target, float coeff)
-{
-	return current + coeff * (target - current);
 }
 
 static inline float echo_step(float in)
 {
 	float coeff = 0.0008f;
-	echo.blend = echo_smooth(echo.blend, echo.target_blend, coeff);
-	echo.sustain = echo_smooth(echo.sustain, echo.target_sustain, coeff);
-	echo.record_level = echo_smooth(echo.record_level, echo.target_record_level, coeff);
-	echo.tone = echo_smooth(echo.tone, echo.target_tone, coeff);
-	echo.wow = echo_smooth(echo.wow, echo.target_wow, coeff);
+	echo.blend        = linear(coeff, echo.blend, echo.target_blend);
+	echo.sustain      = linear(coeff, echo.sustain, echo.target_sustain);
+	echo.record_level = linear(coeff, echo.record_level, echo.target_record_level);
+	echo.tone         = linear(coeff, echo.tone, echo.target_tone);
+	echo.wow          = linear(coeff, echo.wow, echo.target_wow);
 
 	// Slow glide on delay-time changes; avoids zipper noise and gives the
 	// characteristic tape-head pitch shift when the time pot moves.
-	echo.delay_s = echo_smooth(echo.delay_s, echo.target_delay_s, model.delay_smooth);
+	echo.delay_s = linear(model.delay_smooth, echo.delay_s, echo.target_delay_s);
 
 	// 1. Preamp waveshaper
 	// The Echoplex signal always passes through the preamp, so the colouration
@@ -244,8 +223,7 @@ static inline float echo_step(float in)
 	// "wandering" motor irregularity rather than a steady periodic cycle.
 	// Wow and flutter depths are proportional to the current delay time: the
 	// longer the loop, the more absolute pitch variation you get.
-	float wow_mod_freq = 0.15f;
-	echo.wow_mod_phase += fraction_to_u32(wow_mod_freq / SAMPLES_PER_SEC);
+	echo.wow_mod_phase += fraction_to_u32(ECHO_WOW_MOD_FREQ / SAMPLES_PER_SEC);
 	float wow_mod = fastsincos(u32_to_fraction(echo.wow_mod_phase)).sin;
 
 	float wow_rate_hz = model.wow_rate * (1.0f + 0.25f * wow_mod);
@@ -270,12 +248,16 @@ static inline float echo_step(float in)
 	float tape_out = sample_array_read(read_pos, &echo.idx, echo.array);
 
 	// 4. Playback LPF (dynamic based on tone pot)
-	float tone_mult = pow2((echo.tone - 0.5f) * LOG2_10);
-	float eff_playback_fc = model.playback_fc * tone_mult;
-	if (eff_playback_fc < 400.0f) eff_playback_fc = 400.0f;
-	if (eff_playback_fc > 18000.0f) eff_playback_fc = 18000.0f;
-
-	echo_onepole_set_cutoff(&echo.playback_lpf, eff_playback_fc);
+	// Tone smooths at coeff 0.0008 -- no need to recompute the pole coefficient
+	// (which calls pow2) until the value has actually shifted enough to matter.
+	if (fabsf(echo.tone - echo.last_tone) > 0.001f) {
+		echo.last_tone = echo.tone;
+		float tone_mult = pow2((echo.tone - 0.5f) * LOG2_10);
+		float eff_playback_fc = model.playback_fc * tone_mult;
+		if (eff_playback_fc < 400.0f) eff_playback_fc = 400.0f;
+		if (eff_playback_fc > 18000.0f) eff_playback_fc = 18000.0f;
+		echo_onepole_set_cutoff(&echo.playback_lpf, eff_playback_fc);
+	}
 	float wet = echo_onepole_step(&echo.playback_lpf, tape_out);
 
 	// 5. Feedback path
@@ -296,13 +278,7 @@ static inline float echo_step(float in)
 	// distorting at sub-saturation levels; see comment at bottom of file.
 	sample_array_write(tanhf(record_signal + fb * feedback_amt), &echo.idx, echo.array);
 
-	// 7. Tape hiss
-	// Low-level filtered white noise. Scaling by noise_floor keeps it inaudible 
-	// at typical listening levels while still adding "air".
-	float hiss = echo_onepole_step(&echo.noise_lpf, echo_get_white_noise()) * model.noise_floor;
-	wet += hiss;
-
-	// 8. Equal-power blend; keeps total signal power constant across the sweep.
+	// 7. Equal-power blend; keeps total signal power constant across the sweep.
 	struct sincos gains = fastsincos(echo.blend * 0.25f);
 	float dry_gain = gains.cos;
 	float wet_gain = gains.sin;
@@ -328,7 +304,7 @@ static struct effect echo_effect = {
 		{ "Sustain", desc_none, echo_sustain, -42 },
 		{ "Time", desc_ms, echo_time_display, 46 },
 		{ "Record", desc_none, echo_record, -57 },
-		{ "Tone", desc_Hz, echo_tone_display, 19 },
+		{ "Tone", desc_Hz, echo_tone_display, 13 },
 		{ "WowFlut", desc_none, echo_wow },
 		{ "Mode", desc_none, echo_mode_pot, 0, echo_mode_names },
 	}
