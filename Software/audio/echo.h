@@ -130,6 +130,9 @@ struct {
 	u32 wow_mod_phase;
 	u32 flutter_phase;
 
+	float preamp_dc_offset;   // tanhf(preamp_asymmetry): DC bias the waveshaper introduces
+	float last_blend, dry_gain, wet_gain;
+
 	struct echo_onepole record_lpf;
 	struct echo_onepole playback_lpf;
 	struct echo_onepole feedback_lpf;
@@ -186,6 +189,9 @@ static inline void echo_init(signed char pot[10])
 	// not couple to the enum_names array.
 	echo.sos_mode = (pot[6] == 1);
 
+	echo.preamp_dc_offset = tanhf(model.preamp_asymmetry);
+	echo.last_blend = -1.0f;
+
 	// Initialize LPFs (one-pole, 6 dB/oct; see comments at bottom of file).
 	echo_onepole_set_cutoff(&echo.record_lpf, model.record_fc);
 	echo_onepole_set_cutoff(&echo.feedback_lpf, model.feedback_fc);
@@ -211,7 +217,7 @@ static inline float echo_step(float in)
 	if (model.preamp_asymmetry > 0.05f) {
 		// Tube: asymmetric waveshaper generates even-order harmonics (biased tanhf).
 		float arg = in * model.preamp_drive + model.preamp_asymmetry;
-		preamp_out = tanhf(arg) - tanhf(model.preamp_asymmetry);
+		preamp_out = tanhf(arg) - echo.preamp_dc_offset;
 	} else {
 		// Solid state: symmetric odd-harmonic clipping (FET/transistor character).
 		preamp_out = tanhf(in * model.preamp_drive);
@@ -279,11 +285,14 @@ static inline float echo_step(float in)
 	sample_array_write(tanhf(record_signal + fb * feedback_amt), &echo.idx, echo.array);
 
 	// 7. Equal-power blend; keeps total signal power constant across the sweep.
-	struct sincos gains = fastsincos(echo.blend * 0.25f);
-	float dry_gain = gains.cos;
-	float wet_gain = gains.sin;
+	if (fabsf(echo.blend - echo.last_blend) > 0.001f) {
+		echo.last_blend = echo.blend;
+		struct sincos gains = fastsincos(echo.blend * 0.25f);
+		echo.dry_gain = gains.cos;
+		echo.wet_gain = gains.sin;
+	}
 
-	float out = preamp_out * dry_gain + wet * wet_gain;
+	float out = preamp_out * echo.dry_gain + wet * echo.wet_gain;
 
 	// Brighten the status LED in SOS so the player can see they're in
 	// the indefinite-loop mode.
