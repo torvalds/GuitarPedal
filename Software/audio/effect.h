@@ -66,6 +66,7 @@ struct effect {
 #include "echo.h"
 #include "reverb.h"
 #include "pitch.h"
+#include "tremolo.h"
 #include "eq.h"
 #include "usb.h"
 
@@ -99,6 +100,7 @@ static struct effect *const effects[] = {
 	EFF(echo),
 	EFF(reverb),
 	EFF(pitch),
+	EFF(tremolo),
 	&EQ,
 	EFF(usb),
 };
