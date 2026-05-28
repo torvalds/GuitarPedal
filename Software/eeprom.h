@@ -12,17 +12,32 @@ struct effect_state {
 	unsigned char reserved[4]; // Pad to 16 bytes
 };
 
+static inline uint8_t string_checksum(const char *cstr)
+{
+	uint8_t sum = 0;
+
+	if (cstr) {
+		while (*cstr)
+			sum += *cstr++;
+	}
+	return sum;
+}
+
 static inline uint8_t effect_checksum(struct effect *effect, struct effect_state *state)
 {
 	uint8_t sum = 0;
 
-	if (effect->name) {
-		for (const char *p = effect->name; *p; p++) {
-			sum += (uint8_t)*p;
-		}
-	}
+	sum += string_checksum(effect->name);
 
 	for (int i = 0; i < 10; i++) {
+		const struct pot_descr *descr = effect->pots + i;
+
+		sum += string_checksum(descr->label);
+		const char *const *enums = descr->enum_names;
+		if (enums) {
+			while (*enums)
+				sum += string_checksum(*enums++);
+		}
 		sum += (uint8_t)effect->pots[i].def_val;
 		sum += (uint8_t)state->pots[i];
 	}
@@ -34,7 +49,7 @@ static inline uint8_t effect_checksum(struct effect *effect, struct effect_state
 static inline bool load_effect_state(int effect_idx, struct effect *effect)
 {
 	struct effect_state state;
-	uint8_t addr = effect_idx * 32; // 2 pages (32 bytes) per effect
+	uint8_t addr = effect_idx * 16; // 1 page (16 bytes) per effect
 
 	// The EEPROM may not be ready immediately at boot. Retry for up to ~50ms.
 	int retries = 10;
@@ -80,7 +95,7 @@ static inline void save_effect_state(int effect_idx, struct effect *effect)
 
 	// Prepare the I2C transaction: [Address byte] + [16 bytes data]
 	uint8_t buf[1 + sizeof(state)];
-	buf[0] = effect_idx * 32; // Page aligned address
+	buf[0] = effect_idx * 16; // Page aligned address
 	memcpy(buf + 1, &state, sizeof(state));
 
 	i2c_write_blocking(MC24C02_I2C, buf, sizeof(buf), false);
