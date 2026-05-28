@@ -5,6 +5,7 @@
 #include "tusb.h"
 
 #include "usb-audio.h"
+#include "usb-sync.h"
 
 //--------------------------------------------------------------------+
 // Device Descriptors
@@ -22,7 +23,7 @@ static tusb_desc_device_t const desc_device =
 	.bMaxPacketSize0	= CFG_TUD_ENDPOINT0_SIZE,
 
 	.idVendor		= 0xFFFF,
-	.idProduct		= 0x0002, // Changed from HID 0x0001
+	.idProduct		= 0x0003, // Changed to Composite Device
 	.bcdDevice		= 0x0100,
 
 	.iManufacturer		= 0x01,
@@ -44,6 +45,7 @@ enum {
 	ITF_NUM_AUDIO_CONTROL = 0,
 	ITF_NUM_AUDIO_STREAMING_SPK,
 	ITF_NUM_AUDIO_STREAMING_MIC,
+	ITF_NUM_HID,
 	ITF_NUM_TOTAL
 };
 
@@ -90,7 +92,7 @@ enum {
 	/* Standard Interface Association Descriptor (IAD) */		\
 	TUD_AUDIO20_DESC_IAD(						\
 		/*_firstitf*/ ITF_NUM_AUDIO_CONTROL,			\
-		/*_nitfs*/ ITF_NUM_TOTAL,				\
+		/*_nitfs*/ 3,				\
 		/*_stridx*/ 0x00),					\
 	/* Standard AC Interface Descriptor(4.7.1) */			\
 	TUD_AUDIO20_DESC_STD_AC(					\
@@ -261,10 +263,32 @@ enum {
 		/*_lockdelayunit*/ AUDIO20_CS_AS_ISO_DATA_EP_LOCK_DELAY_UNIT_UNDEFINED, \
 		/*_lockdelay*/ 0x0000)
 
-#define CONFIG_TOTAL_LEN (TUD_CONFIG_DESC_LEN + CFG_TUD_AUDIO * TUD_AUDIO20_HEADSET_STEREO_DESC_LEN)
+uint8_t const desc_hid_report[] =
+{
+	TUD_HID_REPORT_DESC_GENERIC_INOUT(sizeof(struct ui_sync_report))
+};
+
+uint8_t const * tud_hid_descriptor_report_cb(uint8_t itf)
+{
+	(void) itf;
+	return desc_hid_report;
+}
+
+#define CONFIG_TOTAL_LEN (TUD_CONFIG_DESC_LEN + CFG_TUD_AUDIO * TUD_AUDIO20_HEADSET_STEREO_DESC_LEN + TUD_HID_INOUT_DESC_LEN)
 
 #define EPNUM_AUDIO_OUT 0x01
 #define EPNUM_AUDIO_IN 0x81
+#define EPNUM_HID_OUT 0x02
+#define EPNUM_HID_IN 0x82
+
+enum {
+	STRID_LANGID = 0,
+	STRID_MANUFACTURER,
+	STRID_PRODUCT,
+	STRID_SERIAL,
+	STRID_AUDIO_INTERFACE,
+	STRID_HID_INTERFACE
+};
 
 uint8_t const desc_configuration[] =
 {
@@ -276,7 +300,9 @@ uint8_t const desc_configuration[] =
 		/*_stridx*/ 0,
 		/*_epout*/ EPNUM_AUDIO_OUT,
 		/*_epin*/ EPNUM_AUDIO_IN,
-		/*_epsize*/ CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX)
+		/*_epsize*/ CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX),
+
+	TUD_HID_INOUT_DESCRIPTOR(ITF_NUM_HID, STRID_HID_INTERFACE, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report), EPNUM_HID_OUT, EPNUM_HID_IN, CFG_TUD_HID_EP_BUFSIZE, 10)
 };
 
 uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
@@ -287,25 +313,20 @@ uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
 //--------------------------------------------------------------------+
 // String Descriptors
 //--------------------------------------------------------------------+
-enum {
-	STRID_LANGID = 0,
-	STRID_MANUFACTURER,
-	STRID_PRODUCT,
-	STRID_SERIAL,
-	STRID_AUDIO_INTERFACE
-};
+
 
 #define DESC_STRING(len) (2*((len)+1)+(TUSB_DESC_STRING<<8))
 uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 {
-	static const uint16_t reply[5][15] = {
+	static const uint16_t reply[6][15] = {
 		{ DESC_STRING(1), 0x0409 }, // English
 		{ DESC_STRING(5), 'L', 'i', 'n', 'u', 's' },
 		{ DESC_STRING(11), 'L', 'i', 'n', 'u', 's', ' ', 'P', 'e', 'd', 'a', 'l' },
 		{ DESC_STRING(1), '0' },
 		{ DESC_STRING(4), 'U', 'A', 'C', '2' },
+		{ DESC_STRING(3), 'H', 'I', 'D' },
 	};
-	if (index >= 5)
+	if (index >= 6)
 		return NULL;
 	return reply[index];
 }
@@ -492,4 +513,34 @@ float get_usb_audio_input(void)
 		return (val_l + val_r) * 0.5f;
 	}
 	return 0.0f;
+}
+
+// Ensure the host knows what to do with HID output packets
+extern void handle_ui_sync_report(const struct ui_sync_report *sync);
+
+void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t report_type, uint8_t const* buffer, uint16_t bufsize)
+{
+	(void)itf;
+	(void)report_id;
+	(void)report_type;
+	if (bufsize == sizeof(struct ui_sync_report)) {
+		handle_ui_sync_report((const struct ui_sync_report *)buffer);
+	}
+}
+
+uint16_t tud_hid_get_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t report_type, uint8_t* buffer, uint16_t reqlen)
+{
+	(void)itf;
+	(void)report_id;
+	(void)report_type;
+	(void)buffer;
+	(void)reqlen;
+	return 0;
+}
+
+void send_ui_sync_report(const struct ui_sync_report *rep)
+{
+	if (!tud_hid_ready()) return;
+
+	tud_hid_report(0, rep, sizeof(struct ui_sync_report));
 }

@@ -12,6 +12,8 @@
 
 #include "board.h"
 
+#include "usb-sync.h"
+
 #include "ws2812.pio.h"
 #include "debounce.pio.h"
 #include "rotary.pio.h"
@@ -75,6 +77,20 @@ static void init_sw_pin(PIO pio, int pin)
 	pio_gpio_init(pio, pin);
 }
 
+// I have no good way to detect USB when in USB host mode.
+//
+// In a perfect world, I would have a GPIO that would tell
+// me whether the power is provided by the 9V guitar power
+// supply or the USB line, but ...
+static inline bool usb_is_connected(void)
+{
+#ifdef USB_MODE_HOST
+	return true;
+#else
+	return tud_ready();
+#endif
+}
+
 // We use PIO1 for the SW pins.
 //
 // They share the same program, just a separate state machine
@@ -99,7 +115,7 @@ static void switch_irq(void)
 	// default pot values
 	if (switch_val & 0x30000) {
 		if (!gpio_get(GPIO_SW1) && !gpio_get(GPIO_SW2)) {
-			if (tud_ready())
+			if (usb_is_connected())
 				reset_usb_boot(0, 0);
 			last_effect = NULL;
 			for (int i = 0; i < ARRAY_SIZE(effects); i++) {
@@ -107,6 +123,48 @@ static void switch_irq(void)
 				reset_effect(eff);
 			}
 		}
+	}
+}
+
+volatile bool ui_sync_changed = false;
+
+#ifdef USB_MODE_HOST
+uint8_t remote_clipping = 0;
+uint8_t remote_intense = 0;
+#endif
+
+extern void send_ui_sync_report(const struct ui_sync_report *rep);
+
+void handle_ui_sync_report(const struct ui_sync_report *sync)
+{
+	if (sync->msg_type == MSG_STATE_UPDATE) {
+		if (sync->effect_idx == 0) {
+			disable_all = (sync->enabled == 0) ? EFF_ENABLE_STEPS : 0;
+			ui_sync_changed = true;
+		} else if (sync->effect_idx <= ARRAY_SIZE(effects)) {
+			struct effect *effect = effects[sync->effect_idx - 1];
+			effect->target = (sync->enabled == 0) ? 0 : EFF_ENABLE_STEPS;
+			for (int i=0; i<10; i++) {
+				effect->pot_values[0][i] = sync->values[i];
+				effect->pot_values[1][i] = sync->values[i];
+			}
+			effect->seq++;
+			ui_sync_changed = true;
+		}
+	} else if (sync->msg_type == MSG_SYNC_REQUEST) {
+#ifndef USB_MODE_HOST
+		if (sync->effect_idx > 0 && sync->effect_idx <= ARRAY_SIZE(effects)) {
+			struct effect *effect = effects[sync->effect_idx - 1];
+			struct ui_sync_report rep = { .msg_type = MSG_STATE_UPDATE, .effect_idx = sync->effect_idx, .enabled = effect->target ? 1 : 0 };
+			memcpy(rep.values, effect->pot_values[effect->seq & 1], 10);
+			send_ui_sync_report(&rep);
+		}
+#endif
+	} else if (sync->msg_type == MSG_LED_UPDATE) {
+#ifdef USB_MODE_HOST
+		remote_clipping = sync->led_clipping;
+		remote_intense = sync->led_intense;
+#endif
 	}
 }
 
@@ -294,8 +352,12 @@ int main()
 	for (;;) {
 		absolute_time_t now = get_absolute_time();
 
+#ifdef USB_MODE_HOST
+		tuh_task();
+#else
 		tud_task();
 		usb_audio_task();
+#endif
 		sh1106_task();
 
 		// Claim 25Hz screen updates

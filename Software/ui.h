@@ -284,6 +284,11 @@ static void update_ui(uint32_t ms_since_boot)
 	if (switch_pressed(1) || switch_pressed(3)) {
 		switch_clear(1); switch_clear(3);
 		effect->target = EFF_ENABLE_STEPS * !effect->target;
+#ifdef USB_MODE_HOST
+		struct ui_sync_report rep = { .msg_type = MSG_STATE_UPDATE, .effect_idx = effect_idx + 1, .enabled = effect->target ? 1 : 0 };
+		memcpy(rep.values, effect->pot_values[effect->seq & 1], 10);
+		send_ui_sync_report(&rep);
+#endif
 		update_screen = true;
 		last_effect = NULL;	// Force list_effects();
 		effect->seq += 2;	// Force saving
@@ -293,6 +298,10 @@ static void update_ui(uint32_t ms_since_boot)
 	if (switch_pressed(2)) {
 		switch_clear(2);
 		disable_all = EFF_ENABLE_STEPS * !disable_all;
+#ifdef USB_MODE_HOST
+		struct ui_sync_report rep = { .msg_type = MSG_STATE_UPDATE, .effect_idx = 0, .enabled = disable_all ? 0 : 1 };
+		send_ui_sync_report(&rep);
+#endif
 	}
 
 	// Effect switching: lower rotary
@@ -313,12 +322,35 @@ static void update_ui(uint32_t ms_since_boot)
 		effect_idx = idx;
 		effect = effects[idx];
 
+#ifdef USB_MODE_HOST
+		struct ui_sync_report req = { .msg_type = MSG_SYNC_REQUEST, .effect_idx = effect_idx + 1 };
+		send_ui_sync_report(&req);
+#endif
+
 		update_screen = true;
 	}
 
 	// The LED mappings have changed between boards
+#ifdef USB_MODE_HOST
+	extern uint8_t remote_clipping;
+	extern uint8_t remote_intense;
+	pwm_set_gpio_level(PWM_PIN1, PWM_100/30 * (!disable_all + 8*!!remote_clipping));
+	pwm_set_gpio_level(PWM_PIN2, PWM_100/30 * (!!effect->target + 8*!!remote_intense));
+#else
 	pwm_set_gpio_level(PWM_PIN1, PWM_100/30 * (!disable_all + 8*!!clipping));
 	pwm_set_gpio_level(PWM_PIN2, PWM_100/30 * (!!effect->target + 8*!!effect->intense));
+#endif
+
+#ifndef USB_MODE_HOST
+	static uint8_t last_clipping = 0;
+	static uint8_t last_intense = 0;
+	if (clipping != last_clipping || effect->intense != last_intense) {
+		struct ui_sync_report rep = { .msg_type = MSG_LED_UPDATE, .led_clipping = clipping, .led_intense = effect->intense };
+		send_ui_sync_report(&rep);
+		last_clipping = clipping;
+		last_intense = effect->intense;
+	}
+#endif
 
 	effect->intense = 0;
 	clipping = 0;
@@ -330,6 +362,11 @@ static void update_ui(uint32_t ms_since_boot)
 
 	// If something changed, let the other CPU know
 	if (read_pots(effect, new_pot)) {
+#ifdef USB_MODE_HOST
+		struct ui_sync_report rep = { .msg_type = MSG_STATE_UPDATE, .effect_idx = effect_idx + 1, .enabled = effect->target ? 1 : 0 };
+		memcpy(rep.values, new_pot, 10);
+		send_ui_sync_report(&rep);
+#endif
 		effect->seq++;
 		update_screen = true;
 	}
@@ -339,6 +376,11 @@ static void update_ui(uint32_t ms_since_boot)
 		sh1106_clear(0, 0, 128, 128);
 		sh1106_puts_8x16(10, 70, effect->name);
 		list_effects(effect);
+		update_screen = true;
+	}
+
+	extern volatile bool ui_sync_changed;
+	if (__atomic_exchange_n(&ui_sync_changed, false, __ATOMIC_RELAXED)) {
 		update_screen = true;
 	}
 

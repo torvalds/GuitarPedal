@@ -66,7 +66,11 @@ pico_generate_pio_header(blink ${PIO_DIR}/debounce.pio)
 pico_generate_pio_header(blink ${PIO_DIR}/rotary.pio)
 pico_generate_pio_header(blink ${PIO_DIR}/i2s.pio)
 
+set(USB_MODE "DEVICE" CACHE STRING "USB Mode: DEVICE (default) or HOST")
+set_property(CACHE USB_MODE PROPERTY STRINGS DEVICE HOST)
+
 target_compile_definitions(blink PRIVATE
+	USB_MODE_${USB_MODE}=1
 	SAMPLES_PER_SEC=${SAMPLES_PER_SEC}f
 	CFG_TUSB_MCU=OPT_MCU_RP2040
 	CFG_TUSB_OS=OPT_OS_PICO
@@ -74,14 +78,27 @@ target_compile_definitions(blink PRIVATE
 
 target_sources(blink PRIVATE
 	blink.c
-	usb-audio.c
 	"${SINE_HEADER}"
 	tinyusb/src/tusb.c
 	tinyusb/src/common/tusb_fifo.c
-	tinyusb/src/device/usbd.c
-	tinyusb/src/class/audio/audio_device.c
 	tinyusb/src/portable/raspberrypi/rp2040/rp2040_usb.c
-	tinyusb/src/portable/raspberrypi/rp2040/dcd_rp2040.c)
+)
+
+if(USB_MODE STREQUAL "HOST")
+	target_sources(blink PRIVATE
+		usb-host.c
+		tinyusb/src/host/usbh.c
+		tinyusb/src/host/hub.c
+		tinyusb/src/class/hid/hid_host.c
+		tinyusb/src/portable/raspberrypi/rp2040/hcd_rp2040.c)
+else()
+	target_sources(blink PRIVATE
+		usb-device.c
+		tinyusb/src/device/usbd.c
+		tinyusb/src/class/audio/audio_device.c
+		tinyusb/src/class/hid/hid_device.c
+		tinyusb/src/portable/raspberrypi/rp2040/dcd_rp2040.c)
+endif()
 
 target_link_libraries(blink
 	pico_stdlib
