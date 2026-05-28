@@ -9,9 +9,11 @@
 // HARM: two independent one-pole filters modelled on the Fender 6G4 harmonic
 //   vibrato circuit. Low branch is a 1-pole LP (R=220k, C=5nF, fc≈144.7 Hz);
 //   high branch is a 1-pole HP (R=1M, C=250pF, fc≈636.6 Hz, implemented as
-//   in - LP at that same corner). These are not complementary crossover halves.
-//   The result has a broad mid-frequency dip and phasey recombination, which is
-//   central to the brownface harmonic tremolo sound.
+//   in - LP at that same corner). These are not complementary crossover halves,
+//   so lo+hi has a broad mid-frequency dip (~8 dB at 300 Hz). To avoid that
+//   level drop the LFO modulates the difference (lo - hi) added to in, not the
+//   branches directly: out = in + k*lfo*(lo - hi). Unity gain at zero depth,
+//   same anti-phase modulation character at non-zero depth.
 
 static struct {
 	struct lfo_state lfo;
@@ -47,7 +49,7 @@ static float tremolo_step(float in)
 
 	float lo = (tremolo.lp1_z = in + tremolo.lp1_a * (tremolo.lp1_z - in));
 	float hi = in - (tremolo.lp2_z = in + tremolo.lp2_a * (tremolo.lp2_z - in));
-	return lo * (1.0f + tremolo.k * lfo) + hi * (1.0f - tremolo.k * lfo);
+	return in + tremolo.k * lfo * (lo - hi);
 }
 
 static struct effect tremolo_effect = {
