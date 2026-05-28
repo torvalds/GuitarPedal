@@ -18,6 +18,7 @@ static inline const char *desc_kHz(signed char pot) { return "kHz"; }
 static inline const char *desc_ms(signed char pot) { return "ms"; }
 static inline const char *desc_x(signed char pot) { return "x"; }
 static inline const char *desc_dB(signed char pot) { return "dB"; }
+static inline const char *desc_s(signed char pot)    { return "s"; }
 static inline const char *desc_none(signed char pot) { return ""; }
 
 //
@@ -56,12 +57,16 @@ struct effect {
 
 // Effects
 #include "gate.h"
+#include "preamp.h"
 #include "compressor.h"
 #include "boost.h"
 #include "phaser.h"
 #include "flanger.h"
+#include "vibrato.h"
 #include "echo.h"
+#include "reverb.h"
 #include "pitch.h"
+#include "tremolo.h"
 #include "eq.h"
 #include "usb.h"
 
@@ -86,12 +91,16 @@ static inline void generic_effect_describe(struct effect *e, signed char pots[10
 
 static struct effect *const effects[] = {
 	EFF(gate),
+	EFF(preamp),
 	EFF(compressor),
 	EFF(boost),
 	EFF(phaser),
 	EFF(flanger),
+	EFF(vibrato),
 	EFF(echo),
+	EFF(reverb),
 	EFF(pitch),
+	EFF(tremolo),
 	&EQ,
 	EFF(usb),
 };
