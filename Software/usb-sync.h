@@ -3,20 +3,21 @@
 
 #include <stdint.h>
 
-enum ui_msg_type {
-	MSG_STATE_UPDATE = 0,
-	MSG_SYNC_REQUEST = 1,
-	MSG_LED_UPDATE = 2
-};
+// MIDI Control Change (CC) constants
+#define MIDI_CC_POT_START        10 // CC 10-19 map to pots 0-9
+#define MIDI_CC_GLOBAL_ENABLE    20
+#define MIDI_CC_EFFECT_ENABLE    21
+#define MIDI_CC_ACTIVE_POT       22
 
-struct ui_sync_report {
-	uint8_t msg_type;
-	uint8_t effect_idx;
-	uint8_t enabled;
-	int8_t  values[10];
-	uint8_t led_clipping;
-	uint8_t led_intense;
-	uint8_t padding[1];
-} __attribute__((packed));
+#define MIDI_CC_EFFECT_INTENSE   30
+#define MIDI_CC_AUDIO_CLIPPING   31
+#define MIDI_CC_CPU_LATENCY      32
+
+// MIDI Program Change maps to effect_idx directly (0-N)
+
+extern void send_midi_cc(uint8_t cc, uint8_t val);
+extern void send_midi_pc(uint8_t pc);
+
+extern int current_midi_effect_idx;
 
 #endif // _USB_SYNC_H

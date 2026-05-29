@@ -2,7 +2,7 @@
 #include "tusb.h"
 #include "usb-sync.h"
 
-extern void handle_ui_sync_report(const struct ui_sync_report *sync);
+extern void handle_midi_packet(const uint8_t packet[4]);
 
 // Needed because audio/effect.h expects it
 float get_usb_audio_input(void)
@@ -23,46 +23,48 @@ int init_usb(void)
 	return tusb_init(BOARD_TUH_RHPORT, &rh_init);
 }
 
-static uint8_t sync_dev_addr = 0;
-static uint8_t sync_instance = 0;
+static bool sync_connected = false;
+static uint8_t sync_idx = 0;
 
-void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, const uint8_t *desc_report, uint16_t desc_len)
+void tuh_midi_mount_cb(uint8_t idx, const tuh_midi_mount_cb_t *mount_cb_data)
 {
-	(void)desc_report;
-	(void)desc_len;
-	uint8_t const itf_protocol = tuh_hid_interface_protocol(dev_addr, instance);
+	(void)mount_cb_data;
+	sync_idx = idx;
+	sync_connected = true;
+}
 
-	if (itf_protocol == HID_ITF_PROTOCOL_NONE) {
-		sync_dev_addr = dev_addr;
-		sync_instance = instance;
-		tuh_hid_receive_report(dev_addr, instance);
+void tuh_midi_umount_cb(uint8_t idx)
+{
+	if (idx == sync_idx) {
+		sync_connected = false;
 	}
 }
 
-void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance)
+void send_midi_cc(uint8_t cc, uint8_t val)
 {
-	if (dev_addr == sync_dev_addr && instance == sync_instance) {
-		sync_dev_addr = 0;
+	if (sync_connected) {
+		uint8_t packet[4] = { 0x0B, 0xB0, cc, val };
+		tuh_midi_packet_write(sync_idx, packet);
+		tuh_midi_write_flush(sync_idx);
 	}
 }
 
-void send_ui_sync_report(const struct ui_sync_report *rep)
+void send_midi_pc(uint8_t pc)
 {
-	if (sync_dev_addr) {
-		tuh_hid_send_report(sync_dev_addr, sync_instance, 0, rep, sizeof(struct ui_sync_report));
+	if (sync_connected) {
+		uint8_t packet[4] = { 0x0C, 0xC0, pc, 0 };
+		tuh_midi_packet_write(sync_idx, packet);
+		tuh_midi_write_flush(sync_idx);
 	}
 }
 
-void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, const uint8_t *report, uint16_t len)
+void tuh_midi_rx_cb(uint8_t idx, uint32_t xferred_bytes)
 {
-	uint8_t const itf_protocol = tuh_hid_interface_protocol(dev_addr, instance);
-
-	if (itf_protocol == HID_ITF_PROTOCOL_NONE) {
-		if (len >= sizeof(struct ui_sync_report)) {
-			const struct ui_sync_report *sync = (const struct ui_sync_report *)report;
-			handle_ui_sync_report(sync);
+	(void)xferred_bytes;
+	if (sync_connected && idx == sync_idx) {
+		uint8_t packet[4];
+		while (tuh_midi_packet_read(idx, packet)) {
+			handle_midi_packet(packet);
 		}
 	}
-
-	tuh_hid_receive_report(dev_addr, instance);
 }

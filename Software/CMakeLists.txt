@@ -91,14 +91,14 @@ if(USB_MODE STREQUAL "HOST")
 		usb-host.c
 		tinyusb/src/host/usbh.c
 		tinyusb/src/host/hub.c
-		tinyusb/src/class/hid/hid_host.c
+		tinyusb/src/class/midi/midi_host.c
 		tinyusb/src/portable/raspberrypi/rp2040/hcd_rp2040.c)
 else()
 	target_sources(blink PRIVATE
 		usb-device.c
 		tinyusb/src/device/usbd.c
 		tinyusb/src/class/audio/audio_device.c
-		tinyusb/src/class/hid/hid_device.c
+		tinyusb/src/class/midi/midi_device.c
 		tinyusb/src/portable/raspberrypi/rp2040/dcd_rp2040.c)
 endif()
 

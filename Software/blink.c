@@ -131,40 +131,74 @@ volatile bool ui_sync_changed = false;
 #ifdef USB_MODE_HOST
 uint8_t remote_clipping = 0;
 uint8_t remote_intense = 0;
+uint8_t remote_dropped = 0;
 #endif
 
-extern void send_ui_sync_report(const struct ui_sync_report *rep);
+int current_midi_effect_idx = 0;
 
-void handle_ui_sync_report(const struct ui_sync_report *sync)
+void handle_midi_packet(const uint8_t packet[4])
 {
-	if (sync->msg_type == MSG_STATE_UPDATE) {
-		if (sync->effect_idx == 0) {
-			disable_all = (sync->enabled == 0) ? EFF_ENABLE_STEPS : 0;
-			ui_sync_changed = true;
-		} else if (sync->effect_idx <= ARRAY_SIZE(effects)) {
-			struct effect *effect = effects[sync->effect_idx - 1];
-			effect->target = (sync->enabled == 0) ? 0 : EFF_ENABLE_STEPS;
-			for (int i=0; i<10; i++) {
-				effect->pot_values[0][i] = sync->values[i];
-				effect->pot_values[1][i] = sync->values[i];
+	uint8_t status = packet[1];
+	uint8_t data1 = packet[2];
+	uint8_t data2 = packet[3];
+
+	if ((status & 0xF0) == 0xB0) {
+		// Control Change
+		if (data1 >= MIDI_CC_POT_START && data1 < MIDI_CC_POT_START + 10) {
+			int pot_idx = data1 - MIDI_CC_POT_START;
+			if (current_midi_effect_idx < ARRAY_SIZE(effects)) {
+				struct effect *effect = effects[current_midi_effect_idx];
+				int val = (data2 * 200 / 127) - 100;
+				effect->pot_values[0][pot_idx] = val;
+				effect->pot_values[1][pot_idx] = val;
+				effect->seq++;
+				ui_sync_changed = true;
 			}
-			effect->seq++;
+		} else if (data1 == MIDI_CC_GLOBAL_ENABLE) {
+			disable_all = (data2 == 0) ? EFF_ENABLE_STEPS : 0;
 			ui_sync_changed = true;
-		}
-	} else if (sync->msg_type == MSG_SYNC_REQUEST) {
-#ifndef USB_MODE_HOST
-		if (sync->effect_idx > 0 && sync->effect_idx <= ARRAY_SIZE(effects)) {
-			struct effect *effect = effects[sync->effect_idx - 1];
-			struct ui_sync_report rep = { .msg_type = MSG_STATE_UPDATE, .effect_idx = sync->effect_idx, .enabled = effect->target ? 1 : 0 };
-			memcpy(rep.values, effect->pot_values[effect->seq & 1], 10);
-			send_ui_sync_report(&rep);
-		}
-#endif
-	} else if (sync->msg_type == MSG_LED_UPDATE) {
+		} else if (data1 == MIDI_CC_EFFECT_ENABLE) {
+			if (current_midi_effect_idx < ARRAY_SIZE(effects)) {
+				struct effect *effect = effects[current_midi_effect_idx];
+				effect->target = (data2 == 0) ? 0 : EFF_ENABLE_STEPS;
+				effect->seq++;
+				ui_sync_changed = true;
+			}
+		} else if (data1 == MIDI_CC_ACTIVE_POT) {
+			if (current_midi_effect_idx < ARRAY_SIZE(effects)) {
+				effects[current_midi_effect_idx]->active_pot = data2;
+				ui_sync_changed = true;
+			}
+		} else if (data1 == MIDI_CC_AUDIO_CLIPPING) {
 #ifdef USB_MODE_HOST
-		remote_clipping = sync->led_clipping;
-		remote_intense = sync->led_intense;
+			remote_clipping = (data2 > 0);
 #endif
+		} else if (data1 == MIDI_CC_EFFECT_INTENSE) {
+#ifdef USB_MODE_HOST
+			remote_intense = (data2 > 0);
+#endif
+		} else if (data1 == MIDI_CC_CPU_LATENCY) {
+#ifdef USB_MODE_HOST
+			remote_dropped = data2;
+#endif
+		}
+	} else if ((status & 0xF0) == 0xC0) {
+		// Program Change
+		if (data1 < ARRAY_SIZE(effects)) {
+			current_midi_effect_idx = data1;
+			ui_sync_changed = true;
+
+#ifndef USB_MODE_HOST
+			struct effect *effect = effects[current_midi_effect_idx];
+			send_midi_cc(MIDI_CC_EFFECT_ENABLE, effect->target ? 127 : 0);
+			send_midi_cc(MIDI_CC_ACTIVE_POT, effect->active_pot);
+			for (int i=0; i<10; i++) {
+				int val = effect->pot_values[0][i];
+				uint8_t midi_val = (val + 100) * 127 / 200;
+				send_midi_cc(MIDI_CC_POT_START + i, midi_val);
+			}
+#endif
+		}
 	}
 }
 
@@ -364,6 +398,15 @@ int main()
 		if (now > next_ui_update) {
 			next_ui_update = delayed_by_ms(now, 40);
 			update_ui(to_ms_since_boot(now));
+
+#ifndef USB_MODE_HOST
+			unsigned int current_dropped = __atomic_exchange_n(&dropped, 0, __ATOMIC_RELAXED);
+			if (current_dropped) {
+				int midi_dropped = current_dropped;
+				if (midi_dropped > 127) midi_dropped = 127;
+				send_midi_cc(MIDI_CC_CPU_LATENCY, midi_dropped);
+			}
+#endif
 		}
 	}
 }

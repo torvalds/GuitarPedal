@@ -259,6 +259,7 @@ static int switch_effect(int idx)
 static void update_ui(uint32_t ms_since_boot)
 {
 	static int effect_idx = 0;
+	static int last_active_pot = -1;
 	static int init = 0;
 
 	if (!init) {
@@ -285,9 +286,12 @@ static void update_ui(uint32_t ms_since_boot)
 		switch_clear(1); switch_clear(3);
 		effect->target = EFF_ENABLE_STEPS * !effect->target;
 #ifdef USB_MODE_HOST
-		struct ui_sync_report rep = { .msg_type = MSG_STATE_UPDATE, .effect_idx = effect_idx + 1, .enabled = effect->target ? 1 : 0 };
-		memcpy(rep.values, effect->pot_values[effect->seq & 1], 10);
-		send_ui_sync_report(&rep);
+		send_midi_cc(MIDI_CC_EFFECT_ENABLE, effect->target ? 127 : 0);
+		for (int i=0; i<10; i++) {
+			int val = effect->pot_values[effect->seq & 1][i];
+			uint8_t midi_val = (val + 100) * 127 / 200;
+			send_midi_cc(MIDI_CC_POT_START + i, midi_val);
+		}
 #endif
 		update_screen = true;
 		last_effect = NULL;	// Force list_effects();
@@ -299,13 +303,19 @@ static void update_ui(uint32_t ms_since_boot)
 		switch_clear(2);
 		disable_all = EFF_ENABLE_STEPS * !disable_all;
 #ifdef USB_MODE_HOST
-		struct ui_sync_report rep = { .msg_type = MSG_STATE_UPDATE, .effect_idx = 0, .enabled = disable_all ? 0 : 1 };
-		send_ui_sync_report(&rep);
+		send_midi_cc(MIDI_CC_GLOBAL_ENABLE, disable_all ? 0 : 127);
 #endif
 	}
 
 	// Effect switching: lower rotary
 	int idx = switch_effect(effect_idx);
+
+#ifndef USB_MODE_HOST
+	if (idx == effect_idx && current_midi_effect_idx != effect_idx) {
+		idx = current_midi_effect_idx;
+	}
+#endif
+
 	if (idx != effect_idx) {
 		// Save the state of the effect we're leaving
 		// if it has been modified
@@ -321,10 +331,11 @@ static void update_ui(uint32_t ms_since_boot)
 
 		effect_idx = idx;
 		effect = effects[idx];
+		current_midi_effect_idx = idx;
+		last_active_pot = -1; // Force active_pot update on screen switch
 
 #ifdef USB_MODE_HOST
-		struct ui_sync_report req = { .msg_type = MSG_SYNC_REQUEST, .effect_idx = effect_idx + 1 };
-		send_ui_sync_report(&req);
+		send_midi_pc(effect_idx);
 #endif
 
 		update_screen = true;
@@ -344,10 +355,12 @@ static void update_ui(uint32_t ms_since_boot)
 #ifndef USB_MODE_HOST
 	static uint8_t last_clipping = 0;
 	static uint8_t last_intense = 0;
-	if (clipping != last_clipping || effect->intense != last_intense) {
-		struct ui_sync_report rep = { .msg_type = MSG_LED_UPDATE, .led_clipping = clipping, .led_intense = effect->intense };
-		send_ui_sync_report(&rep);
+	if (clipping != last_clipping) {
+		send_midi_cc(MIDI_CC_AUDIO_CLIPPING, clipping ? 127 : 0);
 		last_clipping = clipping;
+	}
+	if (effect->intense != last_intense) {
+		send_midi_cc(MIDI_CC_EFFECT_INTENSE, effect->intense ? 127 : 0);
 		last_intense = effect->intense;
 	}
 #endif
@@ -363,11 +376,22 @@ static void update_ui(uint32_t ms_since_boot)
 	// If something changed, let the other CPU know
 	if (read_pots(effect, new_pot)) {
 #ifdef USB_MODE_HOST
-		struct ui_sync_report rep = { .msg_type = MSG_STATE_UPDATE, .effect_idx = effect_idx + 1, .enabled = effect->target ? 1 : 0 };
-		memcpy(rep.values, new_pot, 10);
-		send_ui_sync_report(&rep);
+		for (int i=0; i<10; i++) {
+			int val = new_pot[i];
+			int old_val = cur_pot[i];
+			if (val != old_val) {
+				uint8_t midi_val = (val + 100) * 127 / 200;
+				send_midi_cc(MIDI_CC_POT_START + i, midi_val);
+			}
+		}
 #endif
 		effect->seq++;
+		update_screen = true;
+	}
+
+	extern volatile bool ui_sync_changed;
+	if (__atomic_exchange_n(&ui_sync_changed, false, __ATOMIC_RELAXED)) {
+		last_effect = NULL;
 		update_screen = true;
 	}
 
@@ -379,9 +403,11 @@ static void update_ui(uint32_t ms_since_boot)
 		update_screen = true;
 	}
 
-	extern volatile bool ui_sync_changed;
-	if (__atomic_exchange_n(&ui_sync_changed, false, __ATOMIC_RELAXED)) {
-		update_screen = true;
+	if (effect->active_pot != last_active_pot) {
+#ifdef USB_MODE_HOST
+		send_midi_cc(MIDI_CC_ACTIVE_POT, effect->active_pot);
+#endif
+		last_active_pot = effect->active_pot;
 	}
 
 	if (!update_screen)

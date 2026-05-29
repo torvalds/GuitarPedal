@@ -45,7 +45,8 @@ enum {
 	ITF_NUM_AUDIO_CONTROL = 0,
 	ITF_NUM_AUDIO_STREAMING_SPK,
 	ITF_NUM_AUDIO_STREAMING_MIC,
-	ITF_NUM_HID,
+	ITF_NUM_MIDI,
+	ITF_NUM_MIDI_STREAMING,
 	ITF_NUM_TOTAL
 };
 
@@ -263,23 +264,12 @@ enum {
 		/*_lockdelayunit*/ AUDIO20_CS_AS_ISO_DATA_EP_LOCK_DELAY_UNIT_UNDEFINED, \
 		/*_lockdelay*/ 0x0000)
 
-uint8_t const desc_hid_report[] =
-{
-	TUD_HID_REPORT_DESC_GENERIC_INOUT(sizeof(struct ui_sync_report))
-};
-
-uint8_t const * tud_hid_descriptor_report_cb(uint8_t itf)
-{
-	(void) itf;
-	return desc_hid_report;
-}
-
-#define CONFIG_TOTAL_LEN (TUD_CONFIG_DESC_LEN + CFG_TUD_AUDIO * TUD_AUDIO20_HEADSET_STEREO_DESC_LEN + TUD_HID_INOUT_DESC_LEN)
+#define CONFIG_TOTAL_LEN (TUD_CONFIG_DESC_LEN + CFG_TUD_AUDIO * TUD_AUDIO20_HEADSET_STEREO_DESC_LEN + TUD_MIDI_DESC_LEN)
 
 #define EPNUM_AUDIO_OUT 0x01
 #define EPNUM_AUDIO_IN 0x81
-#define EPNUM_HID_OUT 0x02
-#define EPNUM_HID_IN 0x82
+#define EPNUM_MIDI_OUT 0x02
+#define EPNUM_MIDI_IN 0x82
 
 enum {
 	STRID_LANGID = 0,
@@ -287,7 +277,7 @@ enum {
 	STRID_PRODUCT,
 	STRID_SERIAL,
 	STRID_AUDIO_INTERFACE,
-	STRID_HID_INTERFACE
+	STRID_MIDI_INTERFACE
 };
 
 uint8_t const desc_configuration[] =
@@ -302,7 +292,7 @@ uint8_t const desc_configuration[] =
 		/*_epin*/ EPNUM_AUDIO_IN,
 		/*_epsize*/ CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX),
 
-	TUD_HID_INOUT_DESCRIPTOR(ITF_NUM_HID, STRID_HID_INTERFACE, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report), EPNUM_HID_OUT, EPNUM_HID_IN, CFG_TUD_HID_EP_BUFSIZE, 10)
+	TUD_MIDI_DESCRIPTOR(ITF_NUM_MIDI, STRID_MIDI_INTERFACE, EPNUM_MIDI_OUT, EPNUM_MIDI_IN, CFG_TUD_MIDI_EP_BUFSIZE)
 };
 
 uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
@@ -324,7 +314,7 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 		{ DESC_STRING(11), 'L', 'i', 'n', 'u', 's', ' ', 'P', 'e', 'd', 'a', 'l' },
 		{ DESC_STRING(1), '0' },
 		{ DESC_STRING(4), 'U', 'A', 'C', '2' },
-		{ DESC_STRING(3), 'H', 'I', 'D' },
+		{ DESC_STRING(4), 'M', 'I', 'D', 'I' },
 	};
 	if (index >= 6)
 		return NULL;
@@ -515,32 +505,25 @@ float get_usb_audio_input(void)
 	return 0.0f;
 }
 
-// Ensure the host knows what to do with HID output packets
-extern void handle_ui_sync_report(const struct ui_sync_report *sync);
+extern void handle_midi_packet(const uint8_t packet[4]);
 
-void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t report_type, uint8_t const* buffer, uint16_t bufsize)
+void tud_midi_rx_cb(uint8_t itf)
 {
 	(void)itf;
-	(void)report_id;
-	(void)report_type;
-	if (bufsize == sizeof(struct ui_sync_report)) {
-		handle_ui_sync_report((const struct ui_sync_report *)buffer);
+	uint8_t packet[4];
+	while (tud_midi_packet_read(packet)) {
+		handle_midi_packet(packet);
 	}
 }
 
-uint16_t tud_hid_get_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t report_type, uint8_t* buffer, uint16_t reqlen)
+void send_midi_cc(uint8_t cc, uint8_t val)
 {
-	(void)itf;
-	(void)report_id;
-	(void)report_type;
-	(void)buffer;
-	(void)reqlen;
-	return 0;
+	uint8_t packet[4] = { 0x0B, 0xB0, cc, val };
+	tud_midi_packet_write(packet);
 }
 
-void send_ui_sync_report(const struct ui_sync_report *rep)
+void send_midi_pc(uint8_t pc)
 {
-	if (!tud_hid_ready()) return;
-
-	tud_hid_report(0, rep, sizeof(struct ui_sync_report));
+	uint8_t packet[4] = { 0x0C, 0xC0, pc, 0 };
+	tud_midi_packet_write(packet);
 }
