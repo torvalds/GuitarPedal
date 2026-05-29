@@ -15,6 +15,8 @@ set(SYS_CLK_KHZ 172800)
 set(SAMPLES_PER_SEC 48000.0)
 set(SCRIPT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
 
+pico_set_binary_type(blink copy_to_ram)
+
 # Math table generation
 set(POW2_STEP_SHIFT 8)
 set(POW2_HEADER "${CMAKE_CURRENT_BINARY_DIR}/pow2.h")
