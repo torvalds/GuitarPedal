@@ -52,9 +52,9 @@ static inline float echo_onepole_step(struct echo_onepole *lpf, float x)
 // Delay range. Fixed (not per-model and not exposed via a toggle), so a pair
 // of constants is enough; shared by echo_init and echo_time_display.
 #define ECHO_DELAY_MIN_S    0.050f
-#define ECHO_DELAY_MAX_S    0.800f
-// log2(0.800 / 0.050) = log2(16) = 4.0 exactly, used by the log-taper mapping.
-#define ECHO_DELAY_LOG2_RATIO 4.0f
+#define ECHO_DELAY_MAX_S    0.672f
+// log2(0.672 / 0.050) ~= 3.75, used by the log-taper mapping.
+#define ECHO_DELAY_LOG2_RATIO 3.75f
 #define ECHO_WOW_MOD_FREQ     0.15f
 
 struct echo_model {
@@ -138,7 +138,7 @@ struct {
 	struct echo_onepole feedback_lpf;
 
 	unsigned idx;
-	float array[65536];
+	int16_t array[32768];
 } echo;
 
 static float echo_blend(signed char pot) { return linear_pot(pot, 0, 1); }
@@ -246,12 +246,12 @@ static inline float echo_step(float in)
 
 	float read_pos = read_pos_s * SAMPLES_PER_SEC;
 	if (read_pos < 1.0f) read_pos = 1.0f;
-	if (read_pos > 65534.0f) read_pos = 65534.0f;
+	if (read_pos > 32766.0f) read_pos = 32766.0f;
 
 	// 3. Read
 	// Read BEFORE write so we get the old loop content. If we wrote first,
 	// we would read the newly-written sample.
-	float tape_out = sample_array_read(read_pos, &echo.idx, echo.array);
+	float tape_out = sample_array_read_s16(read_pos, &echo.idx, echo.array);
 
 	// 4. Playback LPF (dynamic based on tone pot)
 	// Tone smooths at coeff 0.0008 -- no need to recompute the pole coefficient
@@ -282,7 +282,7 @@ static inline float echo_step(float in)
 	float feedback_amt = echo.sos_mode ? 1.0f : echo.sustain * model.max_feedback;
 	// tanhf() (rather than limit_value) keeps the loop bounded without
 	// distorting at sub-saturation levels; see comment at bottom of file.
-	sample_array_write(tanhf(record_signal + fb * feedback_amt), &echo.idx, echo.array);
+	sample_array_write_s16(tanhf(record_signal + fb * feedback_amt), &echo.idx, echo.array);
 
 	// 7. Equal-power blend; keeps total signal power constant across the sweep.
 	if (fabsf(echo.blend - echo.last_blend) > 0.001f) {
@@ -311,10 +311,10 @@ static struct effect echo_effect = {
 	.pots = {
 		{ "Blend", desc_none, echo_blend, -32 },
 		{ "Sustain", desc_none, echo_sustain, -25 },
-		{ "Time", desc_ms, echo_time_display, 28 },
+		{ "Time", desc_ms, echo_time_display, 33 },
 		{ "Record", desc_none, echo_record, -34 },
 		{ "Tone", desc_Hz, echo_tone_display, 8 },
-		{ "WowFlut", desc_none, echo_wow },
+		{ "WowFlut", desc_none, echo_wow, -30 },
 		{ "Mode", desc_none, echo_mode_pot, 0, echo_mode_names },
 	}
 };
