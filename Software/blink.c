@@ -146,9 +146,11 @@ void handle_midi_packet(const uint8_t packet[4])
 		// Control Change
 		if (data1 >= MIDI_CC_POT_START && data1 < MIDI_CC_POT_START + 10) {
 			int pot_idx = data1 - MIDI_CC_POT_START;
-			if (current_midi_effect_idx < ARRAY_SIZE(effects)) {
+			if (current_midi_effect_idx < ARRAY_SIZE(effects) && data2 > 0) {
 				struct effect *effect = effects[current_midi_effect_idx];
-				int val = (data2 * 200 / 127) - 100;
+				int val = data2 - 64;
+				if (val < -60) val = -60;
+				if (val > 60) val = 60;
 				effect->pot_values[0][pot_idx] = val;
 				effect->pot_values[1][pot_idx] = val;
 				effect->seq++;
@@ -194,7 +196,7 @@ void handle_midi_packet(const uint8_t packet[4])
 			send_midi_cc(MIDI_CC_ACTIVE_POT, effect->active_pot);
 			for (int i=0; i<10; i++) {
 				int val = effect->pot_values[0][i];
-				uint8_t midi_val = (val + 100) * 127 / 200;
+				uint8_t midi_val = val + 64;
 				send_midi_cc(MIDI_CC_POT_START + i, midi_val);
 			}
 #endif

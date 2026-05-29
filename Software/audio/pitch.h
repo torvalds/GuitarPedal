@@ -70,7 +70,7 @@ static struct effect pitch_effect = {
 	.init = pitch_init,
 	.step = pitch_step,
 	.pots = {
-		{ "Octave", desc_none, pitch_octave, 50, },
+		{ "Octave", desc_none, pitch_octave, 30, },
 		{ "Feedback", desc_none, pitch_feedback },
 		{ "Mix", desc_none, pitch_mix },
 	}

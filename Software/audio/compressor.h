@@ -97,9 +97,9 @@ static struct effect compressor_effect = {
 	.step = compressor_step,
 	.pots = {
 		{ "Level", desc_dB, comp_pot0_level, 0 },	// -20dB
-		{ "Attack", desc_ms, comp_pot1_attack, -70 },	// ~15ms
-		{ "Release", desc_ms, comp_pot2_release, -50 },	// ~150ms
-		{ "Ratio", desc_x, comp_pot3_ratio, -60 },	// ~4.8 ratio
-		{ "Boost", desc_dB, comp_pot4_boost, -50 },	// ~6dB makeup
+		{ "Attack", desc_ms, comp_pot1_attack, -42 },	// ~15ms
+		{ "Release", desc_ms, comp_pot2_release, -30 },	// ~150ms
+		{ "Ratio", desc_x, comp_pot3_ratio, -36 },	// ~4.8 ratio
+		{ "Boost", desc_dB, comp_pot4_boost, -30 },	// ~6dB makeup
 	}
 };

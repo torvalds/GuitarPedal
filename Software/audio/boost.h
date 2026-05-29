@@ -59,8 +59,8 @@ static struct effect boost_effect = {
 	.init = boost_init,
 	.step = boost_step,
 	.pots = {
-		{ "Boost", desc_dB, boost_db, -100, },
-		{ "Level", desc_dB, boost_level, 100 },
+		{ "Boost", desc_dB, boost_db, -60, },
+		{ "Level", desc_dB, boost_level, 60 },
 		{ "Basscut", desc_Hz, boost_basscut, 0 },
 		{ "Highcut", desc_kHz, boost_highcut, 0 },
 		{ "Mix", desc_none, boost_mix },

@@ -58,7 +58,7 @@ static struct effect tremolo_effect = {
 	.init = tremolo_init,
 	.step = tremolo_step,
 	.pots = {
-		{ "Rate",  desc_Hz,   tremolo_rate,     25, NULL },
+		{ "Rate",  desc_Hz,   tremolo_rate,     15, NULL },
 		{ "Depth", desc_none, tremolo_depth,     0, NULL },
 		{ "Mode",  desc_none, tremolo_mode_pot,  0, tremolo_mode_names },
 	}

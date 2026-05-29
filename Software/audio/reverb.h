@@ -146,8 +146,8 @@ static struct effect reverb_effect = {
 	.init       = reverb_init,
 	.step       = reverb_step,
 	.pots = {
-		{ "Mix",      desc_none, reverb_mix,      -64, NULL },  // w=0.18
-		{ "Room",     desc_none, reverb_roomsize,  29, NULL },  // g=0.88
-		{ "Damp",     desc_none, reverb_damp,     -25, NULL },  // pole=0.25
+		{ "Mix",      desc_none, reverb_mix,      -38, NULL },  // w=0.18
+		{ "Room",     desc_none, reverb_roomsize,  17, NULL },  // g=0.88
+		{ "Damp",     desc_none, reverb_damp,     -15, NULL },  // pole=0.25
 	}
 };

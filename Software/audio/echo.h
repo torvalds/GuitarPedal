@@ -309,11 +309,11 @@ static struct effect echo_effect = {
 	.init = echo_init,
 	.step = echo_step,
 	.pots = {
-		{ "Blend", desc_none, echo_blend, -54 },
-		{ "Sustain", desc_none, echo_sustain, -42 },
-		{ "Time", desc_ms, echo_time_display, 46 },
-		{ "Record", desc_none, echo_record, -57 },
-		{ "Tone", desc_Hz, echo_tone_display, 13 },
+		{ "Blend", desc_none, echo_blend, -32 },
+		{ "Sustain", desc_none, echo_sustain, -25 },
+		{ "Time", desc_ms, echo_time_display, 28 },
+		{ "Record", desc_none, echo_record, -34 },
+		{ "Tone", desc_Hz, echo_tone_display, 8 },
 		{ "WowFlut", desc_none, echo_wow },
 		{ "Mode", desc_none, echo_mode_pot, 0, echo_mode_names },
 	}

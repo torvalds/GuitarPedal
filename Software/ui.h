@@ -25,7 +25,7 @@ struct pot_range { int min, max; };
 
 static const struct pot_range get_pot_range(const struct pot_descr *pot)
 {
-	int min = -100, max = 100;
+	int min = -60, max = 60;
 
 	if (pot->enum_names) {
 		min = 0;
@@ -289,7 +289,7 @@ static void update_ui(uint32_t ms_since_boot)
 		send_midi_cc(MIDI_CC_EFFECT_ENABLE, effect->target ? 127 : 0);
 		for (int i=0; i<10; i++) {
 			int val = effect->pot_values[effect->seq & 1][i];
-			uint8_t midi_val = (val + 100) * 127 / 200;
+			uint8_t midi_val = val + 64;
 			send_midi_cc(MIDI_CC_POT_START + i, midi_val);
 		}
 #endif
@@ -380,7 +380,7 @@ static void update_ui(uint32_t ms_since_boot)
 			int val = new_pot[i];
 			int old_val = cur_pot[i];
 			if (val != old_val) {
-				uint8_t midi_val = (val + 100) * 127 / 200;
+				uint8_t midi_val = val + 64;
 				send_midi_cc(MIDI_CC_POT_START + i, midi_val);
 			}
 		}

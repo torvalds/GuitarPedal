@@ -34,7 +34,7 @@ float floorf(float);
 #define SAMPLES_PER_MSEC (SAMPLES_PER_SEC * 0.001)
 
 // Turn -100..100 pot to 0.0..1.0 float internally
-#define POT_TO_FLOAT(pot) (((pot) + 100.0f) / 200.0f)
+#define POT_TO_FLOAT(pot) (((pot) + 60.0f) / 120.0f)
 
 // Turn 0..1 into a range
 #define linear(pot, a, b)	((a)+(pot)*((b)-(a)))

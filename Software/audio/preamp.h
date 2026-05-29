@@ -125,7 +125,7 @@ static struct effect preamp_effect = {
 	.step       = preamp_step,
 	.pots = {
 		{ "Level", desc_dB,   preamp_level_pot,  0, NULL },
-		{ "Sat",   desc_x,    preamp_sat_pot,   -60, NULL },
+		{ "Sat",   desc_x,    preamp_sat_pot,   -36, NULL },
 		{ "Voice", desc_none, preamp_voice_pot,  0,  preamp_voice_names },
 	},
 };

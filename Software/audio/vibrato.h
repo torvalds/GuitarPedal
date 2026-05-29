@@ -40,8 +40,8 @@ static struct effect vibrato_effect = {
 	.init = vibrato_init,
 	.step = vibrato_step,
 	.pots = {
-		{ "Rate",  desc_Hz,   vibrato_rate,  25,  NULL },
-		{ "Depth", desc_ms,   vibrato_depth, -65, NULL },
-		{ "Mix",   desc_none, vibrato_mix,   100, NULL },
+		{ "Rate",  desc_Hz,   vibrato_rate,  15,  NULL },
+		{ "Depth", desc_ms,   vibrato_depth, -39, NULL },
+		{ "Mix",   desc_none, vibrato_mix,   60, NULL },
 	}
 };
