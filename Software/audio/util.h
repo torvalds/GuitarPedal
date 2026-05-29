@@ -74,6 +74,28 @@ static inline float __sample_array_read(float delay, unsigned *idxp, unsigned ma
 
 #define sample_array_read(d, idxp, array) __sample_array_read(d, idxp, ARRAY_SIZE(array)-1, array)
 
+// int16_t delay-line variants: same ring-buffer logic, float<->s16 conversion at
+// the boundary. 1/32767 keeps the range symmetric around zero.
+static inline void __sample_array_write_s16(float val, unsigned *idxp, unsigned mask, int16_t *array)
+{
+	array[mask & ++*idxp] = (int16_t)(val * 32767.0f);
+}
+
+#define sample_array_write_s16(val, idxp, array) __sample_array_write_s16(val, idxp, ARRAY_SIZE(array)-1, array)
+
+static inline float __sample_array_read_s16(float delay, unsigned *idxp, unsigned mask, int16_t *array)
+{
+	int i = (int) delay;
+	float frac = delay - i;
+	int idx = *idxp - i;
+
+	float a = (float)array[mask & idx] * (1.0f / 32767.0f);
+	float b = (float)array[mask & --idx] * (1.0f / 32767.0f);
+	return linear(frac, a, b);
+}
+
+#define sample_array_read_s16(d, idxp, array) __sample_array_read_s16(d, idxp, ARRAY_SIZE(array)-1, array)
+
 #include "log2.h"
 
 #define LOG2_STEPS (1<< LOG2_STEP_SHIFT)
