@@ -289,8 +289,23 @@ static void init_rotary_encoder(void)
 
 #include "ui.h"
 
+static inline void enable_ftz(void)
+{
+	// FZ bit (24) in FPSCR flushes subnormal results to zero in hardware,
+	// covering every float op in the audio chain. Without it, any feedback
+	// path that decays into sub-1e-38 range causes a 5-20x FPU slowdown on
+	// Cortex-M33 (VFPv5 handles subnormals in hardware, not via trap, but
+	// still at a significant penalty). Must be set per-core.
+	uint32_t fpscr;
+	asm volatile("vmrs %0, fpscr" : "=r"(fpscr));
+	fpscr |= 0x01000000u;
+	asm volatile("vmsr fpscr, %0" :: "r"(fpscr));
+	asm volatile("isb");
+}
+
 static void audio_processing(void)
 {
+	enable_ftz();
 	// Get everything going, then clear 'dropped'
 	// to get rid of any initialization issues
 	make_one_noise();
@@ -327,6 +342,7 @@ int main()
 	absolute_time_t next_ui_update;
 
 	set_sys_clock_khz(172800, true);
+	enable_ftz();
 
 	init_i2s();
 	init_ws2812();

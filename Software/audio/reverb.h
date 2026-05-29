@@ -59,14 +59,6 @@ static struct {
 // All fields including .delay are set in reverb_init: pico-sdk's .data
 // copy-from-flash silently zeros large objects, so don't rely on static init.
 
-// Without flush-to-zero, subnormal floats in the comb feedback path cause a
-// ~100x ARM slowdown once the tail decays into the sub-1e-38 range.
-static inline float reverb_flush(float x)
-{
-	union { float f; unsigned int i; } u = { x };
-	return (u.i & 0x7f800000u) ? x : 0.0f;
-}
-
 static float reverb_mix(signed char pot)      { return POT_TO_FLOAT(pot); }
 static float reverb_roomsize(signed char pot) { return linear_pot(pot, 0.70f, 0.98f); }
 static float reverb_damp(signed char pot)     { return linear_pot(pot, 0.1f, 0.5f); }
@@ -108,7 +100,7 @@ static float reverb_step(float in)
 		float mod   = reverb_state.lfo[i % 4].s;
 		unsigned id = (unsigned)((float)c->delay + mod * REVERB_MOD_DEPTH);
 		float out   = c->buf[(c->idx - id) & REVERB_COMB_MASK];
-		c->filterstore = reverb_flush(out + damp * (c->filterstore - out));
+		c->filterstore = out + damp * (c->filterstore - out);
 		c->buf[c->idx++ & REVERB_COMB_MASK] = input + g * c->filterstore;
 		wet += out;
 	}
