@@ -285,14 +285,16 @@ static void update_ui(uint32_t ms_since_boot)
 	if (switch_pressed(1) || switch_pressed(3)) {
 		switch_clear(1); switch_clear(3);
 		effect->target = EFF_ENABLE_STEPS * !effect->target;
-#ifdef USB_MODE_HOST
-		send_midi_cc(MIDI_CC_EFFECT_ENABLE, effect->target ? 127 : 0);
+		uint8_t en_cc = effect_enable_to_cc[effect_idx];
+		if (en_cc) send_midi_cc(en_cc, effect->target ? 127 : 0);
 		for (int i=0; i<10; i++) {
-			int val = effect->pot_values[effect->seq & 1][i];
-			uint8_t midi_val = val + 64;
-			send_midi_cc(MIDI_CC_POT_START + i, midi_val);
+			uint8_t cc = effect_pot_to_cc[effect_idx][i];
+			if (cc) {
+				int val = effect->pot_values[effect->seq & 1][i];
+				uint8_t midi_val = val + 64;
+				send_midi_cc(cc, midi_val);
+			}
 		}
-#endif
 		update_screen = true;
 		last_effect = NULL;	// Force list_effects();
 		effect->seq += 2;	// Force saving
@@ -302,19 +304,15 @@ static void update_ui(uint32_t ms_since_boot)
 	if (switch_pressed(2)) {
 		switch_clear(2);
 		disable_all = EFF_ENABLE_STEPS * !disable_all;
-#ifdef USB_MODE_HOST
-		send_midi_cc(MIDI_CC_GLOBAL_ENABLE, disable_all ? 0 : 127);
-#endif
+		send_midi_cc(GLOBAL_ENABLE_CC, disable_all ? 0 : 127);
 	}
 
 	// Effect switching: lower rotary
 	int idx = switch_effect(effect_idx);
 
-#ifndef USB_MODE_HOST
 	if (idx == effect_idx && current_midi_effect_idx != effect_idx) {
 		idx = current_midi_effect_idx;
 	}
-#endif
 
 	if (idx != effect_idx) {
 		// Save the state of the effect we're leaving
@@ -334,9 +332,7 @@ static void update_ui(uint32_t ms_since_boot)
 		current_midi_effect_idx = idx;
 		last_active_pot = -1; // Force active_pot update on screen switch
 
-#ifdef USB_MODE_HOST
 		send_midi_pc(effect_idx);
-#endif
 
 		update_screen = true;
 	}
@@ -352,7 +348,6 @@ static void update_ui(uint32_t ms_since_boot)
 	pwm_set_gpio_level(PWM_PIN2, PWM_100/30 * (!!effect->target + 8*!!effect->intense));
 #endif
 
-#ifndef USB_MODE_HOST
 	static uint8_t last_clipping = 0;
 	static uint8_t last_intense = 0;
 	if (clipping != last_clipping) {
@@ -363,7 +358,6 @@ static void update_ui(uint32_t ms_since_boot)
 		send_midi_cc(MIDI_CC_EFFECT_INTENSE, effect->intense ? 127 : 0);
 		last_intense = effect->intense;
 	}
-#endif
 
 	effect->intense = 0;
 	clipping = 0;
@@ -375,16 +369,15 @@ static void update_ui(uint32_t ms_since_boot)
 
 	// If something changed, let the other CPU know
 	if (read_pots(effect, new_pot)) {
-#ifdef USB_MODE_HOST
 		for (int i=0; i<10; i++) {
 			int val = new_pot[i];
 			int old_val = cur_pot[i];
-			if (val != old_val) {
+			uint8_t cc = effect_pot_to_cc[effect_idx][i];
+			if (cc && val != old_val) {
 				uint8_t midi_val = val + 64;
-				send_midi_cc(MIDI_CC_POT_START + i, midi_val);
+				send_midi_cc(cc, midi_val);
 			}
 		}
-#endif
 		effect->seq++;
 		update_screen = true;
 	}
@@ -404,9 +397,7 @@ static void update_ui(uint32_t ms_since_boot)
 	}
 
 	if (effect->active_pot != last_active_pot) {
-#ifdef USB_MODE_HOST
 		send_midi_cc(MIDI_CC_ACTIVE_POT, effect->active_pot);
-#endif
 		last_active_pot = effect->active_pot;
 	}
 

@@ -524,11 +524,11 @@ void tud_midi_rx_cb(uint8_t itf)
 void send_midi_cc(uint8_t cc, uint8_t val)
 {
 	uint8_t packet[4] = { 0x0B, 0xB0, cc, val };
-	tud_midi_packet_write(packet);
+	if (tud_midi_mounted()) tud_midi_packet_write(packet);
 }
 
 void send_midi_pc(uint8_t pc)
 {
 	uint8_t packet[4] = { 0x0C, 0xC0, pc, 0 };
-	tud_midi_packet_write(packet);
+	if (tud_midi_mounted()) tud_midi_packet_write(packet);
 }

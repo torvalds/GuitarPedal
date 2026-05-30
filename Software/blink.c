@@ -144,29 +144,43 @@ void handle_midi_packet(const uint8_t packet[4])
 
 	if ((status & 0xF0) == 0xB0) {
 		// Control Change
-		if (data1 >= MIDI_CC_POT_START && data1 < MIDI_CC_POT_START + 10) {
-			int pot_idx = data1 - MIDI_CC_POT_START;
-			if (current_midi_effect_idx < ARRAY_SIZE(effects) && data2 > 0) {
-				struct effect *effect = effects[current_midi_effect_idx];
+		if (data1 == STATE_DUMP_CC) {
+			send_midi_cc(GLOBAL_ENABLE_CC, disable_all ? 0 : 127);
+			for (int i=0; i<ARRAY_SIZE(effects); i++) {
+				struct effect *e = effects[i];
+				uint8_t en_cc = effect_enable_to_cc[i];
+				if (en_cc) send_midi_cc(en_cc, e->target ? 127 : 0);
+				for (int p=0; p<10; p++) {
+					uint8_t pot_cc = effect_pot_to_cc[i][p];
+					if (pot_cc) {
+						int val = e->pot_values[e->seq & 1][p];
+						send_midi_cc(pot_cc, val + 64);
+					}
+				}
+			}
+		} else if (data1 == GLOBAL_ENABLE_CC) {
+			disable_all = (data2 == 0) ? EFF_ENABLE_STEPS : 0;
+			ui_sync_changed = true;
+		} else if (data1 < 128) {
+			const struct midi_cc_mapping *m = &dense_midi_map[data1];
+			if (m->type == 1) { // Pot
+				struct effect *effect = effects[m->effect_idx];
 				int val = data2 - 64;
 				if (val < -60) val = -60;
 				if (val > 60) val = 60;
-				effect->pot_values[0][pot_idx] = val;
-				effect->pot_values[1][pot_idx] = val;
+				effect->pot_values[0][m->pot_idx] = val;
+				effect->pot_values[1][m->pot_idx] = val;
 				effect->seq++;
 				ui_sync_changed = true;
-			}
-		} else if (data1 == MIDI_CC_GLOBAL_ENABLE) {
-			disable_all = (data2 == 0) ? EFF_ENABLE_STEPS : 0;
-			ui_sync_changed = true;
-		} else if (data1 == MIDI_CC_EFFECT_ENABLE) {
-			if (current_midi_effect_idx < ARRAY_SIZE(effects)) {
-				struct effect *effect = effects[current_midi_effect_idx];
+			} else if (m->type == 2) { // Enable
+				struct effect *effect = effects[m->effect_idx];
 				effect->target = (data2 == 0) ? 0 : EFF_ENABLE_STEPS;
 				effect->seq++;
 				ui_sync_changed = true;
 			}
-		} else if (data1 == MIDI_CC_ACTIVE_POT) {
+		}
+
+		if (data1 == MIDI_CC_ACTIVE_POT) {
 			if (current_midi_effect_idx < ARRAY_SIZE(effects)) {
 				effects[current_midi_effect_idx]->active_pot = data2;
 				ui_sync_changed = true;
@@ -190,16 +204,18 @@ void handle_midi_packet(const uint8_t packet[4])
 			current_midi_effect_idx = data1;
 			ui_sync_changed = true;
 
-#ifndef USB_MODE_HOST
 			struct effect *effect = effects[current_midi_effect_idx];
-			send_midi_cc(MIDI_CC_EFFECT_ENABLE, effect->target ? 127 : 0);
+			uint8_t en_cc = effect_enable_to_cc[current_midi_effect_idx];
+			if (en_cc) send_midi_cc(en_cc, effect->target ? 127 : 0);
 			send_midi_cc(MIDI_CC_ACTIVE_POT, effect->active_pot);
 			for (int i=0; i<10; i++) {
-				int val = effect->pot_values[0][i];
-				uint8_t midi_val = val + 64;
-				send_midi_cc(MIDI_CC_POT_START + i, midi_val);
+				uint8_t cc = effect_pot_to_cc[current_midi_effect_idx][i];
+				if (cc) {
+					int val = effect->pot_values[0][i];
+					uint8_t midi_val = val + 64;
+					send_midi_cc(cc, midi_val);
+				}
 			}
-#endif
 		}
 	}
 }
