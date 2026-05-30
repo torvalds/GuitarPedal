@@ -96,10 +96,10 @@ static struct effect compressor_effect = {
 	.init = compressor_init,
 	.step = compressor_step,
 	.pots = {
-		{ "Level", desc_dB, comp_pot0_level, 0 },	// -20dB
-		{ "Attack", desc_ms, comp_pot1_attack, -42 },	// ~15ms
-		{ "Release", desc_ms, comp_pot2_release, -30 },	// ~150ms
-		{ "Ratio", desc_x, comp_pot3_ratio, -36 },	// ~4.8 ratio
-		{ "Boost", desc_dB, comp_pot4_boost, -30 },	// ~6dB makeup
+		EFFECT_POT("Level", desc_dB, comp_pot0_level, 0),	// -20dB
+		EFFECT_POT("Attack", desc_ms, comp_pot1_attack, -42),	// ~15ms
+		EFFECT_POT("Release", desc_ms, comp_pot2_release, -30),	// ~150ms
+		EFFECT_POT("Ratio", desc_x, comp_pot3_ratio, -36),	// ~4.8 ratio
+		EFFECT_POT("Boost", desc_dB, comp_pot4_boost, -30),	// ~6dB makeup
 	}
 };

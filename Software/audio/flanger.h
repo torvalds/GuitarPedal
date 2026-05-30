@@ -40,9 +40,9 @@ static struct effect flanger_effect = {
 	.init = flanger_init,
 	.step = flanger_step,
 	.pots = {
-		{ "Freq", desc_Hz, flanger_pot0 },
-		{ "Delay", desc_ms, flanger_pot1 },
-		{ "Depth", desc_none, flanger_pot2 },
-		{ "Feedback", desc_none, flanger_pot3 },
+		EFFECT_POT("Freq", desc_Hz, flanger_pot0 ),
+		EFFECT_POT("Delay", desc_ms, flanger_pot1 ),
+		EFFECT_POT("Depth", desc_none, flanger_pot2 ),
+		EFFECT_POT("Feedback", desc_none, flanger_pot3 ),
 	}
 };

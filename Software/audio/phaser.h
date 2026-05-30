@@ -43,9 +43,9 @@ static struct effect phaser_effect = {
 	.init = phaser_init,
 	.step = phaser_step,
 	.pots = {
-		{ "LFO", desc_ms, phaser_pot0 },
-		{ "Feedback", desc_none, phaser_pot1 },
-		{ "Freq", desc_Hz, phaser_pot2 },
-		{ "Q", desc_none, phaser_pot3 },
+		EFFECT_POT("LFO", desc_ms, phaser_pot0 ),
+		EFFECT_POT("Feedback", desc_none, phaser_pot1 ),
+		EFFECT_POT("Freq", desc_Hz, phaser_pot2 ),
+		EFFECT_POT("Q", desc_none, phaser_pot3 ),
 	}
 };

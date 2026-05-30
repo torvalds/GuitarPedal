@@ -79,8 +79,8 @@ static struct effect gate_effect = {
 	.init = gate_init,
 	.step = gate_step,
 	.pots = {
-		{ "Level", desc_dB, gate_pot0_level, 0 },	// -70dB
-		{ "Attack", desc_ms, gate_pot1_attack, -42 },	// ~1.5ms
-		{ "Release", desc_ms, gate_pot2_release, -30 },	// ~150ms
+		EFFECT_POT("Level", desc_dB, gate_pot0_level, 0),	// -70dB
+		EFFECT_POT("Attack", desc_ms, gate_pot1_attack, -42),	// ~1.5ms
+		EFFECT_POT("Release", desc_ms, gate_pot2_release, -30),	// ~150ms
 	}
 };

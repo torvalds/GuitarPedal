@@ -55,20 +55,10 @@ struct effect {
 	const struct pot_descr pots[10];
 };
 
-// Effects
-#include "gate.h"
-#include "preamp.h"
-#include "compressor.h"
-#include "boost.h"
-#include "phaser.h"
-#include "flanger.h"
-#include "vibrato.h"
-#include "echo.h"
-#include "reverb.h"
-#include "pitch.h"
-#include "tremolo.h"
-#include "eq.h"
-#include "usb.h"
+#define EFFECT_POT(...) { __VA_ARGS__ }
+
+// Effects and MIDI mapping auto-generated from scripts/gen_effects.py
+#include "effect_map.h"
 
 static inline void generic_effect_describe(struct effect *e, signed char pots[10])
 {
@@ -86,24 +76,6 @@ static inline void generic_effect_describe(struct effect *e, signed char pots[10
 	}
 	fprintf(stderr, "\n");
 }
-
-#define EFF(x) &x##_effect
-
-static struct effect *const effects[] = {
-	EFF(gate),
-	EFF(preamp),
-	EFF(compressor),
-	EFF(boost),
-	EFF(phaser),
-	EFF(flanger),
-	EFF(vibrato),
-	EFF(echo),
-	EFF(reverb),
-	EFF(pitch),
-	EFF(tremolo),
-	&EQ,
-	EFF(usb),
-};
 
 static unsigned int dropped;
 

@@ -34,7 +34,7 @@ static struct effect usb_effect = {
 	.init = usb_init,
 	.step = usb_step,
 	.pots = {
-		{ "L/R Out", desc_none, NULL, 0, usb_output_names },
-		{ "L/R In", desc_none, NULL, 0, usb_input_names },
+		EFFECT_POT("L/R Out", desc_none, NULL, 0, usb_output_names ),
+		EFFECT_POT("L/R In", desc_none, NULL, 0, usb_input_names ),
 	}
 };
