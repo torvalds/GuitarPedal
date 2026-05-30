@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RP2350 Pedal Controller</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <header class="glass-panel">
+      <h1>RP2350 Pedal</h1>
+      <div id="connection-status" class="status disconnected">Disconnected</div>
+
+      <div class="global-controls">
+        <div class="control-group">
+          <label>Global Bypass</label>
+          <label class="switch">
+            <input type="checkbox" id="global-enable">
+            <span class="slider round"></span>
+          </label>
+        </div>
+      </div>
+    </header>
+
+    <main id="effects-container">
+      <!-- Effect cards populated dynamically -->
+    </main>
+
+  </div>
+
+  <script src="effects.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
