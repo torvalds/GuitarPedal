@@ -2,24 +2,15 @@
 
 float get_usb_audio_input(void);
 
-typedef float (*pot_convert_fn)(signed char);
-typedef const char *(*pot_describe_fn)(signed char);
+typedef float (*pot_convert_fn)(unsigned char);
 
 struct pot_descr {
 	const char *label;
-	pot_describe_fn describe;
+	const char *unit;
 	pot_convert_fn convert;
-	signed char def_val;
+	unsigned char def_val;
 	const char *const *enum_names;
 };
-
-static inline const char *desc_Hz(signed char pot) { return "Hz"; }
-static inline const char *desc_kHz(signed char pot) { return "kHz"; }
-static inline const char *desc_ms(signed char pot) { return "ms"; }
-static inline const char *desc_x(signed char pot) { return "x"; }
-static inline const char *desc_dB(signed char pot) { return "dB"; }
-static inline const char *desc_s(signed char pot)    { return "s"; }
-static inline const char *desc_none(signed char pot) { return ""; }
 
 //
 // Primary interface for audio DSP algorithms.
@@ -46,11 +37,11 @@ struct effect {
 	unsigned int mix, target;
 	volatile unsigned int seq, last;
 	unsigned char intense, active_pot;
-	signed char pot_values[2][10];
-	void (*graph)(struct effect *, int, signed char[10]);
-	void (*init)(signed char[10]);
-	void (*load)(struct effect *, signed char[10]);
-	void (*save)(struct effect *, signed char[10]);
+	unsigned char pot_values[2][10];
+	void (*graph)(struct effect *, int, unsigned char[10]);
+	void (*init)(unsigned char[10]);
+	void (*load)(struct effect *, unsigned char[10]);
+	void (*save)(struct effect *, unsigned char[10]);
 	float (*step)(float);
 	const struct pot_descr pots[10];
 };
@@ -60,17 +51,17 @@ struct effect {
 // Effects and MIDI mapping auto-generated from scripts/gen_effects.py
 #include "effect_map.h"
 
-static inline void generic_effect_describe(struct effect *e, signed char pots[10])
+static inline void generic_effect_describe(struct effect *e, unsigned char pots[10])
 {
 	for (int i = 0; i < 10; i++) {
 		if (e->pots[i].label) {
-			if (e->pots[i].convert) {
+			const char *unit = e->pots[i].unit ? e->pots[i].unit : "";
+			if (e->pots[i].enum_names) {
+				int idx = (int)e->pots[i].convert(pots[i]);
+				fprintf(stderr, " %s=%s %s", e->pots[i].label, e->pots[i].enum_names[idx], unit);
+			} else if (e->pots[i].convert) {
 				float val = e->pots[i].convert(pots[i]);
-				const char *unit = e->pots[i].describe ? e->pots[i].describe(pots[i]) : "";
 				fprintf(stderr, " %s=%g %s", e->pots[i].label, val, unit);
-			} else {
-				const char *text = e->pots[i].describe ? e->pots[i].describe(pots[i]) : "";
-				fprintf(stderr, " %s=%s", e->pots[i].label, text);
 			}
 		}
 	}

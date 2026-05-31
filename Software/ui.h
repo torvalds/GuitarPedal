@@ -25,7 +25,7 @@ struct pot_range { int min, max; };
 
 static const struct pot_range get_pot_range(const struct pot_descr *pot)
 {
-	int min = -60, max = 60;
+	int min = 0, max = 120;
 
 	if (pot->enum_names) {
 		min = 0;
@@ -40,7 +40,7 @@ static const struct pot_range get_pot_range(const struct pot_descr *pot)
 //
 // Also note how the 'select' rotary low bits are ignored but allowed
 // to accumulate - but cleared if something else happens.
-static bool read_pots(struct effect *effect, signed char *pots)
+static bool read_pots(struct effect *effect, unsigned char *pots)
 {
 	const struct pot_descr *pot = effect->pots + effect->active_pot;
 	const struct pot_range range = get_pot_range(pot);
@@ -192,11 +192,10 @@ static void pot_describe(const struct pot_descr *pot, int val, int posY)
 	char *end = desc+16;
 	int decimals = 0;
 
-	if (pot->describe) {
-		const char *unit = pot->describe(val);
-		int len = strlen(unit);
+	if (pot->unit) {
+		int len = strlen(pot->unit);
 		if (len > 5) len = 5;
-		memcpy(end, unit, len);
+		memcpy(end, pot->unit, len);
 	}
 
 	if (pot->enum_names) {
@@ -291,7 +290,7 @@ static void update_ui(uint32_t ms_since_boot)
 			uint8_t cc = effect_pot_to_cc[effect_idx][i];
 			if (cc) {
 				int val = effect->pot_values[effect->seq & 1][i];
-				uint8_t midi_val = val + 64;
+				uint8_t midi_val = val;
 				send_midi_cc(cc, midi_val);
 			}
 		}
@@ -319,8 +318,8 @@ static void update_ui(uint32_t ms_since_boot)
 		// if it has been modified
 		if (effect->seq) {
 			unsigned int seq = effect->seq;
-			signed char *cur_pot = effect->pot_values[seq & 1];
-			signed char *new_pot = effect->pot_values[!(seq & 1)];
+			unsigned char *cur_pot = effect->pot_values[seq & 1];
+			unsigned char *new_pot = effect->pot_values[!(seq & 1)];
 			memcpy(new_pot, cur_pot, 10);
 			effect->seq = 0;
 
@@ -363,8 +362,8 @@ static void update_ui(uint32_t ms_since_boot)
 	clipping = 0;
 
 	unsigned int seq = effect->seq;
-	signed char *cur_pot = effect->pot_values[seq & 1];
-	signed char *new_pot = effect->pot_values[!(seq & 1)];
+	unsigned char *cur_pot = effect->pot_values[seq & 1];
+	unsigned char *new_pot = effect->pot_values[!(seq & 1)];
 	memcpy(new_pot, cur_pot, 10);
 
 	// If something changed, let the other CPU know
@@ -374,7 +373,7 @@ static void update_ui(uint32_t ms_since_boot)
 			int old_val = cur_pot[i];
 			uint8_t cc = effect_pot_to_cc[effect_idx][i];
 			if (cc && val != old_val) {
-				uint8_t midi_val = val + 64;
+				uint8_t midi_val = val;
 				send_midi_cc(cc, midi_val);
 			}
 		}

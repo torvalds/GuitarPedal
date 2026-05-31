@@ -1,24 +1,24 @@
+// NAME: Boost [BOOST]
+// PRIORITY: 40
+// POT: "Boost" LINEAR(0.0 40.0) = 0.0 dB
+// POT: "Level" LINEAR(-40.0 0.0) = 0.0 dB
+// POT: "Basscut" FREQUENCY(10.0 200.0) = 10.0 Hz
+// POT: "Highcut" FREQUENCY(1.0 20.0) = 20.0 kHz
+// POT: "Mix" LINEAR(0.0 1.0) = 1.0
 struct {
 	float mult, level, mix;
 	struct biquad basscut, highcut;
 } boost;
 
-static float boost_db(signed char pot) { return linear_pot(pot, 0, 40); }
-static float boost_level(signed char pot) { return linear_pot(pot, -40, 0); }
-static float boost_basscut(signed char pot)  { return frequency_pot(pot, 10, 200); }		//  10 - 200 Hz
-static float boost_highcut(signed char pot)  { return frequency_pot(pot, 1, 20); }		//  1 - 20 kHz
-static float boost_mix(signed char pot) { return linear_pot(pot, 0, 1); }
-
-void boost_init(signed char pot[10])
+void boost_init(unsigned char pot[10])
 {
-	boost.mult = db_to_level(boost_db(pot[0]));
-	boost.level = db_to_level(boost_level(pot[1]));
-	biquad_hpf(&boost.basscut, boost_basscut(pot[2]), 0.707);
-	biquad_lpf(&boost.highcut, boost_highcut(pot[3])*1000, 0.707);
-	boost.mix = boost_mix(pot[4]);
+	boost.mult = db_to_level(boost_pot0(pot[0]));
+	boost.level = db_to_level(boost_pot1(pot[1]));
+	biquad_hpf(&boost.basscut, boost_pot2(pot[2]), 0.707);
+	biquad_lpf(&boost.highcut, boost_pot3(pot[3])*1000, 0.707);
+	boost.mix = boost_pot4(pot[4]);
 }
 
-static struct effect boost_effect;
 
 static float fold(float in, float level)
 {
@@ -52,17 +52,3 @@ static float boost_step(float in)
 
 	return linear(boost.mix, in, out);
 }
-
-static struct effect boost_effect = {
-	.name = "Boost",
-	.short_name = "BOOST",
-	.init = boost_init,
-	.step = boost_step,
-	.pots = {
-		EFFECT_POT("Boost", desc_dB, boost_db, -60, ),
-		EFFECT_POT("Level", desc_dB, boost_level, 60),
-		EFFECT_POT("Basscut", desc_Hz, boost_basscut, 0),
-		EFFECT_POT("Highcut", desc_kHz, boost_highcut, 0),
-		EFFECT_POT("Mix", desc_none, boost_mix ),
-	}
-};

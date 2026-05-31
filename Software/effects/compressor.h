@@ -1,3 +1,10 @@
+// NAME: Compressor [COMPR]
+// PRIORITY: 30
+// POT: "Level" LINEAR(-40.0 0.0) = -20.0 dB
+// POT: "Attack" LINEAR(2.0 100.0) = 15.0 ms
+// POT: "Release" LINEAR(50.0 500.0) = 150.0 ms
+// POT: "Ratio" LINEAR(1.0 20.0) = 4.8 x
+// POT: "Boost" LINEAR(0.0 24.0) = 6.0 dB
 //
 // Compressor Effect
 //
@@ -13,46 +20,21 @@ static struct {
 	.compression = 1.0
 };
 
-static float comp_pot0_level(signed char pot)
+static inline void compressor_init(unsigned char pot[10])
 {
-	return linear_pot(pot, -40.0f, 0.0f);	// -40dB to 0dB.
-}
-
-static float comp_pot1_attack(signed char pot)
-{
-	return linear_pot(pot, 2.0f, 100.0f);	// 2ms to 100ms
-}
-
-static float comp_pot2_release(signed char pot)
-{
-	return linear_pot(pot, 50.0f, 500.0f); // 50ms to 500ms
-}
-
-static float comp_pot3_ratio(signed char pot)
-{
-	return linear_pot(pot, 1.0f, 20.0f);	// 1.0 to 20.0
-}
-
-static float comp_pot4_boost(signed char pot)
-{
-	return linear_pot(pot, 0.0f, 24.0f);	// 0dB to +24dB
-}
-
-static inline void compressor_init(signed char pot[10])
-{
-	float level_db = comp_pot0_level(pot[0]);
+	float level_db = compressor_pot0(pot[0]);
 	compressor.level = db_to_level(level_db);
 
-	float attack_ms = comp_pot1_attack(pot[1]);
+	float attack_ms = compressor_pot1(pot[1]);
 	compressor.attack = time_constant(attack_ms);
 
-	float release_ms = comp_pot2_release(pot[2]);
+	float release_ms = compressor_pot2(pot[2]);
 	compressor.release = time_constant(release_ms);
 
-	float ratio = comp_pot3_ratio(pot[3]);
+	float ratio = compressor_pot3(pot[3]);
 	compressor.ratio = 1.0f - (1.0f / ratio);
 
-	float boost_db = comp_pot4_boost(pot[4]);
+	float boost_db = compressor_pot4(pot[4]);
 	compressor.boost = db_to_level(boost_db);
 }
 
@@ -61,8 +43,6 @@ static inline float mypow(float a, float b)
 {
 	return pow2(log2f(a) * b);
 }
-
-static struct effect compressor_effect;
 
 static inline float compressor_step(float in)
 {
@@ -89,17 +69,3 @@ static inline float compressor_step(float in)
 
 	return in * compressor.compression * compressor.boost;
 }
-
-static struct effect compressor_effect = {
-	.name = "Compressor",
-	.short_name = "COMPR",
-	.init = compressor_init,
-	.step = compressor_step,
-	.pots = {
-		EFFECT_POT("Level", desc_dB, comp_pot0_level, 0),	// -20dB
-		EFFECT_POT("Attack", desc_ms, comp_pot1_attack, -42),	// ~15ms
-		EFFECT_POT("Release", desc_ms, comp_pot2_release, -30),	// ~150ms
-		EFFECT_POT("Ratio", desc_x, comp_pot3_ratio, -36),	// ~4.8 ratio
-		EFFECT_POT("Boost", desc_dB, comp_pot4_boost, -30),	// ~6dB makeup
-	}
-};

@@ -4,51 +4,86 @@ import os
 import re
 import json
 
-def generate(audio_dir, out_h, out_js, effects):
+def generate(audio_dir, out_h, out_js):
     cc_counter = 40
     midi_map = []  # List of dicts for C output
     ui_effects = [] # List of dicts for JS output
+    effects_data = []
 
-    # Build maps
-    for e_idx, base in enumerate(effects):
-        header_path = os.path.join(audio_dir, f"{base}.h")
-        if not os.path.exists(header_path):
-            print(f"Warning: {header_path} not found")
+    for filename in os.listdir(audio_dir):
+        if not filename.endswith('.h'):
             continue
+        base = filename[:-2]
+        header_path = os.path.join(audio_dir, filename)
 
         with open(header_path, 'r') as f:
             content = f.read()
 
-        struct_match = re.search(r'static struct effect \w+ = \{(.*?)\n\};', content, re.DOTALL)
-        if not struct_match:
-            print(f"Warning: Could not parse struct for {base}")
+        name_match = re.search(r'//\s*NAME:\s*(.*?)\s*\[(.*?)\]', content)
+        priority_match = re.search(r'//\s*PRIORITY:\s*(\d+)', content)
+        graph_match = re.search(r'//\s*GRAPH:\s*(\w+)', content)
+
+        if not name_match:
             continue
 
-        struct_body = struct_match.group(1)
-        name_match = re.search(r'\.name\s*=\s*"([^"]+)"', struct_body)
-        short_name_match = re.search(r'\.short_name\s*=\s*"([^"]+)"', struct_body)
-
-        full_name = name_match.group(1) if name_match else base
-        short_name = short_name_match.group(1) if short_name_match else base
+        full_name = name_match.group(1).strip()
+        short_name = name_match.group(2).strip()
+        priority = int(priority_match.group(1)) if priority_match else 100
+        graph_fn = graph_match.group(1) if graph_match else None
 
         pots = []
-        pots_match = re.search(r'\.pots\s*=\s*\{(.*?)\n\s*\}', struct_body, re.DOTALL)
-        if pots_match:
-            pots_body = pots_match.group(1)
-            # Find lines like EFFECT_POT("Level", desc_dB, gate_pot0_level, 0)
-            pot_lines = re.findall(r'EFFECT_POT\(\s*"([^"]+)"', pots_body)
-            for p_idx, pot_label in enumerate(pot_lines):
-                pots.append(pot_label)
-                # Assign CC for pot
-                midi_map.append({
-                    "cc": cc_counter,
-                    "type": 1, # POT
-                    "effect_idx": e_idx,
-                    "pot_idx": p_idx
-                })
-                cc_counter += 1
+        # Match: // POT: "Name" CURVE(a b c) = 1.0 Unit
+        pot_lines = re.findall(r'//[ \t]*POT:[ \t]*"([^"]+)"[ \t]+(LINEAR|FREQUENCY|SQUARED|RAW|ENUM)(?:\(([^)]+)\))?(?:[ \t]*=[ \t]*(\S+))?(?:[ \t]+(\S+))?[ \t]*\n?', content)
 
-        # Assign CC for enable
+        for p_label, p_curve, p_args, p_def, p_unit in pot_lines:
+            enum_list = None
+            if p_curve == 'ENUM' and p_args:
+                enum_list = p_args.split()
+
+            default_val = 0.0
+            if p_def:
+                if enum_list and p_def in enum_list:
+                    default_val = float(enum_list.index(p_def))
+                else:
+                    try:
+                        default_val = float(p_def)
+                    except ValueError:
+                        default_val = 0.0
+
+            pots.append({
+                'label': p_label,
+                'unit': p_unit if p_unit else "none",
+                'curve': p_curve,
+                'args': p_args.split() if p_args else [],
+                'enum': enum_list,
+                'default': default_val
+            })
+
+        effects_data.append({
+            'base': base,
+            'full_name': full_name,
+            'short_name': short_name,
+            'priority': priority,
+            'graph': graph_fn,
+            'pots': pots,
+            'header_path': header_path
+        })
+
+    # Sort by priority
+    effects_data.sort(key=lambda x: x['priority'])
+
+    # Build maps
+    for e_idx, e_data in enumerate(effects_data):
+        for p_idx, pot in enumerate(e_data['pots']):
+            midi_map.append({
+                "cc": cc_counter,
+                "type": 1, # POT
+                "effect_idx": e_idx,
+                "pot_idx": p_idx
+            })
+            pot['cc'] = cc_counter
+            cc_counter += 1
+
         enable_cc = cc_counter
         midi_map.append({
             "cc": cc_counter,
@@ -56,36 +91,120 @@ def generate(audio_dir, out_h, out_js, effects):
             "effect_idx": e_idx,
             "pot_idx": 0
         })
+        e_data['enable_cc'] = enable_cc
         cc_counter += 1
 
+        ui_pots = []
+        for pot in e_data['pots']:
+            min_v = 0.0
+            max_v = 1.0
+            if pot['curve'] != 'ENUM' and len(pot['args']) >= 2:
+                min_v = float(pot['args'][0])
+                max_v = float(pot['args'][1])
+            elif pot['curve'] == 'ENUM' and pot['enum']:
+                max_v = float(len(pot['enum']) - 1)
+
+            ui_pots.append({
+                "name": pot['label'],
+                "unit": pot['unit'],
+                "curve": pot['curve'],
+                "min": min_v,
+                "max": max_v,
+                "default": pot['default'],
+                "cc": pot['cc'],
+                "enum": pot['enum']
+            })
+
         ui_effects.append({
-            "id": base,
-            "name": full_name,
-            "shortName": short_name,
+            "id": e_data['base'],
+            "name": e_data['full_name'],
+            "shortName": e_data['short_name'],
             "enable_cc": enable_cc,
-            "pots": pots,
-            "pot_ccs": [m["cc"] for m in midi_map if m["effect_idx"] == e_idx and m["type"] == 1]
+            "pots": ui_pots
         })
 
     # Generate effect_map.h
     with open(out_h, 'w') as f:
         f.write("// Auto-generated by gen_effects.py\n")
 
-        # Includes
-        for base in effects:
+        for e_data in effects_data:
+            base = e_data['base']
+            struct_name = f"{base}_effect" if base != "eq" else "EQ"
+            e_data['struct_name'] = struct_name
+
+            f.write(f"static struct effect {struct_name};\n")
+
+            for p_idx, pot in enumerate(e_data['pots']):
+                fn_name = f"{base}_pot{p_idx}"
+                pot['fn_name'] = fn_name
+
+                if pot['curve'] == 'ENUM' and pot['enum']:
+                    enum_name = f"{base}_pot{p_idx}_enum"
+                    pot['enum_name'] = enum_name
+                    f.write(f"static const char *const {enum_name}[] = {{ ")
+                    for val in pot['enum']:
+                        f.write(f'"{val}", ')
+                    f.write("NULL };\n")
+
+                args_str = ", ".join(pot['args'])
+                if pot['curve'] == 'RAW' or pot['curve'] == 'ENUM':
+                    f.write(f"static float {fn_name}(unsigned char pot) {{ return pot; }}\n")
+                elif pot['curve'] == 'LINEAR':
+                    f.write(f"static float {fn_name}(unsigned char pot) {{ return linear_pot(pot, {args_str}); }}\n")
+                elif pot['curve'] == 'FREQUENCY':
+                    f.write(f"static float {fn_name}(unsigned char pot) {{ return frequency_pot(pot, {args_str}); }}\n")
+                elif pot['curve'] == 'SQUARED':
+                    f.write(f"static float {fn_name}(unsigned char pot) {{ float p = POT_TO_FLOAT(pot); return linear(p*p, {args_str}); }}\n")
+
             f.write(f"#include \"../effects/{base}.h\"\n")
 
-        f.write("\n")
+            f.write(f"static struct effect {struct_name} = {{\n")
+            f.write(f"\t.name = \"{e_data['full_name']}\",\n")
+            f.write(f"\t.short_name = \"{e_data['short_name']}\",\n")
+            if e_data['graph']:
+                f.write(f"\t.graph = {e_data['graph']},\n")
+            f.write(f"\t.init = {base}_init,\n")
+            f.write(f"\t.step = {base}_step,\n")
+            f.write(f"\t.pots = {{\n")
 
-        # Array
+            for p_idx, pot in enumerate(e_data['pots']):
+                y = pot['default']
+                curve = pot['curve']
+
+                a = 0.0
+                b = 1.0
+                if curve != 'ENUM' and len(pot['args']) >= 2:
+                    a = float(pot['args'][0])
+                    b = float(pot['args'][1])
+
+                if curve == 'RAW' or curve == 'ENUM':
+                    p = y
+                elif curve == 'LINEAR':
+                    p = (y - a) / (b - a) if b != a else 0
+                elif curve == 'FREQUENCY':
+                    p = ((y - a) / (b - a)) ** (1/3.0) if b != a else 0
+                elif curve == 'SQUARED':
+                    p = ((y - a) / (b - a)) ** 0.5 if b != a else 0
+
+                if curve == 'RAW' or curve == 'ENUM':
+                    pot_val = int(round(y))
+                else:
+                    pot_val = int(round(p * 120))
+                    if pot_val < 0: pot_val = 0
+                    if pot_val > 120: pot_val = 120
+
+                unit_str = f"\"{pot['unit']}\"" if pot['unit'] and pot['unit'] != "none" else "NULL"
+                enum_str = f", {pot['enum_name']}" if 'enum_name' in pot else ""
+                f.write(f"\t\tEFFECT_POT(\"{pot['label']}\", {unit_str}, {pot['fn_name']}, {pot_val}{enum_str}),\n")
+
+            f.write("\t}\n")
+            f.write("};\n\n")
+
         f.write("static struct effect *const effects[] = {\n")
-        for base in effects:
-            # Most are <base>_effect except EQ which is just EQ
-            struct_name = f"{base}_effect" if base != "eq" else "EQ"
-            f.write(f"\t&{struct_name},\n")
+        for e_data in effects_data:
+            f.write(f"\t&{e_data['struct_name']},\n")
         f.write("};\n\n")
 
-        # MIDI Map struct
         f.write("struct midi_cc_mapping {\n\tuint8_t type; // 0=none, 1=pot, 2=enable\n\tuint8_t effect_idx;\n\tuint8_t pot_idx;\n};\n\n")
         f.write("static const struct midi_cc_mapping dense_midi_map[128] = {\n")
 
@@ -98,14 +217,14 @@ def generate(audio_dir, out_h, out_js, effects):
         f.write("};\n\n")
 
         f.write("static const uint8_t effect_enable_to_cc[] = {\n")
-        for e_idx in range(len(effects)):
+        for e_idx in range(len(effects_data)):
             enables = [m["cc"] for m in midi_map if m["effect_idx"] == e_idx and m["type"] == 2]
             if enables:
                 f.write(f"\t[{e_idx}] = {enables[0]},\n")
         f.write("};\n\n")
 
         f.write("static const uint8_t effect_pot_to_cc[][10] = {\n")
-        for e_idx in range(len(effects)):
+        for e_idx in range(len(effects_data)):
             f.write(f"\t[{e_idx}] = {{ ")
             for p_idx in range(10):
                 pots = [m["cc"] for m in midi_map if m["effect_idx"] == e_idx and m["type"] == 1 and m["pot_idx"] == p_idx]
@@ -118,9 +237,8 @@ def generate(audio_dir, out_h, out_js, effects):
 
         f.write(f"#define GLOBAL_ENABLE_CC 20\n")
         f.write(f"#define STATE_DUMP_CC 119\n")
-        f.write(f"#define EFFECT_COUNT {len(effects)}\n\n")
+        f.write(f"#define EFFECT_COUNT {len(effects_data)}\n\n")
 
-    # Generate effects.js
     with open(out_js, 'w') as f:
         f.write("// Auto-generated by gen_effects.py\n")
         f.write("const PEDAL_EFFECTS = " + json.dumps(ui_effects, indent=2) + ";\n")
@@ -128,8 +246,8 @@ def generate(audio_dir, out_h, out_js, effects):
         f.write("const STATE_DUMP_CC = 119;\n")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 5:
-        print("Usage: gen_effects.py <audio_dir> <out_h> <out_js> <effect1> <effect2> ...")
+    if len(sys.argv) < 4:
+        print("Usage: gen_effects.py <audio_dir> <out_h> <out_js>")
         sys.exit(1)
 
-    generate(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4:])
+    generate(sys.argv[1], sys.argv[2], sys.argv[3])

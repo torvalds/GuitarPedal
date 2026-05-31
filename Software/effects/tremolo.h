@@ -1,3 +1,8 @@
+// NAME: Tremolo [TREM]
+// PRIORITY: 110
+// POT: "Rate" FREQUENCY(0.1 10.0) = 1.0 Hz
+// POT: "Depth" LINEAR(0.0 1.0) = 0.5
+// POT: "Mode" ENUM(NORM HARM) = NORM
 // Tremolo: sinusoidal amplitude modulation, NORM and HARM modes.
 //
 // NORM: gain = 1 + k * lfo, where k = depth / (2 - depth).
@@ -23,16 +28,10 @@ static struct {
 	float lp2_a, lp2_z;  // one-pole LP at 636.6 Hz; HP = in - lp2 (high branch)
 } tremolo;
 
-static const char *const tremolo_mode_names[] = { "NORM", "HARM", NULL };
-
-static float tremolo_rate(signed char pot)    { return frequency_pot(pot, 0.1f, 10.0f); }
-static float tremolo_depth(signed char pot)   { return POT_TO_FLOAT(pot); }
-static float tremolo_mode_pot(signed char pot) { return pot; }
-
-static void tremolo_init(signed char pot[10])
+static void tremolo_init(unsigned char pot[10])
 {
-	set_lfo_freq(&tremolo.lfo, tremolo_rate(pot[0]));
-	float d = tremolo_depth(pot[1]);
+	set_lfo_freq(&tremolo.lfo, tremolo_pot0(pot[0]));
+	float d = tremolo_pot1(pot[1]);
 	tremolo.k = d / (2.0f - d);
 	tremolo.harmonic = (pot[2] == 1);
 
@@ -51,15 +50,3 @@ static float tremolo_step(float in)
 	float hi = in - (tremolo.lp2_z = in + tremolo.lp2_a * (tremolo.lp2_z - in));
 	return in + tremolo.k * lfo * (lo - hi);
 }
-
-static struct effect tremolo_effect = {
-	.name = "Tremolo",
-	.short_name = "TREM",
-	.init = tremolo_init,
-	.step = tremolo_step,
-	.pots = {
-		EFFECT_POT("Rate",  desc_Hz,   tremolo_rate,     15, NULL ),
-		EFFECT_POT("Depth", desc_none, tremolo_depth,     0, NULL ),
-		EFFECT_POT("Mode",  desc_none, tremolo_mode_pot,  0, tremolo_mode_names ),
-	}
-};

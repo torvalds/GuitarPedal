@@ -1,3 +1,8 @@
+// NAME: Preamp [PRE]
+// PRIORITY: 20
+// POT: "Level" LINEAR(-20.0 20.0) = 0.0 dB
+// POT: "Sat" LINEAR(0.5 4.0) = 1.2 x
+// POT: "Voice" ENUM(Tube JFET) = Tube
 // Two-stage cascaded triode (Tube) or famous single-stage JFET preamp model.
 // SATURATION drives both waveshapers; VOICE selects topology; LEVEL trims output.
 
@@ -56,14 +61,10 @@ static struct {
 	.drive = 1.2f,
 };
 
-static float preamp_level_pot(signed char pot) { return linear_pot(pot, -20.0f, 20.0f); }
-static float preamp_sat_pot  (signed char pot) { return linear_pot(pot, 0.5f, 4.0f); }
-static float preamp_voice_pot(signed char pot) { return pot; }
-
-static inline void preamp_init(signed char pot[10])
+static inline void preamp_init(unsigned char pot[10])
 {
-	preamp.level = db_to_level(preamp_level_pot(pot[0]));
-	preamp.drive = preamp_sat_pot(pot[1]);
+	preamp.level = db_to_level(preamp_pot0(pot[0]));
+	preamp.drive = preamp_pot1(pot[1]);
 	preamp.voice = pot[2];
 
 	// Shelf and miller corners are fixed; computed here because pow2() needs runtime tables.
@@ -115,17 +116,3 @@ static inline float preamp_step(float in)
 		: preamp_jfet_step(in, preamp.drive) * PREAMP_JFET_NORM;
 	return out * preamp.level;
 }
-
-static const char *const preamp_voice_names[] = { "Tube", "JFET", NULL };
-
-static struct effect preamp_effect = {
-	.name       = "Preamp",
-	.short_name = "PRE",
-	.init       = preamp_init,
-	.step       = preamp_step,
-	.pots = {
-		EFFECT_POT("Level", desc_dB,   preamp_level_pot,  0, NULL ),
-		EFFECT_POT("Sat",   desc_x,    preamp_sat_pot,   -36, NULL ),
-		EFFECT_POT("Voice", desc_none, preamp_voice_pot,  0,  preamp_voice_names ),
-	},
-};

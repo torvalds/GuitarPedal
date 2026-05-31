@@ -61,7 +61,7 @@ add_custom_command(
 )
 target_sources(blink PRIVATE "${EQ_W0_HEADER}")
 
-set(EFFECTS gate preamp compressor boost phaser flanger vibrato echo reverb pitch tremolo eq usb)
+file(GLOB EFFECT_HEADERS "effects/*.h")
 set(EFFECT_MAP_HEADER "${CMAKE_CURRENT_BINARY_DIR}/effect_map.h")
 set(EFFECT_JS "${CMAKE_CURRENT_SOURCE_DIR}/WebMIDI/effects.js")
 
@@ -71,8 +71,7 @@ add_custom_command(
 		"${CMAKE_CURRENT_SOURCE_DIR}/effects"
 		"${EFFECT_MAP_HEADER}"
 		"${EFFECT_JS}"
-		${EFFECTS}
-	DEPENDS "${SCRIPT_DIR}/gen_effects.py"
+	DEPENDS "${SCRIPT_DIR}/gen_effects.py" ${EFFECT_HEADERS}
 )
 target_sources(blink PRIVATE "${EFFECT_MAP_HEADER}")
 

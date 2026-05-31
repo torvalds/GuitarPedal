@@ -1,3 +1,8 @@
+// NAME: Vibrato [VIB]
+// PRIORITY: 70
+// POT: "Rate" FREQUENCY(0.1 8.0) = 1.0 Hz
+// POT: "Depth" LINEAR(0.0 5.0) = 0.5 ms
+// POT: "Mix" LINEAR(0.0 1.0) = 1.0
 // Vibrato: LFO-modulated delay line for a classic Doppler shift.
 // Blending dry signal with the wet signal produces a rich chorus-like effect.
 // At 100% wet only the pitch-shifted signal is audible; fun for rotary speaker emulation.
@@ -12,16 +17,12 @@ static struct {
 	float samples[1024];	// ~21ms at 48kHz; max read = center(6ms) + depth(5ms) = 528 samples
 } vibrato;
 
-static float vibrato_rate(signed char pot)  { return frequency_pot(pot, 0.1f, 8.0f); }
-static float vibrato_depth(signed char pot) { return linear_pot(pot, 0.0f, 5.0f); }
-static float vibrato_mix(signed char pot)   { return POT_TO_FLOAT(pot); }
-
-static void vibrato_init(signed char pot[10])
+static void vibrato_init(unsigned char pot[10])
 {
-	set_lfo_freq(&vibrato.lfo, vibrato_rate(pot[0]));
-	vibrato.depth = vibrato_depth(pot[1]) * SAMPLES_PER_MSEC;
+	set_lfo_freq(&vibrato.lfo, vibrato_pot0(pot[0]));
+	vibrato.depth = vibrato_pot1(pot[1]) * SAMPLES_PER_MSEC;
 
-	struct sincos w = fastsincos(0.25f * vibrato_mix(pot[2]));
+	struct sincos w = fastsincos(0.25f * vibrato_pot2(pot[2]));
 	vibrato.dry = w.cos;
 	vibrato.wet = w.sin;
 }
@@ -33,15 +34,3 @@ static float vibrato_step(float in)
 	float wet = sample_array_read(d, &vibrato.idx, vibrato.samples);
 	return vibrato.dry * in + vibrato.wet * wet;
 }
-
-static struct effect vibrato_effect = {
-	.name = "Vibrato",
-	.short_name = "VIB",
-	.init = vibrato_init,
-	.step = vibrato_step,
-	.pots = {
-		EFFECT_POT("Rate",  desc_Hz,   vibrato_rate,  15,  NULL ),
-		EFFECT_POT("Depth", desc_ms,   vibrato_depth, -39, NULL ),
-		EFFECT_POT("Mix",   desc_none, vibrato_mix,   60, NULL ),
-	}
-};

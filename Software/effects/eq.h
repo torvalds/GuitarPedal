@@ -1,3 +1,16 @@
+// NAME: Graphic EQ [EQ]
+// GRAPH: eq_graph
+// PRIORITY: 120
+// POT: "  31 Hz" LINEAR(-20.0 20.0) = 0.0 dB
+// POT: "  62 Hz" LINEAR(-20.0 20.0) = 0.0 dB
+// POT: " 125 Hz" LINEAR(-20.0 20.0) = 0.0 dB
+// POT: " 250 Hz" LINEAR(-20.0 20.0) = 0.0 dB
+// POT: " 500 Hz" LINEAR(-20.0 20.0) = 0.0 dB
+// POT: "1.0 kHz" LINEAR(-20.0 20.0) = 0.0 dB
+// POT: "2.0 kHz" LINEAR(-20.0 20.0) = 0.0 dB
+// POT: "4.0 kHz" LINEAR(-20.0 20.0) = 0.0 dB
+// POT: "8.0 kHz" LINEAR(-20.0 20.0) = 0.0 dB
+// POT: " 16 kHz" LINEAR(-20.0 20.0) = 0.0 dB
 #define EFF_ENABLE_STEPS ((int)SAMPLES_PER_SEC/10)
 
 struct {
@@ -5,19 +18,17 @@ struct {
 	struct biquad_state state[10];
 } eq;
 
-// Linear gain depending on pot value
-static float eq_pot_A(signed char pot)
+// Linear gain depending on pot value (now in dB, so we must calculate pow2)
+static float eq_pot_A(float db)
 {
-	// Map pot [-100..100] to gain multiplier [0.1..10.0]
-	// 10^(pot/100) = 2^(pot * 3.321928 / 100)
-	return pow2(pot * 0.03321928f);
+	return pow2(db * 0.332192809f);
 }
 
 // Q depending on pot value: more extreme gain
 // uses higher Q. Random choices here...
-static inline float eq_pot_Q(int idx, signed char pot[10])
+static inline float eq_pot_Q(int idx, unsigned char pot[10])
 {
-	signed char prev, curr, next;
+	unsigned char prev, curr, next;
 	prev = idx ? pot[idx-1] : pot[0];
 	next = (idx < 9) ? pot[idx+1] : pot[9];
 	curr = pot[idx];
@@ -28,9 +39,9 @@ static inline float eq_pot_Q(int idx, signed char pot[10])
 #include "eq-w0.h"
 
 #define calc_eq_coeff(type, x, pot, coeff) \
-	_biquad_##type(coeff, EQ_W0[x], eq_pot_Q(x,pot), eq_pot_A(pot[x]))
+	_biquad_##type(coeff, EQ_W0[x], eq_pot_Q(x,pot), eq_pot_A(eq_pot##x(pot[x])))
 
-static void eq_init(signed char pot[10])
+static void eq_init(unsigned char pot[10])
 {
 	struct biquad_coeff *c = eq.coeff;
 
@@ -87,7 +98,7 @@ static int eq_magnitude(int x, void *arg)
 
 	float mag_sq = 1.0f;
 	struct biquad_coeff c;
-	signed char *pot = arg;
+	unsigned char *pot = arg;
 
 	calc_eq_coeff(loshelf,0,pot,&c); mag_sq *= biquad_mag_sq(&c,w0,w2);
 	calc_eq_coeff(peaking,1,pot,&c); mag_sq *= biquad_mag_sq(&c,w0,w2);
@@ -118,7 +129,7 @@ static int eq_magnitude(int x, void *arg)
 // Graph the frequency response and put a mark at
 // the current active frequency
 //
-static void eq_graph(struct effect *effect, int active, signed char pots[10])
+static void eq_graph(struct effect *effect, int active, unsigned char pots[10])
 {
 	sh1106_rectangle(0,0,128,64,rect_clear);
 	sh1106_graph(0, 128, 0, 63, eq_magnitude, pots);
@@ -130,23 +141,3 @@ static void eq_graph(struct effect *effect, int active, signed char pots[10])
 		y = 61;
 	sh1106_rectangle(x-2,y-2,5,5,rect_clear);
 }
-
-static struct effect EQ = {
-	.name = "Graphic EQ",
-	.short_name = "EQ",
-	.graph = eq_graph,
-	.init = eq_init,
-	.step = eq_step,
-	.pots = {
-		EFFECT_POT("  31 Hz", desc_x,  eq_pot_A, 0),
-		EFFECT_POT("  62 Hz", desc_x,  eq_pot_A, 0),
-		EFFECT_POT(" 125 Hz", desc_x,  eq_pot_A, 0),
-		EFFECT_POT(" 250 Hz", desc_x,  eq_pot_A, 0),
-		EFFECT_POT(" 500 Hz", desc_x,  eq_pot_A, 0),
-		EFFECT_POT("1.0 kHz", desc_x,  eq_pot_A, 0),
-		EFFECT_POT("2.0 kHz", desc_x,  eq_pot_A, 0),
-		EFFECT_POT("4.0 kHz", desc_x,  eq_pot_A, 0),
-		EFFECT_POT("8.0 kHz", desc_x,  eq_pot_A, 0),
-		EFFECT_POT(" 16 kHz", desc_x,  eq_pot_A, 0),
-	}
-};

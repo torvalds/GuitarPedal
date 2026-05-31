@@ -1,3 +1,12 @@
+// NAME: Tape Echo [ECHO]
+// PRIORITY: 80
+// POT: "Blend" LINEAR(0.0 1.0) = 0.2
+// POT: "Sustain" LINEAR(0.0 1.1) = 0.3
+// POT: "Time" LINEAR(0.0 1.0) = 0.5 ms
+// POT: "Record" LINEAR(0.1 2.0) = 0.5
+// POT: "Tone" LINEAR(0.0 1.0) = 0.5 Hz
+// POT: "WowFlut" LINEAR(0.0 1.0) = 0.2
+// POT: "Mode" ENUM(Normal SOS) = Normal
 //
 // "EchoKing" for Cleveland Music Co. Hothouse DIY DSP Platform
 // Simplified and converted to C for the RP2350 direct pedal format
@@ -18,7 +27,6 @@
 // any other trademark holder. It is an educational DSP example.
 //
 
-static struct effect echo_effect;
 
 //
 // One-pole low-pass: y[n] = (1-a)*x[n] + a*y[n-1], 6 dB/oct rolloff.
@@ -141,52 +149,20 @@ struct {
 	int16_t array[32768];
 } echo;
 
-static float echo_blend(signed char pot) { return linear_pot(pot, 0, 1); }
-static float echo_sustain(signed char pot) { return linear_pot(pot, 0, 1.1f); }
-static float echo_record(signed char pot) { return linear_pot(pot, 0.1f, 2.0f); }
-static float echo_wow(signed char pot) { return linear_pot(pot, 0, 1); }
-
-//
-// Display callbacks: convert a pot to the human-friendly real-world unit
-// (ms / Hz) shown on the OLED. echo_time_display mirrors the log-taper in
-// echo_init; echo_tone_display mirrors the per-sample tone calc in echo_step.
-// Any change to the maths there must be reflected here too.
-//
-static float echo_time_display(signed char pot)
+static inline void echo_init(unsigned char pot[10])
 {
-	float time_val = POT_TO_FLOAT(pot);
-	return ECHO_DELAY_MIN_S * pow2(time_val * ECHO_DELAY_LOG2_RATIO) * 1000.0f;
-}
-
-static float echo_tone_display(signed char pot)
-{
-	float tone_val = linear_pot(pot, 0, 1);
-	float tone_mult = pow2((tone_val - 0.5f) * LOG2_10);
-	float eff_playback_fc = model.playback_fc * tone_mult;
-	if (eff_playback_fc < 400.0f) eff_playback_fc = 400.0f;
-	if (eff_playback_fc > 18000.0f) eff_playback_fc = 18000.0f;
-	return eff_playback_fc;
-}
-
-// Returns the literal pot value; the UI indexes into enum_names with it.
-static float echo_mode_pot(signed char pot) { return pot; }
-
-static inline void echo_init(signed char pot[10])
-{
-   	echo.target_blend = echo_blend(pot[0]);
-	echo.target_sustain = echo_sustain(pot[1]);
+	echo.target_blend = echo_pot0(pot[0]);
+	echo.target_sustain = echo_pot1(pot[1]);
 
 	// Log-taper map of the time pot across ECHO_DELAY_MIN_S..MAX_S.
-	float time_val = POT_TO_FLOAT(pot[2]);
+	float time_val = echo_pot2(pot[2]);
 	echo.target_delay_s = ECHO_DELAY_MIN_S * pow2(time_val * ECHO_DELAY_LOG2_RATIO);
 
-	echo.target_record_level = echo_record(pot[3]);
-	echo.target_tone = POT_TO_FLOAT(pot[4]);
-	echo.target_wow = echo_wow(pot[5]);
+	echo.target_record_level = echo_pot3(pot[3]);
+	echo.target_tone = echo_pot4(pot[4]);
+	echo.target_wow = echo_pot5(pot[5]);
 
 	// Mode: 0=Normal, 1=SOS
-	// `echo.sos_mode = pot[6]` would also work, but let's be defensive and
-	// not couple to the enum_names array.
 	echo.sos_mode = (pot[6] == 1);
 
 	echo.preamp_dc_offset = tanhf(model.preamp_asymmetry);
@@ -300,24 +276,6 @@ static inline float echo_step(float in)
 
 	return out;
 }
-
-static const char *const echo_mode_names[] = { "Normal", "SOS", NULL };
-
-static struct effect echo_effect = {
-	.name = "Tape Echo",
-	.short_name = "ECHO",
-	.init = echo_init,
-	.step = echo_step,
-	.pots = {
-		EFFECT_POT("Blend", desc_none, echo_blend, -32),
-		EFFECT_POT("Sustain", desc_none, echo_sustain, -25),
-		EFFECT_POT("Time", desc_ms, echo_time_display, 33),
-		EFFECT_POT("Record", desc_none, echo_record, -34),
-		EFFECT_POT("Tone", desc_Hz, echo_tone_display, 8),
-		EFFECT_POT("WowFlut", desc_none, echo_wow, -30),
-		EFFECT_POT("Mode", desc_none, echo_mode_pot, 0, echo_mode_names ),
-	}
-};
 
 //
 // tanhf and echo_onepole helpers vs. limit_value and biquad_lpf.

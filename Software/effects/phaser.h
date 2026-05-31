@@ -1,3 +1,9 @@
+// NAME: Phaser [PHSR]
+// PRIORITY: 50
+// POT: "LFO" FREQUENCY(25.0 2000.0) = 25.0 ms
+// POT: "Feedback" LINEAR(0.0 0.75) = 0.0
+// POT: "Freq" FREQUENCY(220.0 6460.0) = 220.0 Hz
+// POT: "Q" LINEAR(0.25 2.0) = 0.25
 struct {
 	struct lfo_state lfo;
 	struct biquad_coeff coeff;
@@ -5,12 +11,7 @@ struct {
 	float center_f, octaves, Q, feedback;
 } phaser;
 
-static float phaser_pot0(signed char pot) { return frequency_pot(pot, 25, 2000); }
-static float phaser_pot1(signed char pot) { return linear_pot(pot, 0, 0.75); }
-static float phaser_pot2(signed char pot) { return frequency_pot(pot, 220, 6460); }
-static float phaser_pot3(signed char pot) { return linear_pot(pot, 0.25, 2); }
-
-void phaser_init(signed char pot[10])
+void phaser_init(unsigned char pot[10])
 {
 	float ms = phaser_pot0(pot[0]);		// 25ms .. 2s
 	set_lfo_ms(&phaser.lfo, ms);
@@ -36,16 +37,3 @@ float phaser_step(float in)
 
 	return tanhf(in + out);
 }
-
-static struct effect phaser_effect = {
-	.name = "Phaser",
-	.short_name = "PHSR",
-	.init = phaser_init,
-	.step = phaser_step,
-	.pots = {
-		EFFECT_POT("LFO", desc_ms, phaser_pot0 ),
-		EFFECT_POT("Feedback", desc_none, phaser_pot1 ),
-		EFFECT_POT("Freq", desc_Hz, phaser_pot2 ),
-		EFFECT_POT("Q", desc_none, phaser_pot3 ),
-	}
-};

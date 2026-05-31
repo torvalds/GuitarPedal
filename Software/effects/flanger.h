@@ -1,3 +1,9 @@
+// NAME: Flanger [FLNGR]
+// PRIORITY: 60
+// POT: "Freq" SQUARED(0.0 10.0) = 0.0 Hz
+// POT: "Delay" LINEAR(0.0 4.0) = 0.0 ms
+// POT: "Depth" LINEAR(0.0 1.0) = 0.0
+// POT: "Feedback" LINEAR(0.0 1.0) = 0.0
 // Flanger effect based on the MIT-licensed DaisySP library by Electrosmith
 // which in turn seems to be based on Soundpipe by Paul Batchelor
 
@@ -10,12 +16,7 @@ static struct {
 	float samples[1024];
 } flanger;
 
-static float flanger_pot0(signed char pot) { float p = POT_TO_FLOAT(pot); return p*p*10; }
-static float flanger_pot1(signed char pot) { return linear_pot(pot, 0, 4); }
-static float flanger_pot2(signed char pot) { return POT_TO_FLOAT(pot); }
-static float flanger_pot3(signed char pot) { return POT_TO_FLOAT(pot); }
-
-static inline void flanger_init(signed char pot[10])
+static inline void flanger_init(unsigned char pot[10])
 {
 	set_lfo_freq(&flanger.lfo, flanger_pot0(pot[0]));
 	flanger.delay = flanger_pot1(pot[1]) * SAMPLES_PER_MSEC;
@@ -33,16 +34,3 @@ static inline float flanger_step(float in)
 
 	return (in + out) / 2;
 }
-
-static struct effect flanger_effect = {
-	.name = "Flanger",
-	.short_name = "FLNGR",
-	.init = flanger_init,
-	.step = flanger_step,
-	.pots = {
-		EFFECT_POT("Freq", desc_Hz, flanger_pot0 ),
-		EFFECT_POT("Delay", desc_ms, flanger_pot1 ),
-		EFFECT_POT("Depth", desc_none, flanger_pot2 ),
-		EFFECT_POT("Feedback", desc_none, flanger_pot3 ),
-	}
-};

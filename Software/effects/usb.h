@@ -1,3 +1,7 @@
+// NAME: USB [USB]
+// PRIORITY: 130
+// POT: "L/R Out" ENUM(Wet Dry Wet/Dry) = Wet
+// POT: "L/R In" ENUM(Off Pre-FX Mix) = Off
 //
 // usb "effect" - it's just setting the output details
 //
@@ -14,7 +18,7 @@ struct {
 	enum usb_input input;
 } usb;
 
-static void usb_init(signed char pot[10])
+static void usb_init(unsigned char pot[10])
 {
 	usb.output = pot[0];
 	usb.input = pot[1];
@@ -24,17 +28,3 @@ static inline float usb_step(float in)
 {
 	return in;
 }
-
-static const char *const usb_output_names[] = { "Wet", "Dry", "Wet/Dry", NULL };
-static const char *const usb_input_names[] = { "Off", "Pre-FX", "Mix", NULL };
-
-static struct effect usb_effect = {
-	.name = "USB",
-	.short_name = "USB",
-	.init = usb_init,
-	.step = usb_step,
-	.pots = {
-		EFFECT_POT("L/R Out", desc_none, NULL, 0, usb_output_names ),
-		EFFECT_POT("L/R In", desc_none, NULL, 0, usb_input_names ),
-	}
-};

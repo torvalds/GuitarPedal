@@ -43,7 +43,7 @@ static void reset_effect(struct effect *eff)
 	eff->seq = 0;
 	eff->mix = eff->target = 0;
 	for (int i = 0; i < 10; i++) {
-		signed char def_val = eff->pots[i].def_val;
+		unsigned char def_val = eff->pots[i].def_val;
 		eff->pot_values[0][i] = def_val;
 		eff->pot_values[1][i] = def_val;
 	}
@@ -154,7 +154,7 @@ void handle_midi_packet(const uint8_t packet[4])
 					uint8_t pot_cc = effect_pot_to_cc[i][p];
 					if (pot_cc) {
 						int val = e->pot_values[e->seq & 1][p];
-						send_midi_cc(pot_cc, val + 64);
+						send_midi_cc(pot_cc, val);
 					}
 				}
 			}
@@ -165,9 +165,8 @@ void handle_midi_packet(const uint8_t packet[4])
 			const struct midi_cc_mapping *m = &dense_midi_map[data1];
 			if (m->type == 1) { // Pot
 				struct effect *effect = effects[m->effect_idx];
-				int val = data2 - 64;
-				if (val < -60) val = -60;
-				if (val > 60) val = 60;
+				int val = data2;
+				if (val > 120) val = 120;
 				effect->pot_values[0][m->pot_idx] = val;
 				effect->pot_values[1][m->pot_idx] = val;
 				effect->seq++;
@@ -212,7 +211,7 @@ void handle_midi_packet(const uint8_t packet[4])
 				uint8_t cc = effect_pot_to_cc[current_midi_effect_idx][i];
 				if (cc) {
 					int val = effect->pot_values[0][i];
-					uint8_t midi_val = val + 64;
+					uint8_t midi_val = val;
 					send_midi_cc(cc, midi_val);
 				}
 			}

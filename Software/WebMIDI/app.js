@@ -71,7 +71,7 @@ function handleMidiMessage(event) {
         const val = data2;
 
         if (cc === GLOBAL_ENABLE_CC) {
-            isGlobalEnabled = (val === 0);
+            isGlobalEnabled = (val > 0);
             globalEnableEl.checked = isGlobalEnabled;
         } else {
             // It's a pot or an effect enable
@@ -79,11 +79,15 @@ function handleMidiMessage(event) {
             if (el) {
                 if (el.type === 'checkbox') {
                     el.checked = (val > 0);
+                } else if (el.tagName === 'SELECT') {
+                    el.value = val;
                 } else if (el.type === 'range') {
-                    el.value = val - 64;
+                    el.value = val;
                     // Update display value if any
                     const valDisplay = el.parentElement.querySelector('.pot-value');
-                    if (valDisplay) valDisplay.textContent = el.value;
+                    if (valDisplay && el.potDef) {
+                        valDisplay.textContent = formatPotValue(el.potDef, val);
+                    }
                 }
             }
         }
@@ -105,11 +109,61 @@ function sendMidiCc(cc, val) {
     midiOutput.send([0xB0, cc, val]);
 }
 
+function formatPotValue(pot, val) {
+    const p = val / 120.0;
+    let y = val;
+
+    if (pot.curve === 'RAW') {
+        y = val;
+    } else if (pot.curve === 'LINEAR') {
+        y = pot.min + p * (pot.max - pot.min);
+    } else if (pot.curve === 'FREQUENCY') {
+        y = pot.min + (p * p * p) * (pot.max - pot.min);
+    } else if (pot.curve === 'SQUARED') {
+        y = pot.min + (p * p) * (pot.max - pot.min);
+    }
+
+    let displayStr = "";
+    if (pot.curve === 'RAW' || pot.curve === 'ENUM') {
+        displayStr = Math.round(y).toString();
+    } else {
+        // Drop trailing zeros, max 2 decimals
+        displayStr = parseFloat(y.toFixed(2)).toString();
+    }
+
+    if (pot.unit && pot.unit !== 'none') {
+        displayStr += ' ' + pot.unit;
+    }
+    return displayStr;
+}
+
+function getInitialPotValue(pot) {
+    if (pot.default === undefined) return 60;
+    const y = pot.default;
+
+    if (pot.curve === 'RAW' || pot.curve === 'ENUM') return Math.round(y);
+
+    let p = 0;
+    const a = pot.min || 0;
+    const b = pot.max || 1;
+
+    if (pot.curve === 'LINEAR') {
+        p = (b !== a) ? (y - a) / (b - a) : 0;
+    } else if (pot.curve === 'FREQUENCY') {
+        p = (b !== a) ? Math.pow((y - a) / (b - a), 1/3.0) : 0;
+    } else if (pot.curve === 'SQUARED') {
+        p = (b !== a) ? Math.pow((y - a) / (b - a), 0.5) : 0;
+    }
+
+    let val = Math.round(p * 120);
+    return Math.max(0, Math.min(120, val));
+}
+
 function renderUI() {
     effectsContainer.innerHTML = '';
 
     globalEnableEl.addEventListener('change', (e) => {
-        sendMidiCc(GLOBAL_ENABLE_CC, e.target.checked ? 0 : 127);
+        sendMidiCc(GLOBAL_ENABLE_CC, e.target.checked ? 127 : 0);
     });
 
     PEDAL_EFFECTS.forEach((effect, idx) => {
@@ -148,36 +202,60 @@ function renderUI() {
         const controls = document.createElement('div');
         controls.className = 'effect-controls';
 
-        effect.pots.forEach((potName, pIdx) => {
-            const potCc = effect.pot_ccs[pIdx];
+        effect.pots.forEach((pot, pIdx) => {
+            const potCc = pot.cc;
 
             const potDiv = document.createElement('div');
             potDiv.className = 'pot-control';
 
             const label = document.createElement('div');
             label.className = 'pot-label';
-            label.textContent = potName;
+            label.textContent = pot.name;
 
-            const valDisplay = document.createElement('div');
-            valDisplay.className = 'pot-value';
-            valDisplay.textContent = "0";
+            const initialVal = getInitialPotValue(pot);
 
-            const input = document.createElement('input');
-            input.type = 'range';
-            input.min = -60;
-            input.max = 60;
-            input.value = 0;
+            if (pot.curve === 'ENUM' && pot.enum) {
+                const select = document.createElement('select');
+                select.className = 'enum-select';
+                pot.enum.forEach((optStr, idx) => {
+                    const opt = document.createElement('option');
+                    opt.value = idx;
+                    opt.textContent = optStr;
+                    select.appendChild(opt);
+                });
+                select.value = initialVal;
 
-            ccToElementMap.set(potCc, input);
-            input.addEventListener('input', (e) => {
-                valDisplay.textContent = e.target.value;
-                const midiVal = parseInt(e.target.value) + 64;
-                sendMidiCc(potCc, midiVal);
-            });
+                ccToElementMap.set(potCc, select);
+                select.addEventListener('change', (e) => {
+                    const midiVal = parseInt(e.target.value);
+                    sendMidiCc(potCc, midiVal);
+                });
 
-            potDiv.appendChild(label);
-            potDiv.appendChild(valDisplay);
-            potDiv.appendChild(input);
+                potDiv.appendChild(label);
+                potDiv.appendChild(select);
+            } else {
+                const valDisplay = document.createElement('div');
+                valDisplay.className = 'pot-value';
+                valDisplay.textContent = formatPotValue(pot, initialVal);
+
+                const input = document.createElement('input');
+                input.type = 'range';
+                input.min = 0;
+                input.max = 120;
+                input.value = initialVal;
+                input.potDef = pot; // Attach pot definition for formatting
+
+                ccToElementMap.set(potCc, input);
+                input.addEventListener('input', (e) => {
+                    const midiVal = parseInt(e.target.value);
+                    valDisplay.textContent = formatPotValue(pot, midiVal);
+                    sendMidiCc(potCc, midiVal);
+                });
+
+                potDiv.appendChild(label);
+                potDiv.appendChild(valDisplay);
+                potDiv.appendChild(input);
+            }
             controls.appendChild(potDiv);
         });
 

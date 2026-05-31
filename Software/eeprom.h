@@ -6,7 +6,7 @@
 #include <string.h>
 
 struct effect_state {
-	signed char pots[10];
+	unsigned char pots[10];
 	unsigned char enabled;
 	unsigned char magic;
 	unsigned char reserved[4]; // Pad to 16 bytes
@@ -69,8 +69,11 @@ static inline bool load_effect_state(int effect_idx, struct effect *effect)
 	int read_res = i2c_read_blocking(MC24C02_I2C, (uint8_t *)&state, sizeof(state), false);
 	if (read_res == sizeof(state)) {
 		if (state.magic == effect_checksum(effect, &state)) {
-			int seq = effect->seq & 1;
-			memcpy(effect->pot_values[seq], state.pots, 10);
+			for (int i = 0; i < 10; i++)
+				if (state.pots[i] > 120)
+					return false;
+			memcpy(effect->pot_values[0], state.pots, 10);
+			memcpy(effect->pot_values[1], state.pots, 10);
 			effect->target = state.enabled ? EFF_ENABLE_STEPS : 0;
 			effect->mix = effect->target; // Apply immediately on load
 			if (effect->load)

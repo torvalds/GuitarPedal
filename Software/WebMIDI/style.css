@@ -111,6 +111,11 @@ select:focus {
   border-color: var(--accent);
 }
 
+option {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+}
+
 /* Toggle Switch */
 .switch {
   position: relative;

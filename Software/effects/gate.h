@@ -1,3 +1,8 @@
+// NAME: Noise Gate [GATE]
+// PRIORITY: 10
+// POT: "Level" LINEAR(-100.0 -40.0) = -70.0 dB
+// POT: "Attack" LINEAR(0.0 10.0) = 1.5 ms
+// POT: "Release" LINEAR(50.0 500.0) = 150.0 ms
 //
 // Noise Gate
 //
@@ -15,38 +20,17 @@ static struct {
 	float env, mult;
 } gate;
 
-static float gate_pot0_level(signed char pot)
+static inline void gate_init(unsigned char pot[10])
 {
-	// -100dB .. -40dB is 0.01mV..10mV peak signal level
-	// If your noise floor is anywhere near -100dB, you don't need the
-	// gate in the first place, but maybe it's a good way to actually
-	// _see_ what your noise floor is...
-	return linear_pot(pot, -100.0f, -40.0f);
-}
-
-static float gate_pot1_attack(signed char pot)
-{
-	return linear_pot(pot, 0.0f, 10.0f);	// 0..10ms
-}
-
-static float gate_pot2_release(signed char pot)
-{
-	return linear_pot(pot, 50.0f, 500.0f); // 50ms to 500ms
-}
-
-static inline void gate_init(signed char pot[10])
-{
-	float level_db = gate_pot0_level(pot[0]);
+	float level_db = gate_pot0(pot[0]);
 	gate.level = db_to_level(level_db);
 
-	float attack_ms = gate_pot1_attack(pot[1]);
+	float attack_ms = gate_pot1(pot[1]);
 	gate.attack = time_constant(attack_ms);
 
-	float release_ms = gate_pot2_release(pot[2]);
+	float release_ms = gate_pot2(pot[2]);
 	gate.release = time_constant(release_ms);
 }
-
-static struct effect gate_effect;
 
 static inline float gate_step(float in)
 {
@@ -72,15 +56,3 @@ static inline float gate_step(float in)
 	gate.mult = mult;
 	return in * mult;
 }
-
-static struct effect gate_effect = {
-	.name = "Noise Gate",
-	.short_name = "GATE",
-	.init = gate_init,
-	.step = gate_step,
-	.pots = {
-		EFFECT_POT("Level", desc_dB, gate_pot0_level, 0),	// -70dB
-		EFFECT_POT("Attack", desc_ms, gate_pot1_attack, -42),	// ~1.5ms
-		EFFECT_POT("Release", desc_ms, gate_pot2_release, -30),	// ~150ms
-	}
-};

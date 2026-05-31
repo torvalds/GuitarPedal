@@ -1,3 +1,8 @@
+// NAME: Reverb [VERB]
+// PRIORITY: 90
+// POT: "Mix" LINEAR(0.0 1.0) = 0.18
+// POT: "Room" LINEAR(0.70 0.98) = 0.88
+// POT: "Damp" LINEAR(0.1 0.5) = 0.25
 //
 // Freeverb: Schroeder-Moorer reverberator for mono 48 kHz.
 // Algorithm by Jezar at Dreampoint, released as public domain.
@@ -59,15 +64,11 @@ static struct {
 // All fields including .delay are set in reverb_init: pico-sdk's .data
 // copy-from-flash silently zeros large objects, so don't rely on static init.
 
-static float reverb_mix(signed char pot)      { return POT_TO_FLOAT(pot); }
-static float reverb_roomsize(signed char pot) { return linear_pot(pot, 0.70f, 0.98f); }
-static float reverb_damp(signed char pot)     { return linear_pot(pot, 0.1f, 0.5f); }
-
-static void reverb_init(signed char pot[10])
+static void reverb_init(unsigned char pot[10])
 {
-	reverb_state.g         = reverb_roomsize(pot[1]);
-	reverb_state.damp      = reverb_damp(pot[2]);
-	reverb_state.wet_level = reverb_mix(pot[0]);
+	reverb_state.g         = reverb_pot1(pot[1]);
+	reverb_state.damp      = reverb_pot2(pot[2]);
+	reverb_state.wet_level = reverb_pot0(pot[0]);
 
 	for (int i = 0; i < 8; i++)
 		reverb_state.combs[i].delay = reverb_comb_L[i];
@@ -116,15 +117,3 @@ static float reverb_step(float in)
 	float w = reverb_state.wet_level;
 	return w * REVERB_SCALEWET * wet + (1.0f - w) * REVERB_SCALEDRY * in;
 }
-
-static struct effect reverb_effect = {
-	.name       = "Reverb",
-	.short_name = "VERB",
-	.init       = reverb_init,
-	.step       = reverb_step,
-	.pots = {
-		EFFECT_POT("Mix",      desc_none, reverb_mix,      -38, NULL ),  // w=0.18
-		EFFECT_POT("Room",     desc_none, reverb_roomsize,  17, NULL ),  // g=0.88
-		EFFECT_POT("Damp",     desc_none, reverb_damp,     -15, NULL ),  // pole=0.25
-	}
-};

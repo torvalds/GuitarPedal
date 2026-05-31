@@ -1,3 +1,8 @@
+// NAME: Pitch [PITCH]
+// PRIORITY: 100
+// POT: "Octave" LINEAR(-2.0 2.0) = 1.0
+// POT: "Feedback" LINEAR(0.0 1.0) = 0.0
+// POT: "Mix" LINEAR(0.0 1.0) = 0.0
 //
 // Entirely random pitch shifting effect walking the
 // sample buffer at varying speeds, and hiding the
@@ -19,21 +24,17 @@ struct {
 	float array[4*DISCONT_STEPS];
 } pitch;
 
-static float pitch_octave(signed char pot) { return linear_pot(pot, -2, 2); }
-static float pitch_feedback(signed char pot) { return linear_pot(pot, 0, 1); }
-static float pitch_mix(signed char pot) { return linear_pot(pot, 0, 1); }
-
-static void pitch_init(signed char pot[10])
+static void pitch_init(unsigned char pot[10])
 {
 	// Which direction do we walk the samples?
 	// Walking backwards lowers the pitch
 	// Walking forwards raises the pitch
 	// Staying at the same delay keeps the pitch the same
 	//
-	float step = pow2(pitch_octave(pot[0]));	//  0.25 .. 4
+	float step = pow2(pitch_pot0(pot[0]));	//  0.25 .. 4
 	pitch.step = step - 1;				// -0.75 .. 3
-	pitch.feedback = pitch_feedback(pot[1]);
-	pitch.mix = pitch_mix(pot[2]);
+	pitch.feedback = pitch_pot1(pot[1]);
+	pitch.mix = pitch_pot2(pot[2]);
 }
 
 // i is discontinuous when sin**2 is 0
@@ -63,15 +64,3 @@ static float pitch_step(float in)
 
 	return linear(pitch.mix, in, out);
 }
-
-static struct effect pitch_effect = {
-	.name = "Pitch",
-	.short_name = "PITCH",
-	.init = pitch_init,
-	.step = pitch_step,
-	.pots = {
-		EFFECT_POT("Octave", desc_none, pitch_octave, 30, ),
-		EFFECT_POT("Feedback", desc_none, pitch_feedback ),
-		EFFECT_POT("Mix", desc_none, pitch_mix ),
-	}
-};
