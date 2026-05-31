@@ -62,6 +62,25 @@ function updateMidiState() {
     }
 }
 
+const updateAppBtn = document.getElementById('update-app-btn');
+if (updateAppBtn) {
+    updateAppBtn.addEventListener('click', async () => {
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (let reg of registrations) {
+                await reg.unregister();
+            }
+        }
+        if ('caches' in window) {
+            const keys = await caches.keys();
+            for (let key of keys) {
+                await caches.delete(key);
+            }
+        }
+        window.location.reload();
+    });
+}
+
 function handleMidiMessage(event) {
     const [status, data1, data2] = event.data;
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rp2350-pedal-cache-v1';
+const CACHE_NAME = 'rp2350-pedal-cache-v2';
 const urlsToCache = [
   './',
   './index.html',

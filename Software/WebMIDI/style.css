@@ -67,6 +67,24 @@ h2 {
   letter-spacing: 0.5px;
 }
 
+.header-status {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.update-btn {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+  border: 1px solid var(--panel-border);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.update-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
 .status.connected {
   background-color: rgba(16, 185, 129, 0.2);
   color: var(--success);
