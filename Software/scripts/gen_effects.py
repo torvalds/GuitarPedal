@@ -73,7 +73,7 @@ def generate(audio_dir, out_h, out_js, effects):
 
         # Includes
         for base in effects:
-            f.write(f"#include \"../audio/{base}.h\"\n")
+            f.write(f"#include \"../effects/{base}.h\"\n")
 
         f.write("\n")
 

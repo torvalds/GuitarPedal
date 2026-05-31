@@ -68,7 +68,7 @@ set(EFFECT_JS "${CMAKE_CURRENT_SOURCE_DIR}/WebMIDI/effects.js")
 add_custom_command(
 	OUTPUT "${EFFECT_MAP_HEADER}" "${EFFECT_JS}"
 	COMMAND "${SCRIPT_DIR}/gen_effects.py"
-		"${CMAKE_CURRENT_SOURCE_DIR}/audio"
+		"${CMAKE_CURRENT_SOURCE_DIR}/effects"
 		"${EFFECT_MAP_HEADER}"
 		"${EFFECT_JS}"
 		${EFFECTS}
