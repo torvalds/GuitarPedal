@@ -35,6 +35,7 @@ static const struct effect *last_effect = NULL;
 
 #include "audio/tac5112.h"
 #include "audio/effect.h"
+#include "eeprom.h"
 
 static void reset_effect(struct effect *eff)
 {
@@ -159,7 +160,34 @@ void handle_midi_packet(const uint8_t packet[4])
 				}
 			}
 		} else if (data1 == GLOBAL_ENABLE_CC) {
-			disable_all = (data2 == 0) ? EFF_ENABLE_STEPS : 0;
+			if (data2 == 64) {
+				disable_all = EFF_ENABLE_STEPS;
+				send_midi_cc(GLOBAL_ENABLE_CC, 0);
+				for (int i = 0; i < ARRAY_SIZE(effects); i++) {
+					struct effect *effect = effects[i];
+					for (int p = 0; p < 10; p++) {
+						unsigned char def_val = effect->pots[p].def_val;
+						effect->pot_values[0][p] = def_val;
+						effect->pot_values[1][p] = def_val;
+					}
+					if (effect->init)
+						effect->init(effect->pot_values[0]);
+					effect->target = 0;
+					effect->seq++;
+				}
+			} else if (data2 == 65) {
+				for (int i = 0; i < ARRAY_SIZE(effects); i++) {
+					save_effect_state(i, effects[i]);
+				}
+			} else if (data2 == 66) {
+				for (int i = 0; i < ARRAY_SIZE(effects); i++) {
+					if (load_effect_state(i, effects[i])) {
+						effects[i]->seq++;
+					}
+				}
+			} else {
+				disable_all = (data2 == 0) ? EFF_ENABLE_STEPS : 0;
+			}
 			ui_sync_changed = true;
 		} else if (data1 < 128) {
 			const struct midi_cc_mapping *m = &dense_midi_map[data1];
@@ -173,9 +201,28 @@ void handle_midi_packet(const uint8_t packet[4])
 				ui_sync_changed = true;
 			} else if (m->type == 2) { // Enable
 				struct effect *effect = effects[m->effect_idx];
-				effect->target = (data2 == 0) ? 0 : EFF_ENABLE_STEPS;
-				effect->seq++;
-				ui_sync_changed = true;
+				if (data2 == 64) {
+					for (int p = 0; p < 10; p++) {
+						unsigned char def_val = effect->pots[p].def_val;
+						effect->pot_values[0][p] = def_val;
+						effect->pot_values[1][p] = def_val;
+					}
+					if (effect->init)
+						effect->init(effect->pot_values[0]);
+				} else if (data2 == 65) {
+					save_effect_state(m->effect_idx, effect);
+				} else if (data2 == 66) {
+					if (load_effect_state(m->effect_idx, effect)) {
+						effect->seq++;
+						ui_sync_changed = true;
+					}
+				} else {
+					effect->target = (data2 == 0) ? 0 : EFF_ENABLE_STEPS;
+				}
+				if (data2 != 66) {
+					effect->seq++;
+					ui_sync_changed = true;
+				}
 			}
 		}
 

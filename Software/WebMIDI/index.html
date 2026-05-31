@@ -15,8 +15,11 @@
       <div id="connection-status" class="status disconnected">Disconnected</div>
 
       <div class="global-controls">
-        <div class="control-group">
+        <div class="control-group enable-group">
           <label>Global Enable</label>
+          <button class="action-btn" id="global-reset-btn" title="Reset All to Defaults">↺</button>
+          <button class="action-btn" id="global-save-btn" title="Save All to EEPROM">💾</button>
+          <button class="action-btn" id="global-load-btn" title="Load All from EEPROM">📂</button>
           <label class="switch">
             <input type="checkbox" id="global-enable">
             <span class="slider round"></span>

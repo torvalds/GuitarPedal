@@ -166,6 +166,25 @@ function renderUI() {
         sendMidiCc(GLOBAL_ENABLE_CC, e.target.checked ? 127 : 0);
     });
 
+    const globalResetBtn = document.getElementById('global-reset-btn');
+    if (globalResetBtn) {
+        globalResetBtn.addEventListener('click', () => {
+            sendMidiCc(GLOBAL_ENABLE_CC, 64);
+            setTimeout(() => sendMidiCc(STATE_DUMP_CC, 127), 100);
+        });
+    }
+    const globalSaveBtn = document.getElementById('global-save-btn');
+    if (globalSaveBtn) {
+        globalSaveBtn.addEventListener('click', () => sendMidiCc(GLOBAL_ENABLE_CC, 65));
+    }
+    const globalLoadBtn = document.getElementById('global-load-btn');
+    if (globalLoadBtn) {
+        globalLoadBtn.addEventListener('click', () => {
+            sendMidiCc(GLOBAL_ENABLE_CC, 66);
+            setTimeout(() => sendMidiCc(STATE_DUMP_CC, 127), 100);
+        });
+    }
+
     PEDAL_EFFECTS.forEach((effect, idx) => {
         const card = document.createElement('section');
         card.className = 'glass-panel effect-card';
@@ -180,8 +199,11 @@ function renderUI() {
         title.textContent = effect.name;
 
         const enableGroup = document.createElement('div');
-        enableGroup.className = 'control-group';
+        enableGroup.className = 'control-group enable-group';
         enableGroup.innerHTML = `
+            <button class="action-btn" id="reset-btn-${idx}" title="Reset to Defaults">↺</button>
+            <button class="action-btn" id="save-btn-${idx}" title="Save to EEPROM">💾</button>
+            <button class="action-btn" id="load-btn-${idx}" title="Load from EEPROM">📂</button>
             <label class="switch">
               <input type="checkbox" id="enable-${idx}">
               <span class="slider round"></span>
@@ -191,6 +213,23 @@ function renderUI() {
         header.appendChild(title);
         header.appendChild(enableGroup);
         card.appendChild(header);
+
+        const resetBtn = enableGroup.querySelector(`#reset-btn-${idx}`);
+        resetBtn.addEventListener('click', () => {
+            sendMidiCc(effect.enable_cc, 64);
+            setTimeout(() => sendMidiCc(STATE_DUMP_CC, 127), 100);
+        });
+
+        const saveBtn = enableGroup.querySelector(`#save-btn-${idx}`);
+        saveBtn.addEventListener('click', () => {
+            sendMidiCc(effect.enable_cc, 65);
+        });
+
+        const loadBtn = enableGroup.querySelector(`#load-btn-${idx}`);
+        loadBtn.addEventListener('click', () => {
+            sendMidiCc(effect.enable_cc, 66);
+            setTimeout(() => sendMidiCc(STATE_DUMP_CC, 127), 100);
+        });
 
         const enableInput = enableGroup.querySelector('input');
         ccToElementMap.set(effect.enable_cc, enableInput);
