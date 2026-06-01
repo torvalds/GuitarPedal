@@ -446,6 +446,12 @@ input[type=range].eq-range {
   border-color: var(--success);
 }
 
+.menu-btn.error {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
 .active-pot-info {
   display: flex;
   align-items: center;

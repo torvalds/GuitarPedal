@@ -221,6 +221,16 @@ function renderUI() {
         }, 1500);
     }
 
+    function showButtonError(btn, errorText) {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = `⚠️ ${errorText}`;
+        btn.classList.add('error');
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.classList.remove('error');
+        }, 1500);
+    }
+
     // Global Menu Panel
     const burgerBtn = document.getElementById('burger-btn');
     const closeGlobalMenuBtn = document.getElementById('close-global-menu');
@@ -254,6 +264,10 @@ function renderUI() {
     const effectResetBtn = document.getElementById('effect-reset-btn');
     if (effectResetBtn) {
         effectResetBtn.addEventListener('click', () => {
+            if (!midiOutput) {
+                showButtonError(effectResetBtn, 'Not Connected');
+                return;
+            }
             if (activeEffectDef) {
                 sendMidiCc(activeEffectDef.enable_cc, 64);
                 setTimeout(() => sendMidiCc(STATE_DUMP_CC, 127), 100);
@@ -265,6 +279,10 @@ function renderUI() {
     const effectSaveBtn = document.getElementById('effect-save-btn');
     if (effectSaveBtn) {
         effectSaveBtn.addEventListener('click', () => {
+            if (!midiOutput) {
+                showButtonError(effectSaveBtn, 'Not Connected');
+                return;
+            }
             if (activeEffectDef) {
                 sendMidiCc(activeEffectDef.enable_cc, 65);
                 showButtonSuccess(effectSaveBtn, 'Saved!');
@@ -275,6 +293,10 @@ function renderUI() {
     const effectLoadBtn = document.getElementById('effect-load-btn');
     if (effectLoadBtn) {
         effectLoadBtn.addEventListener('click', () => {
+            if (!midiOutput) {
+                showButtonError(effectLoadBtn, 'Not Connected');
+                return;
+            }
             if (activeEffectDef) {
                 sendMidiCc(activeEffectDef.enable_cc, 66);
                 setTimeout(() => sendMidiCc(STATE_DUMP_CC, 127), 100);
@@ -336,6 +358,10 @@ function renderUI() {
     const globalResetBtn = document.getElementById('global-reset-btn');
     if (globalResetBtn) {
         globalResetBtn.addEventListener('click', () => {
+            if (!midiOutput) {
+                showButtonError(globalResetBtn, 'Not Connected');
+                return;
+            }
             sendMidiCc(GLOBAL_ENABLE_CC, 64);
             setTimeout(() => {
                 sendMidiCc(GLOBAL_ENABLE_CC, 127);
@@ -347,6 +373,10 @@ function renderUI() {
     const globalSaveBtn = document.getElementById('global-save-btn');
     if (globalSaveBtn) {
         globalSaveBtn.addEventListener('click', () => {
+            if (!midiOutput) {
+                showButtonError(globalSaveBtn, 'Not Connected');
+                return;
+            }
             sendMidiCc(GLOBAL_ENABLE_CC, 65);
             showButtonSuccess(globalSaveBtn, 'Saved!');
         });
@@ -354,6 +384,10 @@ function renderUI() {
     const globalLoadBtn = document.getElementById('global-load-btn');
     if (globalLoadBtn) {
         globalLoadBtn.addEventListener('click', () => {
+            if (!midiOutput) {
+                showButtonError(globalLoadBtn, 'Not Connected');
+                return;
+            }
             sendMidiCc(GLOBAL_ENABLE_CC, 66);
             setTimeout(() => sendMidiCc(STATE_DUMP_CC, 127), 100);
             showButtonSuccess(globalLoadBtn, 'Loaded!');
