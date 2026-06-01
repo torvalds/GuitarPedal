@@ -1,6 +1,6 @@
 // NAME: Tremolo [TREM]
 // PRIORITY: 110
-// POT: "Rate" FREQUENCY(0.1 10.0) = 1.0 Hz
+// POT: "Rate" FREQUENCY(0.1 10.0) = 2.5 Hz
 // POT: "Depth" LINEAR(0.0 1.0) = 0.5
 // POT: "Mode" ENUM(NORM HARM) = NORM
 // Tremolo: sinusoidal amplitude modulation, NORM and HARM modes.

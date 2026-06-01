@@ -1,9 +1,9 @@
 // NAME: Flanger [FLNGR]
 // PRIORITY: 60
-// POT: "Freq" SQUARED(0.0 10.0) = 0.0 Hz
-// POT: "Delay" LINEAR(0.0 4.0) = 0.0 ms
-// POT: "Depth" LINEAR(0.0 1.0) = 0.0
-// POT: "Feedback" LINEAR(0.0 1.0) = 0.0
+// POT: "Freq" SQUARED(0.0 10.0) = 2.5 Hz
+// POT: "Delay" LINEAR(0.0 4.0) = 2.0 ms
+// POT: "Depth" LINEAR(0.0 1.0) = 0.5
+// POT: "Feedback" LINEAR(0.0 1.0) = 0.5
 // Flanger effect based on the MIT-licensed DaisySP library by Electrosmith
 // which in turn seems to be based on Soundpipe by Paul Batchelor
 

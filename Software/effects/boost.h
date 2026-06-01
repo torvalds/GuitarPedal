@@ -2,9 +2,9 @@
 // PRIORITY: 40
 // POT: "Boost" LINEAR(0.0 40.0) = 0.0 dB
 // POT: "Level" LINEAR(-40.0 0.0) = 0.0 dB
-// POT: "Basscut" FREQUENCY(10.0 200.0) = 10.0 Hz
-// POT: "Highcut" FREQUENCY(1.0 20.0) = 20.0 kHz
-// POT: "Mix" LINEAR(0.0 1.0) = 1.0
+// POT: "Basscut" FREQUENCY(10.0 200.0) = 30 Hz
+// POT: "Highcut" FREQUENCY(1.0 20.0) = 3.4 kHz
+// POT: "Mix" LINEAR(0.0 1.0) = 0.5
 struct {
 	float mult, level, mix;
 	struct biquad basscut, highcut;

@@ -1,9 +1,9 @@
 // NAME: Phaser [PHSR]
 // PRIORITY: 50
-// POT: "LFO" FREQUENCY(25.0 2000.0) = 25.0 ms
-// POT: "Feedback" LINEAR(0.0 0.75) = 0.0
-// POT: "Freq" FREQUENCY(220.0 6460.0) = 220.0 Hz
-// POT: "Q" LINEAR(0.25 2.0) = 0.25
+// POT: "LFO" FREQUENCY(25.0 2000.0) = 270.0 ms
+// POT: "Feedback" LINEAR(0.0 0.75) = 0.376
+// POT: "Freq" FREQUENCY(220.0 6460.0) = 1000.0 Hz
+// POT: "Q" LINEAR(0.25 2.0) = 1.125
 struct {
 	struct lfo_state lfo;
 	struct biquad_coeff coeff;

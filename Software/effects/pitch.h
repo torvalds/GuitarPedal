@@ -1,8 +1,8 @@
 // NAME: Pitch [PITCH]
 // PRIORITY: 100
 // POT: "Octave" LINEAR(-2.0 2.0) = 1.0
-// POT: "Feedback" LINEAR(0.0 1.0) = 0.0
-// POT: "Mix" LINEAR(0.0 1.0) = 0.0
+// POT: "Feedback" LINEAR(0.0 1.0) = 0.5
+// POT: "Mix" LINEAR(0.0 1.0) = 0.5
 //
 // Entirely random pitch shifting effect walking the
 // sample buffer at varying speeds, and hiding the

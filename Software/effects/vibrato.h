@@ -1,7 +1,7 @@
 // NAME: Vibrato [VIB]
 // PRIORITY: 70
-// POT: "Rate" FREQUENCY(0.1 8.0) = 1.0 Hz
-// POT: "Depth" LINEAR(0.0 5.0) = 0.5 ms
+// POT: "Rate" FREQUENCY(0.1 8.0) = 2.0 Hz
+// POT: "Depth" LINEAR(0.0 5.0) = 0.875 ms
 // POT: "Mix" LINEAR(0.0 1.0) = 1.0
 // Vibrato: LFO-modulated delay line for a classic Doppler shift.
 // Blending dry signal with the wet signal produces a rich chorus-like effect.
