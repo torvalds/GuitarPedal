@@ -3,7 +3,7 @@ let midiInput = null;
 let midiOutput = null;
 
 // UI Elements
-const statusEl = document.getElementById('connection-status');
+const appTitleEl = document.getElementById('app-title');
 const globalEnableEl = document.getElementById('global-enable');
 const effectsContainer = document.getElementById('effects-container');
 
@@ -23,7 +23,7 @@ async function initMidi() {
         updateMidiState();
     } catch (err) {
         console.error("MIDI access denied", err);
-        statusEl.textContent = "MIDI Error";
+        appTitleEl.textContent = "MIDI Error";
     }
 }
 
@@ -51,16 +51,14 @@ function updateMidiState() {
             midiInput.onmidimessage = handleMidiMessage;
         }
         midiOutput = foundOutput;
-        statusEl.textContent = "Connected";
-        statusEl.className = "status connected";
+        appTitleEl.className = "title-connected";
 
         // Request initial state dump
         sendMidiCc(STATE_DUMP_CC, 127);
     } else {
         midiInput = null;
         midiOutput = null;
-        statusEl.textContent = "Disconnected";
-        statusEl.className = "status disconnected";
+        appTitleEl.className = "title-disconnected";
     }
 }
 
@@ -203,13 +201,101 @@ function renderUI() {
         sendMidiCc(GLOBAL_ENABLE_CC, e.target.checked ? 127 : 0);
     });
 
+    function closeAllPanels() {
+        if (document.getElementById('global-menu-panel')) document.getElementById('global-menu-panel').classList.add('hidden');
+        if (document.getElementById('active-effect-panel')) document.getElementById('active-effect-panel').classList.add('hidden');
+        if (document.getElementById('active-pot-panel')) document.getElementById('active-pot-panel').classList.add('hidden');
+        activeEffectIdx = null;
+        activeEffectDef = null;
+        activePotCc = null;
+        activePotDef = null;
+    }
+
+    function showButtonSuccess(btn, successText) {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = `✓ ${successText}`;
+        btn.classList.add('success');
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.classList.remove('success');
+        }, 1500);
+    }
+
+    // Global Menu Panel
+    const burgerBtn = document.getElementById('burger-btn');
+    const closeGlobalMenuBtn = document.getElementById('close-global-menu');
+    const globalMenuPanel = document.getElementById('global-menu-panel');
+
+    if (burgerBtn) {
+        burgerBtn.addEventListener('click', () => {
+            closeAllPanels();
+            globalMenuPanel.classList.remove('hidden');
+        });
+    }
+
+    if (closeGlobalMenuBtn) {
+        closeGlobalMenuBtn.addEventListener('click', () => {
+            closeAllPanels();
+        });
+    }
+
+    // Active Effect Panel
+    const closeActiveEffectBtn = document.getElementById('close-active-effect');
+    const activeEffectPanel = document.getElementById('active-effect-panel');
+    let activeEffectIdx = null;
+    let activeEffectDef = null;
+
+    if (closeActiveEffectBtn) {
+        closeActiveEffectBtn.addEventListener('click', () => {
+            closeAllPanels();
+        });
+    }
+
+    const effectResetBtn = document.getElementById('effect-reset-btn');
+    if (effectResetBtn) {
+        effectResetBtn.addEventListener('click', () => {
+            if (activeEffectDef) {
+                sendMidiCc(activeEffectDef.enable_cc, 64);
+                setTimeout(() => sendMidiCc(STATE_DUMP_CC, 127), 100);
+                showButtonSuccess(effectResetBtn, 'Reset Complete');
+            }
+        });
+    }
+
+    const effectSaveBtn = document.getElementById('effect-save-btn');
+    if (effectSaveBtn) {
+        effectSaveBtn.addEventListener('click', () => {
+            if (activeEffectDef) {
+                sendMidiCc(activeEffectDef.enable_cc, 65);
+                showButtonSuccess(effectSaveBtn, 'Saved!');
+            }
+        });
+    }
+
+    const effectLoadBtn = document.getElementById('effect-load-btn');
+    if (effectLoadBtn) {
+        effectLoadBtn.addEventListener('click', () => {
+            if (activeEffectDef) {
+                sendMidiCc(activeEffectDef.enable_cc, 66);
+                setTimeout(() => sendMidiCc(STATE_DUMP_CC, 127), 100);
+                showButtonSuccess(effectLoadBtn, 'Loaded!');
+            }
+        });
+    }
+
+    function openActiveEffectPanel(idx, effect) {
+        closeAllPanels();
+        activeEffectIdx = idx;
+        activeEffectDef = effect;
+        document.getElementById('active-effect-title').textContent = effect.name;
+        activeEffectPanel.classList.remove('hidden');
+    }
+
     // Active Pot initialization
     const closeActivePotBtn = document.getElementById('close-active-pot');
     if (closeActivePotBtn) {
         closeActivePotBtn.addEventListener('click', () => {
-            document.getElementById('active-pot-panel').classList.add('hidden');
-            activePotCc = null;
-            activePotDef = null;
+            closeAllPanels();
         });
     }
 
@@ -235,6 +321,7 @@ function renderUI() {
     }
 
     function setActivePot(cc, potDef, currentVal, effectName) {
+        closeAllPanels();
         activePotCc = cc;
         activePotDef = potDef;
 
@@ -250,18 +337,26 @@ function renderUI() {
     if (globalResetBtn) {
         globalResetBtn.addEventListener('click', () => {
             sendMidiCc(GLOBAL_ENABLE_CC, 64);
-            setTimeout(() => sendMidiCc(STATE_DUMP_CC, 127), 100);
+            setTimeout(() => {
+                sendMidiCc(GLOBAL_ENABLE_CC, 127);
+                sendMidiCc(STATE_DUMP_CC, 127);
+            }, 100);
+            showButtonSuccess(globalResetBtn, 'Reset Complete');
         });
     }
     const globalSaveBtn = document.getElementById('global-save-btn');
     if (globalSaveBtn) {
-        globalSaveBtn.addEventListener('click', () => sendMidiCc(GLOBAL_ENABLE_CC, 65));
+        globalSaveBtn.addEventListener('click', () => {
+            sendMidiCc(GLOBAL_ENABLE_CC, 65);
+            showButtonSuccess(globalSaveBtn, 'Saved!');
+        });
     }
     const globalLoadBtn = document.getElementById('global-load-btn');
     if (globalLoadBtn) {
         globalLoadBtn.addEventListener('click', () => {
             sendMidiCc(GLOBAL_ENABLE_CC, 66);
             setTimeout(() => sendMidiCc(STATE_DUMP_CC, 127), 100);
+            showButtonSuccess(globalLoadBtn, 'Loaded!');
         });
     }
 
@@ -281,9 +376,6 @@ function renderUI() {
         const enableGroup = document.createElement('div');
         enableGroup.className = 'control-group enable-group';
         enableGroup.innerHTML = `
-            <button class="action-btn" id="reset-btn-${idx}" title="Reset to Defaults">↺</button>
-            <button class="action-btn" id="save-btn-${idx}" title="Save to EEPROM">💾</button>
-            <button class="action-btn" id="load-btn-${idx}" title="Load from EEPROM">📂</button>
             <label class="switch">
               <input type="checkbox" id="enable-${idx}">
               <span class="slider round"></span>
@@ -294,21 +386,10 @@ function renderUI() {
         header.appendChild(enableGroup);
         card.appendChild(header);
 
-        const resetBtn = enableGroup.querySelector(`#reset-btn-${idx}`);
-        resetBtn.addEventListener('click', () => {
-            sendMidiCc(effect.enable_cc, 64);
-            setTimeout(() => sendMidiCc(STATE_DUMP_CC, 127), 100);
-        });
-
-        const saveBtn = enableGroup.querySelector(`#save-btn-${idx}`);
-        saveBtn.addEventListener('click', () => {
-            sendMidiCc(effect.enable_cc, 65);
-        });
-
-        const loadBtn = enableGroup.querySelector(`#load-btn-${idx}`);
-        loadBtn.addEventListener('click', () => {
-            sendMidiCc(effect.enable_cc, 66);
-            setTimeout(() => sendMidiCc(STATE_DUMP_CC, 127), 100);
+        // Clicking the header (but not the toggle) opens the active effect panel
+        header.addEventListener('click', (e) => {
+            if (e.target.closest('.switch')) return;
+            openActiveEffectPanel(idx, effect);
         });
 
         const enableInput = enableGroup.querySelector('input');

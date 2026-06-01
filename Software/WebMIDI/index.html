@@ -10,24 +10,14 @@
 </head>
 <body>
   <div class="app-container">
-    <header class="glass-panel">
-      <h1>RP2350 Pedal</h1>
-      <div class="header-status">
-        <button id="update-app-btn" class="status update-btn" title="Fetch latest version">Update App</button>
-        <div id="connection-status" class="status disconnected">Disconnected</div>
-      </div>
-
-      <div class="global-controls">
-        <div class="control-group enable-group">
-          <label>Global Enable</label>
-          <button class="action-btn" id="global-reset-btn" title="Reset All to Defaults">↺</button>
-          <button class="action-btn" id="global-save-btn" title="Save All to EEPROM">💾</button>
-          <button class="action-btn" id="global-load-btn" title="Load All from EEPROM">📂</button>
-          <label class="switch">
-            <input type="checkbox" id="global-enable">
-            <span class="slider round"></span>
-          </label>
-        </div>
+    <header class="glass-panel app-header">
+      <h1 id="app-title" class="title-disconnected">RP2350 Pedal</h1>
+      <div class="header-controls">
+        <label class="switch" title="Global Enable">
+          <input type="checkbox" id="global-enable">
+          <span class="slider round"></span>
+        </label>
+        <button id="burger-btn" class="action-btn" title="Menu">☰</button>
       </div>
     </header>
 
@@ -35,9 +25,36 @@
       <!-- Effect cards populated dynamically -->
     </main>
 
+    <!-- Global Menu Panel -->
+    <div id="global-menu-panel" class="glass-panel bottom-panel hidden">
+      <div class="panel-header">
+        <h2>Global Settings</h2>
+        <button id="close-global-menu" class="action-btn" title="Close">✕</button>
+      </div>
+      <div class="panel-content menu-actions">
+        <button id="global-reset-btn" class="menu-btn">↺ Reset All to Defaults</button>
+        <button id="global-save-btn" class="menu-btn">💾 Save All to EEPROM</button>
+        <button id="global-load-btn" class="menu-btn">📂 Load All from EEPROM</button>
+        <button id="update-app-btn" class="menu-btn">⬇️ Update App</button>
+      </div>
+    </div>
+
+    <!-- Active Effect Panel -->
+    <div id="active-effect-panel" class="glass-panel bottom-panel hidden">
+      <div class="panel-header">
+        <h2 id="active-effect-title">Effect Name</h2>
+        <button id="close-active-effect" class="action-btn" title="Close">✕</button>
+      </div>
+      <div class="panel-content menu-actions">
+        <button id="effect-reset-btn" class="menu-btn">↺ Reset to Defaults</button>
+        <button id="effect-save-btn" class="menu-btn">💾 Save to EEPROM</button>
+        <button id="effect-load-btn" class="menu-btn">📂 Load from EEPROM</button>
+      </div>
+    </div>
+
     <!-- Active Pot Panel -->
-    <div id="active-pot-panel" class="glass-panel active-pot-panel hidden">
-      <div class="active-pot-header">
+    <div id="active-pot-panel" class="glass-panel bottom-panel hidden">
+      <div class="panel-header">
         <div class="active-pot-info">
           <span id="active-pot-title">Effect - Pot</span>
           <span id="active-pot-value" class="pot-value">0</span>

@@ -58,54 +58,28 @@ h2 {
   color: var(--text-muted);
 }
 
-.status {
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.header-status {
+.app-header {
   display: flex;
-  gap: 10px;
+  justify-content: space-between;
   align-items: center;
 }
 
-.update-btn {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: var(--text-main);
-  border: 1px solid var(--panel-border);
-  cursor: pointer;
-  transition: all 0.2s;
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
 }
 
-.update-btn:hover {
-  background-color: rgba(255, 255, 255, 0.2);
+#app-title {
+  transition: color 0.3s;
 }
 
-.status.connected {
-  background-color: rgba(16, 185, 129, 0.2);
+.title-connected {
   color: var(--success);
 }
 
-.status.disconnected {
-  background-color: rgba(239, 68, 68, 0.2);
-  color: var(--danger);
-}
-
-.global-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 30px;
-  align-items: center;
-}
-
-.control-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.title-disconnected {
+  color: var(--text-muted);
 }
 
 .control-group label {
@@ -324,6 +298,7 @@ input[type=range]:focus {
   align-items: center;
   border-bottom: 1px solid var(--panel-border);
   padding-bottom: 10px;
+  cursor: pointer;
 }
 
 .effect-title {
@@ -401,8 +376,8 @@ input[type=range].eq-range {
   margin: 0;
 }
 
-/* Active Pot Panel */
-.active-pot-panel {
+/* Bottom Panels (Generic) */
+.bottom-panel {
   position: fixed;
   bottom: 0;
   left: 0;
@@ -418,15 +393,57 @@ input[type=range].eq-range {
   transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.active-pot-panel:not(.hidden) {
+.bottom-panel:not(.hidden) {
   transform: translateY(0);
 }
 
-.active-pot-header {
+.panel-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 25px;
+}
+
+.panel-header h2 {
+  margin: 0;
+  color: var(--text-main);
+}
+
+.menu-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding-bottom: 20px;
+}
+
+.menu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.1rem;
+  padding: 10px 0;
+}
+
+.menu-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--panel-border);
+  color: var(--text-main);
+  padding: 15px;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.menu-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.menu-btn.success {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--success);
+  border-color: var(--success);
 }
 
 .active-pot-info {
