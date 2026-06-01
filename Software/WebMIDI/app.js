@@ -32,6 +32,8 @@ async function initMidi() {
             appTitleEl.textContent = "HTTPS Required";
         } else if (err.name === 'NotAllowedError') {
             appTitleEl.textContent = "Permission Denied";
+        } else if (err.name === 'InvalidStateError') {
+            appTitleEl.textContent = "Tap to Connect";
         } else {
             appTitleEl.textContent = "MIDI Error: " + (err.name || "Unknown");
         }
@@ -597,6 +599,13 @@ function renderUI() {
         effectsContainer.appendChild(card);
     });
 }
+
+appTitleEl.addEventListener('click', () => {
+    if (appTitleEl.textContent.includes('Tap to Connect') || appTitleEl.textContent.includes('Error')) {
+        appTitleEl.textContent = "Connecting...";
+        initMidi();
+    }
+});
 
 // Boot
 renderUI();

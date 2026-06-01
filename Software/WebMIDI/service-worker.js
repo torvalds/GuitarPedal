@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rp2350-pedal-cache-v3';
+const CACHE_NAME = 'rp2350-pedal-cache-v4';
 const urlsToCache = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
