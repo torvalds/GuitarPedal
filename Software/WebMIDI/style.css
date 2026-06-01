@@ -337,3 +337,66 @@ input[type=range]:focus {
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 20px;
 }
+
+/* Graphic EQ specific styles */
+.effect-controls.eq-container {
+  display: block;
+  position: relative;
+  padding-bottom: 20px;
+}
+
+.eq-curve-wrapper {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 0;
+  height: 200px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.eq-curve-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.eq-path {
+  fill: rgba(59, 130, 246, 0.15); /* var(--accent) transparent */
+  stroke: var(--accent);
+  stroke-width: 3px;
+  vector-effect: non-scaling-stroke;
+}
+
+.eq-sliders {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+  margin-top: 10px;
+}
+
+.eq-pot {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  height: 260px; /* enough space for val, slider, label */
+  width: 10%;
+}
+
+.eq-slider-wrapper {
+  width: 20px;
+  height: 180px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+input[type=range].eq-range {
+  transform: rotate(-90deg);
+  width: 180px; /* this becomes the visual height */
+  margin: 0;
+}

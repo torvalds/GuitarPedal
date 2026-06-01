@@ -107,6 +107,10 @@ function handleMidiMessage(event) {
                     if (valDisplay && el.potDef) {
                         valDisplay.textContent = formatPotValue(el.potDef, val);
                     }
+                    // If it has a redraw callback (like EQ), trigger it
+                    if (el.redrawCurve) {
+                        el.redrawCurve();
+                    }
                 }
             }
         }
@@ -258,13 +262,53 @@ function renderUI() {
 
         // Controls
         const controls = document.createElement('div');
-        controls.className = 'effect-controls';
+
+        let slidersContainer = null;
+        let eqPotsInputs = [];
+
+        if (effect.id === 'eq') {
+            controls.className = 'effect-controls eq-container';
+
+            const curveWrapper = document.createElement('div');
+            curveWrapper.className = 'eq-curve-wrapper';
+            curveWrapper.innerHTML = `
+                <svg class="eq-curve-svg" viewBox="0 0 1000 100" preserveAspectRatio="none">
+                    <path id="eq-path-${idx}" class="eq-path" d="" />
+                </svg>
+            `;
+            controls.appendChild(curveWrapper);
+
+            slidersContainer = document.createElement('div');
+            slidersContainer.className = 'eq-sliders';
+            controls.appendChild(slidersContainer);
+
+            effect.redrawCurve = () => {
+                const pathEl = curveWrapper.querySelector(`#eq-path-${idx}`);
+                if (!pathEl || eqPotsInputs.length < 10) return;
+
+                const getY = (val) => 100 - (val / 120) * 100;
+                let path = `M 0,${getY(parseInt(eqPotsInputs[0].value))} L 50,${getY(parseInt(eqPotsInputs[0].value))} `;
+                for (let i = 0; i < 9; i++) {
+                    let x0 = 50 + i * 100;
+                    let y0 = getY(parseInt(eqPotsInputs[i].value));
+                    let x1 = 50 + (i + 1) * 100;
+                    let y1 = getY(parseInt(eqPotsInputs[i+1].value));
+                    let mx = (x0 + x1) / 2;
+                    path += `C ${mx},${y0} ${mx},${y1} ${x1},${y1} `;
+                }
+                path += `L 1000,${getY(parseInt(eqPotsInputs[9].value))} `;
+                path += `L 1000,100 L 0,100 Z`;
+                pathEl.setAttribute('d', path);
+            };
+        } else {
+            controls.className = 'effect-controls';
+        }
 
         effect.pots.forEach((pot, pIdx) => {
             const potCc = pot.cc;
 
             const potDiv = document.createElement('div');
-            potDiv.className = 'pot-control';
+            potDiv.className = effect.id === 'eq' ? 'pot-control eq-pot' : 'pot-control';
 
             const label = document.createElement('div');
             label.className = 'pot-label';
@@ -303,19 +347,45 @@ function renderUI() {
                 input.value = initialVal;
                 input.potDef = pot; // Attach pot definition for formatting
 
+                if (effect.id === 'eq') {
+                    input.className = 'eq-range';
+                    input.redrawCurve = effect.redrawCurve;
+                    eqPotsInputs.push(input);
+                }
+
                 ccToElementMap.set(potCc, input);
                 input.addEventListener('input', (e) => {
                     const midiVal = parseInt(e.target.value);
                     valDisplay.textContent = formatPotValue(pot, midiVal);
                     sendMidiCc(potCc, midiVal);
+                    if (input.redrawCurve) input.redrawCurve();
                 });
 
-                potDiv.appendChild(label);
-                potDiv.appendChild(valDisplay);
-                potDiv.appendChild(input);
+                if (effect.id === 'eq') {
+                    const sliderWrapper = document.createElement('div');
+                    sliderWrapper.className = 'eq-slider-wrapper';
+                    sliderWrapper.appendChild(input);
+
+                    potDiv.appendChild(valDisplay);
+                    potDiv.appendChild(sliderWrapper);
+                    potDiv.appendChild(label);
+                } else {
+                    potDiv.appendChild(label);
+                    potDiv.appendChild(valDisplay);
+                    potDiv.appendChild(input);
+                }
             }
-            controls.appendChild(potDiv);
+
+            if (effect.id === 'eq') {
+                slidersContainer.appendChild(potDiv);
+            } else {
+                controls.appendChild(potDiv);
+            }
         });
+
+        if (effect.id === 'eq') {
+            setTimeout(() => effect.redrawCurve(), 0);
+        }
 
         card.appendChild(controls);
         effectsContainer.appendChild(card);
