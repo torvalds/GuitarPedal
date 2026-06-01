@@ -18,12 +18,23 @@ let activePotDef = null;
 // Initialize MIDI
 async function initMidi() {
     try {
+        if (!navigator.requestMIDIAccess) {
+            appTitleEl.textContent = "Browser Not Supported";
+            console.error("Web MIDI API is not supported in this browser.");
+            return;
+        }
         midiAccess = await navigator.requestMIDIAccess({ sysex: false });
         midiAccess.onstatechange = updateMidiState;
         updateMidiState();
     } catch (err) {
         console.error("MIDI access denied", err);
-        appTitleEl.textContent = "MIDI Error";
+        if (err.name === 'SecurityError') {
+            appTitleEl.textContent = "HTTPS Required";
+        } else if (err.name === 'NotAllowedError') {
+            appTitleEl.textContent = "Permission Denied";
+        } else {
+            appTitleEl.textContent = "MIDI Error: " + (err.name || "Unknown");
+        }
     }
 }
 
