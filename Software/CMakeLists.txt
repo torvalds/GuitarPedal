@@ -64,13 +64,15 @@ target_sources(blink PRIVATE "${EQ_W0_HEADER}")
 file(GLOB EFFECT_HEADERS "effects/*.h")
 set(EFFECT_MAP_HEADER "${CMAKE_CURRENT_BINARY_DIR}/effect_map.h")
 set(EFFECT_JS "${CMAKE_CURRENT_SOURCE_DIR}/WebMIDI/effects.js")
+set(EFFECT_MD "${CMAKE_CURRENT_SOURCE_DIR}/MIDI_CC_MAP.md")
 
 add_custom_command(
-	OUTPUT "${EFFECT_MAP_HEADER}" "${EFFECT_JS}"
+	OUTPUT "${EFFECT_MAP_HEADER}" "${EFFECT_JS}" "${EFFECT_MD}"
 	COMMAND "${SCRIPT_DIR}/gen_effects.py"
 		"${CMAKE_CURRENT_SOURCE_DIR}/effects"
 		"${EFFECT_MAP_HEADER}"
 		"${EFFECT_JS}"
+		"${EFFECT_MD}"
 	DEPENDS "${SCRIPT_DIR}/gen_effects.py" ${EFFECT_HEADERS}
 )
 target_sources(blink PRIVATE "${EFFECT_MAP_HEADER}")

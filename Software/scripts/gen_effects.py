@@ -5,7 +5,7 @@ import re
 import json
 import math
 
-def generate(audio_dir, out_h, out_js):
+def generate(audio_dir, out_h, out_js, out_md):
     cc_counter = 40
     midi_map = []  # List of dicts for C output
     ui_effects = [] # List of dicts for JS output
@@ -253,9 +253,47 @@ def generate(audio_dir, out_h, out_js):
         f.write("const GLOBAL_ENABLE_CC = 20;\n")
         f.write("const STATE_DUMP_CC = 119;\n")
 
+    with open(out_md, 'w') as f:
+        f.write("# MIDI CC Mapping\n\n")
+        f.write("**MIDI Channel:** The pedal responds on **all channels** (Omni Mode). You can set your controller to any channel (1-16).\n\n")
+        f.write("## Global Controls\n\n")
+        f.write("- **Global Enable/Bypass:** CC 20\n")
+        f.write("  - `0` = Bypass\n")
+        f.write("  - `64` = Restore All Defaults\n")
+        f.write("  - `65` = Save All Effects State\n")
+        f.write("  - `66` = Load All Effects State\n")
+        f.write("  - `126` = Reboot to USB Bootloader\n")
+        f.write("  - `Other` = Enable\n")
+        f.write("\n## Effects\n\n")
+        for e_idx, e_data in enumerate(effects_data):
+            f.write(f"### {e_data['full_name']} ({e_data['short_name']})\n\n")
+            f.write(f"- **Program Change (PC):** {e_idx} (Selects this effect as active in UI)\n")
+            f.write(f"- **Enable/Bypass Effect:** CC {e_data['enable_cc']}\n")
+            f.write("  - Values: `0`=Bypass, `64`=Restore Defaults, `65`=Save State, `66`=Load State, `Other`=Enable\n")
+            for pot in e_data['pots']:
+                if pot['curve'] == 'ENUM' and pot['enum']:
+                    range_str = ", ".join([f"{i}={v}" for i, v in enumerate(pot['enum'])])
+                    input_str = f"Input: 0-{len(pot['enum'])-1} (maps to: {range_str})"
+                elif pot['curve'] == 'RAW':
+                    input_str = "Input: 0-127 (Raw value)"
+                else:
+                    if len(pot['args']) >= 2:
+                        min_val = pot['args'][0]
+                        max_val = pot['args'][1]
+                        unit = pot['unit']
+                        if unit and unit != "none":
+                            range_str = f"{min_val} to {max_val} {unit}"
+                        else:
+                            range_str = f"{min_val} to {max_val}"
+                    else:
+                        range_str = "0.0 to 1.0"
+                    input_str = f"Input: 0-120 (maps to: {range_str})"
+                f.write(f"- **{pot['label']}:** CC {pot['cc']} - {input_str}\n")
+            f.write("\n")
+
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
-        print("Usage: gen_effects.py <audio_dir> <out_h> <out_js>")
+    if len(sys.argv) < 5:
+        print("Usage: gen_effects.py <audio_dir> <out_h> <out_js> <out_md>")
         sys.exit(1)
 
-    generate(sys.argv[1], sys.argv[2], sys.argv[3])
+    generate(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
