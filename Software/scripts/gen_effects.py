@@ -3,6 +3,7 @@ import sys
 import os
 import re
 import json
+import math
 
 def generate(audio_dir, out_h, out_js):
     cc_counter = 40
@@ -33,7 +34,7 @@ def generate(audio_dir, out_h, out_js):
 
         pots = []
         # Match: // POT: "Name" CURVE(a b c) = 1.0 Unit
-        pot_lines = re.findall(r'//[ \t]*POT:[ \t]*"([^"]+)"[ \t]+(LINEAR|FREQUENCY|SQUARED|RAW|ENUM)(?:\(([^)]+)\))?(?:[ \t]*=[ \t]*(\S+))?(?:[ \t]+(\S+))?[ \t]*\n?', content)
+        pot_lines = re.findall(r'//[ \t]*POT:[ \t]*"([^"]+)"[ \t]+(LINEAR|FREQUENCY|SQUARED|EXPONENTIAL|RAW|ENUM)(?:\(([^)]+)\))?(?:[ \t]*=[ \t]*(\S+))?(?:[ \t]+(\S+))?[ \t]*\n?', content)
 
         for p_label, p_curve, p_args, p_def, p_unit in pot_lines:
             enum_list = None
@@ -155,6 +156,11 @@ def generate(audio_dir, out_h, out_js):
                     f.write(f"static float {fn_name}(unsigned char pot) {{ return frequency_pot(pot, {args_str}); }}\n")
                 elif pot['curve'] == 'SQUARED':
                     f.write(f"static float {fn_name}(unsigned char pot) {{ float p = POT_TO_FLOAT(pot); return linear(p*p, {args_str}); }}\n")
+                elif pot['curve'] == 'EXPONENTIAL':
+                    a_val = float(pot['args'][0])
+                    b_val = float(pot['args'][1])
+                    log2_ratio = math.log2(b_val / a_val) if a_val != 0 else 0
+                    f.write(f"static float {fn_name}(unsigned char pot) {{ float p = POT_TO_FLOAT(pot); return {a_val}f * pow2(p * {log2_ratio}f); }}\n")
 
             f.write(f"#include \"../effects/{base}.h\"\n")
 
@@ -185,6 +191,8 @@ def generate(audio_dir, out_h, out_js):
                     p = ((y - a) / (b - a)) ** (1/3.0) if b != a else 0
                 elif curve == 'SQUARED':
                     p = ((y - a) / (b - a)) ** 0.5 if b != a else 0
+                elif curve == 'EXPONENTIAL':
+                    p = math.log2(y / a) / math.log2(b / a) if (b != a and a != 0 and y != 0) else 0
 
                 if curve == 'RAW' or curve == 'ENUM':
                     pot_val = int(round(y))

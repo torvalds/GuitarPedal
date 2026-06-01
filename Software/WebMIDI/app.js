@@ -144,6 +144,8 @@ function formatPotValue(pot, val) {
         y = pot.min + (p * p * p) * (pot.max - pot.min);
     } else if (pot.curve === 'SQUARED') {
         y = pot.min + (p * p) * (pot.max - pot.min);
+    } else if (pot.curve === 'EXPONENTIAL') {
+        y = pot.min * Math.pow(pot.max / pot.min, p);
     }
 
     let displayStr = "";
@@ -176,6 +178,8 @@ function getInitialPotValue(pot) {
         p = (b !== a) ? Math.pow((y - a) / (b - a), 1/3.0) : 0;
     } else if (pot.curve === 'SQUARED') {
         p = (b !== a) ? Math.pow((y - a) / (b - a), 0.5) : 0;
+    } else if (pot.curve === 'EXPONENTIAL') {
+        p = (b !== a && a !== 0 && y !== 0) ? Math.log2(y / a) / Math.log2(b / a) : 0;
     }
 
     let val = Math.round(p * 120);

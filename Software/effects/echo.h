@@ -2,9 +2,9 @@
 // PRIORITY: 80
 // POT: "Blend" LINEAR(0.0 1.0) = 0.2
 // POT: "Sustain" LINEAR(0.0 1.1) = 0.3
-// POT: "Time" LINEAR(0.0 1.0) = 0.5 ms
+// POT: "Time" EXPONENTIAL(50.0 672.0) = 375.0 ms
 // POT: "Record" LINEAR(0.1 2.0) = 0.5
-// POT: "Tone" LINEAR(0.0 1.0) = 0.5 Hz
+// POT: "Tone" EXPONENTIAL(1739.25 17392.53) = 6400.0 Hz
 // POT: "WowFlut" LINEAR(0.0 1.0) = 0.2
 // POT: "Mode" ENUM(Normal SOS) = Normal
 //
@@ -154,9 +154,10 @@ static inline void echo_init(unsigned char pot[10])
 	echo.target_blend = echo_pot0(pot[0]);
 	echo.target_sustain = echo_pot1(pot[1]);
 
-	// Log-taper map of the time pot across ECHO_DELAY_MIN_S..MAX_S.
-	float time_val = echo_pot2(pot[2]);
-	echo.target_delay_s = ECHO_DELAY_MIN_S * pow2(time_val * ECHO_DELAY_LOG2_RATIO);
+	// The EXPONENTIAL metadata sets up the curve directly, so the pot value
+	// is already in milliseconds. We just convert it to seconds.
+	float time_ms = echo_pot2(pot[2]);
+	echo.target_delay_s = time_ms / 1000.0f;
 
 	echo.target_record_level = echo_pot3(pot[3]);
 	echo.target_tone = echo_pot4(pot[4]);
@@ -234,9 +235,7 @@ static inline float echo_step(float in)
 	// (which calls pow2) until the value has actually shifted enough to matter.
 	if (fabsf(echo.tone - echo.last_tone) > 0.001f) {
 		echo.last_tone = echo.tone;
-		float tone_mult = pow2((echo.tone - 0.5f) * LOG2_10);
-		float eff_playback_fc = model.playback_fc * tone_mult;
-		if (eff_playback_fc < 400.0f) eff_playback_fc = 400.0f;
+		float eff_playback_fc = echo.tone;
 		if (eff_playback_fc > 18000.0f) eff_playback_fc = 18000.0f;
 		echo_onepole_set_cutoff(&echo.playback_lpf, eff_playback_fc);
 	}
