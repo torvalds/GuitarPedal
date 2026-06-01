@@ -12,6 +12,8 @@ const ccToElementMap = new Map();
 
 // State
 let isGlobalEnabled = false;
+let activePotCc = null;
+let activePotDef = null;
 
 // Initialize MIDI
 async function initMidi() {
@@ -111,6 +113,14 @@ function handleMidiMessage(event) {
                     if (el.redrawCurve) {
                         el.redrawCurve();
                     }
+
+                    // Update active pot panel if it is the currently active one
+                    if (cc === activePotCc && activePotDef) {
+                        const activeSlider = document.getElementById('active-pot-slider');
+                        if (activeSlider) activeSlider.value = val;
+                        const activeValue = document.getElementById('active-pot-value');
+                        if (activeValue) activeValue.textContent = formatPotValue(activePotDef, val);
+                    }
                 }
             }
         }
@@ -192,6 +202,49 @@ function renderUI() {
     globalEnableEl.addEventListener('change', (e) => {
         sendMidiCc(GLOBAL_ENABLE_CC, e.target.checked ? 127 : 0);
     });
+
+    // Active Pot initialization
+    const closeActivePotBtn = document.getElementById('close-active-pot');
+    if (closeActivePotBtn) {
+        closeActivePotBtn.addEventListener('click', () => {
+            document.getElementById('active-pot-panel').classList.add('hidden');
+            activePotCc = null;
+            activePotDef = null;
+        });
+    }
+
+    const activePotSlider = document.getElementById('active-pot-slider');
+    if (activePotSlider) {
+        activePotSlider.addEventListener('input', (e) => {
+            if (activePotCc === null || !activePotDef) return;
+
+            const val = parseInt(e.target.value);
+            document.getElementById('active-pot-value').textContent = formatPotValue(activePotDef, val);
+
+            // Update original element
+            const origInput = ccToElementMap.get(activePotCc);
+            if (origInput) {
+                origInput.value = val;
+                const valDisplay = origInput.parentElement.querySelector('.pot-value');
+                if (valDisplay) valDisplay.textContent = formatPotValue(activePotDef, val);
+                if (origInput.redrawCurve) origInput.redrawCurve();
+            }
+
+            sendMidiCc(activePotCc, val);
+        });
+    }
+
+    function setActivePot(cc, potDef, currentVal, effectName) {
+        activePotCc = cc;
+        activePotDef = potDef;
+
+        document.getElementById('active-pot-title').textContent = `${effectName} - ${potDef.name}`;
+        document.getElementById('active-pot-value').textContent = formatPotValue(potDef, currentVal);
+
+        if (activePotSlider) activePotSlider.value = currentVal;
+
+        document.getElementById('active-pot-panel').classList.remove('hidden');
+    }
 
     const globalResetBtn = document.getElementById('global-reset-btn');
     if (globalResetBtn) {
@@ -378,6 +431,15 @@ function renderUI() {
                     potDiv.appendChild(valDisplay);
                     potDiv.appendChild(input);
                 }
+
+                // Add active pot triggers
+                const activatePot = () => {
+                    setActivePot(potCc, pot, parseInt(input.value), effect.name);
+                };
+
+                // Allow interaction with the pot div to open the active pot panel
+                potDiv.addEventListener('mousedown', activatePot);
+                potDiv.addEventListener('touchstart', activatePot, { passive: true });
             }
 
             if (effect.id === 'eq') {

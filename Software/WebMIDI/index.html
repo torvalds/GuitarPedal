@@ -35,6 +35,20 @@
       <!-- Effect cards populated dynamically -->
     </main>
 
+    <!-- Active Pot Panel -->
+    <div id="active-pot-panel" class="glass-panel active-pot-panel hidden">
+      <div class="active-pot-header">
+        <div class="active-pot-info">
+          <span id="active-pot-title">Effect - Pot</span>
+          <span id="active-pot-value" class="pot-value">0</span>
+        </div>
+        <button id="close-active-pot" class="action-btn" title="Close">✕</button>
+      </div>
+      <div class="active-pot-slider-container">
+        <input type="range" id="active-pot-slider" class="large-slider" min="0" max="120" value="60">
+      </div>
+    </div>
+
   </div>
 
   <script src="effects.js"></script>
