@@ -440,6 +440,15 @@ input[type=range].eq-range {
   background: rgba(255, 255, 255, 0.1);
 }
 
+.menu-btn.danger-btn {
+  color: var(--danger);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.menu-btn.danger-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
 .menu-btn.success {
   background: rgba(16, 185, 129, 0.2);
   color: var(--success);

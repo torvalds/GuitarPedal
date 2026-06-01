@@ -185,6 +185,8 @@ void handle_midi_packet(const uint8_t packet[4])
 						effects[i]->seq++;
 					}
 				}
+			} else if (data2 == 126) {
+				reset_usb_boot(0, 0);
 			} else {
 				disable_all = (data2 == 0) ? EFF_ENABLE_STEPS : 0;
 			}

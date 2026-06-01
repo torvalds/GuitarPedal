@@ -394,6 +394,20 @@ function renderUI() {
         });
     }
 
+    const globalProgramBtn = document.getElementById('global-program-btn');
+    if (globalProgramBtn) {
+        globalProgramBtn.addEventListener('click', () => {
+            if (!midiOutput) {
+                showButtonError(globalProgramBtn, 'Not Connected');
+                return;
+            }
+            if (confirm("Reboot pedal into programming mode?")) {
+                sendMidiCc(GLOBAL_ENABLE_CC, 126);
+                closeAllPanels();
+            }
+        });
+    }
+
     PEDAL_EFFECTS.forEach((effect, idx) => {
         const card = document.createElement('section');
         card.className = 'glass-panel effect-card';
