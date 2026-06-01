@@ -37,15 +37,15 @@ jobs:
       - name: Generate effects.js
         run: |
           cd Software
-          # Run the generation script, outputting to a dummy C header and the real effects.js
-          python3 scripts/gen_effects.py effects/ dummy_map.h WebMIDI/effects.js
-          rm dummy_map.h
+          # Run the generation script, outputting to a dummy C header, the real effects.js, and a dummy md
+          python3 scripts/gen_effects.py effects/ dummy_map.h WebMIDI/effects.js dummy_map.md
+          rm dummy_map.h dummy_map.md
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           # Upload only the WebMIDI directory
           path: './Software/WebMIDI'
