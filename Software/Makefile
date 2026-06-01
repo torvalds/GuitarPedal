@@ -15,6 +15,8 @@ flash:
 prep:
 	git submodule init
 	git submodule update --recursive
+	git -C pico-sdk submodule init
+	git -C pico-sdk submodule update --recursive
 	cmake -DPICO_PLATFORM=rp2350 -S . -B build
 
 .PHONY: build
