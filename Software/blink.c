@@ -458,6 +458,7 @@ int main()
 	next_ui_update = delayed_by_ms(now, 500);
 
 	tac5112_init();
+	init_eeprom();
 
 	init_effects();
 
@@ -477,6 +478,8 @@ int main()
 		// Claim 25Hz screen updates
 		if (now > next_ui_update) {
 			next_ui_update = delayed_by_ms(now, 40);
+
+			eeprom_task();
 			update_ui(to_ms_since_boot(now));
 
 #ifndef USB_MODE_HOST

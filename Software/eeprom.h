@@ -12,6 +12,16 @@ struct effect_state {
 	unsigned char reserved[4]; // Pad to 16 bytes
 };
 
+// Cache the eeprom in RAM for easy access
+//
+// 2kbit eeprom: 256 bytes, 16 effects of 16 bytes each
+#define MAX_SAVED_EFFECTS 16
+static union {
+	struct effect_state state[MAX_SAVED_EFFECTS];
+	unsigned char bytes[256];
+} eeprom_cache;
+static uint32_t eeprom_dirty_mask = 0;
+
 static inline uint8_t string_checksum(const char *cstr)
 {
 	uint8_t sum = 0;
@@ -46,62 +56,95 @@ static inline uint8_t effect_checksum(struct effect *effect, struct effect_state
 	return sum;
 }
 
-static inline bool load_effect_state(int effect_idx, struct effect *effect)
+// We can read the whole eeprom in one go, but we may
+// need to wait for it to wake up.
+static void init_eeprom(void)
 {
-	struct effect_state state;
-	uint8_t addr = effect_idx * 16; // 1 page (16 bytes) per effect
+	uint8_t addr = 0;
 
-	// The EEPROM may not be ready immediately at boot. Retry for up to ~50ms.
-	int retries = 10;
-	while (retries-- > 0) {
-		// Write the memory address we want to read from (with nostop = true)
-		if (i2c_write_blocking(MC24C02_I2C, &addr, 1, true) >= 0) {
-			break;
+	for (int try = 0; try < 10; try++) {
+		if (i2c_write_blocking(MC24C02_I2C, &addr, 1, true) < 0) {
+			sleep_ms(5);
+			continue;
 		}
-		sleep_ms(5);
-	}
 
-	if (retries < 0) {
-		return false;
+		i2c_read_blocking(MC24C02_I2C, eeprom_cache.bytes, 256, false);
+		return;
 	}
-
-	// Read 16 bytes sequentially
-	int read_res = i2c_read_blocking(MC24C02_I2C, (uint8_t *)&state, sizeof(state), false);
-	if (read_res == sizeof(state)) {
-		if (state.magic == effect_checksum(effect, &state)) {
-			for (int i = 0; i < 10; i++)
-				if (state.pots[i] > 120)
-					return false;
-			memcpy(effect->pot_values[0], state.pots, 10);
-			memcpy(effect->pot_values[1], state.pots, 10);
-			effect->target = state.enabled ? EFF_ENABLE_STEPS : 0;
-			effect->mix = effect->target; // Apply immediately on load
-			if (effect->load)
-				effect->load(effect, state.pots);
-			return true;
-		}
-	}
-	return false;
 }
 
-static inline void save_effect_state(int effect_idx, struct effect *effect)
+// Called together with the UI update, at 25Hz
+//
+// That makes it safe to write to the eeprom, which has
+// a write latency of up to 5ms
+static void eeprom_task(void)
 {
-	struct effect_state state = { };
+	uint32_t mask = eeprom_dirty_mask;
+
+	if (!mask)
+		return;
+
+	// Write at most one 8-byte chunk per call to handle the 5ms
+	// latency. We use 8-byte chunks (rather than 16) for broader
+	// compatibility, as standard 24C02 parts have an 8-byte page
+	// write limit (unlike the 24C02C which supports 16 bytes).
+	//
+	// Isolate the lowest bit and clear it.
+	mask &= -mask;
+	eeprom_dirty_mask &= ~mask;
+
+	unsigned int chunk_idx = ffs(mask) - 1;
+
+	uint8_t buf[1 + 8];
+	buf[0] = chunk_idx * 8;
+	memcpy(buf + 1, eeprom_cache.bytes + chunk_idx * 8, 8);
+
+	// If this fails, it fails..
+	i2c_write_blocking(MC24C02_I2C, buf, sizeof(buf), false);
+}
+
+static bool load_effect_state(unsigned int effect_idx, struct effect *effect)
+{
+	if (effect_idx >= MAX_SAVED_EFFECTS)
+		return false;
+
+	struct effect_state *state = eeprom_cache.state + effect_idx;
+
+	if (state->magic != effect_checksum(effect, state))
+		return false;
+
+	for (int i = 0; i < 10; i++) {
+		if (state->pots[i] > 120)
+			return false;
+	}
+
+	memcpy(effect->pot_values[0], state->pots, 10);
+	memcpy(effect->pot_values[1], state->pots, 10);
+	effect->target = state->enabled ? EFF_ENABLE_STEPS : 0;
+	effect->mix = effect->target;
+	if (effect->load)
+		effect->load(effect, state->pots);
+	return true;
+}
+
+static bool save_effect_state(unsigned int effect_idx, struct effect *effect)
+{
+	if (effect_idx >= MAX_SAVED_EFFECTS)
+		return false;
+
+	struct effect_state *state = eeprom_cache.state + effect_idx;
 	int seq = effect->seq & 1;
 
 	if (effect->save)
 		effect->save(effect, effect->pot_values[seq]);
-	memcpy(state.pots, effect->pot_values[seq], 10);
+	memcpy(state->pots, effect->pot_values[seq], 10);
 
-	state.enabled = effect->target ? 1 : 0;
-	state.magic = effect_checksum(effect, &state);
+	state->enabled = effect->target ? 1 : 0;
+	state->magic = effect_checksum(effect, state);
 
-	// Prepare the I2C transaction: [Address byte] + [16 bytes data]
-	uint8_t buf[1 + sizeof(state)];
-	buf[0] = effect_idx * 16; // Page aligned address
-	memcpy(buf + 1, &state, sizeof(state));
-
-	i2c_write_blocking(MC24C02_I2C, buf, sizeof(buf), false);
+	// Set 2 bits per effect (each chunk is 8 bytes, effect is 16 bytes)
+	eeprom_dirty_mask |= (3u << (effect_idx * 2));
+	return true;
 }
 
 #endif
