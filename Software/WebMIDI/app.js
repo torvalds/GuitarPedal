@@ -383,6 +383,22 @@ function renderUI() {
             showButtonSuccess(globalResetBtn, 'Reset Complete');
         });
     }
+
+    const globalDisableBtn = document.getElementById('global-disable-btn');
+    if (globalDisableBtn) {
+        globalDisableBtn.addEventListener('click', () => {
+            if (!midiOutput) {
+                showButtonError(globalDisableBtn, 'Not Connected');
+                return;
+            }
+            sendMidiCc(GLOBAL_ENABLE_CC, 67);
+            setTimeout(() => {
+                sendMidiCc(STATE_DUMP_CC, 127);
+            }, 100);
+            showButtonSuccess(globalDisableBtn, 'Effects Disabled');
+        });
+    }
+
     const globalSaveBtn = document.getElementById('global-save-btn');
     if (globalSaveBtn) {
         globalSaveBtn.addEventListener('click', () => {

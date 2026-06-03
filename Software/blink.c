@@ -185,6 +185,13 @@ void handle_midi_packet(const uint8_t packet[4])
 						effects[i]->seq++;
 					}
 				}
+			} else if (data2 == 67) {
+				disable_all = 0;
+				send_midi_cc(GLOBAL_ENABLE_CC, 127);
+				for (int i = 0; i < ARRAY_SIZE(effects); i++) {
+					effects[i]->target = 0;
+					effects[i]->seq++;
+				}
 			} else if (data2 == 126) {
 				reset_usb_boot(0, 0);
 			} else {

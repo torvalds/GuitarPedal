@@ -262,6 +262,7 @@ def generate(audio_dir, out_h, out_js, out_md):
         f.write("  - `64` = Restore All Defaults\n")
         f.write("  - `65` = Save All Effects State\n")
         f.write("  - `66` = Load All Effects State\n")
+        f.write("  - `67` = Disable All Effects (Global Enable)\n")
         f.write("  - `126` = Reboot to USB Bootloader\n")
         f.write("  - `Other` = Enable\n")
         f.write("\n## Effects\n\n")
