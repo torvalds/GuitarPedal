@@ -47,7 +47,7 @@ static bool read_pots(struct effect *effect, unsigned char *pots)
 
 	// For small ranges, don't make the rotary so twitchy
 	int ignore_low_bits = 0;
-	if (range.max - range.min < 10)
+	if (range.max - range.min < 25)
 		ignore_low_bits = 2;
 
 	int mask = (1 << ignore_low_bits)-1;
