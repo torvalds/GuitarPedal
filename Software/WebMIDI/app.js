@@ -10,10 +10,10 @@ const effectsContainer = document.getElementById('effects-container');
 // Map of CC to its HTML input element for O(1) updates
 const ccToElementMap = new Map();
 
-// State
 let isGlobalEnabled = false;
 let activePotCc = null;
 let activePotDef = null;
+let activeTransmitChannel = 0xB0;
 
 // Initialize MIDI
 async function initMidi() {
@@ -106,6 +106,9 @@ function handleMidiMessage(event) {
             isGlobalEnabled = (val > 0);
             globalEnableEl.checked = isGlobalEnabled;
         } else {
+            if (cc === 107) { // MIDI Ch
+                activeTransmitChannel = (val === 0) ? 0xB0 : (0xB0 | ((val - 1) & 0x0F));
+            }
             // It's a pot or an effect enable
             const el = ccToElementMap.get(cc);
             if (el) {
@@ -150,7 +153,11 @@ function handleMidiMessage(event) {
 
 function sendMidiCc(cc, val) {
     if (!midiOutput) return;
-    midiOutput.send([0xB0, cc, val]);
+    midiOutput.send([activeTransmitChannel, cc, val]);
+
+    if (cc === 107) {
+        activeTransmitChannel = (val === 0) ? 0xB0 : (0xB0 | ((val - 1) & 0x0F));
+    }
 }
 
 function formatPotValue(pot, val) {

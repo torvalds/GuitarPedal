@@ -143,6 +143,11 @@ void handle_midi_packet(const uint8_t packet[4])
 	uint8_t data1 = packet[2];
 	uint8_t data2 = packet[3];
 
+	if (usb.midi_channel != 0) {
+		if ((status & 0x0F) != (usb.midi_channel - 1))
+			return;
+	}
+
 	if ((status & 0xF0) == 0xB0) {
 		// Control Change
 		if (data1 == STATE_DUMP_CC) {
