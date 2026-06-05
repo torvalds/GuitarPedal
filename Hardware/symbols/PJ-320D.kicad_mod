@@ -1,0 +1,235 @@
+(footprint "PJ-320D"
+	(version 20241229)
+	(generator "pcbnew")
+	(generator_version "9.0")
+	(layer "F.Cu")
+	(descr "TRRS 3.5mm headphone jack")
+	(tags "3.5mm TRRS")
+	(property "Reference" "REF**"
+		(at 0 -0.5 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "b8d670e0-66d3-4832-9c1a-073a170b0214")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(property "Value" "PJ-320D"
+		(at 0 1 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "397fc122-cfb4-478c-9fa5-6169b3482950")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" "https://www.sohantech.com/pj-320d-audio-socket-3-5p-earphone-jack-product/"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "8f52d33f-3f37-46f1-bb0d-822bed145616")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" "TRRS 3.5mm headphone jack"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "1b53c18b-3e6e-483d-8a9a-7828f0444295")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr smd)
+	(fp_rect
+		(start -2 -2.5)
+		(end 0 2.5)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "02b142c0-21e2-4550-80c0-1c9fe1d9293b")
+	)
+	(fp_rect
+		(start 0 -3)
+		(end 12.1 3)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "301274b5-7aae-4314-b754-d7ca86e91285")
+	)
+	(fp_circle
+		(center 1.7 0)
+		(end 2.2 0)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(fill no)
+		(layer "Edge.Cuts")
+		(uuid "b8da8f40-4d39-4f7d-b8f8-acd84b46fced")
+	)
+	(fp_circle
+		(center 8.7 0)
+		(end 9.2 0)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(fill no)
+		(layer "Edge.Cuts")
+		(uuid "22d6b829-2974-4dc8-897f-fda90a2f9e95")
+	)
+	(fp_line
+		(start -2 -2.5)
+		(end 0 -2.5)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "0c7f8a18-f554-4a07-8ee8-243b95e9eea6")
+	)
+	(fp_line
+		(start -2 2.5)
+		(end -2 -2.5)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "4680ce5b-99a5-4fca-8968-739652c99862")
+	)
+	(fp_line
+		(start 0 -3)
+		(end 12.1 -3)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "1ad2d9e5-bc56-482c-b7f1-f24f66fde77a")
+	)
+	(fp_line
+		(start 0 -2.5)
+		(end 0 -3)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "1049e912-cb9d-4cdc-81b9-e0829ddf1608")
+	)
+	(fp_line
+		(start 0 2.5)
+		(end -2 2.5)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "3cfa3158-0b54-49bd-9d83-d997d36bd64e")
+	)
+	(fp_line
+		(start 0 3)
+		(end 0 2.5)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "b617f956-b165-456c-a410-804a8ddc993b")
+	)
+	(fp_line
+		(start 12.1 -3)
+		(end 12.1 3)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "8b5360d7-5d27-4586-b7b1-d45ce5c63187")
+	)
+	(fp_line
+		(start 12.1 3)
+		(end 0 3)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "271acf7f-a31e-4d51-a074-39efaf0c2d21")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 2.5 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "4e0800be-e824-4577-a9b3-7d4a1c66bb35")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "R1" smd roundrect
+		(at 6.2 -3.5)
+		(size 1.5 3)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.15)
+		(uuid "1d86a162-7b3a-4667-bf17-34210f8f2917")
+	)
+	(pad "R2" smd roundrect
+		(at 3.2 -3.5)
+		(size 1.5 3)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.15)
+		(uuid "401ef481-b1b5-47d3-ac39-1626b4593f78")
+	)
+	(pad "S" smd roundrect
+		(at 11.6 3.5)
+		(size 1.5 3)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.15)
+		(uuid "f7c318c9-f073-46cd-8e5f-12eeff7843f5")
+	)
+	(pad "T" smd roundrect
+		(at 10.2 -3.5)
+		(size 1.5 3)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.15)
+		(uuid "8a9e2c70-3582-46a0-92c9-d0e2f73577c0")
+	)
+	(embedded_fonts no)
+	(model "${KIPRJMOD}/Mylib.pretty/PJ-320D.step"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
+)
