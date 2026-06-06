@@ -7,14 +7,13 @@
 // Klon pedal originally by Bryan Leavelle <bryanleavelle@gmail.com>
 //
 // Circuit modeled:
-//   Charge pump (18V headroom) -> input buffer -> op-amp with germanium
-//   diode clippers (1N34A) in feedback -> clean/dirty blend that tracks
+//   Charge pump (18V headroom) -> input buffer -> op-amp driving germanium
+//   diodes (1N34A) to ground for hard clipping -> clean/dirty blend that tracks
 //   gain knob -> treble control with 1.7kHz presence peak.
 //
 // The Klon's signature: the clean/dirty blend is NOT a mix knob -- it's
-// wired to the gain pot. Low gain = mostly clean with a touch of edge.
-// High gain = mostly clipped, but never 100%. There's always clean signal
-// mixed in. That's why it's "transparent."
+// wired to a dual-gang gain pot. Low gain = mostly clean with a touch of edge.
+// High gain = 100% clipped. The clean signal grounds out as gain increases.
 
 /* ------------------------------------------------------------------ */
 /*  DC blocker — 1-pole HP at ~20Hz                                   */
@@ -42,8 +41,8 @@ struct {
 	float drive, treble, level;
 	struct single_pole_state dc_in;			/* DC blocking at input */
 	struct single_pole_state dc_out;		/* DC blocking at output */
-	struct biquad in_hp;        			/* 30Hz coupling cap */
-	struct biquad pre_lp;       			/* 15kHz input bandwidth */
+	struct single_pole_state in_hp;			/* 30Hz coupling cap */
+	struct single_pole_state pre_lp;		/* 15kHz input bandwidth */
 	struct biquad tone_hs;      			/* treble control — hi shelf @ 2kHz */
 	struct biquad pres_pk;      			/* presence peak @ 1.7kHz */
 } klon;
@@ -57,8 +56,9 @@ void klon_init(unsigned char pot[10])
 	float hs_db = (klon.treble - 0.5f) * 12.0f;	// -6 to +6 dB
 	float peaking_db = klon.treble * 6.0;		//  0 to +6 dB (original effectively doubled the boost)
 
-	biquad_hpf(&klon.in_hp, 30.0, 0.5);
-	biquad_lpf(&klon.pre_lp, 15000.0, 0.5);
+	// Single-pole RC filters for coupling and bandwidth
+	// initialized implicitly to 0 by static allocation, no init needed here
+
 	biquad_highshelf(&klon.tone_hs, 2000.0, 0.7, db_to_level(hs_db));
 	biquad_peaking(&klon.pres_pk, 1700.0, 1.5, db_to_level(peaking_db));
 }
@@ -72,29 +72,28 @@ float klon_step(float in)
 	/* Input conditioning */
 	pre = klon_dc_step(&klon.dc_in, in);
 
-	pre = biquad_step(&klon.in_hp, pre);		/* coupling cap */
-	pre = biquad_step(&klon.pre_lp, pre);		/* input bandwidth */
+	pre = single_pole_hpf(pre, &klon.in_hp, single_pole_freq(30.0));	/* coupling cap */
+	pre = single_pole_lpf(pre, &klon.pre_lp, single_pole_freq(15000.0));	/* input bandwidth */
 
 	/* Op-amp gain — 18V charge pump gives ~2x headroom vs 9V pedals */
 	boost = 1.0f + drive * drive * 55.0f;
 	pre = pre * boost;
 
 	/*
-	 * Germanium diode pair (1N34A) — 0.3V forward voltage
-	 * (silicon is 0.7V — germanium clips softer, rounder, more compressed)
-	 * Even harmonic content from the soft knee.
+	 * Germanium diode pair (1N34A) to ground — 0.3V forward voltage
+	 * (silicon is 0.7V — germanium clips softer, rounder, more compressed).
+	 * Hard clipping to ground gives even harmonic content from the soft knee.
 	 */
 	ge_clip = tanhf(pre * 0.45f) * 1.8f;
 
 	/*
-	 * THE KLON'S SIGNATURE: clean/dirty blend tracks the gain knob.
+	 * THE KLON'S SIGNATURE: clean/dirty blend tracks the gain knob via a
+	 * dual-gang pot.
 	 * Low drive = mostly clean with a whisper of edge.
-	 * High drive = mostly clipped, but NEVER 100% — always some clean.
-	 * This is why people call it "transparent" — your guitar's voice
-	 * always comes through because the clean signal is always there.
+	 * High drive = 100% clipped, clean signal is fully grounded out.
 	 */
-	clean_amt = 1.0f - drive * 0.85f;
-	dirty_amt = 0.15f + drive * 0.85f;
+	clean_amt = 1.0f - drive;
+	dirty_amt = drive;
 	mixed = in * clean_amt + ge_clip * dirty_amt;
 
 	/* Post-clip tone shaping */
