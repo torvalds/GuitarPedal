@@ -148,6 +148,8 @@ float pow2(float x)
 	return x / (float)(1u << -exp);
 }
 
+#define expf(x) pow2(LOG2_e*(x))
+
 // We can calculate sin/cos at the same time using
 // the table lookup. It's "GoodEnough(tm)" and with
 // 256 entries it's good to about 5.3 digits of
@@ -193,11 +195,10 @@ struct sincos fastsincos(float phase)
 }
 
 // Half-time coefficient calculation:
-//	0.5 ^ ( 1 / samples )
-//	= 2 ^ ( -1 / (ms * SAMPLES_PER_MSEC) )
+//	= exp( -1 / (ms * SAMPLES_PER_MSEC) )
 static inline float time_constant(float ms)
 {
-	return pow2(-1.0 / SAMPLES_PER_MSEC / ms);
+	return expf(-1 / SAMPLES_PER_MSEC / ms);
 }
 
 static inline float db_to_level(float db)
