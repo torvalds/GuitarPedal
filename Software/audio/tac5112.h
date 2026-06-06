@@ -1,5 +1,3 @@
-#include "biquad.h"
-
 // Page and register address for biquad filter
 // coefficients for the ADC record output channel 1
 //

@@ -24,6 +24,8 @@
 #define PIO0_WS2812_SM 2
 
 #include "audio/util.h"
+#include "audio/single-pole.h"
+#include "audio/biquad.h"
 
 #include "tusb.h"
 #include "usb-audio.h"
