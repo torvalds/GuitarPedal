@@ -35,7 +35,7 @@
 
 static inline float klon_dc_step(struct single_pole_state *state, float x)
 {
-	return single_pole_hpf(x, state, single_pole_rc(1e6, 100e-5));
+	return single_pole_hpf(x, state, single_pole_rc(1e6, 100e-9));
 }
 
 struct {
