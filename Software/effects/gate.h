@@ -13,11 +13,8 @@
 //
 
 static struct {
-	// Pot values (pre-computed for step calculation convenience)
-	float level, attack, release;
-
-	// Signal envelope
-	float env, mult;
+	struct envelope envelope;
+	float mult, level;
 } gate;
 
 static inline void gate_init(unsigned char pot[10])
@@ -26,19 +23,13 @@ static inline void gate_init(unsigned char pot[10])
 	gate.level = db_to_level(level_db);
 
 	float attack_ms = gate_pot1(pot[1]);
-	gate.attack = time_constant(attack_ms);
-
 	float release_ms = gate_pot2(pot[2]);
-	gate.release = time_constant(release_ms);
+	envelope_init(&gate.envelope, attack_ms, release_ms);
 }
 
 static inline float gate_step(float in)
 {
-	// Envelope follower
-	float abs_val = fabsf(in);
-	float prev = gate.env;
-	float coef = (abs_val > prev) ? gate.attack : gate.release;
-	float env = linear(coef, abs_val, prev);
+	float env = envelope_step(&gate.envelope, in);
 	float mult = gate.mult;
 
 	// Ramp up fairly quickly, ramp down slowly
@@ -52,7 +43,6 @@ static inline float gate_step(float in)
 			mult = 0.0f;
 		gate_effect.intense = 1;
 	}
-	gate.env = env;
 	gate.mult = mult;
 	return in * mult;
 }

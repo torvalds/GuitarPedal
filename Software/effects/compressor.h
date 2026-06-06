@@ -11,10 +11,13 @@
 
 static struct {
 	// Pot values (pre-computed for step calculation convenience)
-	float level, attack, release, ratio, boost;
+	float level, ratio, boost;
+
+	// Envelope follower
+	struct envelope envelope;
 
 	// Compressor state
-	float env, compression;
+	float compression;
 } compressor = {
 	.level = 1.0,
 	.compression = 1.0
@@ -26,10 +29,8 @@ static inline void compressor_init(unsigned char pot[10])
 	compressor.level = db_to_level(level_db);
 
 	float attack_ms = compressor_pot1(pot[1]);
-	compressor.attack = time_constant(attack_ms);
-
 	float release_ms = compressor_pot2(pot[2]);
-	compressor.release = time_constant(release_ms);
+	envelope_init(&compressor.envelope, attack_ms, release_ms);
 
 	float ratio = compressor_pot3(pot[3]);
 	compressor.ratio = 1.0f - (1.0f / ratio);
@@ -47,9 +48,7 @@ static inline float mypow(float a, float b)
 static inline float compressor_step(float in)
 {
 	// Envelope follower
-	float abs_val = fabsf(in);
-	float coef = (abs_val > compressor.env) ? compressor.attack : compressor.release;
-	compressor.env = linear(coef, abs_val, compressor.env);
+	float env = envelope_step(&compressor.envelope, in);
 
 	// Compression calculation.
 	//
@@ -59,8 +58,8 @@ static inline float compressor_step(float in)
 	//	target = (level / env) ^ (1 - 1/ratio)
 	//
 	float target = 1.0f;
-	if (compressor.env > compressor.level) {
-		target = mypow(compressor.level / compressor.env, compressor.ratio);
+	if (env > compressor.level) {
+		target = mypow(compressor.level / env, compressor.ratio);
 		compressor_effect.intense = 1;
 	}
 
