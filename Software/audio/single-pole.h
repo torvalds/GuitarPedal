@@ -41,6 +41,11 @@ static inline struct single_pole_coeff single_pole_time(float ms)
 	return coeff;
 }
 
+static inline struct single_pole_coeff single_pole_rc(float R, float C)
+{
+	return single_pole_time(R*C*1000);
+}
+
 static inline float single_pole_lpf(float in,
 	struct single_pole_state *state,
 	const struct single_pole_coeff coeff)
@@ -48,9 +53,21 @@ static inline float single_pole_lpf(float in,
 	return _single_pole_step(in, state, coeff);
 }
 
-static inline float single_pole_hpf(float in,
+static inline float single_pole_hpf_complementary(float in,
 	struct single_pole_state *state,
 	const struct single_pole_coeff coeff)
 {
 	return in - _single_pole_step(in, state, coeff);
+}
+
+// The proper way to do a single-pole high-pass filter,
+// with 'R' being the filter pole location (1-alpha)
+static inline float single_pole_hpf(float in,
+	struct single_pole_state *state,
+	const struct single_pole_coeff coeff)
+{
+	float R = 1.0f - coeff.alpha;
+	float y = in + state->y;
+	state->y = R * y - in;
+	return y;
 }
