@@ -80,7 +80,6 @@ static inline void frenchie_density_step(struct frenchie_density *d, float x)
 
 struct frenchie_input_stage {
 	struct biquad input_lp;			/* input loading */
-	struct biquad cathode_shelf;		/* cathode bypass */
 	struct envelope peak;			/* peak envelope for metering */
 	float cap_charge;
 	float cap_charge_rate;
@@ -90,7 +89,6 @@ struct frenchie_input_stage {
 static inline void frenchie_input_stage_init(struct frenchie_input_stage *s)
 {
 	biquad_lpf(&s->input_lp, 4500.0f, 0.6f);
-	biquad_highshelf(&s->cathode_shelf, 800.0f, 0.5f, db_to_level(-2.5f));
 	envelope_init(&s->peak, 0.2f, 50.0f);
 	s->cap_charge_rate = time_constant(0.5f);
 	s->cap_drain_rate = time_constant(30.0f);
@@ -98,7 +96,7 @@ static inline void frenchie_input_stage_init(struct frenchie_input_stage *s)
 
 static inline float frenchie_input_stage_step(struct frenchie_input_stage *s, float x, float intensity)
 {
-	float loaded, bias_shift, biased, grid_thresh, conducted, dry;
+	float loaded, bias_shift, biased, grid_thresh, conducted;
 
 	/* Input loading LP, blended by intensity */
 	loaded = biquad_step(&s->input_lp, x);
@@ -122,11 +120,7 @@ static inline float frenchie_input_stage_step(struct frenchie_input_stage *s, fl
 	else
 		conducted = biased;
 
-	/* Cathode bypass shelf, blended by intensity */
-	dry = conducted;
-	conducted = biquad_step(&s->cathode_shelf, conducted);
-	conducted = linear(intensity, dry, conducted);
-
+	/* 5F1 Champ V1A has no bypass cap, so response is flat here. */
 	envelope_step(&s->peak, x);
 	return conducted;
 }
@@ -144,8 +138,8 @@ struct frenchie_psu {
 
 static inline void frenchie_psu_init(struct frenchie_psu *p)
 {
-	/* 5Y3 tube rectifier: SLOW attack (5ms), SLOW release (200ms) */
-	p->att = time_constant(5.0f);
+	/* 5Y3 tube rectifier: FAST attack (0.5ms), SLOW release (200ms) */
+	p->att = time_constant(0.5f);
 	p->rel = time_constant(200.0f);
 	p->max_droop = 0.30f;			/* 30% voltage drop under load */
 	p->min_v = 0.55f;			/* never below 55% of nominal */
@@ -306,10 +300,10 @@ static inline float frenchie_power_amp_step(struct frenchie_power_amp *pa, float
 	/* Density tracker */
 	frenchie_density_step(&pa->hd, b);
 
-	/* Cathode bias shift — envelope on signal compresses gain */
+	/* Cathode bias shift — envelope on signal shifts DC operating point */
 	float cathode_val = envelope_step(&pa->cathode, b);
 	cathode_shift = cathode_val * 0.20f;
-	b *= (1.0f - cathode_shift);
+	b -= cathode_shift;
 
 	// Replaced piecewise tanh with a single offset tanh to maintain identical
 	// clipping asymptotes (+0.7, -1.0) and slope at zero (1.26) without crossover distortion.
@@ -378,10 +372,10 @@ static inline float frenchie_gate_step(struct frenchie_gate *g, float x)
 static struct {
 	struct biquad rf_filter;			/* 10kHz — grid stopper × Cgk */
 	struct frenchie_input_stage input_stage;	/* 12AX7 grid physics */
-	struct biquad input_hp;				/* 80Hz coupling cap */
 	struct frenchie_psu psu;			/* 5Y3 tube rectifier */
 	struct frenchie_triode v1a;			/* 12AX7 preamp triode */
-	struct biquad tone_lp;				/* single tone knob */
+	struct single_pole_state tone_lp;		/* 1-pole passive tone control */
+	struct single_pole_coeff tone_coeff;
 	struct frenchie_power_amp power_amp;		/* 6V6 Class A power amp */
 	struct frenchie_gate gate;			/* noise gate */
 
@@ -405,7 +399,6 @@ static inline void frenchie_init(unsigned char pot[10])
 
 	biquad_lpf(&frenchie.rf_filter, 10000.0f, 0.5f);
 	frenchie_input_stage_init(&frenchie.input_stage);
-	biquad_hpf(&frenchie.input_hp, 80.0f, 0.7f);
 	frenchie_psu_init(&frenchie.psu);
 	/* V1a: coupling cap HP at 30Hz, Miller LP at 8kHz */
 	frenchie_triode_init(&frenchie.v1a, 30.0f, 8000.0f);
@@ -418,7 +411,7 @@ static inline void frenchie_init(unsigned char pot[10])
 	frenchie.sag_depth = frenchie_pot3(pot[3]);
 	frenchie.out_level = frenchie_pot4(pot[4]);
 
-	biquad_lpf(&frenchie.tone_lp, 1500.0f + tone * 18500.0f, 0.5f);
+	frenchie.tone_coeff = single_pole_freq(1500.0f + tone * 18500.0f);
 }
 
 static inline float frenchie_step(float in)
@@ -435,9 +428,6 @@ static inline float frenchie_step(float in)
 	if (frenchie.input_intensity > 0.0f)
 		mono = frenchie_input_stage_step(&frenchie.input_stage, mono, frenchie.input_intensity);
 
-	/* Coupling cap — blocks DC between input and preamp */
-	mono = biquad_step(&frenchie.input_hp, mono);
-
 	/* PSU sag — 5Y3 tube rectifier droops under load */
 	bplus = frenchie_psu_step(&frenchie.psu,
 		fabsf(mono) * (1.0f + frenchie.gain * 3.0f), frenchie.sag_depth);
@@ -446,8 +436,8 @@ static inline float frenchie_step(float in)
 	mono = frenchie_triode_step(&frenchie.v1a, mono, frenchie.gain * 0.65f, bplus,
 		1.1f, 0.935f /* FIX: was 0.9f, 0.935 matches positive slope (1.1 * 0.85) */, 0.85f, 1.0f, 0.35f, 0.12f);
 
-	/* Tone control — Champ's single LP sweep */
-	mono = biquad_step(&frenchie.tone_lp, mono);
+	/* Tone control — 5F2-A Princeton-style passive 1-pole treble bleed */
+	mono = single_pole_lpf(mono, &frenchie.tone_lp, frenchie.tone_coeff);
 
 	/* 6V6 SE Class A power amp */
 	frenchie.power_amp.drive = frenchie.gain * 0.55f;
