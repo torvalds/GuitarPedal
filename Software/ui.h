@@ -279,6 +279,20 @@ static void update_ui(uint32_t ms_since_boot)
 		// Do something
 	}
 
+	// Left stomp or bottom rotary long-press: save effect state to EEPROM
+	if (switch_pressed(LONGPRESS(1)) || switch_pressed(LONGPRESS(3))) {
+		switch_clear(LONGPRESS(1));
+		switch_clear(LONGPRESS(3));
+		unsigned int seq = effect->seq;
+		unsigned char *cur_pot = effect->pot_values[seq & 1];
+		unsigned char *new_pot = effect->pot_values[!(seq & 1)];
+		memcpy(new_pot, cur_pot, 10);
+		effect->seq = 0;
+
+		save_effect_state(effect_idx, effect);
+		update_screen = true;
+	}
+
 	// Left stomp (or bottom rotary):
 	// enable/disable current effect
 	if (switch_pressed(1) || switch_pressed(3)) {
@@ -314,18 +328,6 @@ static void update_ui(uint32_t ms_since_boot)
 	}
 
 	if (idx != effect_idx) {
-		// Save the state of the effect we're leaving
-		// if it has been modified
-		if (effect->seq) {
-			unsigned int seq = effect->seq;
-			unsigned char *cur_pot = effect->pot_values[seq & 1];
-			unsigned char *new_pot = effect->pot_values[!(seq & 1)];
-			memcpy(new_pot, cur_pot, 10);
-			effect->seq = 0;
-
-			save_effect_state(effect_idx, effects[effect_idx]);
-		}
-
 		effect_idx = idx;
 		effect = effects[idx];
 		current_midi_effect_idx = idx;
