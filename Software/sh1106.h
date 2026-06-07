@@ -80,7 +80,7 @@ static inline unsigned int rot32(unsigned int val, int shift)
 	return (val << shift) | (val >> (32-shift));
 }
 
-static inline void sh1106_fill(int x, int y, int w, int h, unsigned int val, int shift)
+static inline void sh1106_fill(int x, int y, int w, int h, unsigned int val, int shift, unsigned int clr)
 {
 	if (x >= SH110x_COLUMNS || y >= SH110x_LINES) return;
 	if (x < 0) { w += x; x = 0; }
@@ -92,24 +92,25 @@ static inline void sh1106_fill(int x, int y, int w, int h, unsigned int val, int
 
 	int page = y >> 3;
 	y &= 7; h += y;
-	unsigned int clr = ~0 << y;
+	unsigned int bits = ~0 << y;
 
 	do {
 		unsigned int pattern = val;
 		if (h < 8)
-			clr &= (1 << h)-1;
+			bits &= (1 << h)-1;
 		for (int i = x; i < w; i++) {
-			sh1106_sprite_column(page, i, clr, pattern & clr);
+			sh1106_sprite_column(page, i, clr & bits, pattern & bits);
 			pattern = rot32(pattern, shift);
 		}
 
-		clr = ~0;
+		bits = ~0;
 		page++;
 		h -= 8;
 	} while (h > 0 && page < SH110x_PAGES);
 }
 
-#define sh1106_clear(x,y,w,h) sh1106_fill(x,y,w,h,0,0)
+#define sh1106_clear(x,y,w,h) sh1106_fill(x,y,w,h,0,0,~0u)
+#define sh1106_reverse(x,y,w,h) sh1106_fill(x,y,w,h,~0u,0,0)
 
 static inline void sh1106_hline(int x, int y, int w)
 {
@@ -186,7 +187,7 @@ enum pattern {
 static void sh1106_rectangle(int posX, int posY, int width, int height, enum pattern fill)
 {
 	if (fill == rect_filled)
-		return sh1106_fill(posX, posY, width, height, ~0, 0);
+		return sh1106_fill(posX, posY, width, height, ~0, 0, ~0);
 
 	if (width < 1 || height < 1)
 		return;
@@ -208,7 +209,7 @@ static void sh1106_rectangle(int posX, int posY, int width, int height, enum pat
 		[rect_clear] = 0
 	};
 	unsigned int pattern = fill_pattern[fill];
-	sh1106_fill(posX, posY, width, height, pattern, 1);
+	sh1106_fill(posX, posY, width, height, pattern, 1, ~0);
 }
 
 #include "font_6x8.h"
