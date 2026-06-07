@@ -103,6 +103,23 @@ static char *to_ascii(unsigned char term, uint32_t val, char *p, int digits, int
 	return p;
 }
 
+// This reverses the background of a 6x8 text.
+// It's just doing a xor ten bits high
+static void sh1106_reverse_text(int x, int y, int width)
+{
+	#define MAX_REVERSE_WIDTH (8*6+2)
+	static const unsigned int zero[MAX_REVERSE_WIDTH] = { 0, };
+	static const unsigned int bits[MAX_REVERSE_WIDTH] = { [0 ... MAX_REVERSE_WIDTH-1] = 0x3ff };
+
+	// We're extending on the text by one pixel in all
+	// directions, and making a box ten pixels high
+	x--; y--;
+	width += 2;
+	if (width > MAX_REVERSE_WIDTH)
+		width = MAX_REVERSE_WIDTH;
+	sh1106_sprite(x, y, width, zero, bits);
+}
+
 static void list_effects(struct effect *active)
 {
 	int x = 3;
@@ -134,11 +151,8 @@ static void list_effects(struct effect *active)
 		if (effect == active)
 			sh1106_rectangle(x-3, y-3, width+6, 8+6, rect_border);
 		sh1106_puts_6x8(x,y,name);
-		if (effect->target) {
-			static const unsigned int zero[32] = { 0, };
-			static const unsigned int bits[32] = { [0 ... 31] = 0x3ff };
-			sh1106_sprite(x-1, y-1, width+2, zero, bits);
-		}
+		if (effect->target)
+			sh1106_reverse_text(x, y, width);
 		x += width+6;
 	}
 }
@@ -174,11 +188,8 @@ static void list_enums(const struct pot_descr *pot, int active_val, int y)
 		int width = strlen(name)*6;
 
 		sh1106_puts_6x8(x,y+1,name);
-		if (i == active_val) {
-			static const unsigned int zero[32] = { 0, };
-			static const unsigned int bits[32] = { [0 ... 31] = 0x3ff };
-			sh1106_sprite(x-1, y, width+2, zero, bits);
-		}
+		if (i == active_val)
+			sh1106_reverse_text(x, y+1, width);
 		x += width+6;
 	}
 }
