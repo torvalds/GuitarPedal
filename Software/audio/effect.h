@@ -110,7 +110,7 @@ static inline void single_sample(float mix)
 	float in = process_input(sample);
 	float usb_in = get_usb_audio_input();
 
-	if (usb.input == USB_IN_PRE_FX)
+	if (settings.usb_input == USB_IN_PRE_FX)
 		in += usb_in;
 
 	float out = in;
@@ -119,7 +119,7 @@ static inline void single_sample(float mix)
 
 	float val = linear(mix, in, out);
 
-	if (usb.input == USB_IN_MIX)
+	if (settings.usb_input == USB_IN_MIX)
 		val += usb_in;
 
 	sample = process_output(val, sample);

@@ -69,19 +69,18 @@ static inline s32 convert_output(float out)
 static inline s32 process_output(float out, s32 dry)
 {
 	s32 wet = convert_output(out);
+	s32 left, right;
 
-	if (usb_effect.mix) {
-		s32 left, right;
-		switch (usb.output) {
-		case LR_Wet: left = right = wet; break;
-		case LR_Dry: left = right = dry; break;
-		default: left = wet; right = dry; break;
-		}
-		unsigned idx = (output.head & OUTPUT_MASK) * 2;
-		output.buf[idx] = left;
-		output.buf[idx + 1] = right;
-		output.head++;
+	switch (settings.usb_output) {
+	case LR_None: return wet;
+	case LR_Wet: left = right = wet; break;
+	case LR_Dry: left = right = dry; break;
+	default: left = wet; right = dry; break;
 	}
+	unsigned idx = (output.head & OUTPUT_MASK) * 2;
+	output.buf[idx] = left;
+	output.buf[idx + 1] = right;
+	output.head++;
 	return wet;
 }
 

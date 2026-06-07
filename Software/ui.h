@@ -248,6 +248,29 @@ static int switch_effect(int idx)
 	return idx;
 }
 
+// Human perception isn't linear, but neither
+// is LED intensity, particularly since we're
+// typically driving the LED at the lower range
+// of the current range
+//
+// Random map from 0..1 to 0..4096 that works
+// for the LED I have happened to pick
+static int led_pwm_mapping(float pwm)
+{
+	return (int) rintf(pwm * sqrtf(pwm) * PWM_WRAP);
+}
+
+static void set_led(int pin, bool on, bool intense)
+{
+	int level = 0;
+	if (on || intense) {
+		float pwm = intense ? settings.led_intense : settings.led_pwm;
+		level = led_pwm_mapping(pwm / 100.0);
+	}
+
+	pwm_set_gpio_level(pin, level);
+}
+
 // 'update_ui()' is called every few ms to react to user events.
 static void update_ui(uint32_t ms_since_boot)
 {
@@ -333,15 +356,17 @@ static void update_ui(uint32_t ms_since_boot)
 	}
 
 	// The LED mappings have changed between boards
+	bool led1 = !disable_all, led1_intense = clipping;
+	bool led2 = effect->target, led2_intense = effect->intense;
+
 #ifdef USB_MODE_HOST
 	extern uint8_t remote_clipping;
 	extern uint8_t remote_intense;
-	pwm_set_gpio_level(PWM_PIN1, PWM_100/30 * (!disable_all + 8*!!remote_clipping));
-	pwm_set_gpio_level(PWM_PIN2, PWM_100/30 * (!!effect->target + 8*!!remote_intense));
-#else
-	pwm_set_gpio_level(PWM_PIN1, PWM_100/30 * (!disable_all + 8*!!clipping));
-	pwm_set_gpio_level(PWM_PIN2, PWM_100/30 * (!!effect->target + 8*!!effect->intense));
+	led1_intense = remote_clipping;
+	led2_intense = remote_intense;
 #endif
+	set_led(PWM_PIN1, led1, led1_intense);
+	set_led(PWM_PIN2, led2, led2_intense);
 
 	static uint8_t last_clipping = 0;
 	static uint8_t last_intense = 0;

@@ -23,6 +23,8 @@
 #define PIO0_I2S_RX_SM 1
 #define PIO0_WS2812_SM 2
 
+#define PWM_WRAP 4096	// Entirely arbitrary
+
 #include "audio/util.h"
 #include "audio/envelope.h"
 #include "audio/single-pole.h"
@@ -146,8 +148,8 @@ void handle_midi_packet(const uint8_t packet[4])
 	uint8_t data1 = packet[2];
 	uint8_t data2 = packet[3];
 
-	if (usb.midi_channel != 0) {
-		if ((status & 0x0F) != (usb.midi_channel - 1))
+	if (settings.midi_channel != 0) {
+		if ((status & 0x0F) != (settings.midi_channel - 1))
 			return;
 	}
 
@@ -304,15 +306,12 @@ static void init_sw_pins(void)
 	irq_set_enabled(PIO1_IRQ_0, true);
 }
 
-#define PWM_100 4096
-#define PWM_50 2048
-
 static void init_one_pwm_pin(int pin)
 {
 	unsigned int slice = pwm_gpio_to_slice_num(pin);
 
 	gpio_set_function(pin, GPIO_FUNC_PWM);
-	pwm_set_wrap(slice, PWM_100);
+	pwm_set_wrap(slice, PWM_WRAP);
 	pwm_set_gpio_level(pin, 0);
 	pwm_set_enabled(slice, true);
 }
