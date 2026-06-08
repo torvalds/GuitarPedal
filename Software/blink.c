@@ -35,11 +35,13 @@
 #include "sh1106.h"
 #include "switch.h"
 
+static volatile int user_interaction = 0;
 static volatile int next_state_seq = 1;
 static const struct effect *last_effect = NULL;
 
 #include "audio/tac5112.h"
 #include "audio/effect.h"
+
 #include "eeprom.h"
 
 static void reset_effect(struct effect *eff)
@@ -130,6 +132,7 @@ static void switch_irq(void)
 			}
 		}
 	}
+	user_interaction = 1;
 }
 
 volatile bool ui_sync_changed = false;
@@ -380,6 +383,7 @@ static void rotary_irq(void)
 
 		rotary_array[rotary_idx] += val;
 	}
+	user_interaction = 1;
 }
 
 // We'll use a separate PIO program for the rotary
@@ -450,10 +454,37 @@ static void init_effects(void)
 	}
 }
 
+// Fake screensaver that just let's the world know for now
+static void screen_saver(void)
+{
+	// UI update at 25Hz -> ~10s cycle -> 5s half-cycle of sin^2
+	static struct lfo_state breathe = { .step = 0x01000000 };
+
+	float led = lfo_step(&breathe, lfo_sinewave);
+	led = led*led;
+
+	int level = led_pwm_mapping(led * settings.led_pwm);
+	pwm_set_gpio_level(PWM_PIN1, level);
+	level = led_pwm_mapping((1-led) * settings.led_pwm);
+	pwm_set_gpio_level(PWM_PIN2, level);
+
+	// Bouncing ball
+	static int posx, posy, dx = 23, dy = 31;
+
+	sh1106_clear(0, 0, 128, 128);
+	posx += dx; posy += dy;
+
+	int x = posx >> 4, y = posy >> 4;
+	if (x < 0 || x > 122) dx = -dx;
+	if (y < 0 || y > 122) dy = -dy;
+
+	sh1106_rectangle(x,y,6,6,rect_filled);
+	sh1106_draw();
+}
+
 int main()
 {
-	absolute_time_t now;
-	absolute_time_t next_ui_update;
+	int forced_update = 1;
 
 	set_sys_clock_khz(172800, true);
 	enable_ftz();
@@ -468,20 +499,26 @@ int main()
 
 	init_usb();
 
-	now = get_absolute_time();
+	absolute_time_t now = get_absolute_time();
 
 	// Power-up delay for sh1106
-	next_ui_update = delayed_by_ms(now, 500);
+	absolute_time_t next_ui_update = delayed_by_ms(now, 500);
 
 	tac5112_init();
 	init_eeprom();
 
 	init_effects();
 
+	// Idle animation setup
+	absolute_time_t next_idle_time = delayed_by_ms(now, settings.screensaver);
+
 	multicore_launch_core1(audio_processing);
 
 	for (;;) {
 		absolute_time_t now = get_absolute_time();
+
+		if (__atomic_exchange_n(&user_interaction, 0, __ATOMIC_RELAXED))
+			next_idle_time = delayed_by_ms(now, settings.screensaver);
 
 #ifdef USB_MODE_HOST
 		tuh_task();
@@ -494,9 +531,20 @@ int main()
 		// Claim 25Hz screen updates
 		if (now > next_ui_update) {
 			next_ui_update = delayed_by_ms(now, 40);
-
 			eeprom_task();
-			update_ui(to_ms_since_boot(now));
+
+			// Are we in idle mode? Don't do normal
+			// screen updates
+			if (settings.screensaver && now > next_idle_time) {
+				if (disable_all) {
+					screen_saver();
+					forced_update = 1;
+					continue;
+				}
+			}
+
+			update_ui(forced_update);
+			forced_update = 0;
 
 #ifndef USB_MODE_HOST
 			unsigned int current_dropped = __atomic_exchange_n(&dropped, 0, __ATOMIC_RELAXED);

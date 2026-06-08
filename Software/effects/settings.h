@@ -5,6 +5,7 @@
 // POT: "MIDI Ch" ENUM(Omni Ch1 Ch2 Ch3 Ch4 Ch5 Ch6 Ch7 Ch8 Ch9 Ch10 Ch11 Ch12 Ch13 Ch14 Ch15 Ch16) = Omni
 // POT: "LED" LINEAR(0 100) = 10 %
 // POT: "  ATTN" LINEAR(0 100) = 50 %
+// POT: "IdleAnim" LINEAR(0 120) = 5 s
 //
 // Settings "effect" - dummy effect to save various settings
 //
@@ -21,6 +22,7 @@ struct {
 	enum usb_input usb_input;
 	int midi_channel;
 	float led_pwm, led_intense;
+	int screensaver;
 } settings;
 
 static void settings_init(unsigned char pot[10])
@@ -29,12 +31,15 @@ static void settings_init(unsigned char pot[10])
 	settings.usb_input = pot[1];
 	settings.midi_channel = pot[2];
 
-	settings.led_pwm = settings_pot3(pot[3]);
-	settings.led_intense = settings_pot4(pot[4]);
+	settings.led_pwm = settings_pot3(pot[3]) / 100;
+	settings.led_intense = settings_pot4(pot[4]) / 100;
 
 	// Hacky hacky
 	settings_effect.target = EFF_ENABLE_STEPS;
 	settings_effect.intense = settings_effect.active_pot == 4;
+
+	// Screensaver timeout in ms
+	settings.screensaver = (int) rintf(1000*settings_pot5(pot[5]));
 }
 
 static inline float settings_step(float in)

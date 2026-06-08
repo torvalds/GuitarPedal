@@ -265,14 +265,14 @@ static void set_led(int pin, bool on, bool intense)
 	int level = 0;
 	if (on || intense) {
 		float pwm = intense ? settings.led_intense : settings.led_pwm;
-		level = led_pwm_mapping(pwm / 100.0);
+		level = led_pwm_mapping(pwm);
 	}
 
 	pwm_set_gpio_level(pin, level);
 }
 
 // 'update_ui()' is called every few ms to react to user events.
-static void update_ui(uint32_t ms_since_boot)
+static void update_ui(int force_update)
 {
 	static int effect_idx = 0;
 	static int last_active_pot = -1;
@@ -288,6 +288,11 @@ static void update_ui(uint32_t ms_since_boot)
 
 	struct effect *effect = effects[effect_idx];
 	bool update_screen = false;
+
+	if (force_update) {
+		last_effect = NULL;
+		update_screen = true;
+	}
 
 	// Right stomp long-ress: switch to secondary values perhaps?
 	if (switch_pressed(LONGPRESS(2))) {
