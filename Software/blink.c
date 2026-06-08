@@ -456,7 +456,8 @@ static void init_effects(void)
 	}
 }
 
-// Fake screensaver that just let's the world know for now
+#include "tuner_ui.h"
+
 static void screen_saver(void)
 {
 	// UI update at 25Hz -> ~10s cycle -> 5s half-cycle of sin^2
@@ -470,18 +471,7 @@ static void screen_saver(void)
 	level = led_pwm_mapping((1-led) * settings.led_pwm);
 	pwm_set_gpio_level(PWM_PIN2, level);
 
-	// Bouncing ball
-	static int posx, posy, dx = 23, dy = 31;
-
-	sh1106_clear(0, 0, 128, 128);
-	posx += dx; posy += dy;
-
-	int x = posx >> 4, y = posy >> 4;
-	if (x < 0 || x > 122) dx = -dx;
-	if (y < 0 || y > 122) dy = -dy;
-
-	sh1106_rectangle(x,y,6,6,rect_filled);
-	sh1106_draw();
+	draw_analyzer();
 }
 
 int main()
