@@ -29,6 +29,8 @@
 #include "audio/envelope.h"
 #include "audio/single-pole.h"
 #include "audio/biquad.h"
+#include "audio/fft.h"
+#include "audio/analyze.h"
 
 #include "tusb.h"
 #include "usb-audio.h"

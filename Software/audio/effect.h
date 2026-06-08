@@ -97,6 +97,7 @@ static void bypass(void)
 	for (int i = 0; i < BLOCKSIZE; i++) {
 		int32_t sample = pio_sm_get_blocking(pio, PIO0_I2S_RX_SM) << 8;
 		float val = process_input(sample);
+		analyze_process_sample(val);
 		sample = process_output(val, sample);
 		pio_sm_put_blocking(pio0, PIO0_I2S_TX_SM, sample);
 	}
