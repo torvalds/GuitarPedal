@@ -102,8 +102,8 @@ static inline void tuner_magnitudes(float global_max_mag)
 
 			// Allow 3% deviation for harmonics
 			if (fabsf(ratio - closest_int) < 0.03f * closest_int) {
-				// Base must be at least 2% of the loudest peak's magnitude
-				if (peaks[i].mag > dominant_mag * 0.02f) {
+				// Base must be at least 20% of the loudest peak's magnitude
+				if (peaks[i].mag > dominant_mag * 0.20f) {
 					dominant_freq = peaks[i].freq;
 					break; // Found the lowest valid base
 				}
@@ -215,14 +215,14 @@ static inline void polyphonic_tuner_magnitudes(float global_max_mag)
 	if (current_tuning->num_strings == 6) {
 		// Low E harmonics: B3 (3x) and E4 (4x)
 		if (tuner_state.string_mag[0] > 0.0f) {
-			if (tuner_state.string_mag[4] < tuner_state.string_mag[0] * 0.6f)
+			if (tuner_state.string_mag[4] < tuner_state.string_mag[0] * 0.25f)
 				tuner_state.string_mag[4] = 0.0f;
-			if (tuner_state.string_mag[5] < tuner_state.string_mag[0] * 0.5f)
+			if (tuner_state.string_mag[5] < tuner_state.string_mag[0] * 0.25f)
 				tuner_state.string_mag[5] = 0.0f;
 		}
 		// A harmonics: E4 (3x)
 		if (tuner_state.string_mag[1] > 0.0f) {
-			if (tuner_state.string_mag[5] < tuner_state.string_mag[1] * 0.5f)
+			if (tuner_state.string_mag[5] < tuner_state.string_mag[1] * 0.25f)
 				tuner_state.string_mag[5] = 0.0f;
 		}
 	}
