@@ -39,7 +39,7 @@ static void settings_init(unsigned char pot[10])
 	settings_effect.intense = settings_effect.active_pot == 4;
 
 	// Screensaver timeout in ms
-	settings.screensaver = (int) rintf(1000*settings_pot5(pot[5]));
+	settings.screensaver = lrintf(1000*settings_pot5(pot[5]));
 }
 
 static inline float settings_step(float in)

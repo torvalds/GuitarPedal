@@ -121,7 +121,7 @@ static char *float_to_ascii(float val, int places)
 
 	float abs_val = fabsf(val);
 	unsigned int decimals = 0, int_val;
-	int_val = (int)rintf(abs_val);
+	int_val = lrintf(abs_val);
 
 	// Do we need to remove precision or add decimals?
 	if (int_val > 10*target) {
@@ -129,7 +129,7 @@ static char *float_to_ascii(float val, int places)
 		do {
 			remove++;
 			abs_val /= 10;
-			int_val = (int)rintf(abs_val);
+			int_val = lrintf(abs_val);
 		} while (int_val > 10*target);
 		do { int_val *= 10; } while (--remove);
 	} else {
@@ -137,7 +137,7 @@ static char *float_to_ascii(float val, int places)
 			if (decimals >= places)
 				break;
 			abs_val *= 10;
-			int_val = (int)rintf(abs_val);
+			int_val = lrintf(abs_val);
 		}
 	}
 
@@ -260,7 +260,7 @@ static void pot_describe(const struct pot_descr *pot, int val, int posY)
 					decimals = 2;
 				}
 			}
-			val = (int) rintf(fval);
+			val = lrintf(fval);
 			if (decimals > 1 && !(val % 100)) {
 				end--;
 				decimals--;
@@ -305,7 +305,7 @@ static int switch_effect(int idx)
 // for the LED I have happened to pick
 static int led_pwm_mapping(float pwm)
 {
-	return (int) rintf(pwm * sqrtf(pwm) * PWM_WRAP);
+	return lrintf(pwm * sqrtf(pwm) * PWM_WRAP);
 }
 
 static void set_led(int pin, bool on, bool intense)

@@ -120,7 +120,7 @@ static int eq_magnitude(int x, void *arg)
 	// Map dB to Y pixels [0..64].
 	// y=25 is 1x gain (0 dB).
 	// Let's map +20dB to y=0 and -20dB to y=50.
-	int y = 32 - (int) rintf(db * 1.6f); // 32 / 20 = 1.6
+	int y = 32 - lrintf(db * 1.6f); // 32 / 20 = 1.6
 
 	return y;
 }

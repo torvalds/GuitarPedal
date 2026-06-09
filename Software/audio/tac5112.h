@@ -112,7 +112,7 @@ static void tac5112_init(void)
 
 static void bq_convert(float f, unsigned char *buf)
 {
-	int val = (int)rintf(f * (float)0x7fffffff);
+	int val = lrintf(f * (float)0x7fffffff);
 
 	if (f > 0 && val < 0)
 		val = 0x7fffffff;
