@@ -222,30 +222,6 @@ static inline void polyphonic_tuner_magnitudes(float global_max_mag)
 	}
 }
 
-// FFT_SIZE maps to 48kHz (and we only have magnitude bins for
-// half of that). But for guitar tuning, we're only really
-// interested in one octave up from the high E, which is 660Hz.
-//
-// So let's go to FFT_SIZE / 64, which maps to 750Hz
-// (That's really just two bins per pixel - FFT_SHIFT is 14)
-#define BINS_PER_PIXEL (FFT_SIZE/64/128)
-
-static int analyzer_graph_fn(int x, void *arg)
-{
-	int bin = x*BINS_PER_PIXEL;
-	float mag = 1.0;
-
-	for (int i = 0; i < BINS_PER_PIXEL; i++)
-		mag *= tuner_state.magnitudes[bin+i];
-
-	// Logarithmic scaling for magnitude.
-	// Scaled down to de-emphasize and fit in ~40 pixels at the bottom.
-	int h = (int)rintf(3 * log2f(mag + 1.0f));
-	if (h > 41) h = 41;
-	if (h < 0) h = 0;
-
-	return 127 - h; // 127 is bottom of screen
-}
 
 // Forward declare to_ascii from ui.h
 static char *to_ascii(unsigned char term, uint32_t val, char *p, int digits, int decimals);
@@ -284,8 +260,6 @@ static void draw_chromatic(void)
 	if (cents <= -0.5f) *--end = '-';
 	else if (cents >= 0.5f) *--end = '+';
 
-	sh1106_clear(0, 40, 128, 44);
-
 	sh1106_puts_8x16(64 - name_len * 4, 46, full_name);
 
 	int cents_len = strlen(end);
@@ -295,13 +269,13 @@ static void draw_chromatic(void)
 	sh1106_puts_6x8(126 - 5 * 6, 50, float_to_ascii(freq, 4));
 
 	// Huge needle spanning most of screen
-	int bar_x = 64 + (int)(cents * 0.5f); // 50 cents = 25 pixels -> 39 to 89
+	int bar_x = 64 + (int)cents; // 50 cents = 50 pixels -> 14 to 114
 	if (bar_x < 14) bar_x = 14;
 	if (bar_x > 114) bar_x = 114;
 
-	sh1106_hline(14, 78, 100); // Axis line
-	sh1106_vline(64, 76, 5); // Center tick
-	sh1106_vline(bar_x, 74, 9); // Needle
+	sh1106_hline(14, 104, 100); // Axis line
+	sh1106_vline(64, 94, 21); // Center tick
+	sh1106_rectangle(bar_x - 2, 84, 5, 41, rect_filled); // Needle
 }
 
 static void draw_analyzer(void)
@@ -328,9 +302,6 @@ static void draw_analyzer(void)
 	tuner_magnitudes(global_max_mag);
 
 	sh1106_clear(0, 0, 128, 128);
-
-	// Draw graph smaller at the bottom
-	sh1106_graph(0, 127, 86, 127, analyzer_graph_fn, NULL);
 
 	if (tuner_state.dominant_freq > 0.0f)
 		draw_chromatic();
