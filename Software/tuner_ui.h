@@ -284,13 +284,15 @@ static void draw_chromatic(void)
 	if (cents <= -0.5f) *--end = '-';
 	else if (cents >= 0.5f) *--end = '+';
 
-	// Clear middle area
 	sh1106_clear(0, 40, 128, 44);
 
 	sh1106_puts_8x16(64 - name_len * 4, 46, full_name);
 
 	int cents_len = strlen(end);
 	sh1106_puts_6x8(64 - cents_len * 3, 66, end);
+
+	// Display exact frequency to the right of the chromatic section
+	sh1106_puts_6x8(126 - 5 * 6, 50, float_to_ascii(freq, 4));
 
 	// Huge needle spanning most of screen
 	int bar_x = 64 + (int)(cents * 0.5f); // 50 cents = 25 pixels -> 39 to 89
