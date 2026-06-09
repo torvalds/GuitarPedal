@@ -51,9 +51,15 @@ static inline void tuner_magnitudes(float global_max_mag)
 	struct { float freq; float mag; } peaks[64];
 	int num_peaks = 0;
 
-	for (int i = 5; i < 450; i++) {
+	// Search frequencies between ~15Hz and ~1.5kHz (E6 is 1318.5Hz)
+	int min_bin = (int)(15.0f * FFT_SIZE / 12000.0f);
+	int max_bin = (int)(1500.0f * FFT_SIZE / 12000.0f);
+	if (min_bin < 2) min_bin = 2; // Need margin for i-2 check
+	if (max_bin > FFT_SIZE / 2 - 3) max_bin = FFT_SIZE / 2 - 3; // Need margin for i+2 check
+
+	for (int i = min_bin; i < max_bin; i++) {
 		float mag = tuner_state.magnitudes[i];
-		if (mag > 3.0f) {
+		if (mag > 1.0f) {
 			if (mag > tuner_state.magnitudes[i-1] &&
 			    mag > tuner_state.magnitudes[i+1] &&
 			    mag > tuner_state.magnitudes[i-2] * 2.0f &&
@@ -68,7 +74,7 @@ static inline void tuner_magnitudes(float global_max_mag)
 					p = 0.5f * (y1 - y3) / denom;
 				}
 
-				float freq = (i + p) * (48000.0f / FFT_SIZE);
+				float freq = (i + p) * (12000.0f / FFT_SIZE);
 				if (num_peaks < 64) {
 					peaks[num_peaks].freq = freq;
 					peaks[num_peaks].mag = mag;
@@ -132,7 +138,7 @@ static inline void polyphonic_tuner_magnitudes(float global_max_mag)
 
 		for (int t = 0; t < 3; t++) {
 			float target_freq = current_tuning->strings[s].base_freq * (t == 0 ? 0.5f : (t == 1 ? 1.0f : 2.0f));
-			float target_bin = target_freq * ((float)FFT_SIZE / 48000.0f);
+			float target_bin = target_freq * ((float)FFT_SIZE / 12000.0f);
 			int min_b = (int)(target_bin * 0.965f + 0.5f); // +/- 3.5% (about 60 cents)
 			int max_b = (int)(target_bin * 1.035f + 0.5f);
 			if (min_b < 2) min_b = 2;
@@ -164,7 +170,7 @@ static inline void polyphonic_tuner_magnitudes(float global_max_mag)
 					if (denom != 0.0f) {
 						p = 0.5f * (y1 - y3) / denom;
 					}
-					float freq = (peak_b + p) * (48000.0f / FFT_SIZE);
+					float freq = (peak_b + p) * (12000.0f / FFT_SIZE);
 
 					// Always lock the frequency to the lowest valid target to anchor the 2-octave limit
 					if (best_freq == 0.0f) {

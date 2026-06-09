@@ -1,4 +1,4 @@
-#define FFT_SHIFT 14
+#define FFT_SHIFT 13
 #define FFT_SIZE (1 << FFT_SHIFT)
 
 //
@@ -42,9 +42,26 @@ static inline float hanning(unsigned int idx)
 	return sin*sin;
 }
 
-// Add a sample with a hanning window until we've filled the buffer
+// 4x downsampled data with a hanning window until we've filled the buffer
 static inline void analyze_process_sample(float sample)
 {
+	// Downsample by 4x
+	static float sample_sum;
+	static int count;
+
+	sample += sample_sum;
+	if (3 & ++count) {
+		sample_sum = sample;
+		return;
+	}
+
+	sample_sum = 0;
+
+	// We could do 'sample *= 0.25' here to correct
+	// for adding up four samples, but we don't actually
+	// care about the absolute values and will just do
+	// an FFT on it to figure out the frequencies, so ...
+
 	unsigned int idx = analyzer.index;
 	if (idx >= FFT_SIZE)
 		return;
@@ -56,7 +73,7 @@ static inline void analyze_process_sample(float sample)
 	// first significant sample we've seen. Let's not
 	// pointlessly do the FFT on some buffer that
 	// starts out almost entirely silent.
-	if (sample > 0.01 && !analyzer.seen_significant) {
+	if (sample > 0.04 && !analyzer.seen_significant) {
 		idx = 0;
 		analyzer.seen_significant = 1;
 	}
