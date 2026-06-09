@@ -249,6 +249,7 @@ static int analyzer_graph_fn(int x, void *arg)
 
 // Forward declare to_ascii from ui.h
 static char *to_ascii(unsigned char term, uint32_t val, char *p, int digits, int decimals);
+static char *float_to_ascii(float val, int places);
 
 static void draw_chromatic(void)
 {

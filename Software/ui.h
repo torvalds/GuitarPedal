@@ -103,6 +103,54 @@ static char *to_ascii(unsigned char term, uint32_t val, char *p, int digits, int
 	return p;
 }
 
+//
+// Helper wrapper for printing floats. The 'places' thing
+// is very much just approximate, and it's really a mix of
+// 'significant digits' and 'places' depending on what you
+// are printing out (ie it will limit to both).
+//
+// So printing out -12345678.9 to three "places" will result
+// in ten bytes ("-12300000"), while printing out 0.0099 will
+// result in "0.010"
+//
+static char *float_to_ascii(float val, int places)
+{
+	unsigned int target = 1;
+	for (int i = 1; i < places; i++)
+		target *= 10;
+
+	float abs_val = fabsf(val);
+	unsigned int decimals = 0, int_val;
+	int_val = (int)rintf(abs_val);
+
+	// Do we need to remove precision or add decimals?
+	if (int_val > 10*target) {
+		int remove = 0;
+		do {
+			remove++;
+			abs_val /= 10;
+			int_val = (int)rintf(abs_val);
+		} while (int_val > 10*target);
+		do { int_val *= 10; } while (--remove);
+	} else {
+		for (decimals = 0; int_val < target; decimals++) {
+			if (decimals >= places)
+				break;
+			abs_val *= 10;
+			int_val = (int)rintf(abs_val);
+		}
+	}
+
+	// Old-school interfaces. We're not re-entrant
+	static char internal_buffer[16];
+	char *p = internal_buffer + sizeof(internal_buffer);
+
+	p = to_ascii(0, int_val, p, 1, decimals);
+	if (val < 0)
+		*--p = '-';
+	return p;
+}
+
 static void list_effects(struct effect *active)
 {
 	int x = 3;
