@@ -143,7 +143,7 @@ static inline void tuner_magnitudes(float global_max_mag)
 	tuner_state.dominant_mag = dominant_mag;
 }
 
-static const struct tuning std_tuning = {
+static const struct tuning EADGBE = {
 	.name = "Standard",
 	.num_strings = 6,
 	.strings = {
@@ -156,9 +156,54 @@ static const struct tuning std_tuning = {
 	},
 };
 
-static const struct tuning *current_tuning = &std_tuning;
+static const struct tuning DADGAD = {
+	.name = "DADGAD",
+	.num_strings = 6,
+	.strings = {
+		{"D",  73.42f}, // D2
+		{"A", 110.00f}, // A2
+		{"D", 146.83f}, // D3
+		{"G", 196.00f}, // G3
+		{"A", 220.00f}, // A3
+		{"D", 293.66f}, // D4
+	},
+};
 
-static inline void polyphonic_tuner_magnitudes(float global_max_mag)
+// 6-string standard bass tuning
+static const struct tuning BEADGC = {
+	.name = "BEADGC",
+	.num_strings = 6,
+	.strings = {
+		{"B",  30.87f}, // B0
+		{"E",  41.20f}, // E1
+		{"A",  55.00f}, // A1
+		{"D",  73.42f}, // D2
+		{"G",  98.00f}, // G2
+		{"C", 130.81f}, // C3
+	},
+};
+
+// 4-string standard bass tuning
+static const struct tuning EADG = {
+	.name = "EADG",
+	.num_strings = 4,
+	.strings = {
+		{"E",  41.20f}, // E1
+		{"A",  55.00f}, // A1
+		{"D",  73.42f}, // D2
+		{"G",  98.00f}, // G2
+	},
+};
+
+
+static const struct tuning *const tunings[4] = {
+	&EADGBE,
+	&DADGAD,
+	&BEADGC,
+	&EADG,
+};
+
+static inline void polyphonic_tuner_magnitudes(const struct tuning *current_tuning, float global_max_mag)
 {
 	for (int s = 0; s < current_tuning->num_strings; s++) {
 		float best_mag = 0.0f;
@@ -281,7 +326,7 @@ static void draw_chromatic(void)
 	sh1106_rectangle(bar_x - 2, 84, 5, 41, rect_filled); // Needle
 }
 
-static void draw_polyphonic(int s, int base_x, int col_w)
+static void draw_polyphonic(const struct tuning *current_tuning, int s, int base_x, int col_w)
 {
 	int s_x = base_x + s * col_w;
 
@@ -354,7 +399,12 @@ static void draw_analyzer(void)
 	if (tuner_state.dominant_freq > 0.0f)
 		draw_chromatic();
 
-	polyphonic_tuner_magnitudes(global_max_mag);
+	unsigned int tuning_idx = settings.tuning;
+	if (tuning_idx >= ARRAY_SIZE(tunings))
+		tuning_idx = 0;
+	const struct tuning *current_tuning = tunings[tuning_idx];
+
+	polyphonic_tuner_magnitudes(current_tuning, global_max_mag);
 
 	// Clear top background for polyphonic tuning display
 	sh1106_clear(0, 0, 128, 36);
@@ -363,7 +413,7 @@ static void draw_analyzer(void)
 	int base_x = (128 - (current_tuning->num_strings * col_w)) / 2;
 
 	for (int s = 0; s < current_tuning->num_strings; s++) {
-		draw_polyphonic(s, base_x, col_w);
+		draw_polyphonic(current_tuning, s, base_x, col_w);
 	}
 
 	analyzer.index = 0; // consumed

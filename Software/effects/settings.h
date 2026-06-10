@@ -5,7 +5,7 @@
 // POT: "MIDI Ch" ENUM(Omni Ch1 Ch2 Ch3 Ch4 Ch5 Ch6 Ch7 Ch8 Ch9 Ch10 Ch11 Ch12 Ch13 Ch14 Ch15 Ch16) = Omni
 // POT: "LED" LINEAR(0 100) = 10 %
 // POT: "  ATTN" LINEAR(0 100) = 50 %
-// POT: "IdleAnim" LINEAR(0 120) = 5 s
+// POT: "Tuning" ENUM(EADGBE DADGAD BEADGC EADG) = EADGBE
 //
 // Settings "effect" - dummy effect to save various settings
 //
@@ -23,6 +23,7 @@ struct {
 	int midi_channel;
 	float led_pwm, led_intense;
 	int screensaver;
+	int tuning;
 } settings;
 
 static void settings_init(unsigned char pot[10])
@@ -38,8 +39,7 @@ static void settings_init(unsigned char pot[10])
 	settings_effect.target = EFF_ENABLE_STEPS;
 	settings_effect.intense = settings_effect.active_pot == 4;
 
-	// Screensaver timeout in ms
-	settings.screensaver = lrintf(1000*settings_pot5(pot[5]));
+	settings.tuning = pot[5];
 }
 
 static inline float settings_step(float in)
