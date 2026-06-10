@@ -37,6 +37,7 @@
 #include "sh1106.h"
 #include "switch.h"
 
+static int tuner_mode = 0;
 static volatile int user_interaction = 0;
 static volatile int next_state_seq = 1;
 static const struct effect *last_effect = NULL;
@@ -458,7 +459,7 @@ static void init_effects(void)
 
 #include "tuner_ui.h"
 
-static void screen_saver(void)
+static void tuner_mode_ui(void)
 {
 	// UI update at 25Hz -> ~10s cycle -> 5s half-cycle of sin^2
 	static struct lfo_state breathe = { .step = 0x01000000 };
@@ -525,15 +526,23 @@ int main()
 			next_ui_update = delayed_by_ms(now, 40);
 			eeprom_task();
 
-			// Are we in idle mode? Don't do normal
-			// screen updates
-			if (settings.screensaver && now > next_idle_time) {
-				if (disable_all) {
-					screen_saver();
-					forced_update = 1;
-					continue;
-				}
+			// Right stomp long-ress: switch to tuner mode
+			if (switch_pressed(LONGPRESS(2))) {
+				switch_clear(LONGPRESS(2));
+				analyzer.index = 0;
+				tuner_mode = !tuner_mode;
 			}
+
+			// Are we in tuner mode? Don't do normal
+			// screen updates
+			if (tuner_mode) {
+				tuner_mode_ui();
+				forced_update = 1;
+				continue;
+			}
+
+			if (now > next_idle_time)
+				/* screensaver logic */;
 
 			update_ui(forced_update);
 			forced_update = 0;

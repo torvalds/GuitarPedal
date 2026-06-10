@@ -42,7 +42,12 @@ static struct {
 
 static inline float process_input(s32 sample)
 {
-	return sample * SAMPLE_TO_FLOAT_MULTIPLIER;
+	float val = sample * SAMPLE_TO_FLOAT_MULTIPLIER;
+	if (tuner_mode) {
+		analyze_process_sample(val);
+		val = 0.0;
+	}
+	return val;
 }
 
 // Be careful about FP overflows around +1.0

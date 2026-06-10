@@ -342,13 +342,6 @@ static void update_ui(int force_update)
 		update_screen = true;
 	}
 
-	// Right stomp long-ress: switch to secondary values perhaps?
-	if (switch_pressed(LONGPRESS(2))) {
-		switch_clear(LONGPRESS(2));
-		update_screen = true;
-		// Do something
-	}
-
 	// Left stomp or bottom rotary long-press: save effect state to EEPROM
 	if (switch_pressed(LONGPRESS(1)) || switch_pressed(LONGPRESS(3))) {
 		switch_clear(LONGPRESS(1));

@@ -281,6 +281,49 @@ static void draw_chromatic(void)
 	sh1106_rectangle(bar_x - 2, 84, 5, 41, rect_filled); // Needle
 }
 
+static void draw_polyphonic(int s, int base_x, int col_w)
+{
+	int s_x = base_x + s * col_w;
+
+	if (tuner_state.string_mag[s] <= 0) {
+		// Inactive string: center 6x8 char
+		sh1106_puts_6x8(s_x + (col_w - 6) / 2, 4, current_tuning->strings[s].name);
+		return;
+	}
+
+	// Center the 8x16 char in the column
+	sh1106_puts_8x16(s_x + (col_w - 8) / 2, 0, current_tuning->strings[s].name);
+
+	float target_freq = tuner_state.string_target_freq[s];
+
+	// Cents difference
+	float note_float = 12.0f * log2f(tuner_state.string_freq[s] / target_freq);
+	int cents = lrintf(note_float * 100.0f);
+
+	// "Close enough"
+	cents >>= 2;
+
+	// Build an arrow pointing in the right direction
+	//
+	// 10 is not entirely random: the sprites are
+	// max 24 pixels high (32 bit in the sprite map,
+	// but shifted up to 8 bits by the Y position)
+	//
+	cents = cents < -10 ? -10 : cents > 10 ? 10 : cents;
+	unsigned int arrow[32];
+	if (col_w > 32) col_w = 32;
+
+	col_w = (col_w-3)/2;
+	unsigned int pixels = 0;
+	for (int i = 0; i < col_w; i++) {
+		unsigned int val = 10 + cents*i/col_w;
+		pixels |= 7 << val;
+		arrow[i] = pixels;
+		arrow[2*col_w - i - 1] = pixels;
+	}
+	sh1106_sprite(s_x, 17, 2*col_w, arrow, arrow);
+}
+
 static void draw_analyzer(void)
 {
 	if (analyzer.index < FFT_SIZE)
@@ -320,46 +363,8 @@ static void draw_analyzer(void)
 	int base_x = (128 - (current_tuning->num_strings * col_w)) / 2;
 
 	for (int s = 0; s < current_tuning->num_strings; s++) {
-			int s_x = base_x + s * col_w;
-
-			if (tuner_state.string_mag[s] > 0.0f) {
-				// Center the 8x16 char in the column
-				sh1106_puts_8x16(s_x + (col_w - 8) / 2, 0, current_tuning->strings[s].name);
-
-				float target_freq = tuner_state.string_target_freq[s];
-
-				// Cents difference
-				float note_float = 12.0f * log2f(tuner_state.string_freq[s] / target_freq);
-				float cents = note_float * 100.0f;
-
-				// Draw horizontal tuning needle
-				int bar_w = col_w - 2; // leave 1px margin
-				if (bar_w > 21) bar_w = 21; // cap width at 21px
-				int x_offset = s_x + (col_w - bar_w) / 2;
-
-				int bar_x = x_offset + (bar_w / 2) + (int)(cents * 0.15f);
-				if (bar_x < x_offset) bar_x = x_offset;
-				if (bar_x > x_offset + bar_w - 1) bar_x = x_offset + bar_w - 1;
-
-				sh1106_hline(x_offset, 22, bar_w); // Axis line
-				sh1106_vline(x_offset + (bar_w / 2), 20, 5); // Center tick
-				sh1106_vline(bar_x, 18, 9); // Needle
-
-				// Print numerical cents value below graph (y=26)
-				char cents_str[8];
-				char *end = cents_str + 8;
-				end = to_ascii('\0', abs((int)cents), end, 1, 0);
-				if (cents <= -0.5f) *--end = '-';
-				else if (cents >= 0.5f) *--end = '+';
-
-				int len = strlen(end);
-				int text_x = s_x + (col_w - len * 6) / 2;
-				sh1106_puts_6x8(text_x, 26, end);
-			} else {
-				// Inactive string: center 6x8 char
-				sh1106_puts_6x8(s_x + (col_w - 6) / 2, 4, current_tuning->strings[s].name);
-			}
-		}
+		draw_polyphonic(s, base_x, col_w);
+	}
 
 	analyzer.index = 0; // consumed
 
