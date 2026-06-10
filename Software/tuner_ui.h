@@ -61,13 +61,23 @@ static inline bool get_peak(int i, struct peak_info *peak)
 	float y1 = center[-1];
 	float y2 = mag;
 	float y3 = center[+1];
-	float p = 0.0f;
-	float denom = y1 - 2.0f * y2 + y3;
-	if (denom)
-		p = 0.5f * (y1 - y3) / denom;
+	float p;
+
+	// The audio analyzer uses a Hann window (see hanning() in analyze.h).
+	// For a Hann window, the Grandke interpolation algorithm provides a
+	// mathematically exact fractional bin offset. It calculates the offset
+	// depending on which side of the peak is bigger, avoiding log() calls.
+	if (y3 > y1) {
+		p = (2.0f * y3 - y2) / (y3 + y2);
+	} else {
+		p = (y2 - 2.0f * y1) / (y1 + y2);
+	}
 
 	peak->bin = i + p;
 	peak->freq = peak->bin * (12000.0f / FFT_SIZE);
+
+	// A simple parabolic estimate is still fine for the magnitude, as we
+	// mainly use it for relative peak comparisons and thresholding.
 	peak->mag = y2 - 0.25f * (y1 - y3) * p;
 
 	return true;
