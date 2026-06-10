@@ -43,13 +43,73 @@ struct {
 	float string_target_freq[MAX_STRINGS];
 } tuner_state;
 
+struct peak_info {
+	float bin;
+	float freq;
+	float mag;
+};
+
+static inline bool get_peak(int i, struct peak_info *peak)
+{
+	float *center = tuner_state.magnitudes + i;
+	float mag = *center;
+
+	if (mag <=   center[-1] || mag <=   center[+1] ||
+	    mag <= 2*center[-2] || mag <= 2*center[+2])
+		return false;
+
+	float y1 = center[-1];
+	float y2 = mag;
+	float y3 = center[+1];
+	float p = 0.0f;
+	float denom = y1 - 2.0f * y2 + y3;
+	if (denom)
+		p = 0.5f * (y1 - y3) / denom;
+
+	peak->bin = i + p;
+	peak->freq = peak->bin * (12000.0f / FFT_SIZE);
+	peak->mag = y2 - 0.25f * (y1 - y3) * p;
+
+	return true;
+}
+
+static inline void suppress_harmonics(void)
+{
+	int max_bin = FFT_SIZE / 2;
+	for (int i = 2; i < max_bin / 2; i++) {
+		if (tuner_state.magnitudes[i] < tuner_state.avg_mag * 2.0f)
+			continue;
+
+		// We only want to use actual peaks as the base frequency
+		struct peak_info peak;
+		if (!get_peak(i, &peak))
+			continue;
+
+		for (int h = 2; h * peak.bin < max_bin; h++) {
+			float target_exact = h * peak.bin;
+
+			// The error in our fractional bin estimation multiplies by 'h'.
+			// String inharmonicity also naturally widens higher harmonics.
+			// So we widen the spread linearly.
+			int low = lrintf(target_exact - h/2.0);
+			int high = lrintf(target_exact + h/2.0);
+
+			for (int j = low; j <= high; j++) {
+				if (j >= max_bin) break;
+				if (tuner_state.magnitudes[j] > peak.mag)
+					tuner_state.magnitudes[j] -= peak.mag;
+				else
+					tuner_state.magnitudes[j] = 0.0f;
+			}
+		}
+	}
+}
+
 static inline void tuner_magnitudes(float global_max_mag)
 {
 	// Find the dominant fundamental for chromatic tuning
 	float dominant_freq = 0.0f;
 	float dominant_mag = 0.0f;
-	struct { float freq; float mag; } peaks[64];
-	int num_peaks = 0;
 
 	// Search frequencies between ~15Hz and ~1.5kHz (E6 is 1318.5Hz)
 	int min_bin = (int)(15.0f * FFT_SIZE / 12000.0f);
@@ -58,54 +118,12 @@ static inline void tuner_magnitudes(float global_max_mag)
 	if (max_bin > FFT_SIZE / 2 - 3) max_bin = FFT_SIZE / 2 - 3; // Need margin for i+2 check
 
 	for (int i = min_bin; i < max_bin; i++) {
-		float mag = tuner_state.magnitudes[i];
-		if (mag > 1.0f) {
-			if (mag > tuner_state.magnitudes[i-1] &&
-			    mag > tuner_state.magnitudes[i+1] &&
-			    mag > tuner_state.magnitudes[i-2] * 2.0f &&
-			    mag > tuner_state.magnitudes[i+2] * 2.0f) {
-
-				float y1 = tuner_state.magnitudes[i - 1];
-				float y2 = mag;
-				float y3 = tuner_state.magnitudes[i + 1];
-				float p = 0.0f;
-				float denom = y1 - 2.0f * y2 + y3;
-				if (denom != 0.0f) {
-					p = 0.5f * (y1 - y3) / denom;
-				}
-
-				float freq = (i + p) * (12000.0f / FFT_SIZE);
-				if (num_peaks < 64) {
-					peaks[num_peaks].freq = freq;
-					peaks[num_peaks].mag = mag;
-					num_peaks++;
-				}
-			}
-		}
-	}
-
-	if (num_peaks > 0) {
-		int best_idx = 0;
-		for (int i = 1; i < num_peaks; i++) {
-			if (peaks[i].mag > peaks[best_idx].mag) {
-				best_idx = i;
-			}
-		}
-
-		dominant_freq = peaks[best_idx].freq;
-		dominant_mag = peaks[best_idx].mag;
-
-		// Search downwards for a valid base (harmonic root)
-		for (int i = 0; i < best_idx; i++) {
-			float ratio = dominant_freq / peaks[i].freq;
-			float closest_int = rintf(ratio);
-
-			// Allow 3% deviation for harmonics
-			if (fabsf(ratio - closest_int) < 0.03f * closest_int) {
-				// Base must be at least 20% of the loudest peak's magnitude
-				if (peaks[i].mag > dominant_mag * 0.20f) {
-					dominant_freq = peaks[i].freq;
-					break; // Found the lowest valid base
+		if (tuner_state.magnitudes[i] > 1.0f) {
+			struct peak_info peak;
+			if (get_peak(i, &peak)) {
+				if (peak.mag > dominant_mag) {
+					dominant_freq = peak.freq;
+					dominant_mag = peak.mag;
 				}
 			}
 		}
@@ -139,8 +157,8 @@ static inline void polyphonic_tuner_magnitudes(float global_max_mag)
 		for (int t = 0; t < 3; t++) {
 			float target_freq = current_tuning->strings[s].base_freq * (t == 0 ? 0.5f : (t == 1 ? 1.0f : 2.0f));
 			float target_bin = target_freq * ((float)FFT_SIZE / 12000.0f);
-			int min_b = (int)(target_bin * 0.965f + 0.5f); // +/- 3.5% (about 60 cents)
-			int max_b = (int)(target_bin * 1.035f + 0.5f);
+			int min_b = lrintf(target_bin * 0.965f); // +/- 3.5% (about 60 cents)
+			int max_b = lrintf(target_bin * 1.035f);
 			if (min_b < 2) min_b = 2;
 
 			float max_mag = 0.0f;
@@ -154,32 +172,16 @@ static inline void polyphonic_tuner_magnitudes(float global_max_mag)
 
 			// Require the peak to be at least 5% of the global max to be considered a fundamental
 			if (max_mag > tuner_state.avg_mag * 5.0f && max_mag > 1.0f && max_mag > global_max_mag * 0.05f) {
-				// Is it a true local peak, and is it tight?
-				// We check +/- 2 bins to avoid rejecting pure tones that fall exactly between two bins,
-				// while still rejecting wide frequency smearing from string attacks.
-				if (tuner_state.magnitudes[peak_b] > tuner_state.magnitudes[peak_b-1] &&
-				    tuner_state.magnitudes[peak_b] > tuner_state.magnitudes[peak_b+1] &&
-				    tuner_state.magnitudes[peak_b] > tuner_state.magnitudes[peak_b-2] * 2.0f &&
-				    tuner_state.magnitudes[peak_b] > tuner_state.magnitudes[peak_b+2] * 2.0f) {
-
-					float y1 = tuner_state.magnitudes[peak_b - 1];
-					float y2 = tuner_state.magnitudes[peak_b];
-					float y3 = tuner_state.magnitudes[peak_b + 1];
-					float p = 0.0f;
-					float denom = y1 - 2.0f * y2 + y3;
-					if (denom != 0.0f) {
-						p = 0.5f * (y1 - y3) / denom;
-					}
-					float freq = (peak_b + p) * (12000.0f / FFT_SIZE);
-
+				struct peak_info peak;
+				if (get_peak(peak_b, &peak)) {
 					// Always lock the frequency to the lowest valid target to anchor the 2-octave limit
-					if (best_freq == 0.0f) {
-						best_freq = freq;
+					if (!best_freq) {
+						best_freq = peak.freq;
 						tuner_state.string_target_freq[s] = target_freq;
 					}
 					// But adopt the magnitude of the strongest harmonic in the series
-					if (max_mag > best_mag) {
-						best_mag = max_mag;
+					if (peak.mag > best_mag) {
+						best_mag = peak.mag;
 					}
 				}
 			}
@@ -211,21 +213,6 @@ static inline void polyphonic_tuner_magnitudes(float global_max_mag)
 		}
 	}
 
-	// Harmonic suppression (currently only applied to standard 6-string)
-	if (current_tuning->num_strings == 6) {
-		// Low E harmonics: B3 (3x) and E4 (4x)
-		if (tuner_state.string_mag[0] > 0.0f) {
-			if (tuner_state.string_mag[4] < tuner_state.string_mag[0] * 0.25f)
-				tuner_state.string_mag[4] = 0.0f;
-			if (tuner_state.string_mag[5] < tuner_state.string_mag[0] * 0.25f)
-				tuner_state.string_mag[5] = 0.0f;
-		}
-		// A harmonics: E4 (3x)
-		if (tuner_state.string_mag[1] > 0.0f) {
-			if (tuner_state.string_mag[5] < tuner_state.string_mag[1] * 0.25f)
-				tuner_state.string_mag[5] = 0.0f;
-		}
-	}
 }
 
 
@@ -304,6 +291,8 @@ static void draw_analyzer(void)
 	}
 
 	tuner_state.avg_mag = sum_mag / (FFT_SIZE / 2);
+
+	suppress_harmonics();
 
 	tuner_magnitudes(global_max_mag);
 
