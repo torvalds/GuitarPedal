@@ -58,7 +58,7 @@ static inline uint8_t effect_checksum(struct effect *effect, struct effect_state
 
 // We can read the whole eeprom in one go, but we may
 // need to wait for it to wake up.
-static void init_eeprom(void)
+static bool init_eeprom(void)
 {
 	uint8_t addr = 0;
 
@@ -68,9 +68,11 @@ static void init_eeprom(void)
 			continue;
 		}
 
-		i2c_read_blocking(MC24C02_I2C, eeprom_cache.bytes, 256, false);
-		return;
+		if (i2c_read_blocking(MC24C02_I2C, eeprom_cache.bytes, 256, false) == 256)
+			return true;
 	}
+	memset(eeprom_cache.bytes, 0, 256);
+	return false;
 }
 
 // Called together with the UI update, at 25Hz
@@ -103,6 +105,26 @@ static void eeprom_task(void)
 	i2c_write_blocking(MC24C02_I2C, buf, sizeof(buf), false);
 }
 
+static int max_pot_val(struct effect *effect, int pot)
+{
+	const struct pot_descr *desc = effect->pots + pot;
+	if (!desc->label)
+		return 0;
+
+	const char *const *enums = desc->enum_names;
+	if (!enums)
+		return 120;
+
+	// Valid values for enumeration pots are 0..N-1
+	//
+	// An empty enumeration pot isn't valid and can
+	// never be loaded from eeprom
+	for (int i = 0; ; i++) {
+		if (!enums[i])
+			return i-1;
+	}
+}
+
 static bool load_effect_state(unsigned int effect_idx, struct effect *effect)
 {
 	if (effect_idx >= MAX_SAVED_EFFECTS)
@@ -114,7 +136,8 @@ static bool load_effect_state(unsigned int effect_idx, struct effect *effect)
 		return false;
 
 	for (int i = 0; i < 10; i++) {
-		if (state->pots[i] > 120)
+		int max_val = max_pot_val(effect, i);
+		if (state->pots[i] > max_val)
 			return false;
 	}
 

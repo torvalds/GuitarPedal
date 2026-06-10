@@ -219,7 +219,9 @@ void handle_midi_packet(const uint8_t packet[4])
 			if (m->type == 1) { // Pot
 				struct effect *effect = effects[m->effect_idx];
 				int val = data2;
-				if (val > 120) val = 120;
+				int max_val = max_pot_val(effect, m->pot_idx);
+				if (val > max_val)
+					val = 0;
 				effect->pot_values[0][m->pot_idx] = val;
 				effect->pot_values[1][m->pot_idx] = val;
 				effect->seq++;
