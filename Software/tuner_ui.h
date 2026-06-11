@@ -45,6 +45,7 @@ struct {
 struct tune_result {
 	int note_idx; // 0 means no result
 	int cents;
+	float mag;
 };
 
 struct tuner_results {
@@ -293,14 +294,17 @@ static void compute_tuner_results(const struct tuning *current_tuning, struct tu
 
 	// Chromatic
 	out->results[0] = calculate_note_and_cents(tuner_state.dominant_freq);
+	out->results[0].mag = tuner_state.dominant_mag;
 
 	// Polyphonic
 	for (int s = 0; s < current_tuning->num_strings; s++) {
 		if (tuner_state.string_mag[s] > 0.0f) {
 			out->results[1 + s] = calculate_note_and_cents(tuner_state.string_freq[s]);
+			out->results[1 + s].mag = tuner_state.string_mag[s];
 		} else {
 			out->results[1 + s].note_idx = 0;
 			out->results[1 + s].cents = 0;
+			out->results[1 + s].mag = 0.0f;
 		}
 	}
 }
@@ -439,6 +443,12 @@ static void send_tuner_midi(const struct tuner_results *results)
 
 		if (current_note != 0) {
 			send_midi_pitch_bend(ch, cents * 41);
+
+			float mag = results->results[i].mag;
+			int vol = (int)(log2f(mag + 1.0f) * 10.5f);
+			if (vol > 127) vol = 127;
+			if (vol < 0) vol = 0;
+			send_midi_channel_pressure(ch, vol);
 		}
 	}
 }
@@ -457,6 +467,7 @@ static void draw_analyzer(void)
 			for (int i = 0; i < remote_results.num_results; i++) {
 				remote_results.results[i].note_idx = remote_note_idx[i];
 				remote_results.results[i].cents = remote_cents[i];
+				remote_results.results[i].mag = 0.0f; // We don't render remote magnitude on OLED yet
 			}
 			render_tuner_results(&remote_results, current_tuning);
 		}

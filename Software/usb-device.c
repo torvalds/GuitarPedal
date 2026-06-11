@@ -551,3 +551,9 @@ void send_midi_pitch_bend(uint8_t ch, int16_t bend)
 	uint8_t packet[4] = { 0x0E, 0xE0 | (ch & 0x0F), val & 0x7F, (val >> 7) & 0x7F };
 	if (tud_midi_mounted()) tud_midi_packet_write(packet);
 }
+
+void send_midi_channel_pressure(uint8_t ch, uint8_t pressure)
+{
+	uint8_t packet[4] = { 0x0D, 0xD0 | (ch & 0x0F), pressure & 0x7F, 0 };
+	if (tud_midi_mounted()) tud_midi_packet_write(packet);
+}

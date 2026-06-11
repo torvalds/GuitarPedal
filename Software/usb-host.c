@@ -86,6 +86,15 @@ void send_midi_pitch_bend(uint8_t ch, int16_t bend)
 	}
 }
 
+void send_midi_channel_pressure(uint8_t ch, uint8_t pressure)
+{
+	if (sync_connected) {
+		uint8_t packet[4] = { 0x0D, 0xD0 | (ch & 0x0F), pressure & 0x7F, 0 };
+		tuh_midi_packet_write(sync_idx, packet);
+		tuh_midi_write_flush(sync_idx);
+	}
+}
+
 void tuh_midi_rx_cb(uint8_t idx, uint32_t xferred_bytes)
 {
 	(void)xferred_bytes;
