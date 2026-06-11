@@ -480,6 +480,7 @@ function renderUI() {
     }
 
     function closeAllPanels() {
+        if (document.getElementById('panel-backdrop')) document.getElementById('panel-backdrop').classList.add('hidden');
         if (document.getElementById('global-menu-panel')) document.getElementById('global-menu-panel').classList.add('hidden');
         if (document.getElementById('active-effect-panel')) document.getElementById('active-effect-panel').classList.add('hidden');
         if (document.getElementById('active-pot-panel')) document.getElementById('active-pot-panel').classList.add('hidden');
@@ -487,6 +488,11 @@ function renderUI() {
         activeEffectDef = null;
         activePotCc = null;
         activePotDef = null;
+    }
+
+    const backdrop = document.getElementById('panel-backdrop');
+    if (backdrop) {
+        backdrop.addEventListener('click', closeAllPanels);
     }
 
     function showButtonSuccess(btn, successText) {
@@ -516,8 +522,13 @@ function renderUI() {
 
     if (burgerBtn) {
         burgerBtn.addEventListener('click', () => {
-            closeAllPanels();
-            globalMenuPanel.classList.remove('hidden');
+            if (globalMenuPanel.classList.contains('hidden')) {
+                closeAllPanels();
+                globalMenuPanel.classList.remove('hidden');
+                if (backdrop) backdrop.classList.remove('hidden');
+            } else {
+                closeAllPanels();
+            }
         });
     }
 
@@ -583,12 +594,17 @@ function renderUI() {
         });
     }
 
-    function openActiveEffectPanel(idx, effect) {
-        closeAllPanels();
-        activeEffectIdx = idx;
-        activeEffectDef = effect;
-        document.getElementById('active-effect-title').textContent = effect.name;
-        activeEffectPanel.classList.remove('hidden');
+    function openActiveEffectPanel(effectIdx) {
+        const activeEffectPanel = document.getElementById('active-effect-panel');
+        if (activeEffectPanel) {
+            closeAllPanels();
+            activeEffectIdx = effectIdx;
+            activeEffectDef = PEDAL_EFFECTS[effectIdx];
+
+            document.getElementById('active-effect-title').textContent = activeEffectDef.name;
+            activeEffectPanel.classList.remove('hidden');
+            if (backdrop) backdrop.classList.remove('hidden');
+        }
     }
 
     // Active Pot initialization
@@ -625,12 +641,14 @@ function renderUI() {
         activePotCc = cc;
         activePotDef = potDef;
 
-        document.getElementById('active-pot-title').textContent = `${effectName} - ${potDef.name}`;
-        document.getElementById('active-pot-value').textContent = formatPotValue(potDef, currentVal);
+        document.getElementById('active-pot-name').textContent = `${effectName} - ${potDef.name}`;
+        const valDisplay = document.getElementById('active-pot-value');
+        if (valDisplay) valDisplay.textContent = formatPotValue(potDef, currentVal);
 
         if (activePotSlider) activePotSlider.value = currentVal;
 
         document.getElementById('active-pot-panel').classList.remove('hidden');
+        if (backdrop) backdrop.classList.remove('hidden');
     }
 
     const globalResetBtn = document.getElementById('global-reset-btn');
