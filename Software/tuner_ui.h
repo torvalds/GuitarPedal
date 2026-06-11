@@ -40,8 +40,17 @@ struct {
 	// Polyphonic data
 	float string_freq[MAX_STRINGS];
 	float string_mag[MAX_STRINGS];
-	float string_target_freq[MAX_STRINGS];
 } tuner_state;
+
+struct tune_result {
+	int note_idx; // 0 means no result
+	int cents;
+};
+
+struct tuner_results {
+	int num_results;
+	struct tune_result results[1 + MAX_STRINGS];
+};
 
 struct peak_info {
 	float bin;
@@ -203,71 +212,51 @@ static const struct tuning *const tunings[4] = {
 	&EADG,
 };
 
+static inline void find_string_peak(const struct tuning *current_tuning, int s, float global_max_mag)
+{
+	float target_freq = current_tuning->strings[s].base_freq;
+	float target_bin = target_freq * ((float)FFT_SIZE / 12000.0f);
+
+	// We restrict the search window to +/- 2.5% (about 43 cents).
+	// This ensures that any peak we find is guaranteed to be closer to this
+	// target note than to any adjacent note, allowing us to safely derive
+	// the target note index directly from the measured frequency later.
+	// It also neatly matches our UI, which visually clips the polyphonic
+	// tuning arrows to a +/- 40 cent range anyway.
+	int min_b = lrintf(target_bin * 0.975f);
+	int max_b = lrintf(target_bin * 1.025f);
+	if (min_b < 2) min_b = 2;
+
+	float max_mag = 0.0f;
+	int peak_b = 0;
+	for (int i = min_b; i <= max_b; i++) {
+		if (tuner_state.magnitudes[i] > max_mag) {
+			max_mag = tuner_state.magnitudes[i];
+			peak_b = i;
+		}
+	}
+
+	// Require the peak to be at least 5% of the global max to be considered a fundamental
+	if (max_mag > tuner_state.avg_mag * 5.0f && max_mag > 1.0f && max_mag > global_max_mag * 0.05f) {
+		struct peak_info peak;
+		if (get_peak(peak_b, &peak)) {
+			// Final column suppression
+			if (peak.mag >= global_max_mag * 0.20f) {
+				tuner_state.string_freq[s] = peak.freq;
+				tuner_state.string_mag[s] = peak.mag;
+				return;
+			}
+		}
+	}
+
+	tuner_state.string_freq[s] = 0.0f;
+	tuner_state.string_mag[s] = 0.0f;
+}
+
 static inline void polyphonic_tuner_magnitudes(const struct tuning *current_tuning, float global_max_mag)
 {
-	for (int s = 0; s < current_tuning->num_strings; s++) {
-		float best_mag = 0.0f;
-		float best_freq = 0.0f;
-
-		for (int t = 0; t < 3; t++) {
-			float target_freq = current_tuning->strings[s].base_freq * (t == 0 ? 0.5f : (t == 1 ? 1.0f : 2.0f));
-			float target_bin = target_freq * ((float)FFT_SIZE / 12000.0f);
-			int min_b = lrintf(target_bin * 0.965f); // +/- 3.5% (about 60 cents)
-			int max_b = lrintf(target_bin * 1.035f);
-			if (min_b < 2) min_b = 2;
-
-			float max_mag = 0.0f;
-			int peak_b = 0;
-			for (int i = min_b; i <= max_b; i++) {
-				if (tuner_state.magnitudes[i] > max_mag) {
-					max_mag = tuner_state.magnitudes[i];
-					peak_b = i;
-				}
-			}
-
-			// Require the peak to be at least 5% of the global max to be considered a fundamental
-			if (max_mag > tuner_state.avg_mag * 5.0f && max_mag > 1.0f && max_mag > global_max_mag * 0.05f) {
-				struct peak_info peak;
-				if (get_peak(peak_b, &peak)) {
-					// Always lock the frequency to the lowest valid target to anchor the 2-octave limit
-					if (!best_freq) {
-						best_freq = peak.freq;
-						tuner_state.string_target_freq[s] = target_freq;
-					}
-					// But adopt the magnitude of the strongest harmonic in the series
-					if (peak.mag > best_mag) {
-						best_mag = peak.mag;
-					}
-				}
-			}
-		}
-
-		tuner_state.string_freq[s] = best_freq;
-		tuner_state.string_mag[s] = best_mag;
-
-		// Final column suppression
-		if (best_mag < global_max_mag * 0.20f) {
-			tuner_state.string_mag[s] = 0.0f;
-		}
-	}
-
-	// User heuristic: find the lowest active frequency and never walk up more than 2 octaves.
-	float lowest_freq = 9999.0f;
-	for (int s = 0; s < current_tuning->num_strings; s++) {
-		if (tuner_state.string_mag[s] > 0.0f && tuner_state.string_freq[s] < lowest_freq) {
-			lowest_freq = tuner_state.string_freq[s];
-		}
-	}
-
-	if (lowest_freq < 9999.0f) {
-		float max_allowed_freq = lowest_freq * 4.05f; // 2 octaves + tiny margin
-		for (int s = 0; s < current_tuning->num_strings; s++) {
-			if (tuner_state.string_freq[s] > max_allowed_freq) {
-				tuner_state.string_mag[s] = 0.0f;
-			}
-		}
-	}
-
+	for (int s = 0; s < current_tuning->num_strings; s++)
+		find_string_peak(current_tuning, s, global_max_mag);
 }
 
 
@@ -275,16 +264,48 @@ static inline void polyphonic_tuner_magnitudes(const struct tuning *current_tuni
 static char *to_ascii(unsigned char term, uint32_t val, char *p, int digits, int decimals);
 static char *float_to_ascii(float val, int places);
 
-static void draw_chromatic(void)
+// Helper to calculate the MIDI note number (69 = A4 440Hz) and cent deviation.
+static inline struct tune_result calculate_note_and_cents(float freq)
 {
-	float freq = tuner_state.dominant_freq;
-	float note_float = 69.0f + 12.0f * log2f(freq / 440.0f);
-	int note_idx = (int)(rintf(note_float));
-	float cents = (note_float - note_idx) * 100.0f;
+	struct tune_result res = { 0, 0 };
+	if (freq <= 0.0f)
+		return res;
 
-	static const char *const note_names[12] = {
-		"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
-	};
+	float note_float = 69.0f + 12.0f * log2f(freq / 440.0f);
+	res.note_idx = (int)(rintf(note_float));
+	res.cents = (int)lrintf((note_float - res.note_idx) * 100.0f);
+	return res;
+}
+
+static void compute_tuner_results(const struct tuning *current_tuning, struct tuner_results *out)
+{
+	out->num_results = 1 + current_tuning->num_strings;
+
+	// Chromatic
+	out->results[0] = calculate_note_and_cents(tuner_state.dominant_freq);
+
+	// Polyphonic
+	for (int s = 0; s < current_tuning->num_strings; s++) {
+		if (tuner_state.string_mag[s] > 0.0f) {
+			out->results[1 + s] = calculate_note_and_cents(tuner_state.string_freq[s]);
+		} else {
+			out->results[1 + s].note_idx = 0;
+			out->results[1 + s].cents = 0;
+		}
+	}
+}
+
+static const char *const note_names[12] = {
+	"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
+};
+
+static void draw_chromatic(const struct tune_result *result)
+{
+	if (!result->note_idx)
+		return;
+
+	int note_idx = result->note_idx;
+	float cents = result->cents;
 
 	int name_idx = note_idx % 12;
 	if (name_idx < 0) name_idx += 12;
@@ -314,7 +335,7 @@ static void draw_chromatic(void)
 	sh1106_puts_6x8(64 - cents_len * 3, 66, end);
 
 	// Display exact frequency to the right of the chromatic section
-	sh1106_puts_6x8(126 - 5 * 6, 50, float_to_ascii(freq, 4));
+	sh1106_puts_6x8(126 - 5 * 6, 50, float_to_ascii(tuner_state.dominant_freq, 4));
 
 	// Huge needle spanning most of screen
 	int bar_x = 64 + (int)cents; // 50 cents = 50 pixels -> 14 to 114
@@ -326,27 +347,23 @@ static void draw_chromatic(void)
 	sh1106_rectangle(bar_x - 2, 84, 5, 41, rect_filled); // Needle
 }
 
-static void draw_polyphonic(const struct tuning *current_tuning, int s, int base_x, int col_w)
+static void draw_polyphonic(const struct tune_result *result, int s, int base_x, int col_w)
 {
 	int s_x = base_x + s * col_w;
 
-	if (tuner_state.string_mag[s] <= 0) {
-		// Inactive string: center 6x8 char
-		sh1106_puts_6x8(s_x + (col_w - 6) / 2, 4, current_tuning->strings[s].name);
+	if (!result->note_idx) {
+		// Inactive string: no result, so we draw nothing.
 		return;
 	}
 
+	int name_idx = result->note_idx % 12;
+	if (name_idx < 0) name_idx += 12;
+	const char *name = note_names[name_idx];
+
 	// Center the 8x16 char in the column
-	sh1106_puts_8x16(s_x + (col_w - 8) / 2, 0, current_tuning->strings[s].name);
+	sh1106_puts_8x16(s_x + (col_w - 8) / 2, 0, name);
 
-	float target_freq = tuner_state.string_target_freq[s];
-
-	// Cents difference
-	float note_float = 12.0f * log2f(tuner_state.string_freq[s] / target_freq);
-	int cents = lrintf(note_float * 100.0f);
-
-	// "Close enough"
-	cents >>= 2;
+	int cents = result->cents >> 2;
 
 	// Build an arrow pointing in the right direction
 	//
@@ -356,17 +373,18 @@ static void draw_polyphonic(const struct tuning *current_tuning, int s, int base
 	//
 	cents = cents < -10 ? -10 : cents > 10 ? 10 : cents;
 	unsigned int arrow[32];
-	if (col_w > 32) col_w = 32;
+	int arrow_w = col_w;
+	if (arrow_w > 32) arrow_w = 32;
 
-	col_w = (col_w-3)/2;
+	arrow_w = (arrow_w-3)/2;
 	unsigned int pixels = 0;
-	for (int i = 0; i < col_w; i++) {
-		unsigned int val = 10 + cents*i/col_w;
+	for (int i = 0; i < arrow_w; i++) {
+		unsigned int val = 10 + cents*i/arrow_w;
 		pixels |= 7 << val;
 		arrow[i] = pixels;
-		arrow[2*col_w - i - 1] = pixels;
+		arrow[2*arrow_w - i - 1] = pixels;
 	}
-	sh1106_sprite(s_x, 17, 2*col_w, arrow, arrow);
+	sh1106_sprite(s_x, 17, 2*arrow_w, arrow, arrow);
 }
 
 static void draw_analyzer(void)
@@ -396,15 +414,17 @@ static void draw_analyzer(void)
 
 	sh1106_clear(0, 0, 128, 128);
 
-	if (tuner_state.dominant_freq > 0.0f)
-		draw_chromatic();
-
 	unsigned int tuning_idx = settings.tuning;
 	if (tuning_idx >= ARRAY_SIZE(tunings))
 		tuning_idx = 0;
 	const struct tuning *current_tuning = tunings[tuning_idx];
 
 	polyphonic_tuner_magnitudes(current_tuning, global_max_mag);
+
+	struct tuner_results results;
+	compute_tuner_results(current_tuning, &results);
+
+	draw_chromatic(&results.results[0]);
 
 	// Clear top background for polyphonic tuning display
 	sh1106_clear(0, 0, 128, 36);
@@ -413,7 +433,7 @@ static void draw_analyzer(void)
 	int base_x = (128 - (current_tuning->num_strings * col_w)) / 2;
 
 	for (int s = 0; s < current_tuning->num_strings; s++) {
-		draw_polyphonic(current_tuning, s, base_x, col_w);
+		draw_polyphonic(&results.results[1 + s], s, base_x, col_w);
 	}
 
 	analyzer.index = 0; // consumed
