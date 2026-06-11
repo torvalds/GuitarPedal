@@ -31,7 +31,7 @@ struct tuning {
 //
 struct {
 	float magnitudes[FFT_SIZE / 2];
-	float avg_mag;
+	float max_mag, avg_mag;
 
 	// Chromatic tuning data
 	float dominant_freq;
@@ -59,15 +59,56 @@ struct peak_info {
 	float mag;
 };
 
-static inline bool get_peak(int i, struct peak_info *peak)
+static inline bool get_peak(int i, struct peak_info *peak, float min_peak)
 {
 	float *center = tuner_state.magnitudes + i;
 	float mag = *center;
 
-	if (mag <=   center[-1] || mag <=   center[+1] ||
-	    mag <= 2*center[-2] || mag <= 2*center[+2])
+	//
+	// Note that the min_peak argument is only a quick
+	// quick-and-dirty bin peak magnitude filter.
+	//
+	// In particular, it does not take into account that
+	// the final magnitude of the peak is the combination
+	// of the nearby bins and may be bigger than this first
+	// simple filtering.
+	//
+	if (mag < min_peak)
 		return false;
 
+	//
+	// Avoid noise: any peak we detect has to be
+	// clearly above the noise floor, here fairly
+	// arbitrarily defined to be "five times the
+	// average magnitude and at least 5.0"
+	//
+	if (mag < 5.0f || mag < tuner_state.avg_mag * 5.0f)
+		return false;
+
+	//
+	// We know the maximum magnitude we've seen.
+	// Don't bother looking at anything smaller
+	// than 5% of the max. It may be a local peak,
+	// but it's still not interesting.
+	//
+	if (mag < tuner_state.max_mag * 0.05f)
+		return false;
+
+	//
+	// It needs to be sharp enough to not only be at least
+	// equal to its direct neighbors, but slightly bigger than
+	// something two bins away
+	//
+	if (mag <= center[-1] || mag <= center[+1] ||
+	    mag <= 1.2f * center[-2] || mag <= 1.2f * center[+2])
+		return false;
+
+	//
+	// Ok, we have something that looks like a peak bin.
+	//
+	// Let's try to figure out what the actual exact
+	// frequency would be that causes this bin pattern.
+	//
 	float y1 = center[-1];
 	float y2 = mag;
 	float y3 = center[+1];
@@ -89,7 +130,6 @@ static inline bool get_peak(int i, struct peak_info *peak)
 	// A simple parabolic estimate is still fine for the magnitude, as we
 	// mainly use it for relative peak comparisons and thresholding.
 	peak->mag = y2 - 0.25f * (y1 - y3) * p;
-
 	return true;
 }
 
@@ -97,12 +137,8 @@ static inline void suppress_harmonics(void)
 {
 	int max_bin = FFT_SIZE / 2;
 	for (int i = 2; i < max_bin / 2; i++) {
-		if (tuner_state.magnitudes[i] < tuner_state.avg_mag * 2.0f)
-			continue;
-
-		// We only want to use actual peaks as the base frequency
 		struct peak_info peak;
-		if (!get_peak(i, &peak))
+		if (!get_peak(i, &peak, 0.0f))
 			continue;
 
 		for (int h = 2; h * peak.bin < max_bin; h++) {
@@ -135,7 +171,7 @@ static inline void suppress_harmonics(void)
 	}
 }
 
-static inline void tuner_magnitudes(float global_max_mag)
+static inline void tuner_magnitudes(void)
 {
 	// Find the dominant fundamental for chromatic tuning
 	float dominant_freq = 0.0f;
@@ -148,15 +184,24 @@ static inline void tuner_magnitudes(float global_max_mag)
 	if (max_bin > FFT_SIZE / 2 - 3) max_bin = FFT_SIZE / 2 - 3; // Need margin for i+2 check
 
 	for (int i = min_bin; i < max_bin; i++) {
-		if (tuner_state.magnitudes[i] > 1.0f) {
-			struct peak_info peak;
-			if (get_peak(i, &peak)) {
-				if (peak.mag > dominant_mag) {
-					dominant_freq = peak.freq;
-					dominant_mag = peak.mag;
-				}
-			}
+		struct peak_info peak;
+
+		if (!get_peak(i, &peak, dominant_mag))
+			continue;
+
+		//
+		// We heavily prefer fundamentals over their harmonics,
+		// so if we already have seen a dominant peak, discount
+		// new peaks that are far away..
+		//
+		if (dominant_freq) {
+			float distance = peak.freq / dominant_freq;
+			if (peak.mag / distance < dominant_mag)
+				continue;
 		}
+
+		dominant_freq = peak.freq;
+		dominant_mag = peak.mag;
 	}
 
 	tuner_state.dominant_freq = dominant_freq;
@@ -223,7 +268,7 @@ static const struct tuning *const tunings[4] = {
 	&EADG,
 };
 
-static inline void find_string_peak(const struct tuning *current_tuning, int s, float global_max_mag)
+static inline void find_string_peak(const struct tuning *current_tuning, int s)
 {
 	float target_freq = current_tuning->strings[s].base_freq;
 	float target_bin = target_freq * ((float)FFT_SIZE / 12000.0f);
@@ -247,27 +292,23 @@ static inline void find_string_peak(const struct tuning *current_tuning, int s, 
 		}
 	}
 
-	// Require the peak to be at least 5% of the global max to be considered a fundamental
-	if (max_mag > tuner_state.avg_mag * 5.0f && max_mag > 1.0f && max_mag > global_max_mag * 0.05f) {
-		struct peak_info peak;
-		if (get_peak(peak_b, &peak)) {
-			// Final column suppression
-			if (peak.mag >= global_max_mag * 0.20f) {
-				tuner_state.string_freq[s] = peak.freq;
-				tuner_state.string_mag[s] = peak.mag;
-				return;
-			}
-		}
-	}
+	//
+	// Check that it's an actual peak.
+	//
+	// If get_peak() fails, it will leave the
+	// (zeroed) 'peak' variable unchanged.
+	//
+	struct peak_info peak = { };
+	get_peak(peak_b, &peak, 0.0f);
 
-	tuner_state.string_freq[s] = 0.0f;
-	tuner_state.string_mag[s] = 0.0f;
+	tuner_state.string_freq[s] = peak.freq;
+	tuner_state.string_mag[s] = peak.mag;
 }
 
-static inline void polyphonic_tuner_magnitudes(const struct tuning *current_tuning, float global_max_mag)
+static inline void polyphonic_tuner_magnitudes(const struct tuning *current_tuning)
 {
 	for (int s = 0; s < current_tuning->num_strings; s++)
-		find_string_peak(current_tuning, s, global_max_mag);
+		find_string_peak(current_tuning, s);
 }
 
 
@@ -479,22 +520,23 @@ static void draw_analyzer(void)
 
 	// Compute the magnitude of the bins
 	float sum_mag = 0.0f;
-	float global_max_mag = 0.0f;
+	float max_mag = 0.0f;
 	for (int i = 0; i < FFT_SIZE / 2; i++) {
 		float mag = __builtin_cabsf(analyzer.buf[i]);
 		tuner_state.magnitudes[i] = mag;
 		sum_mag += mag;
-		if (mag > global_max_mag)
-			global_max_mag = mag;
+		if (mag > max_mag)
+			max_mag = mag;
 	}
 
+	tuner_state.max_mag = max_mag;
 	tuner_state.avg_mag = sum_mag / (FFT_SIZE / 2);
 
 	suppress_harmonics();
 
-	tuner_magnitudes(global_max_mag);
+	tuner_magnitudes();
 
-	polyphonic_tuner_magnitudes(current_tuning, global_max_mag);
+	polyphonic_tuner_magnitudes(current_tuning);
 
 	struct tuner_results results;
 	compute_tuner_results(current_tuning, &results);
