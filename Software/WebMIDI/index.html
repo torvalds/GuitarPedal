@@ -13,6 +13,7 @@
     <header class="glass-panel app-header">
       <h1 id="app-title" class="title-disconnected">RP2350 Pedal</h1>
       <div class="header-controls">
+        <button id="tuner-btn" class="action-btn" title="Tuner Mode">🎵</button>
         <label class="switch" title="Global Enable">
           <input type="checkbox" id="global-enable">
           <span class="slider round"></span>
@@ -20,6 +21,25 @@
         <button id="burger-btn" class="action-btn" title="Menu">☰</button>
       </div>
     </header>
+
+    <!-- Tuner Panel -->
+    <div id="tuner-panel" class="glass-panel hidden">
+      <div class="tuner-header">
+        <h2>Tuner</h2>
+        <button id="close-tuner-btn" class="action-btn" title="Exit Tuner">✕</button>
+      </div>
+      <div class="tuner-chromatic-display">
+        <div class="tuner-note" id="tuner-chromatic-note">--</div>
+        <div class="tuner-cents" id="tuner-chromatic-cents">0¢</div>
+      </div>
+      <div class="tuner-meter-container">
+        <div class="tuner-meter-center"></div>
+        <div id="tuner-needle" class="tuner-needle"></div>
+      </div>
+      <div class="tuner-strings" id="tuner-poly-strings">
+        <!-- Strings dynamically added here -->
+      </div>
+    </div>
 
     <main id="effects-container">
       <!-- Effect cards populated dynamically -->

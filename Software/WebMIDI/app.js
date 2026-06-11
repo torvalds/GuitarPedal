@@ -15,6 +15,11 @@ let activePotCc = null;
 let activePotDef = null;
 let activeTransmitChannel = 0xB0;
 
+// Tuner State
+let isTunerMode = false;
+const tunerState = Array(9).fill().map(() => ({ note: 0, cents: 0 }));
+const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
 // Initialize MIDI
 async function initMidi() {
     try {
@@ -103,8 +108,21 @@ function handleMidiMessage(event) {
         const val = data2;
 
         if (cc === GLOBAL_ENABLE_CC) {
-            isGlobalEnabled = (val > 0);
-            globalEnableEl.checked = isGlobalEnabled;
+            if (val === 68) {
+                isTunerMode = true;
+                updateTunerModeUI();
+            } else if (val === 69) {
+                isTunerMode = false;
+                updateTunerModeUI();
+            } else if (val === 64 || val === 65 || val === 66 || val === 67 || val === 126) {
+                if (val === 67) {
+                    isGlobalEnabled = false;
+                    globalEnableEl.checked = false;
+                }
+            } else {
+                isGlobalEnabled = (val > 0);
+                globalEnableEl.checked = isGlobalEnabled;
+            }
         } else {
             if (cc === 107) { // MIDI Ch
                 activeTransmitChannel = (val === 0) ? 0xB0 : (0xB0 | ((val - 1) & 0x0F));
@@ -146,6 +164,109 @@ function handleMidiMessage(event) {
             const effectCard = document.getElementById(`effect-${effectIdx}`);
             if (effectCard) {
                 effectCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    } else if ((status & 0xF0) === 0x90) { // Note On
+        const ch = status & 0x0F;
+        const note = data1;
+        const vel = data2;
+        if (vel > 0) {
+            if (ch < 9) tunerState[ch].note = note;
+        } else {
+            if (ch < 9) tunerState[ch].note = 0;
+        }
+        updateTunerDisplay();
+    } else if ((status & 0xF0) === 0x80) { // Note Off
+        const ch = status & 0x0F;
+        if (ch < 9) tunerState[ch].note = 0;
+        updateTunerDisplay();
+    } else if ((status & 0xF0) === 0xE0) { // Pitch Bend
+        const ch = status & 0x0F;
+        const bend = data1 | (data2 << 7);
+        if (ch < 9) tunerState[ch].cents = Math.round((bend - 8192) / 41);
+        updateTunerDisplay();
+    }
+}
+
+function updateTunerModeUI() {
+    const tunerBtn = document.getElementById('tuner-btn');
+    const tunerPanel = document.getElementById('tuner-panel');
+    if (tunerBtn && tunerPanel) {
+        if (isTunerMode) {
+            tunerBtn.classList.add('active');
+            tunerPanel.classList.remove('hidden');
+        } else {
+            tunerBtn.classList.remove('active');
+            tunerPanel.classList.add('hidden');
+        }
+    }
+}
+
+function updateTunerDisplay() {
+    if (!isTunerMode) return;
+
+    const chrom = tunerState[0];
+    const chromNoteEl = document.getElementById('tuner-chromatic-note');
+    const chromCentsEl = document.getElementById('tuner-chromatic-cents');
+    const chromNeedle = document.getElementById('tuner-needle');
+
+    if (chromNoteEl && chromNeedle) {
+        if (chrom.note) {
+            const name = noteNames[chrom.note % 12];
+            const octave = Math.floor(chrom.note / 12) - 1;
+            chromNoteEl.textContent = `${name}${octave}`;
+
+            if (chromCentsEl) {
+                const sign = chrom.cents > 0 ? '+' : '';
+                chromCentsEl.textContent = `${sign}${chrom.cents}¢`;
+            }
+
+            let leftPercent = 50 + chrom.cents;
+            leftPercent = Math.max(0, Math.min(100, leftPercent));
+            chromNeedle.style.left = `${leftPercent}%`;
+            chromNeedle.style.display = 'block';
+
+            if (Math.abs(chrom.cents) < 5) {
+                chromNeedle.style.backgroundColor = 'var(--success)';
+            } else {
+                chromNeedle.style.backgroundColor = 'var(--danger)';
+            }
+        } else {
+            chromNoteEl.textContent = '--';
+            if (chromCentsEl) chromCentsEl.textContent = '0¢';
+            chromNeedle.style.display = 'none';
+        }
+    }
+
+    const polyContainer = document.getElementById('tuner-poly-strings');
+    if (polyContainer) {
+        if (polyContainer.children.length === 0) {
+            for (let i = 1; i <= 6; i++) {
+                const strDiv = document.createElement('div');
+                strDiv.className = 'tuner-string';
+                strDiv.innerHTML = `
+                    <div class="tuner-string-name" id="str-name-${i}">-</div>
+                    <div class="tuner-string-arrow inactive" id="str-arrow-${i}"></div>
+                `;
+                polyContainer.appendChild(strDiv);
+            }
+        }
+
+        for (let i = 1; i <= 6; i++) {
+            const state = tunerState[i];
+            const nameEl = document.getElementById(`str-name-${i}`);
+            const arrowEl = document.getElementById(`str-arrow-${i}`);
+
+            if (state && state.note) {
+                nameEl.textContent = noteNames[state.note % 12];
+                nameEl.classList.add('active');
+                arrowEl.className = 'tuner-string-arrow';
+                if (state.cents > 10) arrowEl.classList.add('down');
+                else if (state.cents < -10) arrowEl.classList.add('up');
+                else arrowEl.classList.add('perfect');
+            } else {
+                nameEl.classList.remove('active');
+                arrowEl.className = 'tuner-string-arrow inactive';
             }
         }
     }
@@ -220,6 +341,24 @@ function renderUI() {
     globalEnableEl.addEventListener('change', (e) => {
         sendMidiCc(GLOBAL_ENABLE_CC, e.target.checked ? 127 : 0);
     });
+
+    const tunerBtn = document.getElementById('tuner-btn');
+    if (tunerBtn) {
+        tunerBtn.addEventListener('click', () => {
+            isTunerMode = !isTunerMode;
+            sendMidiCc(GLOBAL_ENABLE_CC, isTunerMode ? 68 : 69);
+            updateTunerModeUI();
+        });
+    }
+
+    const closeTunerBtn = document.getElementById('close-tuner-btn');
+    if (closeTunerBtn) {
+        closeTunerBtn.addEventListener('click', () => {
+            isTunerMode = false;
+            sendMidiCc(GLOBAL_ENABLE_CC, 69);
+            updateTunerModeUI();
+        });
+    }
 
     function closeAllPanels() {
         if (document.getElementById('global-menu-panel')) document.getElementById('global-menu-panel').classList.add('hidden');
