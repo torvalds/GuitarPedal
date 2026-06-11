@@ -25,12 +25,14 @@ struct tuning {
 	const struct tune_target strings[MAX_STRINGS];
 };
 
-//
-// This is very wasteful. The magnitude array could probably
-// re-use the FFT array and be a union in the analyzer state?
-//
+// The magnitude array re-uses the fft array to not be
+// quite so piggy in memory use. But we might still have
+// to shrink the FFT size at some point.
 struct {
-	float magnitudes[FFT_SIZE / 2];
+	union {
+		complex_t fft[FFT_SIZE];
+		float magnitudes[FFT_SIZE / 2];
+	};
 	float max_mag, avg_mag;
 
 	// Chromatic tuning data
@@ -501,28 +503,50 @@ static void draw_analyzer(void)
 		tuning_idx = 0;
 	const struct tuning *current_tuning = tunings[tuning_idx];
 
-	if (analyzer.index < FFT_SIZE) {
-		if (absolute_time_diff_us(last_remote_tuner_time, get_absolute_time()) < 1000000) {
-			struct tuner_results remote_results;
-			remote_results.num_results = 1 + current_tuning->num_strings;
-			for (int i = 0; i < remote_results.num_results; i++) {
-				remote_results.results[i].note_idx = remote_note_idx[i];
-				remote_results.results[i].cents = remote_cents[i];
-				remote_results.results[i].mag = 0.0f; // We don't render remote magnitude on OLED yet
-			}
-			render_tuner_results(&remote_results, current_tuning);
+	unsigned int write_idx = analyzer.write_index;
+
+	// Catch up if CPU0 falls too far behind CPU1
+	if (write_idx - analyzer.read_index > ANALYZE_RING_SIZE - FFT_SIZE) {
+		analyzer.read_index = write_idx - FFT_SIZE;
+	}
+
+	if (write_idx - analyzer.read_index < FFT_SIZE) {
+		if (!remote_tuner_data)
+			return;
+
+		struct tuner_results remote_results;
+		remote_results.num_results = 1 + current_tuning->num_strings;
+
+		for (int i = 0; i < remote_results.num_results; i++) {
+			remote_results.results[i].note_idx = remote_note_idx[i];
+			remote_results.results[i].cents = remote_cents[i];
+			remote_results.results[i].mag = 0.0f; // We don't render remote magnitude on OLED yet
 		}
+		render_tuner_results(&remote_results, current_tuning);
 		return;
 	}
 
+	// Copy data from ring buffer and apply Hann window
+	for (int i = 0; i < FFT_SIZE; i++) {
+		float sample = analyzer.ring_buf[(analyzer.read_index + i) & ANALYZE_RING_MASK];
+		tuner_state.fft[i] = sample * hanning(i);
+	}
+
 	// Run FFT
-	fft(analyzer.buf, FFT_SHIFT);
+	fft(tuner_state.fft, FFT_SHIFT);
 
 	// Compute the magnitude of the bins
+	//
+	// NOTE! The fft[] and magnitudes[] arrays are a
+	// union in the tuner_state structure. This only works
+	// because we just walk the (bigger) fft 'complex_t'
+	// forward and then store the resulting magnitude
+	// result on top of old fft values.
+	//
 	float sum_mag = 0.0f;
 	float max_mag = 0.0f;
 	for (int i = 0; i < FFT_SIZE / 2; i++) {
-		float mag = __builtin_cabsf(analyzer.buf[i]);
+		float mag = __builtin_cabsf(tuner_state.fft[i]);
 		tuner_state.magnitudes[i] = mag;
 		sum_mag += mag;
 		if (mag > max_mag)
@@ -544,5 +568,7 @@ static void draw_analyzer(void)
 	send_tuner_midi(&results);
 	render_tuner_results(&results, current_tuning);
 
-	analyzer.index = 0; // consumed
+	// Overlap by advancing read_idx by a fraction of FFT_SIZE
+	// FFT_SIZE / 16 = 512 samples. At 12kHz, this means 23 updates per second.
+	analyzer.read_index += FFT_SIZE / 16;
 }

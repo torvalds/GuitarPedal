@@ -1,22 +1,20 @@
 #define FFT_SHIFT 13
 #define FFT_SIZE (1 << FFT_SHIFT)
 
+#define ANALYZE_RING_SHIFT 14
+#define ANALYZE_RING_SIZE (1 << ANALYZE_RING_SHIFT)
+#define ANALYZE_RING_MASK (ANALYZE_RING_SIZE - 1)
+
 //
 // NOTE! This is accessed from both cores, but the
-// logic is that the audio core only touches it as
-// long as 'index' is less that the full buffer size,
-// and the UI core only touches it once we have a
-// full buffer.
-//
-// The audio core essentially hands it to the UI core
-// when it increments the index to FFT_SIZE, and then
-// the UI core then hands it back by simply setting
-// index to zero when it is done.
+// logic is that the audio core only writes to 'ring_buf'
+// and increments 'write_index'. The UI core independently
+// reads from the ring buffer and maintains the read index.
 //
 struct analyze_state {
-	complex_t buf[FFT_SIZE];
-	unsigned int index;
-	unsigned int seen_significant;
+	float ring_buf[ANALYZE_RING_SIZE];
+	volatile unsigned int write_index;
+	unsigned int read_index;
 } analyzer;
 
 // Hann function using the quarter_sine table. We don't
@@ -42,7 +40,7 @@ static inline float hanning(unsigned int idx)
 	return sin*sin;
 }
 
-// 4x downsampled data with a hanning window until we've filled the buffer
+// 4x downsampled data into continuous lock-free ring buffer
 static inline void analyze_process_sample(float sample)
 {
 	// Downsample by 4x
@@ -57,27 +55,7 @@ static inline void analyze_process_sample(float sample)
 
 	sample_sum = 0;
 
-	// We could do 'sample *= 0.25' here to correct
-	// for adding up four samples, but we don't actually
-	// care about the absolute values and will just do
-	// an FFT on it to figure out the frequencies, so ...
-
-	unsigned int idx = analyzer.index;
-	if (idx >= FFT_SIZE)
-		return;
-
-	if (!idx)
-		analyzer.seen_significant = 0;
-
-	// Random: start from beginning if this is the
-	// first significant sample we've seen. Let's not
-	// pointlessly do the FFT on some buffer that
-	// starts out almost entirely silent.
-	if (sample > 0.04 && !analyzer.seen_significant) {
-		idx = 0;
-		analyzer.seen_significant = 1;
-	}
-
-	analyzer.buf[idx] = sample * hanning(idx);
-	analyzer.index = ++idx;
+	unsigned int idx = analyzer.write_index;
+	analyzer.ring_buf[idx & ANALYZE_RING_MASK] = sample;
+	analyzer.write_index = idx + 1;
 }
