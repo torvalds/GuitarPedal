@@ -17,8 +17,85 @@ let activeTransmitChannel = 0xB0;
 
 // Tuner State
 let isTunerMode = false;
-const tunerState = Array(9).fill().map(() => ({ note: 0, cents: 0 }));
+let playSynth = false;
+const tunerState = Array(9).fill().map(() => ({ note: 0, cents: 0, volume: 0 }));
 const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
+// Web Audio API Synth
+let audioCtx = null;
+const synthVoices = {}; // ch -> { osc, gain, filter, note }
+
+function getAudioContext() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+    return audioCtx;
+}
+
+function midiNoteToFreq(note, cents = 0) {
+    return 440 * Math.pow(2, (note - 69 + cents / 100) / 12);
+}
+
+function startNoteVoice(ch, note, cents) {
+    if (!playSynth) return;
+    const ctx = getAudioContext();
+    if (synthVoices[ch]) stopNoteVoice(ch);
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+
+    osc.type = 'sawtooth';
+    osc.frequency.value = midiNoteToFreq(note, cents);
+
+    filter.type = 'lowpass';
+    filter.frequency.value = 1500;
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.1, ctx.currentTime + 0.05);
+
+    osc.start();
+    synthVoices[ch] = { osc, gain, filter, note };
+}
+
+function updateNoteVoiceBend(ch, note, cents) {
+    if (synthVoices[ch] && synthVoices[ch].note === note) {
+        const ctx = getAudioContext();
+        synthVoices[ch].osc.frequency.setTargetAtTime(midiNoteToFreq(note, cents), ctx.currentTime, 0.05);
+    }
+}
+
+function updateNoteVoiceVolume(ch, volume) {
+    if (synthVoices[ch]) {
+        const ctx = getAudioContext();
+        // map 0-127 to a reasonable gain max, e.g., 0.2
+        const targetGain = (volume / 127.0) * 0.2;
+        synthVoices[ch].gain.gain.setTargetAtTime(targetGain, ctx.currentTime, 0.05);
+    }
+}
+
+function stopNoteVoice(ch) {
+    if (synthVoices[ch]) {
+        const { osc, gain } = synthVoices[ch];
+        const ctx = getAudioContext();
+        gain.gain.cancelScheduledValues(ctx.currentTime);
+        gain.gain.setValueAtTime(gain.gain.value, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.1);
+        osc.stop(ctx.currentTime + 0.15);
+        delete synthVoices[ch];
+    }
+}
+
+function stopAllNotes() {
+    for (let ch in synthVoices) stopNoteVoice(ch);
+}
 
 // Initialize MIDI
 async function initMidi() {
@@ -171,19 +248,43 @@ function handleMidiMessage(event) {
         const note = data1;
         const vel = data2;
         if (vel > 0) {
-            if (ch < 9) tunerState[ch].note = note;
+            if (ch < 9) {
+                tunerState[ch].note = note;
+                startNoteVoice(ch, note, tunerState[ch].cents);
+            }
         } else {
-            if (ch < 9) tunerState[ch].note = 0;
+            if (ch < 9) {
+                tunerState[ch].note = 0;
+                stopNoteVoice(ch);
+            }
         }
         updateTunerDisplay();
     } else if ((status & 0xF0) === 0x80) { // Note Off
         const ch = status & 0x0F;
-        if (ch < 9) tunerState[ch].note = 0;
+        if (ch < 9) {
+            tunerState[ch].note = 0;
+            stopNoteVoice(ch);
+        }
         updateTunerDisplay();
     } else if ((status & 0xF0) === 0xE0) { // Pitch Bend
         const ch = status & 0x0F;
         const bend = data1 | (data2 << 7);
-        if (ch < 9) tunerState[ch].cents = Math.round((bend - 8192) / 41);
+        if (ch < 9) {
+            tunerState[ch].cents = Math.round((bend - 8192) / 41);
+            if (tunerState[ch].note > 0) {
+                updateNoteVoiceBend(ch, tunerState[ch].note, tunerState[ch].cents);
+            }
+        }
+        updateTunerDisplay();
+    } else if ((status & 0xF0) === 0xD0) { // Channel Pressure
+        const ch = status & 0x0F;
+        const pressure = data1;
+        if (ch < 9) {
+            tunerState[ch].volume = pressure;
+            if (tunerState[ch].note > 0) {
+                updateNoteVoiceVolume(ch, pressure);
+            }
+        }
         updateTunerDisplay();
     }
 }
@@ -231,10 +332,15 @@ function updateTunerDisplay() {
             } else {
                 chromNeedle.style.backgroundColor = 'var(--danger)';
             }
+
+            const chromVolEl = document.getElementById('tuner-chromatic-vol');
+            if (chromVolEl) chromVolEl.textContent = `V: ${chrom.volume}`;
         } else {
             chromNoteEl.textContent = '--';
             if (chromCentsEl) chromCentsEl.textContent = '0¢';
             chromNeedle.style.display = 'none';
+            const chromVolEl = document.getElementById('tuner-chromatic-vol');
+            if (chromVolEl) chromVolEl.textContent = `V: 0`;
         }
     }
 
@@ -247,6 +353,7 @@ function updateTunerDisplay() {
                 strDiv.innerHTML = `
                     <div class="tuner-string-name" id="str-name-${i}">-</div>
                     <div class="tuner-string-arrow inactive" id="str-arrow-${i}"></div>
+                    <div class="tuner-string-vol" id="str-vol-${i}">0</div>
                 `;
                 polyContainer.appendChild(strDiv);
             }
@@ -256,6 +363,7 @@ function updateTunerDisplay() {
             const state = tunerState[i];
             const nameEl = document.getElementById(`str-name-${i}`);
             const arrowEl = document.getElementById(`str-arrow-${i}`);
+            const volEl = document.getElementById(`str-vol-${i}`);
 
             if (state && state.note) {
                 nameEl.textContent = noteNames[state.note % 12];
@@ -264,9 +372,11 @@ function updateTunerDisplay() {
                 if (state.cents > 10) arrowEl.classList.add('down');
                 else if (state.cents < -10) arrowEl.classList.add('up');
                 else arrowEl.classList.add('perfect');
+                if (volEl) volEl.textContent = state.volume;
             } else {
                 nameEl.classList.remove('active');
                 arrowEl.className = 'tuner-string-arrow inactive';
+                if (volEl) volEl.textContent = "0";
             }
         }
     }
@@ -357,6 +467,15 @@ function renderUI() {
             isTunerMode = false;
             sendMidiCc(GLOBAL_ENABLE_CC, 69);
             updateTunerModeUI();
+        });
+    }
+
+    const tunerSynthToggle = document.getElementById('tuner-synth-toggle');
+    if (tunerSynthToggle) {
+        tunerSynthToggle.addEventListener('change', (e) => {
+            playSynth = e.target.checked;
+            if (!playSynth) stopAllNotes();
+            if (playSynth) getAudioContext(); // Initialize context if needed
         });
     }
 

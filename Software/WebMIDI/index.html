@@ -26,11 +26,17 @@
     <div id="tuner-panel" class="glass-panel hidden">
       <div class="tuner-header">
         <h2>Tuner</h2>
-        <button id="close-tuner-btn" class="action-btn" title="Exit Tuner">✕</button>
+        <div style="display: flex; gap: 15px; align-items: center;">
+          <label style="color: var(--text-muted); display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="tuner-synth-toggle"> Play Tones
+          </label>
+          <button id="close-tuner-btn" class="action-btn" title="Exit Tuner">✕</button>
+        </div>
       </div>
       <div class="tuner-chromatic-display">
         <div class="tuner-note" id="tuner-chromatic-note">--</div>
         <div class="tuner-cents" id="tuner-chromatic-cents">0¢</div>
+        <div class="tuner-vol" id="tuner-chromatic-vol">V: 0</div>
       </div>
       <div class="tuner-meter-container">
         <div class="tuner-meter-center"></div>
