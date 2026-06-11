@@ -397,10 +397,71 @@ static void draw_polyphonic(const struct tune_result *result, int s, int base_x,
 	sh1106_sprite(s_x, 17, 2*arrow_w, arrow, arrow);
 }
 
+static void render_tuner_results(const struct tuner_results *results, const struct tuning *current_tuning)
+{
+	sh1106_clear(0, 0, 128, 128);
+
+	draw_chromatic(&results->results[0]);
+
+	// Clear top background for polyphonic tuning display
+	sh1106_clear(0, 0, 128, 36);
+
+	int col_w = 128 / current_tuning->num_strings;
+	int base_x = (128 - (current_tuning->num_strings * col_w)) / 2;
+
+	for (int s = 0; s < current_tuning->num_strings; s++) {
+		draw_polyphonic(&results->results[1 + s], s, base_x, col_w);
+	}
+
+	sh1106_draw();
+}
+
+static int prev_note_idx[1 + MAX_STRINGS] = {0};
+
+static void send_tuner_midi(const struct tuner_results *results)
+{
+	for (int i = 0; i < results->num_results; i++) {
+		int current_note = results->results[i].note_idx;
+		int prev_note = prev_note_idx[i];
+		int cents = results->results[i].cents;
+
+		uint8_t ch = i; // Chromatic on ch 0, Strings on ch 1-8
+
+		if (current_note != prev_note) {
+			if (prev_note != 0) {
+				send_midi_note_off(ch, prev_note, 0);
+			}
+			if (current_note != 0) {
+				send_midi_note_on(ch, current_note, 100);
+			}
+			prev_note_idx[i] = current_note;
+		}
+
+		if (current_note != 0) {
+			send_midi_pitch_bend(ch, cents * 41);
+		}
+	}
+}
+
 static void draw_analyzer(void)
 {
-	if (analyzer.index < FFT_SIZE)
+	unsigned int tuning_idx = settings.tuning;
+	if (tuning_idx >= ARRAY_SIZE(tunings))
+		tuning_idx = 0;
+	const struct tuning *current_tuning = tunings[tuning_idx];
+
+	if (analyzer.index < FFT_SIZE) {
+		if (absolute_time_diff_us(last_remote_tuner_time, get_absolute_time()) < 1000000) {
+			struct tuner_results remote_results;
+			remote_results.num_results = 1 + current_tuning->num_strings;
+			for (int i = 0; i < remote_results.num_results; i++) {
+				remote_results.results[i].note_idx = remote_note_idx[i];
+				remote_results.results[i].cents = remote_cents[i];
+			}
+			render_tuner_results(&remote_results, current_tuning);
+		}
 		return;
+	}
 
 	// Run FFT
 	fft(analyzer.buf, FFT_SHIFT);
@@ -422,31 +483,13 @@ static void draw_analyzer(void)
 
 	tuner_magnitudes(global_max_mag);
 
-	sh1106_clear(0, 0, 128, 128);
-
-	unsigned int tuning_idx = settings.tuning;
-	if (tuning_idx >= ARRAY_SIZE(tunings))
-		tuning_idx = 0;
-	const struct tuning *current_tuning = tunings[tuning_idx];
-
 	polyphonic_tuner_magnitudes(current_tuning, global_max_mag);
 
 	struct tuner_results results;
 	compute_tuner_results(current_tuning, &results);
 
-	draw_chromatic(&results.results[0]);
-
-	// Clear top background for polyphonic tuning display
-	sh1106_clear(0, 0, 128, 36);
-
-	int col_w = 128 / current_tuning->num_strings;
-	int base_x = (128 - (current_tuning->num_strings * col_w)) / 2;
-
-	for (int s = 0; s < current_tuning->num_strings; s++) {
-		draw_polyphonic(&results.results[1 + s], s, base_x, col_w);
-	}
+	send_tuner_midi(&results);
+	render_tuner_results(&results, current_tuning);
 
 	analyzer.index = 0; // consumed
-
-	sh1106_draw();
 }

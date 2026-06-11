@@ -58,6 +58,34 @@ void send_midi_pc(uint8_t pc)
 	}
 }
 
+void send_midi_note_on(uint8_t ch, uint8_t note, uint8_t vel)
+{
+	if (sync_connected) {
+		uint8_t packet[4] = { 0x09, 0x90 | (ch & 0x0F), note, vel };
+		tuh_midi_packet_write(sync_idx, packet);
+		tuh_midi_write_flush(sync_idx);
+	}
+}
+
+void send_midi_note_off(uint8_t ch, uint8_t note, uint8_t vel)
+{
+	if (sync_connected) {
+		uint8_t packet[4] = { 0x08, 0x80 | (ch & 0x0F), note, vel };
+		tuh_midi_packet_write(sync_idx, packet);
+		tuh_midi_write_flush(sync_idx);
+	}
+}
+
+void send_midi_pitch_bend(uint8_t ch, int16_t bend)
+{
+	if (sync_connected) {
+		uint16_t val = bend + 8192;
+		uint8_t packet[4] = { 0x0E, 0xE0 | (ch & 0x0F), val & 0x7F, (val >> 7) & 0x7F };
+		tuh_midi_packet_write(sync_idx, packet);
+		tuh_midi_write_flush(sync_idx);
+	}
+}
+
 void tuh_midi_rx_cb(uint8_t idx, uint32_t xferred_bytes)
 {
 	(void)xferred_bytes;

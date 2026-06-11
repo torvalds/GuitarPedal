@@ -146,6 +146,10 @@ uint8_t remote_intense = 0;
 uint8_t remote_dropped = 0;
 #endif
 
+static uint8_t remote_note_idx[9] = {0};
+static int8_t remote_cents[9] = {0};
+static absolute_time_t last_remote_tuner_time;
+
 int current_midi_effect_idx = 0;
 
 void handle_midi_packet(const uint8_t packet[4])
@@ -210,6 +214,11 @@ void handle_midi_packet(const uint8_t packet[4])
 				}
 			} else if (data2 == 126) {
 				reset_usb_boot(0, 0);
+			} else if (data2 == 68) {
+				tuner_mode = 1;
+				analyzer.index = 0;
+			} else if (data2 == 69) {
+				tuner_mode = 0;
 			} else {
 				disable_all = (data2 == 0) ? EFF_ENABLE_STEPS : 0;
 			}
@@ -270,6 +279,26 @@ void handle_midi_packet(const uint8_t packet[4])
 #ifdef USB_MODE_HOST
 			remote_dropped = data2;
 #endif
+		}
+	} else if ((status & 0xF0) == 0x90) { // Note On
+		uint8_t ch = status & 0x0F;
+		if (ch < 9) {
+			remote_note_idx[ch] = data1;
+			last_remote_tuner_time = get_absolute_time();
+		}
+	} else if ((status & 0xF0) == 0x80) { // Note Off
+		uint8_t ch = status & 0x0F;
+		if (ch < 9 && remote_note_idx[ch] == data1) {
+			remote_note_idx[ch] = 0;
+			last_remote_tuner_time = get_absolute_time();
+		}
+	} else if ((status & 0xF0) == 0xE0) { // Pitch Bend
+		uint8_t ch = status & 0x0F;
+		if (ch < 9) {
+			uint16_t bend = data1 | (data2 << 7);
+			int cents = ((int)bend - 8192) / 41;
+			remote_cents[ch] = (int8_t)cents;
+			last_remote_tuner_time = get_absolute_time();
 		}
 	} else if ((status & 0xF0) == 0xC0) {
 		// Program Change
@@ -533,6 +562,7 @@ int main()
 				switch_clear(LONGPRESS(2));
 				analyzer.index = 0;
 				tuner_mode = !tuner_mode;
+				send_midi_cc(GLOBAL_ENABLE_CC, tuner_mode ? 68 : 69);
 			}
 
 			// Are we in tuner mode? Don't do normal

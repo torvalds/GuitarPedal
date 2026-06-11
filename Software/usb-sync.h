@@ -18,6 +18,10 @@
 extern void send_midi_cc(uint8_t cc, uint8_t val);
 extern void send_midi_pc(uint8_t pc);
 
+extern void send_midi_note_on(uint8_t ch, uint8_t note, uint8_t vel);
+extern void send_midi_note_off(uint8_t ch, uint8_t note, uint8_t vel);
+extern void send_midi_pitch_bend(uint8_t ch, int16_t bend);
+
 extern int current_midi_effect_idx;
 
 #endif // _USB_SYNC_H
