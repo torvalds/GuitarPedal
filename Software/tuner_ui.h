@@ -107,16 +107,26 @@ static inline void suppress_harmonics(void)
 		for (int h = 2; h * peak.bin < max_bin; h++) {
 			float target_exact = h * peak.bin;
 
-			// The error in our fractional bin estimation multiplies by 'h'.
-			// String inharmonicity also naturally widens higher harmonics.
-			// So we widen the spread linearly.
-			int low = lrintf(target_exact - h/2.0);
-			int high = lrintf(target_exact + h/2.0);
+			// Restrict suppression to the exact +/- 2.0 bin Hann window footprint
+			int low = (int)floorf(target_exact - 2.0f);
+			int high = (int)ceilf(target_exact + 2.0f);
 
 			for (int j = low; j <= high; j++) {
 				if (j >= max_bin) break;
-				if (tuner_state.magnitudes[j] > peak.mag)
-					tuner_state.magnitudes[j] -= peak.mag;
+				if (j < 0) continue;
+
+				float d = fabsf((float)j - target_exact);
+				float w = 0.0f;
+				if (d <= 1.0f) {
+					w = 1.0f - 0.5f * d * d;
+				} else if (d <= 2.0f) {
+					float x = 2.0f - d;
+					w = 0.5f * x * x;
+				}
+
+				float suppression = peak.mag * w;
+				if (tuner_state.magnitudes[j] > suppression)
+					tuner_state.magnitudes[j] -= suppression;
 				else
 					tuner_state.magnitudes[j] = 0.0f;
 			}

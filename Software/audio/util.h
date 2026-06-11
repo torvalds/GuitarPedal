@@ -24,6 +24,7 @@ float rintf(float);
 float sqrtf(float);
 float fabsf(float);
 float floorf(float);
+float ceilf(float);
 long int lrintf(float);
 
 #define log10f(x) (log2f(x)/LOG2_10)
