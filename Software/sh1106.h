@@ -304,6 +304,42 @@ static void sh1106_graph(int start, int end, int min, int max, int (*fn)(int, vo
 	}
 }
 
+static inline void sh1106_init(void)
+{
+	// See also "Software Configuration" in Solomon Systech app note
+	static const char initcmd[] = {
+		0xAE,				// Display OFF
+		0x00,				// Lower column address
+		0x10,				// Higher column address zero (default)
+		0x20,				// Page addressing mode (SH1107)
+		0x32,				// Charge pump at 8V (default)
+		0x40,				// Set display start line zero (default)
+		0x81, 0x80,			// Contrast control
+		0x8D, 0x14,			// Chargepump enable - see SSD1306 app note
+		0xA0 + SH1106_LEFTRIGHT,	// Set segment remap left rotate
+		0xA4,				// Set scan from RAM on (default)
+		0xA6,				// Set normal display (default)
+		0xA8, SH110x_LINES-1,		// Set multiplex ratio to 64/128 (default)
+		0xAD, 0x8B,			// Set DC-DC ON (display must be off)
+		0xB0,				// Page address 0
+		0xC0 +8*SH1106_UPDOWN,		// Common output scan direction: normal
+		0xD3, 0x00,			// Set display offset (0-3f)
+		0xD5, 0x80,			// Display clock divide ratio: f_osc (upper nybble) divided by 1 (lower nybble) (default)
+		0xD9, 0xF1,			// Set dischange/precharge period, 15 / 1 DCLK each
+		0xDA, 0x12,			// Set pad configuration sequential
+		0xDB, 0x35,			// Set VCOM deselect level (0.770 - default)
+		// 0xE0: R-M-W command - reads do not increment addresses, writes do
+		// 0xE3: NOP
+		// 0xEE: End R-M-W mode
+		0xAF,		// Display ON
+	};
+
+	for (int i = 0; i < ARRAY_SIZE(initcmd); i++) {
+		unsigned char cmd[2] = { 0x80, initcmd[i] };
+		sh1106_array_write(cmd);
+	}
+}
+
 static int sh1106_dirty;
 
 static void sh1106_draw(void)
@@ -346,6 +382,15 @@ static void sh1106_task()
 
 	if (!sh1106_dirty)
 		return;
+
+	static int init = 0;
+	if (!init) {
+		if (sh1106_read() < 0)
+			return;
+		init = 1;
+		sh1106_init();
+		return;
+	}
 
 	size_t ptr = 0;
 
@@ -396,46 +441,4 @@ static void sh1106_task()
 	}
 
 	sh1106_dirty = 0;
-}
-
-static inline void sh1106_init(void)
-{
-	// See also "Software Configuration" in Solomon Systech app note
-	static const char initcmd[] = {
-		0xAE,				// Display OFF
-		0x00,				// Lower column address
-		0x10,				// Higher column address zero (default)
-		0x20,				// Page addressing mode (SH1107)
-		0x32,				// Charge pump at 8V (default)
-		0x40,				// Set display start line zero (default)
-		0x81, 0x80,			// Contrast control
-		0x8D, 0x14,			// Chargepump enable - see SSD1306 app note
-		0xA0 + SH1106_LEFTRIGHT,	// Set segment remap left rotate
-		0xA4,				// Set scan from RAM on (default)
-		0xA6,				// Set normal display (default)
-		0xA8, SH110x_LINES-1,		// Set multiplex ratio to 64/128 (default)
-		0xAD, 0x8B,			// Set DC-DC ON (display must be off)
-		0xB0,				// Page address 0
-		0xC0 +8*SH1106_UPDOWN,		// Common output scan direction: normal
-		0xD3, 0x00,			// Set display offset (0-3f)
-		0xD5, 0x80,			// Display clock divide ratio: f_osc (upper nybble) divided by 1 (lower nybble) (default)
-		0xD9, 0xF1,			// Set dischange/precharge period, 15 / 1 DCLK each
-		0xDA, 0x12,			// Set pad configuration sequential
-		0xDB, 0x35,			// Set VCOM deselect level (0.770 - default)
-		// 0xE0: R-M-W command - reads do not increment addresses, writes do
-		// 0xE3: NOP
-		// 0xEE: End R-M-W mode
-		0xAF,		// Display ON
-	};
-
-	for (int i = 0; i < ARRAY_SIZE(initcmd); i++) {
-		unsigned char cmd[2] = { 0x80, initcmd[i] };
-		sh1106_array_write(cmd);
-	}
-
-	sh1106_draw();
-
-	// Test font sprites
-	sh1106_puts_8x16(20, 5, "Hello world!");
-	sh1106_draw();
 }

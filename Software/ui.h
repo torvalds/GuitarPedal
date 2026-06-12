@@ -324,15 +324,6 @@ static void update_ui(int force_update)
 {
 	static int effect_idx = 0;
 	static int last_active_pot = -1;
-	static int init = 0;
-
-	if (!init) {
-		if (sh1106_read() < 0)
-			return;
-		init = 1;
-		sh1106_init();
-		return;
-	}
 
 	struct effect *effect = effects[effect_idx];
 	bool update_screen = false;
