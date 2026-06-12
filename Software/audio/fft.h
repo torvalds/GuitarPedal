@@ -8,9 +8,19 @@ static inline complex_t twiddle_factor(float phase)
 
 static inline unsigned reverse_n_bits(unsigned int i, unsigned int bits)
 {
+#ifdef __arm__
 	// Newer versions of gcc have this as a builtin
 	asm inline("rbit %0,%1":"=r" (i): "r" (i));
 	return i >> (32-bits);
+#else
+	int res = 0;
+	for (int j = 0; j < bits; j++) {
+		res <<= 1;
+		res |= i & 1;
+		i >>= 1;
+	}
+	return res;
+#endif
 }
 
 //
