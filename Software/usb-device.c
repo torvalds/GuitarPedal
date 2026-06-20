@@ -4,8 +4,9 @@
 #include "board.h"
 #include "tusb.h"
 
+#include "midi.h"
+
 #include "usb-audio.h"
-#include "usb-sync.h"
 
 //--------------------------------------------------------------------+
 // Device Descriptors
@@ -510,8 +511,6 @@ float get_usb_audio_input(void)
 	return 0.0f;
 }
 
-extern void handle_midi_packet(const uint8_t packet[4]);
-
 void tud_midi_rx_cb(uint8_t itf)
 {
 	(void)itf;
@@ -521,39 +520,8 @@ void tud_midi_rx_cb(uint8_t itf)
 	}
 }
 
-void send_midi_cc(uint8_t cc, uint8_t val)
+void usb_midi_write(const uint8_t packet[4])
 {
-	uint8_t packet[4] = { 0x0B, 0xB0, cc, val };
-	if (tud_midi_mounted()) tud_midi_packet_write(packet);
-}
-
-void send_midi_pc(uint8_t pc)
-{
-	uint8_t packet[4] = { 0x0C, 0xC0, pc, 0 };
-	if (tud_midi_mounted()) tud_midi_packet_write(packet);
-}
-
-void send_midi_note_on(uint8_t ch, uint8_t note, uint8_t vel)
-{
-	uint8_t packet[4] = { 0x09, 0x90 | (ch & 0x0F), note, vel };
-	if (tud_midi_mounted()) tud_midi_packet_write(packet);
-}
-
-void send_midi_note_off(uint8_t ch, uint8_t note, uint8_t vel)
-{
-	uint8_t packet[4] = { 0x08, 0x80 | (ch & 0x0F), note, vel };
-	if (tud_midi_mounted()) tud_midi_packet_write(packet);
-}
-
-void send_midi_pitch_bend(uint8_t ch, int16_t bend)
-{
-	uint16_t val = bend + 8192;
-	uint8_t packet[4] = { 0x0E, 0xE0 | (ch & 0x0F), val & 0x7F, (val >> 7) & 0x7F };
-	if (tud_midi_mounted()) tud_midi_packet_write(packet);
-}
-
-void send_midi_channel_pressure(uint8_t ch, uint8_t pressure)
-{
-	uint8_t packet[4] = { 0x0D, 0xD0 | (ch & 0x0F), pressure & 0x7F, 0 };
-	if (tud_midi_mounted()) tud_midi_packet_write(packet);
+	if (tud_midi_mounted())
+		tud_midi_packet_write(packet);
 }

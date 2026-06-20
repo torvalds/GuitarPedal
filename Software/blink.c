@@ -12,8 +12,6 @@
 
 #include "board.h"
 
-#include "usb-sync.h"
-
 #include "ws2812.pio.h"
 #include "debounce.pio.h"
 #include "rotary.pio.h"
@@ -32,6 +30,8 @@
 #include "audio/fft.h"
 #include "audio/analyze.h"
 
+#include "midi.h"
+#include "uart.h"
 #include "tusb.h"
 #include "usb-audio.h"
 #include "sh1106.h"
@@ -430,9 +430,11 @@ static void init_rotary_encoder(void)
 	init_sw_pin(pio, GPIO_ROT1B);
 	rotary_program_init(pio, 0, offset, GPIO_ROT1A);
 
+#if !MIDI_HW
 	init_sw_pin(pio, GPIO_ROT2A);
 	init_sw_pin(pio, GPIO_ROT2B);
 	rotary_program_init(pio, 1, offset, GPIO_ROT2A);
+#endif
 
 	irq_set_exclusive_handler(PIO2_IRQ_0, rotary_irq);
 	irq_set_enabled(PIO2_IRQ_0, true);
@@ -521,6 +523,7 @@ int main()
 	init_i2c_bus(i2c1, 400, I2C1_SDA, I2C1_SCL);
 
 	init_usb();
+	uart_midi_init();
 
 	absolute_time_t now = get_absolute_time();
 
@@ -550,6 +553,7 @@ int main()
 		usb_audio_task();
 #endif
 		sh1106_task();
+		uart_midi_poll();
 
 		// Claim 25Hz screen updates
 		if (now > next_ui_update) {

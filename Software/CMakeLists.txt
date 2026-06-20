@@ -11,6 +11,13 @@ pico_sdk_init()
 
 add_executable(blink)
 
+# I should have used different PIO pins for MIDI
+# but they conflict with the second rotary encoder
+set(MIDI_HW OFF CACHE BOOL "Enable MIDI HW (not just MIDI over USB-C) support")
+
+set(USB_MODE "DEVICE" CACHE STRING "USB Mode: DEVICE (default) or HOST")
+set_property(CACHE USB_MODE PROPERTY STRINGS DEVICE HOST)
+
 set(SYS_CLK_KHZ 172800)
 set(SAMPLES_PER_SEC 48000.0)
 set(SCRIPT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
@@ -85,10 +92,8 @@ pico_generate_pio_header(blink ${PIO_DIR}/debounce.pio)
 pico_generate_pio_header(blink ${PIO_DIR}/rotary.pio)
 pico_generate_pio_header(blink ${PIO_DIR}/i2s.pio)
 
-set(USB_MODE "DEVICE" CACHE STRING "USB Mode: DEVICE (default) or HOST")
-set_property(CACHE USB_MODE PROPERTY STRINGS DEVICE HOST)
-
 target_compile_definitions(blink PRIVATE
+	MIDI_HW=$<BOOL:${MIDI_HW}>
 	USB_MODE_${USB_MODE}=1
 	SAMPLES_PER_SEC=${SAMPLES_PER_SEC}f
 	CFG_TUSB_MCU=OPT_MCU_RP2040

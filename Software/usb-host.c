@@ -1,8 +1,7 @@
 #include "pico/stdlib.h"
 #include "tusb.h"
-#include "usb-sync.h"
 
-extern void handle_midi_packet(const uint8_t packet[4]);
+#include "midi.h"
 
 // Needed because audio/effect.h expects it
 float get_usb_audio_input(void)
@@ -40,56 +39,9 @@ void tuh_midi_umount_cb(uint8_t idx)
 	}
 }
 
-void send_midi_cc(uint8_t cc, uint8_t val)
+void usb_midi_write(const uint8_t packet[4])
 {
 	if (sync_connected) {
-		uint8_t packet[4] = { 0x0B, 0xB0, cc, val };
-		tuh_midi_packet_write(sync_idx, packet);
-		tuh_midi_write_flush(sync_idx);
-	}
-}
-
-void send_midi_pc(uint8_t pc)
-{
-	if (sync_connected) {
-		uint8_t packet[4] = { 0x0C, 0xC0, pc, 0 };
-		tuh_midi_packet_write(sync_idx, packet);
-		tuh_midi_write_flush(sync_idx);
-	}
-}
-
-void send_midi_note_on(uint8_t ch, uint8_t note, uint8_t vel)
-{
-	if (sync_connected) {
-		uint8_t packet[4] = { 0x09, 0x90 | (ch & 0x0F), note, vel };
-		tuh_midi_packet_write(sync_idx, packet);
-		tuh_midi_write_flush(sync_idx);
-	}
-}
-
-void send_midi_note_off(uint8_t ch, uint8_t note, uint8_t vel)
-{
-	if (sync_connected) {
-		uint8_t packet[4] = { 0x08, 0x80 | (ch & 0x0F), note, vel };
-		tuh_midi_packet_write(sync_idx, packet);
-		tuh_midi_write_flush(sync_idx);
-	}
-}
-
-void send_midi_pitch_bend(uint8_t ch, int16_t bend)
-{
-	if (sync_connected) {
-		uint16_t val = bend + 8192;
-		uint8_t packet[4] = { 0x0E, 0xE0 | (ch & 0x0F), val & 0x7F, (val >> 7) & 0x7F };
-		tuh_midi_packet_write(sync_idx, packet);
-		tuh_midi_write_flush(sync_idx);
-	}
-}
-
-void send_midi_channel_pressure(uint8_t ch, uint8_t pressure)
-{
-	if (sync_connected) {
-		uint8_t packet[4] = { 0x0D, 0xD0 | (ch & 0x0F), pressure & 0x7F, 0 };
 		tuh_midi_packet_write(sync_idx, packet);
 		tuh_midi_write_flush(sync_idx);
 	}

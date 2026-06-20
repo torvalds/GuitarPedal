@@ -28,8 +28,17 @@
 #define GPIO_ROT1A		6
 #define GPIO_ROT1B		7
 
-#define GPIO_ROT2A		26
-#define GPIO_ROT2B		27
+// The MIDI-controlled ones do not have
+// the second rotary encoder
+#if MIDI_HW
+  #define MIDI_OUT		26
+  #define MIDI_IN		27
+  #define MIDI_UART		uart1
+#else
+  #define GPIO_ROT2A		26
+  #define GPIO_ROT2B		27
+#endif
+
 
 #define I2C0_SDA		4
 #define I2C0_SCL		5
