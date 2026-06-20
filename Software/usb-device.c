@@ -516,7 +516,9 @@ void tud_midi_rx_cb(uint8_t itf)
 	(void)itf;
 	uint8_t packet[4];
 	while (tud_midi_packet_read(packet)) {
-		handle_midi_packet(packet);
+		// MIDI Thru: Echo to hardware UART if not for us
+		if (!handle_midi_packet(packet))
+			uart_midi_write(packet);
 	}
 }
 

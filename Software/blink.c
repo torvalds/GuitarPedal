@@ -152,7 +152,7 @@ static int8_t remote_cents[9] = {0};
 
 int current_midi_effect_idx = 0;
 
-void handle_midi_packet(const uint8_t packet[4])
+bool handle_midi_packet(const uint8_t packet[4])
 {
 	uint8_t status = packet[1];
 	uint8_t data1 = packet[2];
@@ -160,10 +160,13 @@ void handle_midi_packet(const uint8_t packet[4])
 
 	if (settings.midi_channel != 0) {
 		if ((status & 0x0F) != (settings.midi_channel - 1))
-			return;
+			return false;
 	}
 
+	bool handled = false;
+
 	if ((status & 0xF0) == 0xB0) {
+		handled = true;
 		// Control Change
 		if (data1 == STATE_DUMP_CC) {
 			send_midi_cc(GLOBAL_ENABLE_CC, disable_all ? 0 : 127);
@@ -280,18 +283,21 @@ void handle_midi_packet(const uint8_t packet[4])
 #endif
 		}
 	} else if ((status & 0xF0) == 0x90) { // Note On
+		handled = true;
 		uint8_t ch = status & 0x0F;
 		if (ch < 9) {
 			remote_note_idx[ch] = data1;
 			remote_tuner_data = true;
 		}
 	} else if ((status & 0xF0) == 0x80) { // Note Off
+		handled = true;
 		uint8_t ch = status & 0x0F;
 		if (ch < 9 && remote_note_idx[ch] == data1) {
 			remote_note_idx[ch] = 0;
 			remote_tuner_data = true;
 		}
 	} else if ((status & 0xF0) == 0xE0) { // Pitch Bend
+		handled = true;
 		uint8_t ch = status & 0x0F;
 		if (ch < 9) {
 			uint16_t bend = data1 | (data2 << 7);
@@ -300,6 +306,7 @@ void handle_midi_packet(const uint8_t packet[4])
 			remote_tuner_data = true;
 		}
 	} else if ((status & 0xF0) == 0xC0) {
+		handled = true;
 		// Program Change
 		if (data1 < ARRAY_SIZE(effects)) {
 			current_midi_effect_idx = data1;
@@ -319,6 +326,8 @@ void handle_midi_packet(const uint8_t packet[4])
 			}
 		}
 	}
+
+	return handled;
 }
 
 static void init_sw_pins(void)

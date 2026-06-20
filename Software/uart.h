@@ -91,8 +91,12 @@ void uart_midi_poll(void)
 	}
 
 	uint8_t packet[4];
-	while (uart_midi_read(packet))
-		handle_midi_packet(packet);
+	while (uart_midi_read(packet)) {
+		if (!handle_midi_packet(packet)) {
+			usb_midi_write(packet); // MIDI Thru: Echo to USB if not for us
+			uart_midi_write(packet); // MIDI Thru: Echo to UART if not for us
+		}
+	}
 #endif
 }
 
