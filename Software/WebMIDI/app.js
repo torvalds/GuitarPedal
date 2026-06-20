@@ -122,23 +122,65 @@ async function initMidi() {
     }
 }
 
+let selectedInputId = null;
+let selectedOutputId = null;
+
+function populateMidiSelects() {
+    const inSelect = document.getElementById('midi-input-select');
+    const outSelect = document.getElementById('midi-output-select');
+    if (!inSelect || !outSelect) return;
+
+    inSelect.innerHTML = '<option value="">-- Auto-detect Linus Pedal --</option>';
+    outSelect.innerHTML = '<option value="">-- Auto-detect Linus Pedal --</option>';
+
+    for (let input of midiAccess.inputs.values()) {
+        const opt = document.createElement('option');
+        opt.value = input.id;
+        opt.textContent = input.name;
+        if (input.id === selectedInputId) opt.selected = true;
+        inSelect.appendChild(opt);
+    }
+
+    for (let output of midiAccess.outputs.values()) {
+        const opt = document.createElement('option');
+        opt.value = output.id;
+        opt.textContent = output.name;
+        if (output.id === selectedOutputId) opt.selected = true;
+        outSelect.appendChild(opt);
+    }
+}
+
 function updateMidiState() {
     let foundInput = null;
     let foundOutput = null;
 
-    for (let input of midiAccess.inputs.values()) {
-        if (input.name.includes('Linus Pedal')) {
-            foundInput = input;
-            break;
+    if (selectedInputId && midiAccess.inputs.has(selectedInputId)) {
+        foundInput = midiAccess.inputs.get(selectedInputId);
+    } else {
+        for (let input of midiAccess.inputs.values()) {
+            if (!foundInput) foundInput = input;
+            if (input.name.includes('Linus Pedal')) {
+                foundInput = input;
+                break;
+            }
         }
+        if (foundInput && !selectedInputId) selectedInputId = foundInput.id;
     }
 
-    for (let output of midiAccess.outputs.values()) {
-        if (output.name.includes('Linus Pedal')) {
-            foundOutput = output;
-            break;
+    if (selectedOutputId && midiAccess.outputs.has(selectedOutputId)) {
+        foundOutput = midiAccess.outputs.get(selectedOutputId);
+    } else {
+        for (let output of midiAccess.outputs.values()) {
+            if (!foundOutput) foundOutput = output;
+            if (output.name.includes('Linus Pedal')) {
+                foundOutput = output;
+                break;
+            }
         }
+        if (foundOutput && !selectedOutputId) selectedOutputId = foundOutput.id;
     }
+
+    populateMidiSelects();
 
     if (foundInput && foundOutput) {
         if (midiInput !== foundInput) {
@@ -147,6 +189,7 @@ function updateMidiState() {
         }
         midiOutput = foundOutput;
         appTitleEl.className = "title-connected";
+        appTitleEl.textContent = `Connected: ${foundInput.name}`;
 
         // Request initial state dump
         sendMidiCc(STATE_DUMP_CC, 127);
@@ -154,6 +197,7 @@ function updateMidiState() {
         midiInput = null;
         midiOutput = null;
         appTitleEl.className = "title-disconnected";
+        appTitleEl.textContent = "RP2350 Pedal";
     }
 }
 
@@ -447,6 +491,21 @@ function getInitialPotValue(pot) {
 
 function renderUI() {
     effectsContainer.innerHTML = '';
+
+    const inSelect = document.getElementById('midi-input-select');
+    if (inSelect) {
+        inSelect.addEventListener('change', (e) => {
+            selectedInputId = e.target.value;
+            updateMidiState();
+        });
+    }
+    const outSelect = document.getElementById('midi-output-select');
+    if (outSelect) {
+        outSelect.addEventListener('change', (e) => {
+            selectedOutputId = e.target.value;
+            updateMidiState();
+        });
+    }
 
     globalEnableEl.addEventListener('change', (e) => {
         sendMidiCc(GLOBAL_ENABLE_CC, e.target.checked ? 127 : 0);
