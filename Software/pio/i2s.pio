@@ -1,15 +1,16 @@
 ;
 ; We want a target sample frequency of 48kHz, which
-; with 24-bit i2s data means a dot clock of 2.304MHz.
+; with 32-bit i2s data means a dot clock of 3.072MHz.
 ;
-; We overclock the rp2354 slightly to 172.8MHz, which
-; is exactly 75x that dot clock frequency.
+; We overclock the rp2354 to 230.4MHz, which is exactly
+; 75x that dot clock frequency.
 ;
-; We then use a PIO divider of 25, and make the PIO
-; program do 3 cycles per clock.
+; We then use a PIO divider of 37.5, and make the PIO
+; program do 2 cycles per clock.
 ;
-; This means that all dividers are nice integers and
-; there is no clock jitter due to any fractional cycles.
+; This means that the PIO cycles will alternate 37/38
+; sysclk cycles, and the BCLK duty cycle won't be quite
+; 50:50, but each BCLK cycle start will be 75 cycles.
 ;
 ; i2s: FSYNC and each data bit is transmitted on the
 ; falling edge of BCLK, so we set those bits the cycle
@@ -19,59 +20,25 @@
 ; The actual data is transmitted one cycle after FSYNC
 ; goes low
 ;
-; I may need to move to 32-bit i2s data in order to
-; support the HW-setup of a TAC5242, in which case the
-; most obvious options would be to
-;
-;  (a) just overclock more, keeping that 3x25 multiplier
-;      and going up to 230.4MHz sysclk
-;      (FBDIV: 96, POSTDIV1: 5, POSTDIV2: 1)
-;
-;  (b) Do a 2x25 PIO multiplier instead, dropping down
-;      sysclk to 153.6MHz
-;      (FBDIV: 64, POSTDIV1: 5, POSTDIV2: 2)
-;
-; That 230.4MHz setup is supposedly stable according to
-; people who overclock these things, but it feels a bit
-; aggressive. If I do that, I probably need to make sure
-; the flash is run at no more than a divide-by-three:
-;
-;   target_compile_definitions(blink.c PRIVATE
-;       SYS_CLK_KHZ=230400
-;       PICO_FLASH_SPI_CLKDIV=3
-;       PICO_EMBED_XIP_SETUP=1
-;   )
-;
-; but for now I'm just leaving myself a note here for
-; later. The more aggressive overclock option - if it is
-; stable - would be nice for CPU headroom too, of course.
-;
-; I also just noticed that my i2p PIO program is garbage,
-; and when I converted it from two cycles per BCLK to three
-; cycles I made the BLCK no longer be a symmetrical square
-; wave. Apparently the TAC5112 doesn't care - it presumably
-; just looks at the rising edge - but I should really fix
-; that too.
-;
 .pio_version 1
 
 .program i2s_tx
 .fifo tx
-.clock_div 25
+.clock_div 37.5
 .side_set 2
 .out 1 left
 
 .wrap_target
-	pull noblock [1]	side 0b00	; cycle 0: FSYNC goes LOW
-	set x,22		side 0b01
+	pull noblock		side 0b00	; cycle 0: FSYNC goes LOW
+	set x,30		side 0b01
 loop_low:
-	out pins,1 [1]		side 0b00	; cycles 1..23: DOUT wiggles
+	out pins,1		side 0b00	; cycles 1..31: DOUT wiggles
 	jmp x-- loop_low	side 0b01
 
-	out pins,1 [1]		side 0b10	; cycle 24: FSYNC goes HIGH
-	set x,22		side 0b11
+	out pins,1		side 0b10	; cycle 32: FSYNC goes HIGH
+	set x,30		side 0b11
 loop_high:
-	nop [1]			side 0b10	; cycles 25-47
+	nop			side 0b10	; cycles 3-63
 	jmp x-- loop_high	side 0b11
 .wrap
 
@@ -107,16 +74,16 @@ static inline void i2s_tx_program_init(PIO pio, uint sm, uint offset, uint pin)
 
 .program i2s_rx
 .fifo rx
-.clock_div 25
+.clock_div 37.5
 .in 1 left
 
 .wrap_target
-	set x,23
-	wait 0 jmppin [3]		; wait for FSYNC going low
+	set x,31
+	wait 0 jmppin [2]		; wait for FSYNC going low
 					; then delay to sample in the middle of valid window
 
 loop_in:
-	in pins,1 [1]			; read DIN and delay to make loop exactly 3 cycles
+	in pins,1			; read DIN and loop exactly 2 cycles
 	jmp x-- loop_in
 
 	push noblock [14]		; write result and delay before looping

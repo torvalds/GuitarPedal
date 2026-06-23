@@ -95,7 +95,7 @@ static void bypass(void)
 	PIO pio = pio0;
 
 	for (int i = 0; i < BLOCKSIZE; i++) {
-		int32_t sample = pio_sm_get_blocking(pio, PIO0_I2S_RX_SM) << 8;
+		int32_t sample = pio_sm_get_blocking(pio, PIO0_I2S_RX_SM);
 		float val = process_input(sample);
 		sample = process_output(val, sample);
 		pio_sm_put_blocking(pio0, PIO0_I2S_TX_SM, sample);
@@ -106,7 +106,7 @@ static inline void single_sample(float mix)
 {
 	PIO pio = pio0;
 
-	int32_t sample = pio_sm_get_blocking(pio, PIO0_I2S_RX_SM) << 8;
+	int32_t sample = pio_sm_get_blocking(pio, PIO0_I2S_RX_SM);
 	float in = process_input(sample);
 	float usb_in = get_usb_audio_input();
 

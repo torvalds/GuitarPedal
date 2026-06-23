@@ -93,6 +93,12 @@ pico_generate_pio_header(blink ${PIO_DIR}/rotary.pio)
 pico_generate_pio_header(blink ${PIO_DIR}/i2s.pio)
 
 target_compile_definitions(blink PRIVATE
+	SYS_CLK_KHZ=230400
+	PLL_SYS_VCO_FREQ_HZ=1152000000
+	PLL_SYS_POSTDIV1=5
+	PLL_SYS_POSTDIV2=1
+	PICO_FLASH_SPI_CLKDIV=3
+	PICO_EMBED_XIP_SETUP=1
 	MIDI_HW=$<BOOL:${MIDI_HW}>
 	USB_MODE_${USB_MODE}=1
 	SAMPLES_PER_SEC=${SAMPLES_PER_SEC}f

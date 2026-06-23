@@ -520,7 +520,6 @@ int main()
 {
 	int forced_update = 1;
 
-	set_sys_clock_khz(172800, true);
 	enable_ftz();
 
 	init_i2s();
