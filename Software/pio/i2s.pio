@@ -19,6 +19,40 @@
 ; The actual data is transmitted one cycle after FSYNC
 ; goes low
 ;
+; I may need to move to 32-bit i2s data in order to
+; support the HW-setup of a TAC5242, in which case the
+; most obvious options would be to
+;
+;  (a) just overclock more, keeping that 3x25 multiplier
+;      and going up to 230.4MHz sysclk
+;      (FBDIV: 96, POSTDIV1: 5, POSTDIV2: 1)
+;
+;  (b) Do a 2x25 PIO multiplier instead, dropping down
+;      sysclk to 153.6MHz
+;      (FBDIV: 64, POSTDIV1: 5, POSTDIV2: 2)
+;
+; That 230.4MHz setup is supposedly stable according to
+; people who overclock these things, but it feels a bit
+; aggressive. If I do that, I probably need to make sure
+; the flash is run at no more than a divide-by-three:
+;
+;   target_compile_definitions(blink.c PRIVATE
+;       SYS_CLK_KHZ=230400
+;       PICO_FLASH_SPI_CLKDIV=3
+;       PICO_EMBED_XIP_SETUP=1
+;   )
+;
+; but for now I'm just leaving myself a note here for
+; later. The more aggressive overclock option - if it is
+; stable - would be nice for CPU headroom too, of course.
+;
+; I also just noticed that my i2p PIO program is garbage,
+; and when I converted it from two cycles per BCLK to three
+; cycles I made the BLCK no longer be a symmetrical square
+; wave. Apparently the TAC5112 doesn't care - it presumably
+; just looks at the rising edge - but I should really fix
+; that too.
+;
 .pio_version 1
 
 .program i2s_tx
