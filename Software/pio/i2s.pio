@@ -2,15 +2,11 @@
 ; We want a target sample frequency of 48kHz, which
 ; with 32-bit i2s data means a dot clock of 3.072MHz.
 ;
-; We overclock the rp2354 to 230.4MHz, which is exactly
-; 75x that dot clock frequency.
+; We clock the rp2354 to 153.6MHz, which is exactly
+; 50x that dot clock frequency.
 ;
-; We then use a PIO divider of 37.5, and make the PIO
+; We then use a PIO divider of 25, and make the PIO
 ; program do 2 cycles per clock.
-;
-; This means that the PIO cycles will alternate 37/38
-; sysclk cycles, and the BCLK duty cycle won't be quite
-; 50:50, but each BCLK cycle start will be 75 cycles.
 ;
 ; i2s: FSYNC and each data bit is transmitted on the
 ; falling edge of BCLK, so we set those bits the cycle
@@ -24,7 +20,7 @@
 
 .program i2s_tx
 .fifo tx
-.clock_div 37.5
+.clock_div 25
 .side_set 2
 .out 1 left
 
@@ -74,7 +70,7 @@ static inline void i2s_tx_program_init(PIO pio, uint sm, uint offset, uint pin)
 
 .program i2s_rx
 .fifo rx
-.clock_div 37.5
+.clock_div 25
 .in 1 left
 
 .wrap_target
