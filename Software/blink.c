@@ -71,14 +71,36 @@ static void init_i2s(void)
 	i2s_tx_program_init(pio0, PIO0_I2S_TX_SM, tx_offset, I2S_BCLK);
 	i2s_rx_program_init(pio0, PIO0_I2S_RX_SM, rx_offset, I2S_BCLK);
 
+	dma_rx = dma_claim_unused_channel(true);
+	dma_channel_config c_rx = dma_channel_get_default_config(dma_rx);
+	channel_config_set_transfer_data_size(&c_rx, DMA_SIZE_32);
+	channel_config_set_read_increment(&c_rx, false);
+	channel_config_set_write_increment(&c_rx, true);
+	channel_config_set_dreq(&c_rx, pio_get_dreq(pio0, PIO0_I2S_RX_SM, false));
+	channel_config_set_ring(&c_rx, true, 7); // write wrap at 128 bytes (32 words)
+
 	dma_tx = dma_claim_unused_channel(true);
-	dma_channel_config c = dma_channel_get_default_config(dma_tx);
-	channel_config_set_transfer_data_size(&c, DMA_SIZE_32);
-	channel_config_set_read_increment(&c, true);
-	channel_config_set_write_increment(&c, false);
-	channel_config_set_dreq(&c, pio_get_dreq(pio0, PIO0_I2S_TX_SM, true));
-	channel_config_set_ring(&c, false, 7); // read wrap at 128 bytes (32 words)
-	dma_channel_configure(dma_tx, &c, &pio0->txf[PIO0_I2S_TX_SM], tx_dma_buf, 0xffffffff, true);
+	dma_channel_config c_tx = dma_channel_get_default_config(dma_tx);
+	channel_config_set_transfer_data_size(&c_tx, DMA_SIZE_32);
+	channel_config_set_read_increment(&c_tx, true);
+	channel_config_set_write_increment(&c_tx, false);
+	channel_config_set_dreq(&c_tx, pio_get_dreq(pio0, PIO0_I2S_TX_SM, true));
+	channel_config_set_ring(&c_tx, false, 7); // read wrap at 128 bytes (32 words)
+
+	pio_sm_clear_fifos(pio0, PIO0_I2S_RX_SM);
+	pio_sm_clear_fifos(pio0, PIO0_I2S_TX_SM);
+
+	// RX and TX start at the same point, together. But TX will
+	// fill up the PIO buffers and move ahead, while RX will be
+	// waiting for the first samples to come in, so it naturally
+	// falls behind.
+	//
+	// And "falls behind" is the same as "is ahead" in a circular
+	// buffer.
+	dma_channel_configure(dma_rx, &c_rx, i2s_dma_buf, &pio0->rxf[PIO0_I2S_RX_SM], 0xffffffff, false);
+	dma_channel_configure(dma_tx, &c_tx, &pio0->txf[PIO0_I2S_TX_SM], i2s_dma_buf, 0xffffffff, false);
+
+	dma_start_channel_mask((1u << dma_rx) | (1u << dma_tx));
 }
 
 static void init_ws2812(void)

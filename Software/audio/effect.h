@@ -91,50 +91,38 @@ static int disable_all;
 
 #define BLOCKSIZE 200
 
-static int32_t __attribute__((aligned(128))) tx_dma_buf[32];
+static int32_t __attribute__((aligned(128))) i2s_dma_buf[32];
 static int dma_tx;
-static unsigned int tx_write_idx = 0;
+static int dma_rx;
+static unsigned int cpu_idx = 0;
 
-static inline void put_i2s_tx_blocking(int32_t sample)
+static inline int32_t *i2s_dma_tx_ptr(void)
 {
-	unsigned int next_idx = (tx_write_idx + 1) & 31;
-	int32_t *ptr = tx_dma_buf + tx_write_idx;
-	tx_write_idx = next_idx;
-
-	// Wait until the DMA pointer has moved past it
-	while (dma_hw->ch[dma_tx].read_addr == (unsigned int)ptr)
-		tight_loop_contents();
-
-	*ptr = sample;
+	return (int32_t *) dma_hw->ch[dma_tx].read_addr;
 }
 
-static inline void check_underrun(void)
+static inline int32_t *i2s_dma_rx_ptr(void)
 {
-	unsigned int tx_read_idx = (dma_hw->ch[dma_tx].read_addr - (uint32_t)tx_dma_buf) / 4;
-	// If the write index is less than 4 samples ahead of the read index, we're underrunning
-	if (((tx_write_idx - tx_read_idx) & 31) < 4) {
-		dropped++;
-		clipping = 1;
-	}
-}
-
-static void bypass(void)
-{
-	PIO pio = pio0;
-
-	for (int i = 0; i < BLOCKSIZE; i++) {
-		int32_t sample = pio_sm_get_blocking(pio, PIO0_I2S_RX_SM);
-		float val = process_input(sample);
-		sample = process_output(val, sample);
-		put_i2s_tx_blocking(sample);
-	}
+	return (int32_t *) dma_hw->ch[dma_rx].write_addr;
 }
 
 static inline void single_sample(float mix)
 {
-	PIO pio = pio0;
+	int32_t *cpu_ptr = i2s_dma_buf + cpu_idx;
 
-	int32_t sample = pio_sm_get_blocking(pio, PIO0_I2S_RX_SM);
+	// Wait for RX DMA to produce the sample
+	while (cpu_ptr == i2s_dma_rx_ptr())
+		tight_loop_contents();
+
+	// Check we're is safely ahead of TX DMA
+	unsigned int tx_idx = i2s_dma_tx_ptr() - i2s_dma_buf;
+	if (((cpu_idx - tx_idx) & 31) < 2) {
+		dropped++;
+		clipping = 1;
+	}
+
+	// In-place processing
+	int32_t sample = *cpu_ptr;
 	float in = process_input(sample);
 	float usb_in = get_usb_audio_input();
 
@@ -151,9 +139,16 @@ static inline void single_sample(float mix)
 		val += usb_in;
 
 	sample = process_output(val, sample);
+	*cpu_ptr = sample;
 
-	check_underrun();
-	put_i2s_tx_blocking(sample);
+	cpu_idx = (cpu_idx + 1) & 31;
+}
+
+static void bypass(void)
+{
+	for (int i = 0; i < BLOCKSIZE; i++) {
+		single_sample(0.0);
+	}
 }
 
 static __attribute__((noinline)) void make_one_noise(void)
