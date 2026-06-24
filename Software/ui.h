@@ -458,14 +458,22 @@ static void update_ui(int force_update)
 		last_active_pot = effect->active_pot;
 	}
 
-	if (!update_screen)
-		return;
-
 #if 0
 	char buffer[16], *end = buffer+sizeof(buffer);
-	char *p = to_ascii(0, dropped, end, 1);
-	sh1106_puts_6x8(126-6*(end-p-1),118,p);
+
+	unsigned int tx = i2s_dma_tx_ptr() - i2s_dma_buf;
+	unsigned int rx = i2s_dma_rx_ptr() - i2s_dma_buf;
+	unsigned int cpu = cpu_idx;
+
+	char *p = to_ascii(0, (rx - tx) & 31, end, 1, 0);
+	sh1106_puts_6x8(126-6*(end-p-1),64,p);
+	p = to_ascii(0, (cpu - tx) & 31, end, 1, 0);
+	sh1106_puts_6x8(126-6*(end-p-1),72,p);
+	update_screen = true;
 #endif
+
+	if (!update_screen)
+		return;
 
 	int active = effect->active_pot;
 	if (effect->graph) {
