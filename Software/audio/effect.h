@@ -90,6 +90,34 @@ static inline float do_effect_step(struct effect *effect, float val)
 static int disable_all;
 
 #define BLOCKSIZE 200
+
+static int32_t __attribute__((aligned(128))) tx_dma_buf[32];
+static int dma_tx;
+static unsigned int tx_write_idx = 0;
+
+static inline void put_i2s_tx_blocking(int32_t sample)
+{
+	unsigned int next_idx = (tx_write_idx + 1) & 31;
+	int32_t *ptr = tx_dma_buf + tx_write_idx;
+	tx_write_idx = next_idx;
+
+	// Wait until the DMA pointer has moved past it
+	while (dma_hw->ch[dma_tx].read_addr == (unsigned int)ptr)
+		tight_loop_contents();
+
+	*ptr = sample;
+}
+
+static inline void check_underrun(void)
+{
+	unsigned int tx_read_idx = (dma_hw->ch[dma_tx].read_addr - (uint32_t)tx_dma_buf) / 4;
+	// If the write index is less than 4 samples ahead of the read index, we're underrunning
+	if (((tx_write_idx - tx_read_idx) & 31) < 4) {
+		dropped++;
+		clipping = 1;
+	}
+}
+
 static void bypass(void)
 {
 	PIO pio = pio0;
@@ -98,7 +126,7 @@ static void bypass(void)
 		int32_t sample = pio_sm_get_blocking(pio, PIO0_I2S_RX_SM);
 		float val = process_input(sample);
 		sample = process_output(val, sample);
-		pio_sm_put_blocking(pio0, PIO0_I2S_TX_SM, sample);
+		put_i2s_tx_blocking(sample);
 	}
 }
 
@@ -124,11 +152,8 @@ static inline void single_sample(float mix)
 
 	sample = process_output(val, sample);
 
-	if (pio_sm_is_tx_fifo_empty(pio, PIO0_I2S_TX_SM)) {
-		dropped++;
-		clipping = 1;
-	}
-	pio_sm_put_blocking(pio0, PIO0_I2S_TX_SM, sample);
+	check_underrun();
+	put_i2s_tx_blocking(sample);
 }
 
 static __attribute__((noinline)) void make_one_noise(void)

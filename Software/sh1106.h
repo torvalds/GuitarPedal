@@ -15,7 +15,6 @@
 //   https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf
 //
 #define SH1106_ADDR	0x3C
-#include "hardware/dma.h"
 
 #define SH1107 1
 

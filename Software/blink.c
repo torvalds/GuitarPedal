@@ -9,6 +9,7 @@
 #include "hardware/i2c.h"
 #include "hardware/pwm.h"
 #include "hardware/clocks.h"
+#include "hardware/dma.h"
 
 #include "board.h"
 
@@ -69,6 +70,15 @@ static void init_i2s(void)
 
 	i2s_tx_program_init(pio0, PIO0_I2S_TX_SM, tx_offset, I2S_BCLK);
 	i2s_rx_program_init(pio0, PIO0_I2S_RX_SM, rx_offset, I2S_BCLK);
+
+	dma_tx = dma_claim_unused_channel(true);
+	dma_channel_config c = dma_channel_get_default_config(dma_tx);
+	channel_config_set_transfer_data_size(&c, DMA_SIZE_32);
+	channel_config_set_read_increment(&c, true);
+	channel_config_set_write_increment(&c, false);
+	channel_config_set_dreq(&c, pio_get_dreq(pio0, PIO0_I2S_TX_SM, true));
+	channel_config_set_ring(&c, false, 7); // read wrap at 128 bytes (32 words)
+	dma_channel_configure(dma_tx, &c, &pio0->txf[PIO0_I2S_TX_SM], tx_dma_buf, 0xffffffff, true);
 }
 
 static void init_ws2812(void)
@@ -468,16 +478,8 @@ static inline void enable_ftz(void)
 static void audio_processing(void)
 {
 	enable_ftz();
-	// Get everything going, then clear 'dropped'
-	// to get rid of any initialization issues
-	make_one_noise();
-	for (int i=0; i<8; i++)
-		pio_sm_put_blocking(pio0, PIO0_I2S_TX_SM, 0);
-	dropped = 0;
-
-	for (;;) {
+	for (;;)
 		make_one_noise();
-	}
 }
 
 unsigned get_audio_samples(int32_t *buffer, unsigned nr)
