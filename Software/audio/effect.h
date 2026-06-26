@@ -160,7 +160,8 @@ static __attribute__((noinline)) void make_one_noise(void)
 		if (seq == effect->last)
 			continue;
 		effect->last = seq;
-		effect->init(effect->pot_values[seq & 1]);
+		if (effect->mix)
+			effect->init(effect->pot_values[seq & 1]);
 	}
 
 	static int disable = 0;
