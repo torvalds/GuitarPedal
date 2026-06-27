@@ -116,9 +116,12 @@ def suppress_harmonics(mags_input):
     return mags
 
 def run_c_tuner(wav_file, offset):
+    if '\x00' in wav_file:
+        print("Error: Invalid file path")
+        return None, None
     cmd = ['./test-fft', wav_file, str(offset * 4)]
     try:
-        result = subprocess.run(cmd, capture_output=True, check=True)
+        result = subprocess.run(cmd, capture_output=True, check=True, shell=False)
         data = result.stdout
 
         header_format = '<II'
