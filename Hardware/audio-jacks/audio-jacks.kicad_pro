@@ -188,6 +188,7 @@
       ],
       "track_widths": [
         0.0,
+        0.15,
         0.3,
         0.6
       ],
@@ -565,7 +566,7 @@
       "exclude_dnp": false,
       "fields_ordered": [
         {
-          "group_by": false,
+          "group_by": true,
           "label": "Comment",
           "name": "Value",
           "show": true
@@ -718,7 +719,7 @@
           "group_by": false,
           "label": "JLCPCB",
           "name": "JLCPCB",
-          "show": true
+          "show": false
         },
         {
           "group_by": false,
