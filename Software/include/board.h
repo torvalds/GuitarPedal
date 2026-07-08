@@ -45,7 +45,7 @@
 #define I2C1_SDA		2
 #define I2C1_SCL		3
 
-#define MC24C02_I2C		i2c0, 0x50
+#define MC24Cxx_I2C		i2c0, 0x50
 #define TAC5112_I2C		i2c0, 0x51
 #define SH1106_I2C		i2c1, 0x3c
 

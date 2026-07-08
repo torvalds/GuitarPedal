@@ -5,6 +5,26 @@
 #include "board.h"
 #include <string.h>
 
+#ifdef EEPROM_64KBIT
+  // We could fit many more, but
+  // let's leave that for later
+  //
+  // Right now we're limited by
+  // the 32-bit dirty bitmap
+  #define MAX_SAVED_EFFECTS 32
+#else
+  // 2kbit eeprom: 256 bytes, 16 effects of 16 bytes each
+  #define MAX_SAVED_EFFECTS 16
+#endif
+
+// Some old 24c02 eeprom chips only do 8-byte page sizes,
+// but the one I have is 16 bytes, and the MC24C64 has
+// a 64-byte page size, but 16 byte writes work for both,
+// and matches the effect size (so writing one chunk only
+// changes one effect).
+#define EEPROM_PAGE_SIZE 16
+#define EEPROM_SIZE (16*MAX_SAVED_EFFECTS)
+
 struct effect_state {
 	unsigned char pots[10];
 	unsigned char enabled;
@@ -13,12 +33,9 @@ struct effect_state {
 };
 
 // Cache the eeprom in RAM for easy access
-//
-// 2kbit eeprom: 256 bytes, 16 effects of 16 bytes each
-#define MAX_SAVED_EFFECTS 16
 static union {
 	struct effect_state state[MAX_SAVED_EFFECTS];
-	unsigned char bytes[256];
+	unsigned char bytes[EEPROM_SIZE];
 } eeprom_cache;
 static uint32_t eeprom_dirty_mask = 0;
 
@@ -60,18 +77,22 @@ static inline uint8_t effect_checksum(struct effect *effect, struct effect_state
 // need to wait for it to wake up.
 static bool init_eeprom(void)
 {
-	uint8_t addr = 0;
+#ifdef EEPROM_64KBIT
+	uint8_t addr[2] = { 0, 0 };
+#else
+	uint8_t addr[1] = { 0 };
+#endif
 
 	for (int try = 0; try < 10; try++) {
-		if (i2c_write_blocking(MC24C02_I2C, &addr, 1, true) < 0) {
+		if (i2c_write_blocking(MC24Cxx_I2C, addr, sizeof(addr), true) < 0) {
 			sleep_ms(5);
 			continue;
 		}
 
-		if (i2c_read_blocking(MC24C02_I2C, eeprom_cache.bytes, 256, false) == 256)
+		if (i2c_read_blocking(MC24Cxx_I2C, eeprom_cache.bytes, EEPROM_SIZE, false) == EEPROM_SIZE)
 			return true;
 	}
-	memset(eeprom_cache.bytes, 0, 256);
+	memset(eeprom_cache.bytes, 0, EEPROM_SIZE);
 	return false;
 }
 
@@ -86,23 +107,28 @@ static void eeprom_task(void)
 	if (!mask)
 		return;
 
-	// Write at most one 8-byte chunk per call to handle the 5ms
-	// latency. We use 8-byte chunks (rather than 16) for broader
-	// compatibility, as standard 24C02 parts have an 8-byte page
-	// write limit (unlike the 24C02C which supports 16 bytes).
+	// Write at most a page per call to handle the 5ms
+	// latency.
 	//
 	// Isolate the lowest bit and clear it.
 	mask &= -mask;
 	eeprom_dirty_mask &= ~mask;
 
 	unsigned int chunk_idx = ffs(mask) - 1;
+	unsigned int offset = chunk_idx * EEPROM_PAGE_SIZE;
 
-	uint8_t buf[1 + 8];
-	buf[0] = chunk_idx * 8;
-	memcpy(buf + 1, eeprom_cache.bytes + chunk_idx * 8, 8);
+	uint8_t buf[2 + EEPROM_PAGE_SIZE];
+	buf[0] = offset >> 8;
+	buf[1] = offset & 0xff;
+	memcpy(buf + 2, eeprom_cache.bytes + offset, EEPROM_PAGE_SIZE);
 
 	// If this fails, it fails..
-	i2c_write_blocking(MC24C02_I2C, buf, sizeof(buf), false);
+	uint8_t *p = buf;
+	size_t len = sizeof(buf);
+#ifndef EEPROM_64KBIT
+	p++; len--;
+#endif
+	i2c_write_blocking(MC24Cxx_I2C, p, len, false);
 }
 
 static int max_pot_val(struct effect *effect, int pot)
@@ -165,8 +191,7 @@ static bool save_effect_state(unsigned int effect_idx, struct effect *effect)
 	state->enabled = effect->target ? 1 : 0;
 	state->magic = effect_checksum(effect, state);
 
-	// Set 2 bits per effect (each chunk is 8 bytes, effect is 16 bytes)
-	eeprom_dirty_mask |= (3u << (effect_idx * 2));
+	eeprom_dirty_mask |= 1u << effect_idx;
 	return true;
 }
 
