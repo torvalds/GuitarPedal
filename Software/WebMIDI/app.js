@@ -245,7 +245,7 @@ function handleMidiMessage(event) {
                 globalEnableEl.checked = isGlobalEnabled;
             }
         } else {
-            if (cc === 107) { // MIDI Ch
+            if (cc === MIDI_CHANNEL_CC) {
                 activeTransmitChannel = (val === 0) ? 0xB0 : (0xB0 | ((val - 1) & 0x0F));
             }
             // It's a pot or an effect enable
@@ -430,7 +430,7 @@ function sendMidiCc(cc, val) {
     if (!midiOutput) return;
     midiOutput.send([activeTransmitChannel, cc, val]);
 
-    if (cc === 107) {
+    if (cc === MIDI_CHANNEL_CC) {
         activeTransmitChannel = (val === 0) ? 0xB0 : (0xB0 | ((val - 1) & 0x0F));
     }
 }
