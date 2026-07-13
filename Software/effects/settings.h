@@ -20,10 +20,10 @@ enum usb_input {
 struct {
 	enum usb_output usb_output;
 	enum usb_input usb_input;
-	int midi_channel;
-	float led_pwm, led_intense;
-	int screensaver;
-	int tuning;
+	_Atomic int midi_channel;
+	_Atomic float led_pwm, led_intense;
+	_Atomic int screensaver;
+	_Atomic int tuning;
 } settings;
 
 static void settings_init(unsigned char pot[10])
@@ -36,8 +36,9 @@ static void settings_init(unsigned char pot[10])
 	settings.led_intense = settings_pot4(pot[4]) / 100;
 
 	// Hacky hacky
-	settings_effect.target = EFF_ENABLE_STEPS;
-	settings_effect.intense = settings_effect.active_pot == 4;
+	atomic_store_explicit(&settings_effect.target, EFF_ENABLE_STEPS,
+		memory_order_relaxed);
+	effect_set_intense(&settings_effect, settings_effect.active_pot == 4);
 
 	settings.tuning = pot[5];
 }

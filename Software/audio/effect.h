@@ -1,4 +1,7 @@
 #include "lfo.h"
+#include <stdatomic.h>
+#include <string.h>
+#include "pico/critical_section.h"
 
 float get_usb_audio_input(void);
 
@@ -34,9 +37,9 @@ struct pot_descr {
 //
 struct effect {
 	const char *name, *short_name;
-	unsigned int mix, target;
-	volatile unsigned int seq, last;
-	unsigned char intense, active_pot;
+	unsigned int mix, last;
+	_Atomic unsigned int target, seq;
+	_Atomic unsigned char intense, active_pot;
 	unsigned char pot_values[2][10];
 	void (*graph)(struct effect *, int, unsigned char[10]);
 	void (*init)(unsigned char[10]);
@@ -45,6 +48,23 @@ struct effect {
 	float (*step)(float);
 	const struct pot_descr pots[10];
 };
+
+static critical_section_t effect_config_lock;
+
+static inline unsigned int effect_current_seq(const struct effect *effect)
+{
+	return atomic_load_explicit(&effect->seq, memory_order_acquire);
+}
+
+static inline void effect_config_changed(struct effect *effect)
+{
+	atomic_fetch_add_explicit(&effect->seq, 1, memory_order_release);
+}
+
+static inline void effect_set_intense(struct effect *effect, bool intense)
+{
+	atomic_store_explicit(&effect->intense, intense, memory_order_relaxed);
+}
 
 #define EFFECT_POT(...) { __VA_ARGS__ }
 
@@ -68,15 +88,18 @@ static inline void generic_effect_describe(struct effect *e, unsigned char pots[
 	fprintf(stderr, "\n");
 }
 
-static unsigned int dropped;
+static _Atomic unsigned int dropped;
 
 static inline float do_effect_step(struct effect *effect, float val)
 {
-	if (effect->mix == effect->target) {
+	unsigned int target = atomic_load_explicit(&effect->target,
+		memory_order_relaxed);
+
+	if (effect->mix == target) {
 		if (effect->mix)
 			val = effect->step(val);
 	} else {
-		int dir = effect->mix < effect->target ? +1 : -1;
+		int dir = effect->mix < target ? +1 : -1;
 		float mix = effect->mix / (float) EFF_ENABLE_STEPS;
 		effect->mix += dir;
 		float effect_val = effect->step(val);
@@ -87,7 +110,7 @@ static inline float do_effect_step(struct effect *effect, float val)
 
 #include "process.h"
 
-static int disable_all;
+static _Atomic int disable_all;
 
 #define BLOCKSIZE 200
 
@@ -117,8 +140,8 @@ static inline void single_sample(float mix)
 	// Check we're is safely ahead of TX DMA
 	unsigned int tx_idx = i2s_dma_tx_ptr() - i2s_dma_buf;
 	if (((cpu_idx - tx_idx) & 31) < 2) {
-		dropped++;
-		clipping = 1;
+		atomic_fetch_add_explicit(&dropped, 1, memory_order_relaxed);
+		atomic_store_explicit(&clipping, 1, memory_order_relaxed);
 	}
 
 	// In-place processing
@@ -155,19 +178,32 @@ static __attribute__((noinline)) void make_one_noise(void)
 {
 	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
 		struct effect *effect = effects[i];
+		unsigned char pot[10];
 
-		unsigned seq = effect->seq;
+		unsigned seq = effect_current_seq(effect);
 		if (seq == effect->last)
 			continue;
+
+		// Leave initialization pending while the effect is disabled.
+		if (!effect->mix && !atomic_load_explicit(&effect->target,
+						    memory_order_relaxed))
+			continue;
+
+		critical_section_enter_blocking(&effect_config_lock);
+		seq = atomic_load_explicit(&effect->seq, memory_order_relaxed);
+		memcpy(pot, effect->pot_values[seq & 1], sizeof(pot));
+		critical_section_exit(&effect_config_lock);
+
+		effect->init(pot);
 		effect->last = seq;
-		if (effect->mix)
-			effect->init(effect->pot_values[seq & 1]);
 	}
 
 	static int disable = 0;
-	while (disable != disable_all) {
+	int disable_target = atomic_load_explicit(&disable_all,
+		memory_order_relaxed);
+	while (disable != disable_target) {
 		float mix = disable / (float) EFF_ENABLE_STEPS;
-		disable += (disable < disable_all) ? 1 : -1;
+		disable += (disable < disable_target) ? 1 : -1;
 		single_sample(mix);
 	}
 

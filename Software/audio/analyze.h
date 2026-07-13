@@ -1,3 +1,5 @@
+#include <stdatomic.h>
+
 #define FFT_SHIFT 13
 #define FFT_SIZE (1 << FFT_SHIFT)
 
@@ -13,8 +15,8 @@
 //
 struct analyze_state {
 	float ring_buf[ANALYZE_RING_SIZE];
-	volatile unsigned int write_index;
-	unsigned int read_index;
+	_Atomic unsigned int write_index;
+	_Atomic unsigned int read_index;
 } analyzer;
 
 // Hann function using the quarter_sine table. We don't
@@ -55,7 +57,17 @@ static inline void analyze_process_sample(float sample)
 
 	sample_sum = 0;
 
-	unsigned int idx = analyzer.write_index;
+	unsigned int idx = atomic_load_explicit(&analyzer.write_index,
+		memory_order_relaxed);
+	unsigned int read_idx = atomic_load_explicit(&analyzer.read_index,
+		memory_order_acquire);
+
+	// The analyzer is optional, so drop data instead of overwriting a
+	// window while the UI core is processing it.
+	if (idx - read_idx >= ANALYZE_RING_SIZE)
+		return;
+
 	analyzer.ring_buf[idx & ANALYZE_RING_MASK] = sample;
-	analyzer.write_index = idx + 1;
+	atomic_store_explicit(&analyzer.write_index, idx + 1,
+		memory_order_release);
 }

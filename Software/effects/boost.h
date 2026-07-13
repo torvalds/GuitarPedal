@@ -23,7 +23,7 @@ void boost_init(unsigned char pot[10])
 static float fold(float in, float level)
 {
 	float fold_scale = 0.5;
-	boost_effect.intense = 1;
+	effect_set_intense(&boost_effect, true);
 	for (;;) {
 		float over = (in - level) * fold_scale;
 

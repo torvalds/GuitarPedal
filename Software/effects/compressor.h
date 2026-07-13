@@ -60,7 +60,7 @@ static inline float compressor_step(float in)
 	float target = 1.0f;
 	if (env > compressor.level) {
 		target = mypow(compressor.level / env, compressor.ratio);
-		compressor_effect.intense = 1;
+		effect_set_intense(&compressor_effect, true);
 	}
 
 	// ... and then we smooth the compression factor to prevent clicks

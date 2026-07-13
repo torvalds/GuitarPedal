@@ -5,7 +5,7 @@
 
 #define FLOAT_TO_SAMPLE_MULTIPLIER (0x80000000 / 1.0)
 
-static int clipping;
+static _Atomic int clipping;
 
 // Random buffer size. Note that we only expose
 // half the data in the buffer so that we don't
@@ -18,8 +18,8 @@ static int clipping;
 
 static struct {
 	unsigned phase;
-	volatile unsigned head, tail;
-	volatile s32 buf[OUTPUT_SIZE * 2];
+	_Atomic unsigned head, tail;
+	s32 buf[OUTPUT_SIZE * 2];
 } output;
 
 //
@@ -43,7 +43,7 @@ static struct {
 static inline float process_input(s32 sample)
 {
 	float val = sample * SAMPLE_TO_FLOAT_MULTIPLIER;
-	if (tuner_mode) {
+	if (atomic_load_explicit(&tuner_mode, memory_order_relaxed)) {
 		analyze_process_sample(val);
 		val = 0.0;
 	}
@@ -55,17 +55,17 @@ static inline s32 convert_output(float out)
 {
 	s32 res = (s32)rintf(out * FLOAT_TO_SAMPLE_MULTIPLIER);
 	if (out > 0.99) {
-		clipping = 1;
+		atomic_store_explicit(&clipping, 1, memory_order_relaxed);
 
 		// Be careful about FP overflows close to +1.0,
 		// because even just under 1.0 can round to the
 		// max negative integer result
 		if (res < 0 || out >= 1.0) {
-			clipping = 1;
+			atomic_store_explicit(&clipping, 1, memory_order_relaxed);
 			return 0x7fffffff;
 		}
 	} else if (out < -1.0) {
-		clipping = 1;
+		atomic_store_explicit(&clipping, 1, memory_order_relaxed);
 		return 0x80000000;
 	}
 	return res;
@@ -82,16 +82,25 @@ static inline s32 process_output(float out, s32 dry)
 	case LR_Dry: left = right = dry; break;
 	default: left = wet; right = dry; break;
 	}
-	unsigned idx = (output.head & OUTPUT_MASK) * 2;
+	unsigned head = atomic_load_explicit(&output.head, memory_order_relaxed);
+	unsigned tail = atomic_load_explicit(&output.tail, memory_order_acquire);
+
+	// Do not overwrite samples while the USB core is copying them.
+	if (head - tail >= OUTPUT_SIZE)
+		return wet;
+
+	unsigned idx = (head & OUTPUT_MASK) * 2;
 	output.buf[idx] = left;
 	output.buf[idx + 1] = right;
-	output.head++;
+	atomic_store_explicit(&output.head, head + 1, memory_order_release);
 	return wet;
 }
 
 static inline unsigned output_buffer_size(void)
 {
-	unsigned nr = output.head - output.tail;
+	unsigned head = atomic_load_explicit(&output.head, memory_order_acquire);
+	unsigned tail = atomic_load_explicit(&output.tail, memory_order_relaxed);
+	unsigned nr = head - tail;
 	if (nr > OUTPUT_SIZE/2)
 		nr = OUTPUT_SIZE/2;
 	return nr;
@@ -99,8 +108,8 @@ static inline unsigned output_buffer_size(void)
 
 static inline unsigned get_output_samples(s32 *buffer, unsigned nr)
 {
-	unsigned head = output.head;
-	unsigned tail = output.tail;
+	unsigned head = atomic_load_explicit(&output.head, memory_order_acquire);
+	unsigned tail = atomic_load_explicit(&output.tail, memory_order_relaxed);
 
 	// If more than 75% of the buffer is filled, we
 	// have lost sync, and we will just restart at
@@ -118,7 +127,7 @@ static inline unsigned get_output_samples(s32 *buffer, unsigned nr)
 	// tell if the head has gone way past.
 	if (nr > max)
 		nr = max;
-	output.tail = tail + nr;
+	unsigned int new_tail = tail + nr;
 
 	tail &= OUTPUT_MASK;
 	unsigned batch = nr;
@@ -130,5 +139,6 @@ static inline unsigned get_output_samples(s32 *buffer, unsigned nr)
 		tail = 0;
 	}
 	memcpy(buffer, (void *)(output.buf + tail * 2), batch * 2 * sizeof(s32));
+	atomic_store_explicit(&output.tail, new_tail, memory_order_release);
 	return nr;
 }

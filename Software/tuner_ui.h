@@ -503,14 +503,16 @@ static void draw_analyzer(void)
 		tuning_idx = 0;
 	const struct tuning *current_tuning = tunings[tuning_idx];
 
-	unsigned int write_idx = analyzer.write_index;
+	unsigned int write_idx = atomic_load_explicit(&analyzer.write_index,
+		memory_order_acquire);
+	unsigned int read_idx = atomic_load_explicit(&analyzer.read_index,
+		memory_order_relaxed);
 
 	// Catch up if CPU0 falls too far behind CPU1
-	if (write_idx - analyzer.read_index > ANALYZE_RING_SIZE - FFT_SIZE) {
-		analyzer.read_index = write_idx - FFT_SIZE;
-	}
+	if (write_idx - read_idx > ANALYZE_RING_SIZE - FFT_SIZE)
+		read_idx = write_idx - FFT_SIZE;
 
-	if (write_idx - analyzer.read_index < FFT_SIZE) {
+	if (write_idx - read_idx < FFT_SIZE) {
 		if (!remote_tuner_data)
 			return;
 
@@ -528,9 +530,11 @@ static void draw_analyzer(void)
 
 	// Copy data from ring buffer and apply Hann window
 	for (int i = 0; i < FFT_SIZE; i++) {
-		float sample = analyzer.ring_buf[(analyzer.read_index + i) & ANALYZE_RING_MASK];
+		float sample = analyzer.ring_buf[(read_idx + i) & ANALYZE_RING_MASK];
 		tuner_state.fft[i] = sample * hanning(i);
 	}
+	atomic_store_explicit(&analyzer.read_index, read_idx + FFT_SIZE / 16,
+		memory_order_release);
 
 	// Run FFT
 	fft(tuner_state.fft, FFT_SHIFT);
@@ -568,7 +572,4 @@ static void draw_analyzer(void)
 	send_tuner_midi(&results);
 	render_tuner_results(&results, current_tuning);
 
-	// Overlap by advancing read_idx by a fraction of FFT_SIZE
-	// FFT_SIZE / 16 = 512 samples. At 12kHz, this means 23 updates per second.
-	analyzer.read_index += FFT_SIZE / 16;
 }

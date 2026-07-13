@@ -38,10 +38,11 @@
 #include "sh1106.h"
 #include "switch.h"
 
-static int tuner_mode = 0;
+static _Atomic int tuner_mode;
 static volatile int user_interaction = 0;
 static volatile int next_state_seq = 1;
 static const struct effect *last_effect = NULL;
+static _Atomic bool reset_effects_requested;
 
 #include "audio/tac5112.h"
 #include "audio/effect.h"
@@ -50,15 +51,36 @@ static const struct effect *last_effect = NULL;
 
 static void reset_effect(struct effect *eff)
 {
-	eff->active_pot = 0;
 	eff->last = -1;
-	eff->seq = 0;
-	eff->mix = eff->target = 0;
+	eff->mix = 0;
+	atomic_init(&eff->target, 0);
+	atomic_init(&eff->seq, 0);
+	atomic_init(&eff->intense, 0);
+	atomic_init(&eff->active_pot, 0);
 	for (int i = 0; i < 10; i++) {
 		unsigned char def_val = eff->pots[i].def_val;
 		eff->pot_values[0][i] = def_val;
 		eff->pot_values[1][i] = def_val;
 	}
+}
+
+static void reset_all_effects(void)
+{
+	critical_section_enter_blocking(&effect_config_lock);
+	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
+		struct effect *effect = effects[i];
+
+		effect->active_pot = 0;
+		for (int p = 0; p < 10; p++) {
+			unsigned char def_val = effect->pots[p].def_val;
+			effect->pot_values[0][p] = def_val;
+			effect->pot_values[1][p] = def_val;
+		}
+		atomic_store_explicit(&effect->target, 0, memory_order_relaxed);
+		effect_config_changed(effect);
+	}
+	critical_section_exit(&effect_config_lock);
+	last_effect = NULL;
 }
 
 static void init_i2s(void)
@@ -160,11 +182,8 @@ static void switch_irq(void)
 		if (!gpio_get(GPIO_SW1) && !gpio_get(GPIO_SW2)) {
 			if (usb_is_connected())
 				reset_usb_boot(0, 0);
-			last_effect = NULL;
-			for (int i = 0; i < ARRAY_SIZE(effects); i++) {
-				struct effect *eff = effects[i];
-				reset_effect(eff);
-			}
+			atomic_store_explicit(&reset_effects_requested, true,
+				memory_order_release);
 		}
 	}
 	user_interaction = 1;
@@ -190,8 +209,10 @@ bool handle_midi_packet(const uint8_t packet[4])
 	uint8_t data1 = packet[2];
 	uint8_t data2 = packet[3];
 
-	if (settings.midi_channel != 0) {
-		if ((status & 0x0F) != (settings.midi_channel - 1))
+	int midi_channel = atomic_load_explicit(&settings.midi_channel,
+		memory_order_acquire);
+	if (midi_channel != 0) {
+		if ((status & 0x0F) != (midi_channel - 1))
 			return false;
 	}
 
@@ -201,23 +222,30 @@ bool handle_midi_packet(const uint8_t packet[4])
 		handled = true;
 		// Control Change
 		if (data1 == STATE_DUMP_CC) {
-			send_midi_cc(GLOBAL_ENABLE_CC, disable_all ? 0 : 127);
+			send_midi_cc(GLOBAL_ENABLE_CC,
+				atomic_load_explicit(&disable_all,
+					memory_order_acquire) ? 0 : 127);
 			for (int i=0; i<ARRAY_SIZE(effects); i++) {
 				struct effect *e = effects[i];
 				uint8_t en_cc = effect_enable_to_cc[i];
-				if (en_cc) send_midi_cc(en_cc, e->target ? 127 : 0);
+				if (en_cc)
+					send_midi_cc(en_cc,
+						atomic_load_explicit(&e->target,
+							memory_order_acquire) ? 127 : 0);
 				for (int p=0; p<10; p++) {
 					uint8_t pot_cc = effect_pot_to_cc[i][p];
 					if (pot_cc) {
-						int val = e->pot_values[e->seq & 1][p];
+						int val = e->pot_values[effect_current_seq(e) & 1][p];
 						send_midi_cc(pot_cc, val);
 					}
 				}
 			}
 		} else if (data1 == GLOBAL_ENABLE_CC) {
 			if (data2 == 64) {
-				disable_all = EFF_ENABLE_STEPS;
+				atomic_store_explicit(&disable_all, EFF_ENABLE_STEPS,
+					memory_order_release);
 				send_midi_cc(GLOBAL_ENABLE_CC, 0);
+				critical_section_enter_blocking(&effect_config_lock);
 				for (int i = 0; i < ARRAY_SIZE(effects); i++) {
 					struct effect *effect = effects[i];
 					for (int p = 0; p < 10; p++) {
@@ -225,11 +253,11 @@ bool handle_midi_packet(const uint8_t packet[4])
 						effect->pot_values[0][p] = def_val;
 						effect->pot_values[1][p] = def_val;
 					}
-					if (effect->init)
-						effect->init(effect->pot_values[0]);
-					effect->target = 0;
-					effect->seq++;
+					atomic_store_explicit(&effect->target, 0,
+						memory_order_relaxed);
+					effect_config_changed(effect);
 				}
+				critical_section_exit(&effect_config_lock);
 			} else if (data2 == 65) {
 				for (int i = 0; i < ARRAY_SIZE(effects); i++) {
 					save_effect_state(i, effects[i]);
@@ -237,24 +265,28 @@ bool handle_midi_packet(const uint8_t packet[4])
 			} else if (data2 == 66) {
 				for (int i = 0; i < ARRAY_SIZE(effects); i++) {
 					if (load_effect_state(i, effects[i])) {
-						effects[i]->seq++;
+						effect_config_changed(effects[i]);
 					}
 				}
 			} else if (data2 == 67) {
-				disable_all = 0;
+				atomic_store_explicit(&disable_all, 0,
+					memory_order_release);
 				send_midi_cc(GLOBAL_ENABLE_CC, 127);
 				for (int i = 0; i < ARRAY_SIZE(effects); i++) {
-					effects[i]->target = 0;
-					effects[i]->seq++;
+					atomic_store_explicit(&effects[i]->target, 0,
+						memory_order_release);
+					effect_config_changed(effects[i]);
 				}
 			} else if (data2 == 126) {
 				reset_usb_boot(0, 0);
 			} else if (data2 == 68) {
-				tuner_mode = 1;
+				atomic_store_explicit(&tuner_mode, 1, memory_order_release);
 			} else if (data2 == 69) {
-				tuner_mode = 0;
+				atomic_store_explicit(&tuner_mode, 0, memory_order_release);
 			} else {
-				disable_all = (data2 == 0) ? EFF_ENABLE_STEPS : 0;
+				atomic_store_explicit(&disable_all,
+					(data2 == 0) ? EFF_ENABLE_STEPS : 0,
+					memory_order_release);
 			}
 			ui_sync_changed = true;
 		} else if (data1 < 128) {
@@ -265,32 +297,36 @@ bool handle_midi_packet(const uint8_t packet[4])
 				int max_val = max_pot_val(effect, m->pot_idx);
 				if (val > max_val)
 					val = 0;
+				critical_section_enter_blocking(&effect_config_lock);
 				effect->pot_values[0][m->pot_idx] = val;
 				effect->pot_values[1][m->pot_idx] = val;
-				effect->seq++;
+				effect_config_changed(effect);
+				critical_section_exit(&effect_config_lock);
 				ui_sync_changed = true;
 			} else if (m->type == 2) { // Enable
 				struct effect *effect = effects[m->effect_idx];
 				if (data2 == 64) {
+					critical_section_enter_blocking(&effect_config_lock);
 					for (int p = 0; p < 10; p++) {
 						unsigned char def_val = effect->pots[p].def_val;
 						effect->pot_values[0][p] = def_val;
 						effect->pot_values[1][p] = def_val;
 					}
-					if (effect->init)
-						effect->init(effect->pot_values[0]);
+					critical_section_exit(&effect_config_lock);
 				} else if (data2 == 65) {
 					save_effect_state(m->effect_idx, effect);
 				} else if (data2 == 66) {
 					if (load_effect_state(m->effect_idx, effect)) {
-						effect->seq++;
+						effect_config_changed(effect);
 						ui_sync_changed = true;
 					}
 				} else {
-					effect->target = (data2 == 0) ? 0 : EFF_ENABLE_STEPS;
+					atomic_store_explicit(&effect->target,
+						(data2 == 0) ? 0 : EFF_ENABLE_STEPS,
+						memory_order_release);
 				}
 				if (data2 != 66) {
-					effect->seq++;
+					effect_config_changed(effect);
 					ui_sync_changed = true;
 				}
 			}
@@ -350,13 +386,22 @@ bool handle_midi_packet(const uint8_t packet[4])
 			ui_sync_changed = true;
 
 			struct effect *effect = effects[current_midi_effect_idx];
+			unsigned char pot_values[10];
 			uint8_t en_cc = effect_enable_to_cc[current_midi_effect_idx];
-			if (en_cc) send_midi_cc(en_cc, effect->target ? 127 : 0);
+			if (en_cc)
+				send_midi_cc(en_cc,
+					atomic_load_explicit(&effect->target,
+						memory_order_acquire) ? 127 : 0);
 			send_midi_cc(MIDI_CC_ACTIVE_POT, effect->active_pot);
+			critical_section_enter_blocking(&effect_config_lock);
+			unsigned int seq = effect_current_seq(effect);
+			memcpy(pot_values, effect->pot_values[seq & 1],
+				sizeof(pot_values));
+			critical_section_exit(&effect_config_lock);
 			for (int i=0; i<10; i++) {
 				uint8_t cc = effect_pot_to_cc[current_midi_effect_idx][i];
 				if (cc) {
-					int val = effect->pot_values[0][i];
+					int val = pot_values[i];
 					uint8_t midi_val = val;
 					send_midi_cc(cc, midi_val);
 				}
@@ -523,7 +568,11 @@ static void init_effects(void)
 
 		reset_effect(effect);
 		load_effect_state(i, effect);
-		effect->init(effect->pot_values[0]);
+		unsigned int seq = effect_current_seq(effect);
+		effect->mix = atomic_load_explicit(&effect->target,
+			memory_order_relaxed);
+		effect->init(effect->pot_values[seq & 1]);
+		effect->last = seq;
 	}
 }
 
@@ -550,6 +599,7 @@ int main()
 	int forced_update = 1;
 
 	enable_ftz();
+	critical_section_init(&effect_config_lock);
 
 	init_i2s();
 	init_ws2812();
@@ -573,15 +623,20 @@ int main()
 	init_effects();
 
 	// Idle animation setup
-	absolute_time_t next_idle_time = delayed_by_ms(now, settings.screensaver);
+	int screensaver = atomic_load_explicit(&settings.screensaver,
+		memory_order_acquire);
+	absolute_time_t next_idle_time = delayed_by_ms(now, screensaver);
 
 	multicore_launch_core1(audio_processing);
 
 	for (;;) {
 		absolute_time_t now = get_absolute_time();
 
-		if (__atomic_exchange_n(&user_interaction, 0, __ATOMIC_RELAXED))
-			next_idle_time = delayed_by_ms(now, settings.screensaver);
+		if (__atomic_exchange_n(&user_interaction, 0, __ATOMIC_RELAXED)) {
+			screensaver = atomic_load_explicit(&settings.screensaver,
+				memory_order_acquire);
+			next_idle_time = delayed_by_ms(now, screensaver);
+		}
 
 #ifdef USB_MODE_HOST
 		tuh_task();
@@ -592,6 +647,10 @@ int main()
 		sh1106_task();
 		uart_midi_poll();
 
+		if (atomic_exchange_explicit(&reset_effects_requested, false,
+					     memory_order_acq_rel))
+			reset_all_effects();
+
 		// Claim 25Hz screen updates
 		if (now > next_ui_update) {
 			next_ui_update = delayed_by_ms(now, 40);
@@ -600,13 +659,16 @@ int main()
 			// Right stomp long-ress: switch to tuner mode
 			if (switch_pressed(LONGPRESS(2))) {
 				switch_clear(LONGPRESS(2));
-				tuner_mode = !tuner_mode;
-				send_midi_cc(GLOBAL_ENABLE_CC, tuner_mode ? 68 : 69);
+				int enabled = !atomic_load_explicit(&tuner_mode,
+					memory_order_relaxed);
+				atomic_store_explicit(&tuner_mode, enabled,
+					memory_order_release);
+				send_midi_cc(GLOBAL_ENABLE_CC, enabled ? 68 : 69);
 			}
 
 			// Are we in tuner mode? Don't do normal
 			// screen updates
-			if (tuner_mode) {
+			if (atomic_load_explicit(&tuner_mode, memory_order_acquire)) {
 				tuner_mode_ui();
 				forced_update = 1;
 				continue;
@@ -619,7 +681,8 @@ int main()
 			forced_update = 0;
 
 #ifndef USB_MODE_HOST
-			unsigned int current_dropped = __atomic_exchange_n(&dropped, 0, __ATOMIC_RELAXED);
+			unsigned int current_dropped = atomic_exchange_explicit(&dropped,
+				0, memory_order_relaxed);
 			if (current_dropped) {
 				int midi_dropped = current_dropped;
 				if (midi_dropped > 127) midi_dropped = 127;

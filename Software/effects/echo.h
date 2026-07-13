@@ -271,7 +271,7 @@ static inline float echo_step(float in)
 
 	// Brighten the status LED in SOS so the player can see they're in
 	// the indefinite-loop mode.
-	echo_effect.intense = echo.sos_mode;
+	effect_set_intense(&echo_effect, echo.sos_mode);
 
 	return out;
 }

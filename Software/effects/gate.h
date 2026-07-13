@@ -41,7 +41,7 @@ static inline float gate_step(float in)
 		mult = linear(0.001f, mult, 0.0f);
 		if (mult < 0.01f)
 			mult = 0.0f;
-		gate_effect.intense = 1;
+		effect_set_intense(&gate_effect, true);
 	}
 	gate.mult = mult;
 	return in * mult;

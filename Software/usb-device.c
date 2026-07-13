@@ -1,5 +1,6 @@
 #include "pico/stdlib.h"
 #include "pico.h"
+#include <stdatomic.h>
 
 #include "board.h"
 #include "tusb.h"
@@ -452,8 +453,8 @@ bool tud_audio_get_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
 
 #define USB_RX_BUF_SIZE 512
 static int32_t usb_rx_buf[USB_RX_BUF_SIZE * 2]; // stereo buffer
-static volatile unsigned usb_rx_head;
-static volatile unsigned usb_rx_tail;
+static _Atomic unsigned usb_rx_head;
+static _Atomic unsigned usb_rx_tail;
 
 void usb_audio_task(void)
 {
@@ -485,12 +486,16 @@ void usb_audio_task(void)
 		unsigned samples_read = bytes_read / (sizeof(int32_t) * 2);
 
 		for (unsigned i = 0; i < samples_read; i++) {
-			unsigned head = usb_rx_head;
+			unsigned head = atomic_load_explicit(&usb_rx_head,
+				memory_order_relaxed);
 			unsigned next_head = (head + 1) % USB_RX_BUF_SIZE;
-			if (next_head != usb_rx_tail) {
+			unsigned tail = atomic_load_explicit(&usb_rx_tail,
+				memory_order_acquire);
+			if (next_head != tail) {
 				usb_rx_buf[head * 2] = temp_buf[i * 2];
 				usb_rx_buf[head * 2 + 1] = temp_buf[i * 2 + 1];
-				usb_rx_head = next_head;
+				atomic_store_explicit(&usb_rx_head, next_head,
+					memory_order_release);
 			}
 		}
 	}
@@ -498,11 +503,13 @@ void usb_audio_task(void)
 
 float get_usb_audio_input(void)
 {
-	unsigned tail = usb_rx_tail;
-	if (tail != usb_rx_head) {
+	unsigned tail = atomic_load_explicit(&usb_rx_tail, memory_order_relaxed);
+	unsigned head = atomic_load_explicit(&usb_rx_head, memory_order_acquire);
+	if (tail != head) {
 		int32_t l = usb_rx_buf[tail * 2];
 		int32_t r = usb_rx_buf[tail * 2 + 1];
-		usb_rx_tail = (tail + 1) % USB_RX_BUF_SIZE;
+		atomic_store_explicit(&usb_rx_tail,
+			(tail + 1) % USB_RX_BUF_SIZE, memory_order_release);
 
 		float val_l = l * (1.0f / 2147483648.0f);
 		float val_r = r * (1.0f / 2147483648.0f);

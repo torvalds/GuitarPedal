@@ -182,7 +182,7 @@ static void list_effects(struct effect *active)
 		if (effect == active)
 			sh1106_rectangle(x-3, y-3, width+6, 8+6, rect_border);
 		sh1106_puts_6x8(x,y,name);
-		if (effect->target)
+		if (atomic_load_explicit(&effect->target, memory_order_acquire))
 			sh1106_reverse(x-1, y-1, width+2, 10);
 		x += width+6;
 	}
@@ -312,7 +312,11 @@ static void set_led(int pin, bool on, bool intense)
 {
 	int level = 0;
 	if (on || intense) {
-		float pwm = intense ? settings.led_intense : settings.led_pwm;
+		float pwm = intense ?
+			atomic_load_explicit(&settings.led_intense,
+				memory_order_relaxed) :
+			atomic_load_explicit(&settings.led_pwm,
+				memory_order_relaxed);
 		level = led_pwm_mapping(pwm);
 	}
 
@@ -337,12 +341,6 @@ static void update_ui(int force_update)
 	if (switch_pressed(LONGPRESS(1)) || switch_pressed(LONGPRESS(3))) {
 		switch_clear(LONGPRESS(1));
 		switch_clear(LONGPRESS(3));
-		unsigned int seq = effect->seq;
-		unsigned char *cur_pot = effect->pot_values[seq & 1];
-		unsigned char *new_pot = effect->pot_values[!(seq & 1)];
-		memcpy(new_pot, cur_pot, 10);
-		effect->seq = 0;
-
 		save_effect_state(effect_idx, effect);
 		update_screen = true;
 	}
@@ -351,27 +349,30 @@ static void update_ui(int force_update)
 	// enable/disable current effect
 	if (switch_pressed(1) || switch_pressed(3)) {
 		switch_clear(1); switch_clear(3);
-		effect->target = EFF_ENABLE_STEPS * !effect->target;
+		unsigned int target = atomic_load_explicit(&effect->target,
+			memory_order_relaxed) ? 0 : EFF_ENABLE_STEPS;
+		atomic_store_explicit(&effect->target, target, memory_order_release);
 		uint8_t en_cc = effect_enable_to_cc[effect_idx];
-		if (en_cc) send_midi_cc(en_cc, effect->target ? 127 : 0);
+		if (en_cc) send_midi_cc(en_cc, target ? 127 : 0);
 		for (int i=0; i<10; i++) {
 			uint8_t cc = effect_pot_to_cc[effect_idx][i];
 			if (cc) {
-				int val = effect->pot_values[effect->seq & 1][i];
+				int val = effect->pot_values[effect_current_seq(effect) & 1][i];
 				uint8_t midi_val = val;
 				send_midi_cc(cc, midi_val);
 			}
 		}
 		update_screen = true;
 		last_effect = NULL;	// Force list_effects();
-		effect->seq += 2;	// Force saving
 	}
 
 	// Right stomp: enable/disable all effects
 	if (switch_pressed(2)) {
 		switch_clear(2);
-		disable_all = EFF_ENABLE_STEPS * !disable_all;
-		send_midi_cc(GLOBAL_ENABLE_CC, disable_all ? 0 : 127);
+		int disable = atomic_load_explicit(&disable_all,
+			memory_order_relaxed) ? 0 : EFF_ENABLE_STEPS;
+		atomic_store_explicit(&disable_all, disable, memory_order_release);
+		send_midi_cc(GLOBAL_ENABLE_CC, disable ? 0 : 127);
 	}
 
 	// Effect switching: lower rotary
@@ -393,8 +394,14 @@ static void update_ui(int force_update)
 	}
 
 	// The LED mappings have changed between boards
-	bool led1 = !disable_all, led1_intense = clipping;
-	bool led2 = effect->target, led2_intense = effect->intense;
+	int current_clipping = atomic_exchange_explicit(&clipping, 0,
+		memory_order_acq_rel);
+	int current_intense = atomic_exchange_explicit(&effect->intense, 0,
+		memory_order_acq_rel);
+	bool led1 = !atomic_load_explicit(&disable_all, memory_order_acquire);
+	bool led1_intense = current_clipping;
+	bool led2 = atomic_load_explicit(&effect->target, memory_order_acquire);
+	bool led2_intense = current_intense;
 
 #ifdef USB_MODE_HOST
 	extern uint8_t remote_clipping;
@@ -407,25 +414,28 @@ static void update_ui(int force_update)
 
 	static uint8_t last_clipping = 0;
 	static uint8_t last_intense = 0;
-	if (clipping != last_clipping) {
-		send_midi_cc(MIDI_CC_AUDIO_CLIPPING, clipping ? 127 : 0);
-		last_clipping = clipping;
+	if (current_clipping != last_clipping) {
+		send_midi_cc(MIDI_CC_AUDIO_CLIPPING, current_clipping ? 127 : 0);
+		last_clipping = current_clipping;
 	}
-	if (effect->intense != last_intense) {
-		send_midi_cc(MIDI_CC_EFFECT_INTENSE, effect->intense ? 127 : 0);
-		last_intense = effect->intense;
+	if (current_intense != last_intense) {
+		send_midi_cc(MIDI_CC_EFFECT_INTENSE, current_intense ? 127 : 0);
+		last_intense = current_intense;
 	}
 
-	effect->intense = 0;
-	clipping = 0;
-
-	unsigned int seq = effect->seq;
+	unsigned int seq = effect_current_seq(effect);
 	unsigned char *cur_pot = effect->pot_values[seq & 1];
 	unsigned char *new_pot = effect->pot_values[!(seq & 1)];
+	critical_section_enter_blocking(&effect_config_lock);
 	memcpy(new_pot, cur_pot, 10);
 
 	// If something changed, let the other CPU know
-	if (read_pots(effect, new_pot)) {
+	bool pots_changed = read_pots(effect, new_pot);
+	if (pots_changed)
+		effect_config_changed(effect);
+	critical_section_exit(&effect_config_lock);
+
+	if (pots_changed) {
 		for (int i=0; i<10; i++) {
 			int val = new_pot[i];
 			int old_val = cur_pot[i];
@@ -435,7 +445,6 @@ static void update_ui(int force_update)
 				send_midi_cc(cc, midi_val);
 			}
 		}
-		effect->seq++;
 		update_screen = true;
 	}
 

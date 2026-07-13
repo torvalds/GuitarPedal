@@ -167,10 +167,12 @@ static bool load_effect_state(unsigned int effect_idx, struct effect *effect)
 			return false;
 	}
 
+	critical_section_enter_blocking(&effect_config_lock);
 	memcpy(effect->pot_values[0], state->pots, 10);
 	memcpy(effect->pot_values[1], state->pots, 10);
-	effect->target = state->enabled ? EFF_ENABLE_STEPS : 0;
-	effect->mix = effect->target;
+	atomic_store_explicit(&effect->target,
+		state->enabled ? EFF_ENABLE_STEPS : 0, memory_order_release);
+	critical_section_exit(&effect_config_lock);
 	if (effect->load)
 		effect->load(effect, state->pots);
 	return true;
@@ -182,13 +184,16 @@ static bool save_effect_state(unsigned int effect_idx, struct effect *effect)
 		return false;
 
 	struct effect_state *state = eeprom_cache.state + effect_idx;
-	int seq = effect->seq & 1;
+	critical_section_enter_blocking(&effect_config_lock);
+	int seq = effect_current_seq(effect) & 1;
 
 	if (effect->save)
 		effect->save(effect, effect->pot_values[seq]);
 	memcpy(state->pots, effect->pot_values[seq], 10);
+	critical_section_exit(&effect_config_lock);
 
-	state->enabled = effect->target ? 1 : 0;
+	state->enabled = atomic_load_explicit(&effect->target,
+		memory_order_acquire) ? 1 : 0;
 	state->magic = effect_checksum(effect, state);
 
 	eeprom_dirty_mask |= 1u << effect_idx;
