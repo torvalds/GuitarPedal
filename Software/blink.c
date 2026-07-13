@@ -298,8 +298,13 @@ bool handle_midi_packet(const uint8_t packet[4])
 
 		if (data1 == MIDI_CC_ACTIVE_POT) {
 			if (current_midi_effect_idx < ARRAY_SIZE(effects)) {
-				effects[current_midi_effect_idx]->active_pot = data2;
-				ui_sync_changed = true;
+				struct effect *effect = effects[current_midi_effect_idx];
+
+				if (data2 < ARRAY_SIZE(effect->pots) &&
+				    effect->pots[data2].label) {
+					effect->active_pot = data2;
+					ui_sync_changed = true;
+				}
 			}
 		} else if (data1 == MIDI_CC_AUDIO_CLIPPING) {
 #ifdef USB_MODE_HOST
