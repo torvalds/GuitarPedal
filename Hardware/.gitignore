@@ -1,6 +1,7 @@
 fp-info-cache
 gerbers/
 manufacturing/
+.history/
 *-backups/
 *-bak
 *.bak
