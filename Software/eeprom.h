@@ -5,7 +5,7 @@
 #include "board.h"
 #include <string.h>
 
-#ifdef EEPROM_64KBIT
+#if EEPROM_64KBIT
   // We could fit many more, but
   // let's leave that for later
   //
@@ -77,7 +77,7 @@ static inline uint8_t effect_checksum(struct effect *effect, struct effect_state
 // need to wait for it to wake up.
 static bool init_eeprom(void)
 {
-#ifdef EEPROM_64KBIT
+#if EEPROM_64KBIT
 	uint8_t addr[2] = { 0, 0 };
 #else
 	uint8_t addr[1] = { 0 };
@@ -125,7 +125,7 @@ static void eeprom_task(void)
 	// If this fails, it fails..
 	uint8_t *p = buf;
 	size_t len = sizeof(buf);
-#ifndef EEPROM_64KBIT
+#if !EEPROM_64KBIT
 	p++; len--;
 #endif
 	i2c_write_blocking(MC24Cxx_I2C, p, len, false);
