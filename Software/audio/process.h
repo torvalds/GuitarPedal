@@ -13,14 +13,14 @@ static int clipping;
 // the part of the buffer we're looking at.
 //
 // 256 samples is about 5ms worth of data at 48kHz
-#define OUTPUT_SIZE 512
-#define OUTPUT_MASK (OUTPUT_SIZE-1)
+#define USB_OUTPUT_SIZE 512
+#define USB_OUTPUT_MASK (USB_OUTPUT_SIZE-1)
 
 static struct {
 	unsigned phase;
 	volatile unsigned head, tail;
-	volatile s32 buf[OUTPUT_SIZE * 2];
-} output;
+	volatile raw_sample_t buf[USB_OUTPUT_SIZE];
+} usb_output;
 
 //
 // The audio board with the TAC5112 seems to return -1.0..1.0
@@ -40,9 +40,9 @@ static struct {
 
 #define SAMPLE_TO_FLOAT_MULTIPLIER (3.45 / 2.82843 / 0x80000000)
 
-static inline float process_input(s32 sample)
+static inline float process_input(raw_sample_t sample)
 {
-	float val = sample * SAMPLE_TO_FLOAT_MULTIPLIER;
+	float val = sample.left * SAMPLE_TO_FLOAT_MULTIPLIER;
 	if (tuner_mode) {
 		analyze_process_sample(val);
 		val = 0.0;
@@ -51,7 +51,7 @@ static inline float process_input(s32 sample)
 }
 
 // Be careful about FP overflows around +1.0
-static inline s32 convert_output(float out)
+static inline raw_sample_t convert_output(float out)
 {
 	s32 res = (s32)rintf(out * FLOAT_TO_SAMPLE_MULTIPLIER);
 	if (out > 0.99) {
@@ -62,52 +62,53 @@ static inline s32 convert_output(float out)
 		// max negative integer result
 		if (res < 0 || out >= 1.0) {
 			clipping = 1;
-			return 0x7fffffff;
+			res = 0x7fffffff;
 		}
 	} else if (out < -1.0) {
 		clipping = 1;
-		return 0x80000000;
+		res = 0x80000000;
 	}
-	return res;
+
+	// We'll do stereo output some day
+	return (raw_sample_t) { .left = res, .right = res };
 }
 
-static inline s32 process_output(float out, s32 dry)
+static inline raw_sample_t process_output(float out, raw_sample_t dry)
 {
-	s32 wet = convert_output(out);
-	s32 left, right;
+	raw_sample_t wet = convert_output(out);
+	raw_sample_t usb;
 
 	switch (settings.usb_output) {
 	case LR_None: return wet;
-	case LR_Wet: left = right = wet; break;
-	case LR_Dry: left = right = dry; break;
-	default: left = wet; right = dry; break;
+	case LR_Wet: usb = wet; break;
+	case LR_Dry: usb = dry; break;
+	default: usb.left = wet.left; usb.right = dry.left; break;
 	}
-	unsigned idx = (output.head & OUTPUT_MASK) * 2;
-	output.buf[idx] = left;
-	output.buf[idx + 1] = right;
-	output.head++;
+	unsigned idx = usb_output.head & USB_OUTPUT_MASK;
+	usb_output.head++;
+	usb_output.buf[idx] = usb;
 	return wet;
 }
 
 static inline unsigned output_buffer_size(void)
 {
-	unsigned nr = output.head - output.tail;
-	if (nr > OUTPUT_SIZE/2)
-		nr = OUTPUT_SIZE/2;
+	unsigned nr = usb_output.head - usb_output.tail;
+	if (nr > USB_OUTPUT_SIZE/2)
+		nr = USB_OUTPUT_SIZE/2;
 	return nr;
 }
 
 static inline unsigned get_output_samples(s32 *buffer, unsigned nr)
 {
-	unsigned head = output.head;
-	unsigned tail = output.tail;
+	unsigned head = usb_output.head;
+	unsigned tail = usb_output.tail;
 
 	// If more than 75% of the buffer is filled, we
 	// have lost sync, and we will just restart at
 	// the half buffer mark.
 	unsigned max = head - tail;
-	if (max > 3 * OUTPUT_SIZE / 4) {
-		max = OUTPUT_SIZE / 2;
+	if (max > 3 * USB_OUTPUT_SIZE / 4) {
+		max = USB_OUTPUT_SIZE / 2;
 		tail = head - max;
 	}
 
@@ -118,17 +119,17 @@ static inline unsigned get_output_samples(s32 *buffer, unsigned nr)
 	// tell if the head has gone way past.
 	if (nr > max)
 		nr = max;
-	output.tail = tail + nr;
+	usb_output.tail = tail + nr;
 
-	tail &= OUTPUT_MASK;
+	tail &= USB_OUTPUT_MASK;
 	unsigned batch = nr;
-	if (tail + batch > OUTPUT_SIZE) {
-		batch = OUTPUT_SIZE - tail;
-		memcpy(buffer, (void *)(output.buf + tail * 2), batch * 2 * sizeof(s32));
+	if (tail + batch > USB_OUTPUT_SIZE) {
+		batch = USB_OUTPUT_SIZE - tail;
+		memcpy(buffer, (void *)(usb_output.buf + tail), batch * sizeof(raw_sample_t));
 		buffer += batch * 2;
 		batch = nr - batch;
 		tail = 0;
 	}
-	memcpy(buffer, (void *)(output.buf + tail * 2), batch * 2 * sizeof(s32));
+	memcpy(buffer, (void *)(usb_output.buf + tail), batch * sizeof(raw_sample_t));
 	return nr;
 }

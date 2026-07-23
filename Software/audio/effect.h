@@ -91,47 +91,50 @@ static int disable_all;
 
 #define BLOCKSIZE 200
 
-static int32_t __attribute__((aligned(128))) i2s_dma_buf[32];
+static raw_sample_t __attribute__((aligned(128))) i2s_dma_buf[16];
 static int dma_tx;
 static int dma_rx;
 static unsigned int cpu_idx = 0;
 
-static inline int32_t *i2s_dma_tx_ptr(void)
+static inline raw_sample_t *i2s_dma_tx_ptr(void)
 {
-	return (int32_t *) dma_hw->ch[dma_tx].read_addr;
+	return (raw_sample_t *) (dma_hw->ch[dma_tx].read_addr & ~7);
 }
 
-static inline int32_t *i2s_dma_rx_ptr(void)
+static inline raw_sample_t *i2s_dma_rx_ptr(void)
 {
-	return (int32_t *) dma_hw->ch[dma_rx].write_addr;
+	return (raw_sample_t *) (dma_hw->ch[dma_rx].write_addr & ~7);
 }
 
 static inline void single_sample(float mix)
 {
-	int32_t *cpu_ptr = i2s_dma_buf + cpu_idx;
+	raw_sample_t *cpu_ptr = i2s_dma_buf + cpu_idx;
+	cpu_idx = (cpu_idx + 1) & 15;
 
 	// Wait for RX DMA to produce the sample
 	while (cpu_ptr == i2s_dma_rx_ptr())
 		tight_loop_contents();
 
-	// Check we're is safely ahead of TX DMA
+	// Check we're safely ahead of TX DMA
 	unsigned int tx_idx = i2s_dma_tx_ptr() - i2s_dma_buf;
-	if (((cpu_idx - tx_idx) & 31) < 2) {
+	if (((cpu_idx - tx_idx) & 15) < 2) {
 		dropped++;
 		clipping = 1;
 	}
 
 	// In-place processing
-	int32_t sample = *cpu_ptr;
+	raw_sample_t sample = *cpu_ptr;
 	float in = process_input(sample);
 	float usb_in = get_usb_audio_input();
 
+	// We need to do the USB input as stereo too
 	if (settings.usb_input == USB_IN_PRE_FX)
 		in += usb_in;
 
 	float out = in;
-	for (int i = 0; i < ARRAY_SIZE(effects); i++)
+	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
 		out = do_effect_step(effects[i], out);
+	}
 
 	float val = linear(mix, in, out);
 
@@ -140,8 +143,6 @@ static inline void single_sample(float mix)
 
 	sample = process_output(val, sample);
 	*cpu_ptr = sample;
-
-	cpu_idx = (cpu_idx + 1) & 31;
 }
 
 static void bypass(void)

@@ -17,6 +17,10 @@ typedef unsigned int u32;
 typedef long long s64;
 typedef unsigned long long u64;
 
+typedef struct {
+	s32 left, right;
+} raw_sample_t;
+
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 // Declare the fast functions with hardware support

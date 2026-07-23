@@ -22,19 +22,19 @@
 .fifo tx
 .clock_div 25
 .side_set 2
-.out 1 left
 
 .wrap_target
-	pull noblock		side 0b00	; cycle 0: FSYNC goes LOW
-	set x,30		side 0b01
+	out pins, 1		side 0b00	; Cycle 0: FSYNC low. Output R0 (from previous frame)
+public start_tx:
+	set x, 30		side 0b01
 loop_low:
-	out pins,1		side 0b00	; cycles 1..31: DOUT wiggles
+	out pins, 1		side 0b00	; Cycle 2: Output L31..L1
 	jmp x-- loop_low	side 0b01
 
-	out pins,1		side 0b10	; cycle 32: FSYNC goes HIGH
-	set x,30		side 0b11
+	out pins, 1		side 0b10	; Cycle 64: FSYNC high. Output L0
+	set x, 30		side 0b11
 loop_high:
-	nop			side 0b10	; cycles 3-63
+	out pins, 1		side 0b10	; Cycle 66: Output R31..R1
 	jmp x-- loop_high	side 0b11
 .wrap
 
@@ -61,9 +61,11 @@ static inline void i2s_tx_program_init(PIO pio, uint sm, uint offset, uint pin)
 	sm_config_set_sideset_pin_base(&c, pin);
 	// DOUT using 'OUT' instruction
 	sm_config_set_out_pins(&c, pin+2, 1);
+	// Auto-pull, shift left (MSB first), 32 bits
+	sm_config_set_out_shift(&c, false, true, 32);
 
 	// Load and run the program
-	pio_sm_init(pio, sm, offset, &c);
+	pio_sm_init(pio, sm, offset + i2s_tx_offset_start_tx, &c);
 	pio_sm_set_enabled(pio, sm, true);
 }
 %}
@@ -71,18 +73,23 @@ static inline void i2s_tx_program_init(PIO pio, uint sm, uint offset, uint pin)
 .program i2s_rx
 .fifo rx
 .clock_div 25
-.in 1 left
+
+public start_rx:
+	wait 1 jmppin			; wait for FSYNC going high
+	wait 0 jmppin [1]		; wait for FSYNC going low, delay to sample middle
 
 .wrap_target
-	set x,31
-	wait 0 jmppin [2]		; wait for FSYNC going low
-					; then delay to sample in the middle of valid window
+	set x, 30
+loop_left:
+	in pins, 1
+	jmp x-- loop_left
+	in pins, 1			; sample LSB of left channel
 
-loop_in:
-	in pins,1			; read DIN and loop exactly 2 cycles
-	jmp x-- loop_in
-
-	push noblock [14]		; write result and delay before looping
+	set x, 30
+loop_right:
+	in pins, 1
+	jmp x-- loop_right
+	in pins, 1			; sample LSB of right channel
 .wrap
 
 % c-sdk {
@@ -92,9 +99,11 @@ static inline void i2s_rx_program_init(PIO pio, uint sm, uint offset, uint pin)
 
 	sm_config_set_jmp_pin(&c, pin+1);	// FSYNC
 	sm_config_set_in_pins(&c, pin+3);	// DOUT
+	// Auto-push, shift left (MSB first), 32 bits
+	sm_config_set_in_shift(&c, false, true, 32);
 
 	// Load and run the program
-	pio_sm_init(pio, sm, offset, &c);
+	pio_sm_init(pio, sm, offset + i2s_rx_offset_start_rx, &c);
 	pio_sm_set_enabled(pio, sm, true);
 }
 %}
