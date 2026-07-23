@@ -104,7 +104,7 @@ static void tac5112_init(void)
 		{ 0x6d, 0b00100000 },	// DAC OUT2M configured for line out driver and audio bandwidth, AIN2P impedance 4k4
 		{ 0x72, 0b00011100 },	// Three biquads per ADC channel
 		{ 0x73, 0b00011100 },	// Three biquads per DAC channel
-		{ 0x76, 0b10001000 },	// Input Channel 1 enabled; Output Channel 1 enabled
+		{ 0x76, 0b11001100 },	// Input Channel 1 and 2 enabled; Output Channel 1 and 2 enabled
 		{ 0x78, 0b11100000 },	// ADC, DAC and MICBIAS Powered Up
 	};
 	tac5112_array_write(regwrite);
