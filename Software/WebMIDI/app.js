@@ -585,16 +585,25 @@ function renderUI() {
               <input type="checkbox" id="enable-${idx}">
               <span class="slider round"></span>
             </label>
+            <button class="action-btn effect-reset-btn" title="Reset to Defaults">↺</button>
         `;
 
         header.appendChild(title);
         header.appendChild(enableGroup);
         card.appendChild(header);
 
-        // Clicking the header (but not the toggle) opens the active effect panel
-        header.addEventListener('click', (e) => {
-            if (e.target.closest('.switch')) return;
-            openActiveEffectPanel(idx, effect);
+        const resetBtn = enableGroup.querySelector('.effect-reset-btn');
+        resetBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // prevent toggling effect header or other click events
+            effect.pots.forEach((potDef, pIdx) => {
+                const initialVal = getInitialPotValue(potDef);
+                const inputEl = ccToElementMap.get(`eff-${idx}-pot-${pIdx}`);
+                if (inputEl) {
+                    inputEl.value = initialVal;
+                    // Trigger the event so the UI updates and Sysex gets sent
+                    inputEl.dispatchEvent(new Event(inputEl.tagName === 'SELECT' ? 'change' : 'input'));
+                }
+            });
         });
 
         const enableInput = enableGroup.querySelector('input');
@@ -712,9 +721,17 @@ function renderUI() {
                 ctx.lineWidth = 4;
                 ctx.strokeStyle = '#4ecca3';
 
+                const margin = 40;
+                const graphWidth = W - 2 * margin;
+                const maxFx = 13.0 * Math.log2(20000.0 / 20.0);
+
                 for (let x = 0; x <= W; x += 2) {
-                    const fx = x * (127.0 / W);
-                    const freq = 20 * Math.pow(2, fx / 13.0);
+                    const p = (x - margin) / graphWidth;
+                    const fx = p * maxFx;
+                    let freq = 20 * Math.pow(2, fx / 13.0);
+                    // clamp freq for math stability outside margins
+                    if (freq < 5) freq = 5;
+                    if (freq > 24000) freq = 24000;
 
                     const w0 = fastsincos(freq / fs);
                     const w2 = fastsincos((2.0 * freq) / fs);
@@ -745,7 +762,8 @@ function renderUI() {
                     const db = getFloat(i * 2 + 1);
 
                     const fx = 13.0 * Math.log2(freq / 20.0);
-                    const x = fx * (W / 127.0);
+                    const p = fx / maxFx;
+                    const x = margin + p * graphWidth;
                     const y = (H / 2) - (db * (H / 40));
 
                     nodes.push({x, y});
@@ -796,11 +814,15 @@ function renderUI() {
                     const p = (freq - fDef.min) / (fDef.max - fDef.min);
                     fVal = Math.round(p * 120.0);
                 }
+                if (isNaN(fVal)) fVal = 0;
+                fVal = Math.max(0, Math.min(120, fVal));
 
                 // Inverse gain
                 let gVal = 0;
                 const gp = (db - gDef.min) / (gDef.max - gDef.min);
                 gVal = Math.round(gp * 120.0);
+                if (isNaN(gVal)) gVal = 0;
+                gVal = Math.max(0, Math.min(120, gVal));
 
                 // Update inputs visually
                 eqPotsInputs[fIdx].value = fVal;
@@ -864,9 +886,17 @@ function renderUI() {
                 const W = canvas.width;
                 const H = canvas.height;
 
-                const fx = pos.x / (W / 127.0);
+                const posX = Math.max(0, Math.min(W, pos.x));
+                const posY = Math.max(0, Math.min(H, pos.y));
+
+                const margin = 40;
+                const graphWidth = W - 2 * margin;
+                const maxFx = 13.0 * Math.log2(20000.0 / 20.0);
+
+                const p = (posX - margin) / graphWidth;
+                const fx = p * maxFx;
                 const freq = 20.0 * Math.pow(2, fx / 13.0);
-                const db = (H / 2 - pos.y) / (H / 40);
+                const db = (H / 2 - posY) / (H / 40);
 
                 updateEqNode(activeNodeIdx, freq, db);
             };
@@ -1060,10 +1090,7 @@ appTitleEl.addEventListener('click', () => {
     function closeAllPanels() {
         if (document.getElementById('panel-backdrop')) document.getElementById('panel-backdrop').classList.add('hidden');
         if (document.getElementById('global-menu-panel')) document.getElementById('global-menu-panel').classList.add('hidden');
-        if (document.getElementById('active-effect-panel')) document.getElementById('active-effect-panel').classList.add('hidden');
         if (document.getElementById('active-pot-panel')) document.getElementById('active-pot-panel').classList.add('hidden');
-        activeEffectIdx = null;
-        activeEffectDef = null;
         activePotCc = null;
         activePotDef = null;
     }
@@ -1114,75 +1141,6 @@ appTitleEl.addEventListener('click', () => {
         closeGlobalMenuBtn.addEventListener('click', () => {
             closeAllPanels();
         });
-    }
-
-    // Active Effect Panel
-    const closeActiveEffectBtn = document.getElementById('close-active-effect');
-    const activeEffectPanel = document.getElementById('active-effect-panel');
-    let activeEffectIdx = null;
-    let activeEffectDef = null;
-
-    if (closeActiveEffectBtn) {
-        closeActiveEffectBtn.addEventListener('click', () => {
-            closeAllPanels();
-        });
-    }
-
-    const effectResetBtn = document.getElementById('effect-reset-btn');
-    if (effectResetBtn) {
-        effectResetBtn.addEventListener('click', () => {
-            if (!midiOutput) {
-                showButtonError(effectResetBtn, 'Not Connected');
-                return;
-            }
-            if (activeEffectDef) {
-                sendSysex([0x04, 0]);
-                setTimeout(() => sendSysex([0x05]), 100);
-                showButtonSuccess(effectResetBtn, 'Reset Complete');
-            }
-        });
-    }
-
-    const effectSaveBtn = document.getElementById('effect-save-btn');
-    if (effectSaveBtn) {
-        effectSaveBtn.addEventListener('click', () => {
-            if (!midiOutput) {
-                showButtonError(effectSaveBtn, 'Not Connected');
-                return;
-            }
-            if (activeEffectDef) {
-
-                showButtonSuccess(effectSaveBtn, 'Saved!');
-            }
-        });
-    }
-
-    const effectLoadBtn = document.getElementById('effect-load-btn');
-    if (effectLoadBtn) {
-        effectLoadBtn.addEventListener('click', () => {
-            if (!midiOutput) {
-                showButtonError(effectLoadBtn, 'Not Connected');
-                return;
-            }
-            if (activeEffectDef) {
-
-                setTimeout(() => sendSysex([0x05]), 100);
-                showButtonSuccess(effectLoadBtn, 'Loaded!');
-            }
-        });
-    }
-
-    function openActiveEffectPanel(effectIdx) {
-        const activeEffectPanel = document.getElementById('active-effect-panel');
-        if (activeEffectPanel) {
-            closeAllPanels();
-            activeEffectIdx = effectIdx;
-            activeEffectDef = PEDAL_EFFECTS[effectIdx];
-
-            document.getElementById('active-effect-title').textContent = activeEffectDef.name;
-            activeEffectPanel.classList.remove('hidden');
-            if (backdrop) backdrop.classList.remove('hidden');
-        }
     }
 
     // Active Pot initialization
