@@ -185,8 +185,176 @@ static int8_t remote_cents[9] = {0};
 
 int current_midi_effect_idx = 0;
 
+#include "midi_schema.h"
+
+static int schema_tx_index = -1;
+
+static void send_sysex_schema_chunk(void)
+{
+	if (schema_tx_index < 0) return;
+
+	int len = strlen(midi_schema_json);
+	while (schema_tx_index <= len + 1) {
+		uint8_t packet[4];
+		int next_idx = schema_tx_index;
+
+		if (schema_tx_index == 0) {
+			packet[0] = 0x04; packet[1] = 0xF0; packet[2] = 0x7D; packet[3] = 0x02;
+			next_idx = 1;
+		} else {
+			int i = schema_tx_index - 1;
+			int remain = len - i;
+			if (remain >= 3) {
+				packet[0] = 0x04;
+				packet[1] = midi_schema_json[i++];
+				packet[2] = midi_schema_json[i++];
+				packet[3] = midi_schema_json[i++];
+				next_idx = i + 1;
+			} else if (remain == 2) {
+				packet[0] = 0x07;
+				packet[1] = midi_schema_json[i++];
+				packet[2] = midi_schema_json[i++];
+				packet[3] = 0xF7;
+				next_idx = len + 2;
+			} else if (remain == 1) {
+				packet[0] = 0x06;
+				packet[1] = midi_schema_json[i++];
+				packet[2] = 0xF7;
+				packet[3] = 0;
+				next_idx = len + 2;
+			} else {
+				packet[0] = 0x05;
+				packet[1] = 0xF7;
+				packet[2] = 0;
+				packet[3] = 0;
+				next_idx = len + 2;
+			}
+		}
+
+		if (!tud_midi_packet_write(packet)) break; // FIFO full
+		schema_tx_index = next_idx;
+
+		if (schema_tx_index >= len + 2) {
+			schema_tx_index = -1;
+			break;
+		}
+	}
+}
+
+static int state_dump_eff_idx = -1;
+static int state_dump_pot_idx = 0;
+static int state_dump_packet_idx = 0;
+
+static void send_state_dump_chunk(void)
+{
+	if (state_dump_eff_idx < 0) return;
+
+	while (state_dump_eff_idx < ARRAY_SIZE(effects)) {
+		if (state_dump_eff_idx == 0 && state_dump_pot_idx == 0) {
+			uint8_t packet[4] = { 0x0B, 0xB0, MIDI_CC_GLOBAL_ENABLE, disable_all ? 0 : 127 };
+			if (!tud_midi_packet_write(packet)) return;
+			state_dump_pot_idx = 1;
+		} else {
+			struct effect *e = effects[state_dump_eff_idx];
+			uint8_t packet[4];
+
+			if (state_dump_packet_idx == 0) {
+				packet[0] = 0x04; packet[1] = 0xF0; packet[2] = 0x7D; packet[3] = 0x03;
+			} else if (state_dump_packet_idx == 1) {
+				packet[0] = 0x04; packet[1] = state_dump_eff_idx;
+				if (state_dump_pot_idx == 1) {
+					packet[2] = 0; packet[3] = e->target ? 127 : 0;
+				} else {
+					packet[2] = state_dump_pot_idx - 1;
+					packet[3] = e->pot_values[e->seq & 1][state_dump_pot_idx - 2];
+				}
+			} else {
+				packet[0] = 0x05; packet[1] = 0xF7; packet[2] = 0; packet[3] = 0;
+			}
+
+			if (!tud_midi_packet_write(packet)) return;
+
+			state_dump_packet_idx++;
+			if (state_dump_packet_idx == 3) {
+				state_dump_packet_idx = 0;
+				state_dump_pot_idx++;
+				if (state_dump_pot_idx == 12) {
+					state_dump_pot_idx = 1;
+					state_dump_eff_idx++;
+				}
+			}
+		}
+	}
+
+	state_dump_eff_idx = -1;
+}
+static uint8_t sysex_buf[32];
+static int sysex_len = 0;
+static bool in_sysex = false;
+
+static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
+{
+	uint8_t cmd = sysex_buf[0];
+	if (cmd == 0x01) { // Schema Request
+		schema_tx_index = 0;
+	} else if (cmd == 0x03 && sysex_len >= 3) { // Set Parameter
+		uint8_t eff_id = sysex_buf[1];
+		uint8_t pot_idx = sysex_buf[2];
+		uint8_t val = sysex_buf[3];
+		struct effect *e = NULL;
+		if (eff_id < ARRAY_SIZE(effects)) {
+			e = effects[eff_id];
+		}
+		if (e) {
+			if (pot_idx == 0) {
+				e->target = val > 0 ? EFF_ENABLE_STEPS : 0;
+			} else if (pot_idx <= 10) {
+				unsigned int seq = e->seq;
+				unsigned char *cur_pot = e->pot_values[seq & 1];
+				unsigned char *new_pot = e->pot_values[!(seq & 1)];
+				memcpy(new_pot, cur_pot, 10);
+				new_pot[pot_idx - 1] = val;
+				e->seq++;
+			}
+			ui_sync_changed = true;
+		}
+	} else if (cmd == 0x04 && sysex_len >= 2) { // Save Scene
+		uint8_t scene_id = sysex_buf[1];
+		save_scene(scene_id);
+	} else if (cmd == 0x05) { // State Dump Request
+		state_dump_eff_idx = 0;
+		state_dump_pot_idx = 0;
+		state_dump_packet_idx = 0;
+	}
+}
+
 bool handle_midi_packet(const uint8_t packet[4])
 {
+	uint8_t code = packet[0] & 0x0F;
+
+	// Handle SysEx parsing across packets
+	if (code == 0x04 || code == 0x05 || code == 0x06 || code == 0x07) {
+		for (int i = 1; i <= 3; i++) {
+			uint8_t b = packet[i];
+			if (b == 0xF0) {
+				in_sysex = true;
+				sysex_len = 0;
+			} else if (b == 0xF7 && in_sysex) {
+				in_sysex = false;
+				handle_sysex_payload(sysex_buf, sysex_len);
+			} else if (in_sysex) {
+				if (sysex_len == 0 && b == 0x7D) {
+					// Consume header 7D
+				} else if (sysex_len < sizeof(sysex_buf)) {
+					sysex_buf[sysex_len++] = b;
+				}
+			}
+			if (code == 0x05 && i == 1) break;
+			if (code == 0x06 && i == 2) break;
+		}
+		return true;
+	}
+
 	uint8_t status = packet[1];
 	uint8_t data1 = packet[2];
 	uint8_t data2 = packet[3];
@@ -200,104 +368,20 @@ bool handle_midi_packet(const uint8_t packet[4])
 
 	if ((status & 0xF0) == 0xB0) {
 		handled = true;
-		// Control Change
-		if (data1 == STATE_DUMP_CC) {
-			send_midi_cc(GLOBAL_ENABLE_CC, disable_all ? 0 : 127);
-			for (int i=0; i<ARRAY_SIZE(effects); i++) {
-				struct effect *e = effects[i];
-				uint8_t en_cc = effect_enable_to_cc[i];
-				if (en_cc) send_midi_cc(en_cc, e->target ? 127 : 0);
-				for (int p=0; p<10; p++) {
-					uint8_t pot_cc = effect_pot_to_cc[i][p];
-					if (pot_cc) {
-						int val = e->pot_values[e->seq & 1][p];
-						send_midi_cc(pot_cc, val);
-					}
-				}
-			}
-		} else if (data1 == GLOBAL_ENABLE_CC) {
-			if (data2 == 64) {
-				disable_all = EFF_ENABLE_STEPS;
-				send_midi_cc(GLOBAL_ENABLE_CC, 0);
-				for (int i = 0; i < ARRAY_SIZE(effects); i++) {
-					struct effect *effect = effects[i];
-					for (int p = 0; p < 10; p++) {
-						unsigned char def_val = effect->pots[p].def_val;
-						effect->pot_values[0][p] = def_val;
-						effect->pot_values[1][p] = def_val;
-					}
-					if (effect->init)
-						effect->init(effect->pot_values[0]);
-					effect->target = 0;
-					effect->seq++;
-				}
-			} else if (data2 == 65) {
-				for (int i = 0; i < ARRAY_SIZE(effects); i++) {
-					save_effect_state(i, effects[i]);
-				}
-			} else if (data2 == 66) {
-				for (int i = 0; i < ARRAY_SIZE(effects); i++) {
-					if (load_effect_state(i, effects[i])) {
-						effects[i]->seq++;
-					}
-				}
-			} else if (data2 == 67) {
-				disable_all = 0;
-				send_midi_cc(GLOBAL_ENABLE_CC, 127);
-				for (int i = 0; i < ARRAY_SIZE(effects); i++) {
-					effects[i]->target = 0;
-					effects[i]->seq++;
-				}
-			} else if (data2 == 126) {
-				reset_usb_boot(0, 0);
-			} else if (data2 == 68) {
+		if (data1 == 20) { // Global Bypass
+			if (data2 == 68) {
 				tuner_mode = 1;
 			} else if (data2 == 69) {
 				tuner_mode = 0;
+			} else if (data2 == 126) {
+				reset_usb_boot(0, 0);
 			} else {
 				disable_all = (data2 == 0) ? EFF_ENABLE_STEPS : 0;
 			}
 			ui_sync_changed = true;
-		} else if (data1 < 128) {
-			const struct midi_cc_mapping *m = &dense_midi_map[data1];
-			if (m->type == 1) { // Pot
-				struct effect *effect = effects[m->effect_idx];
-				int val = data2;
-				int max_val = max_pot_val(effect, m->pot_idx);
-				if (val > max_val)
-					val = 0;
-				effect->pot_values[0][m->pot_idx] = val;
-				effect->pot_values[1][m->pot_idx] = val;
-				effect->seq++;
-				ui_sync_changed = true;
-			} else if (m->type == 2) { // Enable
-				struct effect *effect = effects[m->effect_idx];
-				if (data2 == 64) {
-					for (int p = 0; p < 10; p++) {
-						unsigned char def_val = effect->pots[p].def_val;
-						effect->pot_values[0][p] = def_val;
-						effect->pot_values[1][p] = def_val;
-					}
-					if (effect->init)
-						effect->init(effect->pot_values[0]);
-				} else if (data2 == 65) {
-					save_effect_state(m->effect_idx, effect);
-				} else if (data2 == 66) {
-					if (load_effect_state(m->effect_idx, effect)) {
-						effect->seq++;
-						ui_sync_changed = true;
-					}
-				} else {
-					effect->target = (data2 == 0) ? 0 : EFF_ENABLE_STEPS;
-				}
-				if (data2 != 66) {
-					effect->seq++;
-					ui_sync_changed = true;
-				}
-			}
-		}
-
-		if (data1 == MIDI_CC_ACTIVE_POT) {
+		} else if (data1 == 7) { // Volume
+			// Not yet wired globally
+		} else if (data1 == MIDI_CC_ACTIVE_POT) {
 			if (current_midi_effect_idx < ARRAY_SIZE(effects)) {
 				effects[current_midi_effect_idx]->active_pot = data2;
 				ui_sync_changed = true;
@@ -340,23 +424,10 @@ bool handle_midi_packet(const uint8_t packet[4])
 		}
 	} else if ((status & 0xF0) == 0xC0) {
 		handled = true;
-		// Program Change
-		if (data1 < ARRAY_SIZE(effects)) {
-			current_midi_effect_idx = data1;
+		// Program Change -> Load Scene
+		if (data1 < MAX_SCENES) {
+			load_scene(data1);
 			ui_sync_changed = true;
-
-			struct effect *effect = effects[current_midi_effect_idx];
-			uint8_t en_cc = effect_enable_to_cc[current_midi_effect_idx];
-			if (en_cc) send_midi_cc(en_cc, effect->target ? 127 : 0);
-			send_midi_cc(MIDI_CC_ACTIVE_POT, effect->active_pot);
-			for (int i=0; i<10; i++) {
-				uint8_t cc = effect_pot_to_cc[current_midi_effect_idx][i];
-				if (cc) {
-					int val = effect->pot_values[0][i];
-					uint8_t midi_val = val;
-					send_midi_cc(cc, midi_val);
-				}
-			}
 		}
 	}
 
@@ -583,6 +654,8 @@ int main()
 		tuh_task();
 #else
 		tud_task();
+		send_sysex_schema_chunk();
+		send_state_dump_chunk();
 		usb_audio_task();
 #endif
 		sh1106_task();
@@ -597,7 +670,7 @@ int main()
 			if (switch_pressed(LONGPRESS(2))) {
 				switch_clear(LONGPRESS(2));
 				tuner_mode = !tuner_mode;
-				send_midi_cc(GLOBAL_ENABLE_CC, tuner_mode ? 68 : 69);
+				send_midi_cc(MIDI_CC_GLOBAL_ENABLE, tuner_mode ? 68 : 69);
 			}
 
 			// Are we in tuner mode? Don't do normal

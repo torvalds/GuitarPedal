@@ -70,8 +70,16 @@
         </div>
         <button id="global-reset-btn" class="menu-btn">↺ Reset All to Defaults</button>
         <button id="global-disable-btn" class="menu-btn">⏸ Disable All Effects</button>
-        <button id="global-save-btn" class="menu-btn">💾 Save All to EEPROM</button>
-        <button id="global-load-btn" class="menu-btn">📂 Load All from EEPROM</button>
+        <div class="scene-selection" style="margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+          <label style="display:block; margin-bottom: 5px; color: var(--text-muted); font-size: 0.9em;">Scene Selection</label>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <select id="global-scene-select" style="flex: 1; background: #222; color: #fff; padding: 8px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.2); font-family: inherit; font-size: 1em;">
+              <!-- Options injected via JS -->
+            </select>
+            <button id="global-load-scene-btn" class="glass-button" style="padding: 8px 15px; font-size: 0.9em;">📂 Load</button>
+            <button id="global-save-scene-btn" class="glass-button" style="padding: 8px 15px; font-size: 0.9em;">💾 Save</button>
+          </div>
+        </div>
         <button id="update-app-btn" class="menu-btn">⬇️ Update App</button>
         <button id="global-program-btn" class="menu-btn danger-btn">⚠️ Reboot to Programming Mode</button>
       </div>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rp2350-pedal-cache-v4';
+const CACHE_NAME = 'rp2350-pedal-cache-v6';
 const urlsToCache = [
   './',
   './index.html',
@@ -22,15 +22,19 @@ self.addEventListener('install', event => {
 
 self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Cache hit - return response
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
+    fetch(event.request).then(response => {
+      // Network success - update cache and return response
+      if (response && response.status === 200) {
+        const responseClone = response.clone();
+        caches.open(CACHE_NAME).then(cache => {
+          cache.put(event.request, responseClone);
+        });
       }
-    )
+      return response;
+    }).catch(() => {
+      // Network failed - fallback to cache
+      return caches.match(event.request);
+    })
   );
 });
 

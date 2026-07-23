@@ -321,13 +321,23 @@ input[type=range]:focus {
 }
 
 .eq-curve-wrapper {
-  position: absolute;
-  top: 40px;
-  left: 0;
-  right: 0;
-  height: 200px;
-  z-index: 0;
-  pointer-events: none;
+  position: relative;
+  width: 100%;
+  height: 300px;
+  margin-top: 20px;
+  z-index: 1;
+  pointer-events: auto;
+  cursor: crosshair;
+}
+
+.eq-sliders-hidden {
+  display: none !important;
+}
+
+.eq-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .eq-curve-svg {

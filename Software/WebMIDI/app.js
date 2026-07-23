@@ -105,7 +105,7 @@ async function initMidi() {
             console.error("Web MIDI API is not supported in this browser.");
             return;
         }
-        midiAccess = await navigator.requestMIDIAccess({ sysex: false });
+        midiAccess = await navigator.requestMIDIAccess({ sysex: true });
         midiAccess.onstatechange = updateMidiState;
         updateMidiState();
     } catch (err) {
@@ -192,7 +192,7 @@ function updateMidiState() {
         appTitleEl.textContent = `Connected: ${foundInput.name}`;
 
         // Request initial state dump
-        sendMidiCc(STATE_DUMP_CC, 127);
+        sendSysex([0x01]);
     } else {
         midiInput = null;
         midiOutput = null;
@@ -220,7 +220,74 @@ if (updateAppBtn) {
     });
 }
 
+
+function sendSysex(data) {
+    if (!midiOutput) return;
+    const msg = new Uint8Array([0xF0, 0x7D, ...data, 0xF7]);
+    midiOutput.send(msg);
+}
+
+let PEDAL_EFFECTS = [];
+let effectIdMap = new Map();
+
+function handleSysex(data) {
+    const cmd = data[2];
+    if (cmd === 0x02) {
+        // Schema Response
+        let jsonStr = '';
+        for (let i = 3; i < data.length - 1; i++) {
+            jsonStr += String.fromCharCode(data[i]);
+        }
+        try {
+            PEDAL_EFFECTS = JSON.parse(jsonStr);
+            effectIdMap.clear();
+            PEDAL_EFFECTS.forEach((e, idx) => effectIdMap.set(e.id, idx));
+            renderUI();
+            // Request State
+            sendSysex([0x05]);
+        } catch (e) {
+            console.error("Failed to parse schema", e);
+        }
+    } else if (cmd === 0x03 && data.length >= 6) { // Set Parameter
+        const effId = data[3];
+        const potIdx = data[4];
+        const val = data[5];
+
+        const idx = effectIdMap.get(effId);
+        if (idx !== undefined) {
+            const idKey = potIdx === 0 ? `eff-${idx}-bypass` : `eff-${idx}-pot-${potIdx-1}`;
+            const el = ccToElementMap.get(idKey);
+            if (el) {
+                if (el.type === 'checkbox') {
+                    el.checked = (val > 0);
+                } else if (el.tagName === 'SELECT') {
+                    el.value = val;
+                } else if (el.type === 'range') {
+                    el.value = val;
+                    const valDisplay = el.parentElement.querySelector('.pot-value');
+                    if (valDisplay && el.potDef) {
+                        valDisplay.textContent = formatPotValue(el.potDef, val);
+                    }
+                    if (el.redrawCurve) {
+                        el.redrawCurve();
+                    }
+                    if (activePotDef && activePotCc === idKey) { // activePotCc is now acting as string key
+                        const activeSlider = document.getElementById('active-pot-slider');
+                        if (activeSlider) activeSlider.value = val;
+                        const activeValue = document.getElementById('active-pot-value');
+                        if (activeValue) activeValue.textContent = formatPotValue(activePotDef, val);
+                    }
+                }
+            }
+        }
+    }
+}
+
 function handleMidiMessage(event) {
+    if (event.data[0] === 0xF0) {
+        if (event.data[1] === 0x7D) handleSysex(event.data);
+        return;
+    }
     const [status, data1, data2] = event.data;
 
     // Control Change (0xB0 to 0xBF, we just mask to 0xB0 for channel 1)
@@ -426,6 +493,12 @@ function updateTunerDisplay() {
     }
 }
 
+
+function sendMidiPc(pc) {
+    if (!midiOutput) return;
+    midiOutput.send([0xC0 | (activeTransmitChannel & 0x0F), pc]);
+}
+
 function sendMidiCc(cc, val) {
     if (!midiOutput) return;
     midiOutput.send([activeTransmitChannel, cc, val]);
@@ -492,6 +565,452 @@ function getInitialPotValue(pot) {
 function renderUI() {
     effectsContainer.innerHTML = '';
 
+    PEDAL_EFFECTS.forEach((effect, idx) => {
+        const card = document.createElement('section');
+        card.className = 'glass-panel effect-card';
+        card.id = `effect-${idx}`;
+
+        // Header
+        const header = document.createElement('div');
+        header.className = 'effect-header';
+
+        const title = document.createElement('div');
+        title.className = 'effect-title';
+        title.textContent = effect.name;
+
+        const enableGroup = document.createElement('div');
+        enableGroup.className = 'control-group enable-group';
+        enableGroup.innerHTML = `
+            <label class="switch">
+              <input type="checkbox" id="enable-${idx}">
+              <span class="slider round"></span>
+            </label>
+        `;
+
+        header.appendChild(title);
+        header.appendChild(enableGroup);
+        card.appendChild(header);
+
+        // Clicking the header (but not the toggle) opens the active effect panel
+        header.addEventListener('click', (e) => {
+            if (e.target.closest('.switch')) return;
+            openActiveEffectPanel(idx, effect);
+        });
+
+        const enableInput = enableGroup.querySelector('input');
+        ccToElementMap.set(`eff-${idx}-bypass`, enableInput);
+        enableInput.addEventListener('change', (e) => {
+            sendSysex([0x03, effect.id, 0, e.target.checked ? 127 : 0]);
+        });
+
+        // Controls
+        const controls = document.createElement('div');
+
+        let slidersContainer = null;
+        let eqPotsInputs = [];
+
+        if (effect.name === 'Parametric EQ') {
+
+            controls.className = 'effect-controls eq-container';
+
+            const curveWrapper = document.createElement('div');
+            curveWrapper.className = 'eq-curve-wrapper';
+            curveWrapper.innerHTML = `
+                <canvas id="eq-canvas-${idx}" width="1000" height="300" class="eq-canvas"></canvas>
+            `;
+            controls.appendChild(curveWrapper);
+
+            slidersContainer = document.createElement('div');
+            slidersContainer.className = 'eq-sliders eq-sliders-hidden';
+            controls.appendChild(slidersContainer);
+
+            effect.redrawCurve = () => {
+                const canvas = curveWrapper.querySelector(`#eq-canvas-${idx}`);
+                if (!canvas || eqPotsInputs.length < 10) return;
+                const ctx = canvas.getContext('2d');
+                const W = canvas.width;
+                const H = canvas.height;
+                ctx.clearRect(0, 0, W, H);
+
+                // Math helper for biquad mag sq
+                function fastsincos(f) {
+                    const rad = f * 2 * Math.PI;
+                    return { sin: Math.sin(rad), cos: Math.cos(rad) };
+                }
+                function pow2(x) { return Math.pow(2, x); }
+                function biquad_mag_sq(c, w0, w2) {
+                    const re_num = c.b0 + c.b1 * w0.cos + c.b2 * w2.cos;
+                    const im_num = c.b1 * w0.sin + c.b2 * w2.sin;
+                    const num = re_num * re_num + im_num * im_num;
+
+                    const re_den = 1.0 + c.a1 * w0.cos + c.a2 * w2.cos;
+                    const im_den = c.a1 * w0.sin + c.a2 * w2.sin;
+                    const den = re_den * re_den + im_den * im_den;
+
+                    if (den < 1e-12) return num * 1e12;
+                    return num / den;
+                }
+                function biquad_loshelf(w0, Q, A) {
+                    const alpha = w0.sin / (2 * Q);
+                    const ap1 = A + 1, am1 = A - 1;
+                    const sqAmin2 = 2 * Math.sqrt(A) * alpha;
+                    const a0_inv = 1 / (ap1 + am1 * w0.cos + sqAmin2);
+                    return {
+                        b0: A * (ap1 - am1 * w0.cos + sqAmin2) * a0_inv,
+                        b1: 2 * A * (am1 - ap1 * w0.cos) * a0_inv,
+                        b2: A * (ap1 - am1 * w0.cos - sqAmin2) * a0_inv,
+                        a1: -2 * (am1 + ap1 * w0.cos) * a0_inv,
+                        a2: (ap1 + am1 * w0.cos - sqAmin2) * a0_inv
+                    };
+                }
+                function biquad_peaking(w0, Q, A) {
+                    const alpha = w0.sin / (2 * Q);
+                    const a0_inv = 1 / (1 + alpha / A);
+                    return {
+                        b0: (1 + alpha * A) * a0_inv,
+                        b1: (-2 * w0.cos) * a0_inv,
+                        b2: (1 - alpha * A) * a0_inv,
+                        a1: (-2 * w0.cos) * a0_inv,
+                        a2: (1 - alpha / A) * a0_inv
+                    };
+                }
+                function biquad_hishelf(w0, Q, A) {
+                    const alpha = w0.sin / (2 * Q);
+                    const ap1 = A + 1, am1 = A - 1;
+                    const sqAmin2 = 2 * Math.sqrt(A) * alpha;
+                    const a0_inv = 1 / (ap1 - am1 * w0.cos + sqAmin2);
+                    return {
+                        b0: A * (ap1 + am1 * w0.cos + sqAmin2) * a0_inv,
+                        b1: -2 * A * (am1 + ap1 * w0.cos) * a0_inv,
+                        b2: A * (ap1 + am1 * w0.cos - sqAmin2) * a0_inv,
+                        a1: 2 * (am1 - ap1 * w0.cos) * a0_inv,
+                        a2: (ap1 - am1 * w0.cos - sqAmin2) * a0_inv
+                    };
+                }
+
+                const pots = eqPotsInputs.map(el => parseInt(el.value));
+                // getFloat maps 0-120 to actual value
+                function getFloat(p_idx) {
+                    const val = pots[p_idx];
+                    const potDef = effect.pots[p_idx];
+                    const p = val / 120.0;
+                    if (potDef.curve === 'LINEAR') return potDef.min + p * (potDef.max - potDef.min);
+                    if (potDef.curve === 'FREQUENCY') return potDef.min + Math.pow(p, 3) * (potDef.max - potDef.min);
+                    return val;
+                }
+                function peq_pot_A(db) { return Math.pow(10, db / 40.0); }
+
+                const fs = 48000;
+                const Q = 1.0;
+                const c0 = biquad_loshelf(fastsincos(getFloat(0)/fs), Q, peq_pot_A(getFloat(1)));
+                const c1 = biquad_peaking(fastsincos(getFloat(2)/fs), Q, peq_pot_A(getFloat(3)));
+                const c2 = biquad_peaking(fastsincos(getFloat(4)/fs), Q, peq_pot_A(getFloat(5)));
+                const c3 = biquad_peaking(fastsincos(getFloat(6)/fs), Q, peq_pot_A(getFloat(7)));
+                const c4 = biquad_hishelf(fastsincos(getFloat(8)/fs), Q, peq_pot_A(getFloat(9)));
+
+                ctx.beginPath();
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = '#4ecca3';
+
+                for (let x = 0; x <= W; x += 2) {
+                    const fx = x * (127.0 / W);
+                    const freq = 20 * Math.pow(2, fx / 13.0);
+
+                    const w0 = fastsincos(freq / fs);
+                    const w2 = fastsincos((2.0 * freq) / fs);
+
+                    let mag_sq = 1.0;
+                    mag_sq *= biquad_mag_sq(c0, w0, w2);
+                    mag_sq *= biquad_mag_sq(c1, w0, w2);
+                    mag_sq *= biquad_mag_sq(c2, w0, w2);
+                    mag_sq *= biquad_mag_sq(c3, w0, w2);
+                    mag_sq *= biquad_mag_sq(c4, w0, w2);
+
+                    let mag = Math.sqrt(mag_sq);
+                    if (mag < 0.0001) mag = 0.0001;
+                    const db = 20.0 * Math.log10(mag);
+
+                    // map dB to Y [0..H]
+                    let y = (H/2) - (db * (H/40)); // +- 20dB range
+
+                    if (x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+
+                // Draw interactive nodes
+                nodes = [];
+                for (let i = 0; i < 5; i++) {
+                    const freq = getFloat(i * 2);
+                    const db = getFloat(i * 2 + 1);
+
+                    const fx = 13.0 * Math.log2(freq / 20.0);
+                    const x = fx * (W / 127.0);
+                    const y = (H / 2) - (db * (H / 40));
+
+                    nodes.push({x, y});
+
+                    ctx.beginPath();
+                    ctx.arc(x, y, 8, 0, 2 * Math.PI);
+                    ctx.fillStyle = (typeof activeNodeIdx !== 'undefined' && i === activeNodeIdx) ? '#ffffff' : '#4ecca3';
+                    ctx.fill();
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = '#1a1a2e';
+                    ctx.stroke();
+
+                    // Draw labels
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                    ctx.font = '12px "Inter", sans-serif';
+                    ctx.textAlign = 'center';
+                    let fStr = freq >= 1000 ? (freq/1000).toFixed(2) + 'k' : freq.toFixed(0);
+                    ctx.fillText(`${fStr}Hz`, x, y - 24);
+                    ctx.fillText(`${db > 0 ? '+' : ''}${db.toFixed(1)}dB`, x, y - 10);
+                }
+            };
+
+
+
+            // Interactive EQ logic
+            let isDragging = false;
+            let activeNodeIdx = -1;
+            let nodes = [];
+
+            let lastEqUpdate = 0;
+            // Helper to inverse map freq/db to MIDI val (0-120)
+            function updateEqNode(nodeIdx, freq, db) {
+                const fIdx = nodeIdx * 2;
+                const gIdx = nodeIdx * 2 + 1;
+                const fDef = effect.pots[fIdx];
+                const gDef = effect.pots[gIdx];
+
+                // Clamp
+                freq = Math.max(fDef.min, Math.min(fDef.max, freq));
+                db = Math.max(gDef.min, Math.min(gDef.max, db));
+
+                // Inverse freq
+                let fVal = 0;
+                if (fDef.curve === 'FREQUENCY') {
+                    const p = Math.pow((freq - fDef.min) / (fDef.max - fDef.min), 1/3);
+                    fVal = Math.round(p * 120.0);
+                } else if (fDef.curve === 'LINEAR') {
+                    const p = (freq - fDef.min) / (fDef.max - fDef.min);
+                    fVal = Math.round(p * 120.0);
+                }
+
+                // Inverse gain
+                let gVal = 0;
+                const gp = (db - gDef.min) / (gDef.max - gDef.min);
+                gVal = Math.round(gp * 120.0);
+
+                // Update inputs visually
+                eqPotsInputs[fIdx].value = fVal;
+                eqPotsInputs[gIdx].value = gVal;
+
+                // Throttle SysEx to max 50Hz (20ms) to prevent USB floods, but always send
+                const now = performance.now();
+                if (now - lastEqUpdate > 20) {
+                    sendSysex([0x03, effect.id, fIdx + 1, fVal]);
+                    sendSysex([0x03, effect.id, gIdx + 1, gVal]);
+                    lastEqUpdate = now;
+                }
+
+                const fDisplay = eqPotsInputs[fIdx].parentElement.querySelector('.pot-value');
+                if (fDisplay) fDisplay.textContent = formatPotValue(fDef, fVal);
+
+                const gDisplay = eqPotsInputs[gIdx].parentElement.querySelector('.pot-value');
+                if (gDisplay) gDisplay.textContent = formatPotValue(gDef, gVal);
+
+                effect.redrawCurve();
+            }
+
+            const getMousePos = (e) => {
+                const canvas = curveWrapper.querySelector(`#eq-canvas-${idx}`);
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                return {
+                    x: (clientX - rect.left) * scaleX,
+                    y: (clientY - rect.top) * scaleY
+                };
+            };
+
+            const onDown = (e) => {
+                e.preventDefault();
+                const pos = getMousePos(e);
+                let minDist = 10000;
+                activeNodeIdx = -1;
+                nodes.forEach((n, i) => {
+                    const dx = n.x - pos.x;
+                    const dy = n.y - pos.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist < 40 && dist < minDist) {
+                        minDist = dist;
+                        activeNodeIdx = i;
+                    }
+                });
+                if (activeNodeIdx !== -1) {
+                    isDragging = true;
+                    effect.redrawCurve();
+                }
+            };
+
+            const onMove = (e) => {
+                if (!isDragging || activeNodeIdx === -1) return;
+                e.preventDefault();
+                const pos = getMousePos(e);
+                const canvas = curveWrapper.querySelector(`#eq-canvas-${idx}`);
+                const W = canvas.width;
+                const H = canvas.height;
+
+                const fx = pos.x / (W / 127.0);
+                const freq = 20.0 * Math.pow(2, fx / 13.0);
+                const db = (H / 2 - pos.y) / (H / 40);
+
+                updateEqNode(activeNodeIdx, freq, db);
+            };
+
+            const onUp = (e) => {
+                if (isDragging && activeNodeIdx !== -1) {
+                    // Force final sysex flush on release
+                    const fIdx = activeNodeIdx * 2;
+                    const gIdx = activeNodeIdx * 2 + 1;
+                    const fVal = parseInt(eqPotsInputs[fIdx].value);
+                    const gVal = parseInt(eqPotsInputs[gIdx].value);
+                    if (!isNaN(fVal)) sendSysex([0x03, effect.id, fIdx + 1, fVal]);
+                    if (!isNaN(gVal)) sendSysex([0x03, effect.id, gIdx + 1, gVal]);
+                }
+                isDragging = false;
+                if (activeNodeIdx !== -1) {
+                    activeNodeIdx = -1;
+                    effect.redrawCurve();
+                }
+            };
+
+            // We must wait for the canvas to be added to DOM
+            setTimeout(() => {
+                const canvasEl = curveWrapper.querySelector(`#eq-canvas-${idx}`);
+                if (canvasEl) {
+                    canvasEl.addEventListener('mousedown', onDown);
+                    canvasEl.addEventListener('mousemove', onMove);
+                    canvasEl.addEventListener('mouseup', onUp);
+                    canvasEl.addEventListener('mouseleave', onUp);
+                    canvasEl.addEventListener('touchstart', onDown, {passive: false});
+                    canvasEl.addEventListener('touchmove', onMove, {passive: false});
+                    canvasEl.addEventListener('touchend', onUp);
+                }
+            }, 0);
+
+        } else {
+            controls.className = 'effect-controls';
+        }
+
+        effect.pots.forEach((pot, pIdx) => {
+            const potIdKey = `eff-${idx}-pot-${pIdx}`;
+
+            const potDiv = document.createElement('div');
+            potDiv.className = effect.name === 'Parametric EQ' ? 'pot-control eq-pot' : 'pot-control';
+
+            const label = document.createElement('div');
+            label.className = 'pot-label';
+            label.textContent = pot.name;
+
+            const initialVal = getInitialPotValue(pot);
+
+            if (pot.curve === 'ENUM' && pot.enum) {
+                const select = document.createElement('select');
+                select.className = 'enum-select';
+                pot.enum.forEach((optStr, idx) => {
+                    const opt = document.createElement('option');
+                    opt.value = idx;
+                    opt.textContent = optStr;
+                    select.appendChild(opt);
+                });
+                select.value = initialVal;
+
+                ccToElementMap.set(potIdKey, select);
+                select.addEventListener('change', (e) => {
+                    const midiVal = parseInt(e.target.value);
+                    sendSysex([0x03, effect.id, pIdx+1, midiVal]);
+                });
+
+                potDiv.appendChild(label);
+                potDiv.appendChild(select);
+            } else {
+                const valDisplay = document.createElement('div');
+                valDisplay.className = 'pot-value';
+                valDisplay.textContent = formatPotValue(pot, initialVal);
+
+                const input = document.createElement('input');
+                input.type = 'range';
+                input.min = 0;
+                input.max = 120;
+                input.value = initialVal;
+                input.potDef = pot; // Attach pot definition for formatting
+
+                if (effect.name === 'Parametric EQ') {
+                    input.className = 'eq-range';
+                    input.redrawCurve = effect.redrawCurve;
+                    eqPotsInputs.push(input);
+                }
+
+                ccToElementMap.set(potIdKey, input);
+                input.addEventListener('input', (e) => {
+                    const midiVal = parseInt(e.target.value);
+                    valDisplay.textContent = formatPotValue(pot, midiVal);
+                    sendSysex([0x03, effect.id, pIdx+1, midiVal]);
+                    if (input.redrawCurve) input.redrawCurve();
+                });
+
+                if (effect.name === 'Parametric EQ') {
+                    const sliderWrapper = document.createElement('div');
+                    sliderWrapper.className = 'eq-slider-wrapper';
+                    sliderWrapper.appendChild(input);
+
+                    potDiv.appendChild(valDisplay);
+                    potDiv.appendChild(sliderWrapper);
+                    potDiv.appendChild(label);
+                } else {
+                    potDiv.appendChild(label);
+                    potDiv.appendChild(valDisplay);
+                    potDiv.appendChild(input);
+                }
+
+                // Add active pot triggers
+                const activatePot = () => {
+                    setActivePot(potIdKey, pot, parseInt(input.value), effect.name);
+                };
+
+                // Allow interaction with the pot div to open the active pot panel
+                potDiv.addEventListener('mousedown', activatePot);
+                potDiv.addEventListener('touchstart', activatePot, { passive: true });
+            }
+
+            if (effect.name === 'Parametric EQ') {
+                slidersContainer.appendChild(potDiv);
+            } else {
+                controls.appendChild(potDiv);
+            }
+        });
+
+        if (effect.name === 'Parametric EQ') {
+            setTimeout(() => effect.redrawCurve(), 0);
+        }
+
+        card.appendChild(controls);
+        effectsContainer.appendChild(card);
+    });
+}
+
+appTitleEl.addEventListener('click', () => {
+    if (appTitleEl.textContent.includes('Tap to Connect') || appTitleEl.textContent.includes('Error')) {
+        appTitleEl.textContent = "Connecting...";
+        initMidi();
+    }
+});
+
+// Event Listeners
     const inSelect = document.getElementById('midi-input-select');
     if (inSelect) {
         inSelect.addEventListener('change', (e) => {
@@ -617,8 +1136,8 @@ function renderUI() {
                 return;
             }
             if (activeEffectDef) {
-                sendMidiCc(activeEffectDef.enable_cc, 64);
-                setTimeout(() => sendMidiCc(STATE_DUMP_CC, 127), 100);
+                sendSysex([0x04, 0]);
+                setTimeout(() => sendSysex([0x05]), 100);
                 showButtonSuccess(effectResetBtn, 'Reset Complete');
             }
         });
@@ -632,7 +1151,7 @@ function renderUI() {
                 return;
             }
             if (activeEffectDef) {
-                sendMidiCc(activeEffectDef.enable_cc, 65);
+
                 showButtonSuccess(effectSaveBtn, 'Saved!');
             }
         });
@@ -646,8 +1165,8 @@ function renderUI() {
                 return;
             }
             if (activeEffectDef) {
-                sendMidiCc(activeEffectDef.enable_cc, 66);
-                setTimeout(() => sendMidiCc(STATE_DUMP_CC, 127), 100);
+
+                setTimeout(() => sendSysex([0x05]), 100);
                 showButtonSuccess(effectLoadBtn, 'Loaded!');
             }
         });
@@ -691,7 +1210,15 @@ function renderUI() {
                 if (origInput.redrawCurve) origInput.redrawCurve();
             }
 
-            sendMidiCc(activePotCc, val);
+            // Parse activePotCc to get effectId and potIdx
+            // activePotCc is like "eff-2-pot-0"
+            const parts = activePotCc.split('-');
+            if (parts.length >= 4) {
+                const idx = parseInt(parts[1]);
+                const pIdx = parseInt(parts[3]);
+                const effId = PEDAL_EFFECTS[idx].id;
+                sendSysex([0x03, effId, pIdx + 1, val]);
+            }
         });
     }
 
@@ -720,7 +1247,7 @@ function renderUI() {
             sendMidiCc(GLOBAL_ENABLE_CC, 64);
             setTimeout(() => {
                 sendMidiCc(GLOBAL_ENABLE_CC, 127);
-                sendMidiCc(STATE_DUMP_CC, 127);
+                sendSysex([0x01]);
             }, 100);
             showButtonSuccess(globalResetBtn, 'Reset Complete');
         });
@@ -733,35 +1260,46 @@ function renderUI() {
                 showButtonError(globalDisableBtn, 'Not Connected');
                 return;
             }
+
             sendMidiCc(GLOBAL_ENABLE_CC, 67);
-            setTimeout(() => {
-                sendMidiCc(STATE_DUMP_CC, 127);
-            }, 100);
             showButtonSuccess(globalDisableBtn, 'Effects Disabled');
         });
     }
 
-    const globalSaveBtn = document.getElementById('global-save-btn');
-    if (globalSaveBtn) {
-        globalSaveBtn.addEventListener('click', () => {
+    const sceneSelect = document.getElementById('global-scene-select');
+    if (sceneSelect) {
+        for (let i = 0; i < 32; i++) {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = `Scene ${i}`;
+            sceneSelect.appendChild(opt);
+        }
+    }
+
+    const loadSceneBtn = document.getElementById('global-load-scene-btn');
+    if (loadSceneBtn) {
+        loadSceneBtn.addEventListener('click', () => {
             if (!midiOutput) {
-                showButtonError(globalSaveBtn, 'Not Connected');
+                showButtonError(loadSceneBtn, 'Not Connected');
                 return;
             }
-            sendMidiCc(GLOBAL_ENABLE_CC, 65);
-            showButtonSuccess(globalSaveBtn, 'Saved!');
+            const sceneId = parseInt(sceneSelect.value);
+            sendMidiPc(sceneId);
+            setTimeout(() => sendSysex([0x05]), 100);
+            showButtonSuccess(loadSceneBtn, 'Loaded!');
         });
     }
-    const globalLoadBtn = document.getElementById('global-load-btn');
-    if (globalLoadBtn) {
-        globalLoadBtn.addEventListener('click', () => {
+
+    const saveSceneBtn = document.getElementById('global-save-scene-btn');
+    if (saveSceneBtn) {
+        saveSceneBtn.addEventListener('click', () => {
             if (!midiOutput) {
-                showButtonError(globalLoadBtn, 'Not Connected');
+                showButtonError(saveSceneBtn, 'Not Connected');
                 return;
             }
-            sendMidiCc(GLOBAL_ENABLE_CC, 66);
-            setTimeout(() => sendMidiCc(STATE_DUMP_CC, 127), 100);
-            showButtonSuccess(globalLoadBtn, 'Loaded!');
+            const sceneId = parseInt(sceneSelect.value);
+            sendSysex([0x04, sceneId]);
+            showButtonSuccess(saveSceneBtn, 'Saved!');
         });
     }
 
@@ -779,191 +1317,6 @@ function renderUI() {
         });
     }
 
-    PEDAL_EFFECTS.forEach((effect, idx) => {
-        const card = document.createElement('section');
-        card.className = 'glass-panel effect-card';
-        card.id = `effect-${idx}`;
-
-        // Header
-        const header = document.createElement('div');
-        header.className = 'effect-header';
-
-        const title = document.createElement('div');
-        title.className = 'effect-title';
-        title.textContent = effect.name;
-
-        const enableGroup = document.createElement('div');
-        enableGroup.className = 'control-group enable-group';
-        enableGroup.innerHTML = `
-            <label class="switch">
-              <input type="checkbox" id="enable-${idx}">
-              <span class="slider round"></span>
-            </label>
-        `;
-
-        header.appendChild(title);
-        header.appendChild(enableGroup);
-        card.appendChild(header);
-
-        // Clicking the header (but not the toggle) opens the active effect panel
-        header.addEventListener('click', (e) => {
-            if (e.target.closest('.switch')) return;
-            openActiveEffectPanel(idx, effect);
-        });
-
-        const enableInput = enableGroup.querySelector('input');
-        ccToElementMap.set(effect.enable_cc, enableInput);
-        enableInput.addEventListener('change', (e) => {
-            sendMidiCc(effect.enable_cc, e.target.checked ? 127 : 0);
-        });
-
-        // Controls
-        const controls = document.createElement('div');
-
-        let slidersContainer = null;
-        let eqPotsInputs = [];
-
-        if (effect.id === 'eq') {
-            controls.className = 'effect-controls eq-container';
-
-            const curveWrapper = document.createElement('div');
-            curveWrapper.className = 'eq-curve-wrapper';
-            curveWrapper.innerHTML = `
-                <svg class="eq-curve-svg" viewBox="0 0 1000 100" preserveAspectRatio="none">
-                    <path id="eq-path-${idx}" class="eq-path" d="" />
-                </svg>
-            `;
-            controls.appendChild(curveWrapper);
-
-            slidersContainer = document.createElement('div');
-            slidersContainer.className = 'eq-sliders';
-            controls.appendChild(slidersContainer);
-
-            effect.redrawCurve = () => {
-                const pathEl = curveWrapper.querySelector(`#eq-path-${idx}`);
-                if (!pathEl || eqPotsInputs.length < 10) return;
-
-                const getY = (val) => 100 - (val / 120) * 100;
-                let path = `M 0,${getY(parseInt(eqPotsInputs[0].value))} L 50,${getY(parseInt(eqPotsInputs[0].value))} `;
-                for (let i = 0; i < 9; i++) {
-                    let x0 = 50 + i * 100;
-                    let y0 = getY(parseInt(eqPotsInputs[i].value));
-                    let x1 = 50 + (i + 1) * 100;
-                    let y1 = getY(parseInt(eqPotsInputs[i+1].value));
-                    let mx = (x0 + x1) / 2;
-                    path += `C ${mx},${y0} ${mx},${y1} ${x1},${y1} `;
-                }
-                path += `L 1000,${getY(parseInt(eqPotsInputs[9].value))} `;
-                path += `L 1000,100 L 0,100 Z`;
-                pathEl.setAttribute('d', path);
-            };
-        } else {
-            controls.className = 'effect-controls';
-        }
-
-        effect.pots.forEach((pot, pIdx) => {
-            const potCc = pot.cc;
-
-            const potDiv = document.createElement('div');
-            potDiv.className = effect.id === 'eq' ? 'pot-control eq-pot' : 'pot-control';
-
-            const label = document.createElement('div');
-            label.className = 'pot-label';
-            label.textContent = pot.name;
-
-            const initialVal = getInitialPotValue(pot);
-
-            if (pot.curve === 'ENUM' && pot.enum) {
-                const select = document.createElement('select');
-                select.className = 'enum-select';
-                pot.enum.forEach((optStr, idx) => {
-                    const opt = document.createElement('option');
-                    opt.value = idx;
-                    opt.textContent = optStr;
-                    select.appendChild(opt);
-                });
-                select.value = initialVal;
-
-                ccToElementMap.set(potCc, select);
-                select.addEventListener('change', (e) => {
-                    const midiVal = parseInt(e.target.value);
-                    sendMidiCc(potCc, midiVal);
-                });
-
-                potDiv.appendChild(label);
-                potDiv.appendChild(select);
-            } else {
-                const valDisplay = document.createElement('div');
-                valDisplay.className = 'pot-value';
-                valDisplay.textContent = formatPotValue(pot, initialVal);
-
-                const input = document.createElement('input');
-                input.type = 'range';
-                input.min = 0;
-                input.max = 120;
-                input.value = initialVal;
-                input.potDef = pot; // Attach pot definition for formatting
-
-                if (effect.id === 'eq') {
-                    input.className = 'eq-range';
-                    input.redrawCurve = effect.redrawCurve;
-                    eqPotsInputs.push(input);
-                }
-
-                ccToElementMap.set(potCc, input);
-                input.addEventListener('input', (e) => {
-                    const midiVal = parseInt(e.target.value);
-                    valDisplay.textContent = formatPotValue(pot, midiVal);
-                    sendMidiCc(potCc, midiVal);
-                    if (input.redrawCurve) input.redrawCurve();
-                });
-
-                if (effect.id === 'eq') {
-                    const sliderWrapper = document.createElement('div');
-                    sliderWrapper.className = 'eq-slider-wrapper';
-                    sliderWrapper.appendChild(input);
-
-                    potDiv.appendChild(valDisplay);
-                    potDiv.appendChild(sliderWrapper);
-                    potDiv.appendChild(label);
-                } else {
-                    potDiv.appendChild(label);
-                    potDiv.appendChild(valDisplay);
-                    potDiv.appendChild(input);
-                }
-
-                // Add active pot triggers
-                const activatePot = () => {
-                    setActivePot(potCc, pot, parseInt(input.value), effect.name);
-                };
-
-                // Allow interaction with the pot div to open the active pot panel
-                potDiv.addEventListener('mousedown', activatePot);
-                potDiv.addEventListener('touchstart', activatePot, { passive: true });
-            }
-
-            if (effect.id === 'eq') {
-                slidersContainer.appendChild(potDiv);
-            } else {
-                controls.appendChild(potDiv);
-            }
-        });
-
-        if (effect.id === 'eq') {
-            setTimeout(() => effect.redrawCurve(), 0);
-        }
-
-        card.appendChild(controls);
-        effectsContainer.appendChild(card);
-    });
-}
-
-appTitleEl.addEventListener('click', () => {
-    if (appTitleEl.textContent.includes('Tap to Connect') || appTitleEl.textContent.includes('Error')) {
-        appTitleEl.textContent = "Connecting...";
-        initMidi();
-    }
-});
 
 // Boot
 renderUI();

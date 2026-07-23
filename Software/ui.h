@@ -352,15 +352,10 @@ static void update_ui(int force_update)
 	if (switch_pressed(1) || switch_pressed(3)) {
 		switch_clear(1); switch_clear(3);
 		effect->target = EFF_ENABLE_STEPS * !effect->target;
-		uint8_t en_cc = effect_enable_to_cc[effect_idx];
-		if (en_cc) send_midi_cc(en_cc, effect->target ? 127 : 0);
+		send_sysex_set_param(effect_idx, 0, effect->target ? 127 : 0);
 		for (int i=0; i<10; i++) {
-			uint8_t cc = effect_pot_to_cc[effect_idx][i];
-			if (cc) {
-				int val = effect->pot_values[effect->seq & 1][i];
-				uint8_t midi_val = val;
-				send_midi_cc(cc, midi_val);
-			}
+			int val = effect->pot_values[effect->seq & 1][i];
+			send_sysex_set_param(effect_idx, i+1, val);
 		}
 		update_screen = true;
 		last_effect = NULL;	// Force list_effects();
@@ -368,10 +363,11 @@ static void update_ui(int force_update)
 	}
 
 	// Right stomp: enable/disable all effects
-	if (switch_pressed(2)) {
-		switch_clear(2);
+	if (switch_pressed(2) || switch_pressed(4)) {
+		switch_clear(2); switch_clear(4);
 		disable_all = EFF_ENABLE_STEPS * !disable_all;
-		send_midi_cc(GLOBAL_ENABLE_CC, disable_all ? 0 : 127);
+		send_midi_cc(MIDI_CC_GLOBAL_ENABLE, disable_all ? 0 : 127);
+		update_screen = true;
 	}
 
 	// Effect switching: lower rotary
@@ -429,10 +425,8 @@ static void update_ui(int force_update)
 		for (int i=0; i<10; i++) {
 			int val = new_pot[i];
 			int old_val = cur_pot[i];
-			uint8_t cc = effect_pot_to_cc[effect_idx][i];
-			if (cc && val != old_val) {
-				uint8_t midi_val = val;
-				send_midi_cc(cc, midi_val);
+			if (val != old_val) {
+				send_sysex_set_param(effect_idx, i+1, val);
 			}
 		}
 		effect->seq++;

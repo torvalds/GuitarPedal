@@ -511,19 +511,30 @@ sample_t get_usb_audio_input(void)
 	return (sample_t) { 0, 0 };
 }
 
+bool in_tud_task = false;
+
 void tud_midi_rx_cb(uint8_t itf)
 {
 	(void)itf;
 	uint8_t packet[4];
+	in_tud_task = true;
 	while (tud_midi_packet_read(packet)) {
 		// MIDI Thru: Echo to hardware UART if not for us
 		if (!handle_midi_packet(packet))
 			uart_midi_write(packet);
 	}
+	in_tud_task = false;
 }
 
 void usb_midi_write(const uint8_t packet[4])
 {
-	if (tud_midi_mounted())
-		tud_midi_packet_write(packet);
+	if (tud_midi_mounted()) {
+		if (in_tud_task) {
+			tud_midi_packet_write(packet);
+		} else {
+			while (!tud_midi_packet_write(packet)) {
+				tud_task();
+			}
+		}
+	}
 }

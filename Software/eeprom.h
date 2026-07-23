@@ -6,16 +6,12 @@
 #include <string.h>
 
 #if EEPROM_64KBIT
-  // We could fit many more, but
-  // let's leave that for later
-  //
-  // Right now we're limited by
-  // the 32-bit dirty bitmap
-  #define MAX_SAVED_EFFECTS 32
+  #define MAX_SCENES 32
 #else
-  // 2kbit eeprom: 256 bytes, 16 effects of 16 bytes each
-  #define MAX_SAVED_EFFECTS 16
+  #define MAX_SCENES 1
 #endif
+#define MAX_SCENE_EFFECTS 16
+
 
 // Some old 24c02 eeprom chips only do 8-byte page sizes,
 // but the one I have is 16 bytes, and the MC24C64 has
@@ -23,7 +19,7 @@
 // and matches the effect size (so writing one chunk only
 // changes one effect).
 #define EEPROM_PAGE_SIZE 16
-#define EEPROM_SIZE (16*MAX_SAVED_EFFECTS)
+#define SCENE_SIZE (16*MAX_SCENE_EFFECTS)
 
 struct effect_state {
 	unsigned char pots[10];
@@ -32,12 +28,13 @@ struct effect_state {
 	unsigned char reserved[4]; // Pad to 16 bytes
 };
 
-// Cache the eeprom in RAM for easy access
+// Cache the current scene in RAM for easy access
 static union {
-	struct effect_state state[MAX_SAVED_EFFECTS];
-	unsigned char bytes[EEPROM_SIZE];
+	struct effect_state state[MAX_SCENE_EFFECTS];
+	unsigned char bytes[SCENE_SIZE];
 } eeprom_cache;
 static uint32_t eeprom_dirty_mask = 0;
+static uint8_t current_scene_id = 0;
 
 static inline uint8_t string_checksum(const char *cstr)
 {
@@ -89,10 +86,10 @@ static bool init_eeprom(void)
 			continue;
 		}
 
-		if (i2c_read_blocking(MC24Cxx_I2C, eeprom_cache.bytes, EEPROM_SIZE, false) == EEPROM_SIZE)
+		if (i2c_read_blocking(MC24Cxx_I2C, eeprom_cache.bytes, SCENE_SIZE, false) == SCENE_SIZE)
 			return true;
 	}
-	memset(eeprom_cache.bytes, 0, EEPROM_SIZE);
+	memset(eeprom_cache.bytes, 0, SCENE_SIZE);
 	return false;
 }
 
@@ -115,7 +112,8 @@ static void eeprom_task(void)
 	eeprom_dirty_mask &= ~mask;
 
 	unsigned int chunk_idx = ffs(mask) - 1;
-	unsigned int offset = chunk_idx * EEPROM_PAGE_SIZE;
+	unsigned int base_offset = current_scene_id * SCENE_SIZE;
+	unsigned int offset = base_offset + chunk_idx * EEPROM_PAGE_SIZE;
 
 	uint8_t buf[2 + EEPROM_PAGE_SIZE];
 	buf[0] = offset >> 8;
@@ -153,7 +151,7 @@ static int max_pot_val(struct effect *effect, int pot)
 
 static bool load_effect_state(unsigned int effect_idx, struct effect *effect)
 {
-	if (effect_idx >= MAX_SAVED_EFFECTS)
+	if (effect_idx >= MAX_SCENE_EFFECTS)
 		return false;
 
 	struct effect_state *state = eeprom_cache.state + effect_idx;
@@ -178,7 +176,7 @@ static bool load_effect_state(unsigned int effect_idx, struct effect *effect)
 
 static bool save_effect_state(unsigned int effect_idx, struct effect *effect)
 {
-	if (effect_idx >= MAX_SAVED_EFFECTS)
+	if (effect_idx >= MAX_SCENE_EFFECTS)
 		return false;
 
 	struct effect_state *state = eeprom_cache.state + effect_idx;
@@ -192,6 +190,49 @@ static bool save_effect_state(unsigned int effect_idx, struct effect *effect)
 	state->magic = effect_checksum(effect, state);
 
 	eeprom_dirty_mask |= 1u << effect_idx;
+	return true;
+}
+
+static bool load_scene(uint8_t scene_id)
+{
+	if (scene_id >= MAX_SCENES) return false;
+
+	// Wait for any pending writes
+	while (eeprom_dirty_mask) eeprom_task();
+
+	uint16_t offset = scene_id * SCENE_SIZE;
+#if EEPROM_64KBIT
+	uint8_t addr[2] = { offset >> 8, offset & 0xff };
+#else
+	uint8_t addr[1] = { offset & 0xff };
+#endif
+
+	for (int try = 0; try < 10; try++) {
+		if (i2c_write_blocking(MC24Cxx_I2C, addr, sizeof(addr), true) < 0) {
+			sleep_ms(5);
+			continue;
+		}
+		if (i2c_read_blocking(MC24Cxx_I2C, eeprom_cache.bytes, SCENE_SIZE, false) == SCENE_SIZE) {
+			current_scene_id = scene_id;
+			return true;
+		}
+	}
+	return false;
+}
+
+static bool save_scene(uint8_t scene_id)
+{
+	if (scene_id >= MAX_SCENES) return false;
+
+	// Ensure current state is fully written before switching pointer
+	while (eeprom_dirty_mask) eeprom_task();
+
+	// If we are saving to a DIFFERENT scene, we change current_scene_id
+	// and mark everything as dirty so eeprom_task writes it out over time.
+	// This avoids blocking the audio thread for 256 bytes of writes
+	// (which takes ~80ms due to page write delays).
+	current_scene_id = scene_id;
+	eeprom_dirty_mask = (1 << EFFECT_COUNT) - 1; // Mark all used effects as dirty
 	return true;
 }
 

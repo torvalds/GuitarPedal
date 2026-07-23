@@ -25,6 +25,17 @@ static inline void send_midi_cc(uint8_t cc, uint8_t val)
 	uart_midi_write(packet);
 }
 
+static inline void send_sysex_set_param(uint8_t eff_id, uint8_t pot_idx, uint8_t val)
+{
+	// F0 7D 03 <eff_id> <pot_idx> <val> F7
+	uint8_t p1[4] = { 0x04, 0xF0, 0x7D, 0x03 };
+	uint8_t p2[4] = { 0x04, eff_id, pot_idx, val };
+	uint8_t p3[4] = { 0x05, 0xF7, 0, 0 };
+	usb_midi_write(p1);
+	usb_midi_write(p2);
+	usb_midi_write(p3);
+}
+
 static inline void send_midi_pc(uint8_t pc)
 {
 	uint8_t packet[4] = { 0x0C, 0xC0, pc, 0 };
