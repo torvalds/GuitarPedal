@@ -451,7 +451,7 @@ bool tud_audio_get_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
 }
 
 #define USB_RX_BUF_SIZE 512
-static int32_t usb_rx_buf[USB_RX_BUF_SIZE * 2]; // stereo buffer
+static raw_sample_t usb_rx_buf[USB_RX_BUF_SIZE];
 static volatile unsigned usb_rx_head;
 static volatile unsigned usb_rx_tail;
 
@@ -478,37 +478,37 @@ void usb_audio_task(void)
 
 	uint16_t rx_avail = tud_audio_available();
 	if (rx_avail) {
-		int32_t temp_buf[48 * 2];
+		raw_sample_t temp_buf[48];
 		if (rx_avail > sizeof(temp_buf))
 			rx_avail = sizeof(temp_buf);
 		uint16_t bytes_read = tud_audio_read(temp_buf, rx_avail);
-		unsigned samples_read = bytes_read / (sizeof(int32_t) * 2);
+		unsigned samples_read = bytes_read / sizeof(raw_sample_t);
 
 		for (unsigned i = 0; i < samples_read; i++) {
 			unsigned head = usb_rx_head;
 			unsigned next_head = (head + 1) % USB_RX_BUF_SIZE;
 			if (next_head != usb_rx_tail) {
-				usb_rx_buf[head * 2] = temp_buf[i * 2];
-				usb_rx_buf[head * 2 + 1] = temp_buf[i * 2 + 1];
+				usb_rx_buf[head] = temp_buf[i];
 				usb_rx_head = next_head;
 			}
 		}
 	}
 }
 
-float get_usb_audio_input(void)
+sample_t get_usb_audio_input(void)
 {
 	unsigned tail = usb_rx_tail;
+
 	if (tail != usb_rx_head) {
-		int32_t l = usb_rx_buf[tail * 2];
-		int32_t r = usb_rx_buf[tail * 2 + 1];
+		raw_sample_t sample = usb_rx_buf[tail];
 		usb_rx_tail = (tail + 1) % USB_RX_BUF_SIZE;
 
-		float val_l = l * (1.0f / 2147483648.0f);
-		float val_r = r * (1.0f / 2147483648.0f);
-		return (val_l + val_r) * 0.5f;
+		return (sample_t) {
+			.left = sample.left * (1.0f / 2147483648.0f),
+			.right = sample.right * (1.0f / 2147483648.0f)
+		};
 	}
-	return 0.0f;
+	return (sample_t) { 0, 0 };
 }
 
 void tud_midi_rx_cb(uint8_t itf)

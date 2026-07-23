@@ -1,6 +1,6 @@
 #include "lfo.h"
 
-float get_usb_audio_input(void);
+sample_t get_usb_audio_input(void);
 
 typedef float (*pot_convert_fn)(unsigned char);
 
@@ -70,17 +70,19 @@ static inline void generic_effect_describe(struct effect *e, unsigned char pots[
 
 static unsigned int dropped;
 
-static inline float do_effect_step(struct effect *effect, float val)
+// Effects are purely mono... For now
+static inline sample_t do_effect_step(struct effect *effect, sample_t val)
 {
 	if (effect->mix == effect->target) {
 		if (effect->mix)
-			val = effect->step(val);
+			val.right = val.left = effect->step(val.left);
 	} else {
 		int dir = effect->mix < effect->target ? +1 : -1;
 		float mix = effect->mix / (float) EFF_ENABLE_STEPS;
 		effect->mix += dir;
-		float effect_val = effect->step(val);
-		val = linear(mix, val, effect_val);
+		float effect_val = effect->step(val.left);
+		val.left = linear(mix, val.left, effect_val);
+		val.right = linear(mix, val.right, effect_val);
 	}
 	return val;
 }
@@ -124,25 +126,29 @@ static inline void single_sample(float mix)
 
 	// In-place processing
 	raw_sample_t sample = *cpu_ptr;
-	float in = process_input(sample);
-	float usb_in = get_usb_audio_input();
+	sample_t in = process_input(sample);
+	sample_t usb_in = get_usb_audio_input();
 
 	// We need to do the USB input as stereo too
-	if (settings.usb_input == USB_IN_PRE_FX)
-		in += usb_in;
+	if (settings.usb_input == USB_IN_PRE_FX) {
+		in.left += usb_in.left;
+		in.right += usb_in.right;
+	}
 
-	float out = in;
+	sample_t out = in;
 	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
 		out = do_effect_step(effects[i], out);
 	}
 
-	float val = linear(mix, in, out);
+	out.left = linear(mix, in.left, out.left);
+	out.right = linear(mix, in.right, out.right);
 
-	if (settings.usb_input == USB_IN_MIX)
-		val += usb_in;
+	if (settings.usb_input == USB_IN_MIX) {
+		out.left += usb_in.left;
+		out.right += usb_in.right;
+	}
 
-	sample = process_output(val, sample);
-	*cpu_ptr = sample;
+	*cpu_ptr = process_output(out, sample);
 }
 
 static void bypass(void)

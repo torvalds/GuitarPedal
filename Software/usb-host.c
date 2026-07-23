@@ -4,9 +4,9 @@
 #include "midi.h"
 
 // Needed because audio/effect.h expects it
-float get_usb_audio_input(void)
+sample_t get_usb_audio_input(void)
 {
-	return 0.0f;
+	return (sample_t) { 0, 0 };
 }
 
 #ifndef BOARD_TUH_RHPORT

@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "audio/types.h"
+
 int init_usb(void);
 void usb_audio_task(void);
 
@@ -10,6 +12,6 @@ void usb_audio_task(void);
 unsigned get_audio_samples(int32_t *buffer, unsigned nr);
 
 // Read one sample from USB audio input
-float get_usb_audio_input(void);
+sample_t get_usb_audio_input(void);
 
 #endif

@@ -40,18 +40,22 @@ static struct {
 
 #define SAMPLE_TO_FLOAT_MULTIPLIER (3.45 / 2.82843 / 0x80000000)
 
-static inline float process_input(raw_sample_t sample)
+static inline sample_t process_input(raw_sample_t sample)
 {
-	float val = sample.left * SAMPLE_TO_FLOAT_MULTIPLIER;
+	sample_t val = {
+		.left = sample.left * SAMPLE_TO_FLOAT_MULTIPLIER,
+		.right = sample.right * SAMPLE_TO_FLOAT_MULTIPLIER
+	};
+
 	if (tuner_mode) {
 		analyze_process_sample(val);
-		val = 0.0;
+		val.left = val.right = 0.0;
 	}
 	return val;
 }
 
 // Be careful about FP overflows around +1.0
-static inline raw_sample_t convert_output(float out)
+static inline s32 convert_output(float out)
 {
 	s32 res = (s32)rintf(out * FLOAT_TO_SAMPLE_MULTIPLIER);
 	if (out > 0.99) {
@@ -70,12 +74,15 @@ static inline raw_sample_t convert_output(float out)
 	}
 
 	// We'll do stereo output some day
-	return (raw_sample_t) { .left = res, .right = res };
+	return res;
 }
 
-static inline raw_sample_t process_output(float out, raw_sample_t dry)
+static inline raw_sample_t process_output(sample_t out, raw_sample_t dry)
 {
-	raw_sample_t wet = convert_output(out);
+	raw_sample_t wet = {
+		.left = convert_output(out.left),
+		.right = convert_output(out.right)
+	};
 	raw_sample_t usb;
 
 	switch (settings.usb_output) {

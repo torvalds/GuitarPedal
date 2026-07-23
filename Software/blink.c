@@ -24,6 +24,7 @@
 
 #define PWM_WRAP 4096	// Entirely arbitrary
 
+#include "audio/types.h"
 #include "audio/util.h"
 #include "audio/envelope.h"
 #include "audio/single-pole.h"

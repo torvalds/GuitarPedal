@@ -41,21 +41,22 @@ static inline float hanning(unsigned int idx)
 }
 
 // 4x downsampled data into continuous lock-free ring buffer
-static inline void analyze_process_sample(float sample)
+static inline void analyze_process_sample(sample_t sample)
 {
 	// Downsample by 4x
 	static float sample_sum;
 	static int count;
 
-	sample += sample_sum;
+	float left = sample.left;
+	left += sample_sum;
 	if (3 & ++count) {
-		sample_sum = sample;
+		sample_sum = left;
 		return;
 	}
 
 	sample_sum = 0;
 
 	unsigned int idx = analyzer.write_index;
-	analyzer.ring_buf[idx & ANALYZE_RING_MASK] = sample;
+	analyzer.ring_buf[idx & ANALYZE_RING_MASK] = left;
 	analyzer.write_index = idx + 1;
 }
