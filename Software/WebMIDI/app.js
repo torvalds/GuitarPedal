@@ -1,3 +1,13 @@
+const SYSEX_CMD = {
+    REQ_SCHEMA: 0x01,
+    RES_SCHEMA: 0x02,
+    PARAM_UPDATE: 0x03,
+    SAVE_SCENE: 0x04,
+    REQ_STATE: 0x05,
+    ROUTING_ORDER: 0x08,
+    DIAGNOSTIC: 0x09
+};
+
 let midiAccess = null;
 let midiInput = null;
 let midiOutput = null;
@@ -202,8 +212,8 @@ function updateMidiState() {
         appTitleEl.textContent = `Connected: ${foundInput.name}`;
 
         // Request initial state dump
-        sendSysex([0x01]);
-        sendSysex([0x09]); // Request diagnostic status
+        sendSysex([SYSEX_CMD.REQ_SCHEMA]);
+        sendSysex([SYSEX_CMD.DIAGNOSTIC]); // Request diagnostic status
     } else {
         midiInput = null;
         midiOutput = null;
@@ -236,7 +246,7 @@ let diagnosticTimeout = null;
 function scheduleDiagnostic() {
     if (diagnosticTimeout) clearTimeout(diagnosticTimeout);
     diagnosticTimeout = setTimeout(() => {
-        sendSysex([0x09]);
+        sendSysex([SYSEX_CMD.DIAGNOSTIC]);
     }, 1000);
 }
 
@@ -244,7 +254,7 @@ function sendSysex(data) {
     if (!midiOutput) return;
     const msg = new Uint8Array([0xF0, 0x7D, ...data, 0xF7]);
     midiOutput.send(msg);
-    if (data[0] !== 0x09 && data[0] !== 0x01 && data[0] !== 0x05) {
+    if (data[0] !== SYSEX_CMD.DIAGNOSTIC && data[0] !== SYSEX_CMD.REQ_SCHEMA && data[0] !== SYSEX_CMD.REQ_STATE) {
         scheduleDiagnostic();
     }
 }
@@ -255,68 +265,90 @@ let effectIdMap = new Map();
 function handleSysex(data) {
     const cmd = data[2];
     console.debug(`[WebMIDI] Received SysEx cmd=0x${cmd.toString(16)}, data=[${Array.from(data).map(b => '0x' + b.toString(16).padStart(2, '0')).join(', ')}]`);
-    if (cmd === 0x02) {
-        // Schema Response
-        let jsonStr = '';
-        for (let i = 3; i < data.length - 1; i++) {
-            jsonStr += String.fromCharCode(data[i]);
-        }
-        try {
-            PEDAL_EFFECTS = JSON.parse(jsonStr);
-            effectIdMap.clear();
-            PEDAL_EFFECTS.forEach((e, idx) => effectIdMap.set(e.id, idx));
-            renderUI();
-            // Request State
-            sendSysex([0x05]);
-        } catch (e) {
-            console.error("Failed to parse schema", e);
-        }
-    } else if (cmd === 0x09) { // Diagnostic Response
-        let jsonStr = '';
-        for (let i = 3; i < data.length - 1; i++) {
-            jsonStr += String.fromCharCode(data[i]);
-        }
-        if (jsonStr.trim() !== '') {
-            console.log(`[Pedal Diagnostic] ${jsonStr.trim()}`);
-        }
-    } else if (cmd === 0x03 && data.length >= 6) { // Set Parameter
-        const effId = data[3];
-        const potIdx = data[4];
-        const val = data[5];
 
-        const idx = effectIdMap.get(effId);
-        if (idx !== undefined) {
-            const idKey = potIdx === 0 ? `eff-${idx}-mix` : `eff-${idx}-pot-${potIdx-1}`;
-            const el = ccToElementMap.get(idKey);
-            if (el) {
-                if (el.type === 'checkbox') {
-                    el.checked = (val > 0);
-                } else if (el.tagName === 'SELECT') {
-                    el.value = val;
-                } else if (el.type === 'range') {
-                    el.value = val;
-                    const valDisplay = el.parentElement.querySelector('.pot-value');
-                    if (valDisplay && el.potDef) {
-                        valDisplay.textContent = formatPotValue(el.potDef, val);
-                    }
-                    if (el.redrawCurve) {
-                        el.redrawCurve();
-                    }
-                    if (activePotDef && activePotCc === idKey) { // activePotCc is now acting as string key
-                        const activeSlider = document.getElementById('active-pot-slider');
-                        if (activeSlider) activeSlider.value = val;
-                        const activeValue = document.getElementById('active-pot-value');
-                        if (activeValue) activeValue.textContent = formatPotValue(activePotDef, val);
+    switch (cmd) {
+        case SYSEX_CMD.RES_SCHEMA: {
+            // Schema Response
+            let jsonStr = '';
+            for (let i = 3; i < data.length - 1; i++) {
+                jsonStr += String.fromCharCode(data[i]);
+            }
+            try {
+                PEDAL_EFFECTS = JSON.parse(jsonStr);
+                effectIdMap.clear();
+                PEDAL_EFFECTS.forEach((e, idx) => effectIdMap.set(e.id, idx));
+                renderUI();
+                // Request State and Status
+                sendSysex([SYSEX_CMD.REQ_STATE]);
+                sendSysex([SYSEX_CMD.DIAGNOSTIC]);
+            } catch (e) {
+                console.error("Failed to parse schema", e);
+            }
+            break;
+        }
+
+        case SYSEX_CMD.DIAGNOSTIC: {
+            // Diagnostic Response
+            let jsonStr = '';
+            for (let i = 3; i < data.length - 1; i++) {
+                jsonStr += String.fromCharCode(data[i]);
+            }
+            if (jsonStr.trim() !== '') {
+                console.log(`[Pedal Diagnostic] ${jsonStr.trim()}`);
+            }
+            break;
+        }
+
+        case SYSEX_CMD.PARAM_UPDATE: {
+            // Set Parameter
+            if (data.length < 6) break;
+            const effId = data[3];
+            const potIdx = data[4];
+            const val = data[5];
+
+            const idx = effectIdMap.get(effId);
+            if (idx !== undefined) {
+                const idKey = potIdx === 0 ? `eff-${idx}-mix` : `eff-${idx}-pot-${potIdx-1}`;
+                const el = ccToElementMap.get(idKey);
+                if (el) {
+                    if (el.type === 'checkbox') {
+                        el.checked = (val > 0);
+                    } else if (el.tagName === 'SELECT') {
+                        el.value = val;
+                    } else if (el.type === 'range') {
+                        el.value = val;
+                        const valDisplay = el.parentElement.querySelector('.pot-value');
+                        if (valDisplay && el.potDef) {
+                            valDisplay.textContent = formatPotValue(el.potDef, val);
+                        }
+                        if (el.redrawCurve) {
+                            el.redrawCurve();
+                        }
+                        if (activePotDef && activePotCc === idKey) { // activePotCc is now acting as string key
+                            const activeSlider = document.getElementById('active-pot-slider');
+                            if (activeSlider) activeSlider.value = val;
+                            const activeValue = document.getElementById('active-pot-value');
+                            if (activeValue) activeValue.textContent = formatPotValue(activePotDef, val);
+                        }
                     }
                 }
             }
+            break;
         }
-    } else if (cmd === 0x08) { // Routing order
-        const routeIds = [];
-        for (let i = 3; i < data.length - 1; i++) {
-            routeIds.push(data[i]);
+
+        case SYSEX_CMD.ROUTING_ORDER: {
+            // Routing order
+            const routeIds = [];
+            for (let i = 3; i < data.length - 1; i++) {
+                routeIds.push(data[i]);
+            }
+            reorderEffectsInDOM(routeIds);
+
+            // A state dump always concludes with the routing order.
+            // Fetch status now to pick up any "Sent state dump" or similar info.
+            sendSysex([SYSEX_CMD.DIAGNOSTIC]);
+            break;
         }
-        reorderEffectsInDOM(routeIds);
     }
 }
 
@@ -599,7 +631,7 @@ function sendUpdatedRouting() {
         }
     });
 
-    const data = [0x08, ...routeIds.slice(0, 14)];
+    const data = [SYSEX_CMD.ROUTING_ORDER, ...routeIds.slice(0, 14)];
     sendSysex(data);
     reorderEffectsInDOM(routeIds);
 }
@@ -1064,8 +1096,8 @@ function renderUI() {
                 // Throttle SysEx to max 50Hz (20ms) to prevent USB floods, but always send
                 const now = performance.now();
                 if (now - lastEqUpdate > 20) {
-                    sendSysex([0x03, effect.id, fIdx + 1, fVal]);
-                    sendSysex([0x03, effect.id, gIdx + 1, gVal]);
+                    sendSysex([SYSEX_CMD.PARAM_UPDATE, effect.id, fIdx + 1, fVal]);
+                    sendSysex([SYSEX_CMD.PARAM_UPDATE, effect.id, gIdx + 1, gVal]);
                     lastEqUpdate = now;
                 }
 
@@ -1141,8 +1173,8 @@ function renderUI() {
                     const gIdx = activeNodeIdx * 2 + 1;
                     const fVal = parseInt(eqPotsInputs[fIdx].value);
                     const gVal = parseInt(eqPotsInputs[gIdx].value);
-                    if (!isNaN(fVal)) sendSysex([0x03, effect.id, fIdx + 1, fVal]);
-                    if (!isNaN(gVal)) sendSysex([0x03, effect.id, gIdx + 1, gVal]);
+                    if (!isNaN(fVal)) sendSysex([SYSEX_CMD.PARAM_UPDATE, effect.id, fIdx + 1, fVal]);
+                    if (!isNaN(gVal)) sendSysex([SYSEX_CMD.PARAM_UPDATE, effect.id, gIdx + 1, gVal]);
                 }
                 isDragging = false;
                 if (activeNodeIdx !== -1) {
@@ -1196,7 +1228,7 @@ function renderUI() {
             mixInput.addEventListener('input', (e) => {
                 const midiVal = parseInt(e.target.value);
                 mixValDisplay.textContent = formatPotValue(mixPotDef, midiVal);
-                sendSysex([0x03, effect.id, 0, midiVal]);
+                sendSysex([SYSEX_CMD.PARAM_UPDATE, effect.id, 0, midiVal]);
             });
 
             mixDiv.appendChild(mixLabel);
@@ -1239,7 +1271,7 @@ function renderUI() {
                 ccToElementMap.set(potIdKey, select);
                 select.addEventListener('change', (e) => {
                     const midiVal = parseInt(e.target.value);
-                    sendSysex([0x03, effect.id, pIdx+1, midiVal]);
+                    sendSysex([SYSEX_CMD.PARAM_UPDATE, effect.id, pIdx+1, midiVal]);
                 });
 
                 potDiv.appendChild(label);
@@ -1266,7 +1298,7 @@ function renderUI() {
                 input.addEventListener('input', (e) => {
                     const midiVal = parseInt(e.target.value);
                     valDisplay.textContent = formatPotValue(pot, midiVal);
-                    sendSysex([0x03, effect.id, pIdx+1, midiVal]);
+                    sendSysex([SYSEX_CMD.PARAM_UPDATE, effect.id, pIdx+1, midiVal]);
                     if (input.redrawCurve) input.redrawCurve();
                 });
 
@@ -1451,11 +1483,11 @@ appTitleEl.addEventListener('click', () => {
                 const idx = parseInt(parts[1]);
                 const pIdx = parseInt(parts[3]);
                 const effId = PEDAL_EFFECTS[idx].id;
-                sendSysex([0x03, effId, pIdx + 1, val]);
+                sendSysex([SYSEX_CMD.PARAM_UPDATE, effId, pIdx + 1, val]);
             } else if (parts.length === 3 && parts[2] === 'mix') {
                 const idx = parseInt(parts[1]);
                 const effId = PEDAL_EFFECTS[idx].id;
-                sendSysex([0x03, effId, 0, val]);
+                sendSysex([SYSEX_CMD.PARAM_UPDATE, effId, 0, val]);
             }
         });
     }
@@ -1485,7 +1517,8 @@ appTitleEl.addEventListener('click', () => {
             sendMidiCc(GLOBAL_ENABLE_CC, 64);
             setTimeout(() => {
                 sendMidiCc(GLOBAL_ENABLE_CC, 127);
-                sendSysex([0x01]);
+                sendSysex([SYSEX_CMD.REQ_SCHEMA]);
+                sendSysex([SYSEX_CMD.DIAGNOSTIC]); // Check status after reset
             }, 100);
             showButtonSuccess(globalResetBtn, 'Reset Complete');
         });
@@ -1523,7 +1556,10 @@ appTitleEl.addEventListener('click', () => {
             }
             const sceneId = parseInt(sceneSelect.value);
             sendMidiPc(sceneId);
-            setTimeout(() => sendSysex([0x05]), 100);
+            setTimeout(() => {
+                sendSysex([SYSEX_CMD.REQ_STATE]);
+                sendSysex([SYSEX_CMD.DIAGNOSTIC]); // Check status after load
+            }, 100);
             showButtonSuccess(loadSceneBtn, 'Loaded!');
         });
     }
@@ -1536,7 +1572,8 @@ appTitleEl.addEventListener('click', () => {
                 return;
             }
             const sceneId = parseInt(sceneSelect.value);
-            sendSysex([0x04, sceneId]);
+            sendSysex([SYSEX_CMD.SAVE_SCENE, sceneId]);
+            sendSysex([SYSEX_CMD.DIAGNOSTIC]); // Check status after save
             showButtonSuccess(saveSceneBtn, 'Saved!');
         });
     }
