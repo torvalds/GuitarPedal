@@ -19,12 +19,6 @@ struct {
 	struct biquad_state state[5];
 } peq;
 
-static float peq_pot_A(float db)
-{
-	// A = 10^(db/40), which is 2^(db * LOG2_10 / 40)
-	return pow2(db * (LOG2_10 / 40.0f));
-}
-
 // Fixed Q for the 5-band EQ
 static const float PEQ_Q = 1.0f;
 
@@ -32,11 +26,11 @@ static void parametric_eq_init(unsigned char pot[10])
 {
 	struct biquad_coeff *c = peq.coeff;
 
-	_biquad_loshelf(c+0, fastsincos(parametric_eq_pot0(pot[0]) / SAMPLES_PER_SEC), PEQ_Q, peq_pot_A(parametric_eq_pot1(pot[1])));
-	_biquad_peaking(c+1, fastsincos(parametric_eq_pot2(pot[2]) / SAMPLES_PER_SEC), PEQ_Q, peq_pot_A(parametric_eq_pot3(pot[3])));
-	_biquad_peaking(c+2, fastsincos(parametric_eq_pot4(pot[4]) / SAMPLES_PER_SEC), PEQ_Q, peq_pot_A(parametric_eq_pot5(pot[5])));
-	_biquad_peaking(c+3, fastsincos(parametric_eq_pot6(pot[6]) / SAMPLES_PER_SEC), PEQ_Q, peq_pot_A(parametric_eq_pot7(pot[7])));
-	_biquad_hishelf(c+4, fastsincos(parametric_eq_pot8(pot[8]) / SAMPLES_PER_SEC), PEQ_Q, peq_pot_A(parametric_eq_pot9(pot[9])));
+	_biquad_loshelf(c+0, fastsincos(parametric_eq_pot0(pot[0]) / SAMPLES_PER_SEC), PEQ_Q, db_to_level(parametric_eq_pot1(pot[1])));
+	_biquad_peaking(c+1, fastsincos(parametric_eq_pot2(pot[2]) / SAMPLES_PER_SEC), PEQ_Q, db_to_level(parametric_eq_pot3(pot[3])));
+	_biquad_peaking(c+2, fastsincos(parametric_eq_pot4(pot[4]) / SAMPLES_PER_SEC), PEQ_Q, db_to_level(parametric_eq_pot5(pot[5])));
+	_biquad_peaking(c+3, fastsincos(parametric_eq_pot6(pot[6]) / SAMPLES_PER_SEC), PEQ_Q, db_to_level(parametric_eq_pot7(pot[7])));
+	_biquad_hishelf(c+4, fastsincos(parametric_eq_pot8(pot[8]) / SAMPLES_PER_SEC), PEQ_Q, db_to_level(parametric_eq_pot9(pot[9])));
 }
 
 static float parametric_eq_step(float in)
@@ -77,11 +71,11 @@ static int peq_magnitude(int x, void *arg)
 	struct biquad_coeff c;
 	unsigned char *pot = arg;
 
-	_biquad_loshelf(&c, fastsincos(parametric_eq_pot0(pot[0]) / SAMPLES_PER_SEC), PEQ_Q, peq_pot_A(parametric_eq_pot1(pot[1]))); mag_sq *= peq_biquad_mag_sq(&c,w0,w2);
-	_biquad_peaking(&c, fastsincos(parametric_eq_pot2(pot[2]) / SAMPLES_PER_SEC), PEQ_Q, peq_pot_A(parametric_eq_pot3(pot[3]))); mag_sq *= peq_biquad_mag_sq(&c,w0,w2);
-	_biquad_peaking(&c, fastsincos(parametric_eq_pot4(pot[4]) / SAMPLES_PER_SEC), PEQ_Q, peq_pot_A(parametric_eq_pot5(pot[5]))); mag_sq *= peq_biquad_mag_sq(&c,w0,w2);
-	_biquad_peaking(&c, fastsincos(parametric_eq_pot6(pot[6]) / SAMPLES_PER_SEC), PEQ_Q, peq_pot_A(parametric_eq_pot7(pot[7]))); mag_sq *= peq_biquad_mag_sq(&c,w0,w2);
-	_biquad_hishelf(&c, fastsincos(parametric_eq_pot8(pot[8]) / SAMPLES_PER_SEC), PEQ_Q, peq_pot_A(parametric_eq_pot9(pot[9]))); mag_sq *= peq_biquad_mag_sq(&c,w0,w2);
+	_biquad_loshelf(&c, fastsincos(parametric_eq_pot0(pot[0]) / SAMPLES_PER_SEC), PEQ_Q, db_to_level(parametric_eq_pot1(pot[1]))); mag_sq *= peq_biquad_mag_sq(&c,w0,w2);
+	_biquad_peaking(&c, fastsincos(parametric_eq_pot2(pot[2]) / SAMPLES_PER_SEC), PEQ_Q, db_to_level(parametric_eq_pot3(pot[3]))); mag_sq *= peq_biquad_mag_sq(&c,w0,w2);
+	_biquad_peaking(&c, fastsincos(parametric_eq_pot4(pot[4]) / SAMPLES_PER_SEC), PEQ_Q, db_to_level(parametric_eq_pot5(pot[5]))); mag_sq *= peq_biquad_mag_sq(&c,w0,w2);
+	_biquad_peaking(&c, fastsincos(parametric_eq_pot6(pot[6]) / SAMPLES_PER_SEC), PEQ_Q, db_to_level(parametric_eq_pot7(pot[7]))); mag_sq *= peq_biquad_mag_sq(&c,w0,w2);
+	_biquad_hishelf(&c, fastsincos(parametric_eq_pot8(pot[8]) / SAMPLES_PER_SEC), PEQ_Q, db_to_level(parametric_eq_pot9(pot[9]))); mag_sq *= peq_biquad_mag_sq(&c,w0,w2);
 
 	float mag = sqrtf(mag_sq);
 	if (mag < 0.0001f) mag = 0.0001f;
