@@ -699,3 +699,39 @@ input[type=range].large-slider::-webkit-slider-runnable-track {
   color: white;
   border-color: var(--accent);
 }
+
+.unrouted-divider {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--text-color);
+    font-weight: bold;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    position: relative;
+    opacity: 0.7;
+}
+
+.unrouted-divider::before,
+.unrouted-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 30%;
+    height: 1px;
+    background-color: var(--text-color);
+    opacity: 0.3;
+}
+
+.unrouted-divider::before { left: 5%; }
+.unrouted-divider::after { right: 5%; }
+
+.effect-card.unrouted {
+    opacity: 0.5;
+    filter: grayscale(80%);
+    transition: opacity 0.3s, filter 0.3s;
+}
+
+.effect-card.unrouted:hover {
+    opacity: 0.8;
+    filter: grayscale(40%);
+}

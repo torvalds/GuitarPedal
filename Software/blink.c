@@ -47,6 +47,10 @@ static const struct effect *last_effect = NULL;
 #include "audio/tac5112.h"
 #include "audio/effect.h"
 
+uint8_t effect_chain[15];
+uint8_t effect_chain_len = 0;
+uint8_t routed_effect_count = 0;
+
 #include "eeprom.h"
 
 static void reset_effect(struct effect *eff)
@@ -55,6 +59,7 @@ static void reset_effect(struct effect *eff)
 	eff->last = -1;
 	eff->seq = 0;
 	eff->mix = eff->target = 0;
+	eff->mix_pot = (unsigned int)(eff->def_mix * EFF_ENABLE_STEPS);
 	for (int i = 0; i < 10; i++) {
 		unsigned char def_val = eff->pots[i].def_val;
 		eff->pot_values[0][i] = def_val;
@@ -244,6 +249,7 @@ static void send_sysex_schema_chunk(void)
 static int state_dump_eff_idx = -1;
 static int state_dump_pot_idx = 0;
 static int state_dump_packet_idx = 0;
+static int state_dump_routing_idx = -1;
 
 static void send_state_dump_chunk(void)
 {
@@ -252,7 +258,8 @@ static void send_state_dump_chunk(void)
 	while (state_dump_eff_idx < ARRAY_SIZE(effects)) {
 		if (state_dump_eff_idx == 0 && state_dump_pot_idx == 0) {
 			uint8_t packet[4] = { 0x0B, 0xB0, MIDI_CC_GLOBAL_ENABLE, disable_all ? 0 : 127 };
-			if (!tud_midi_packet_write(packet)) return;
+			if (!tud_midi_packet_write(packet))
+				return;
 			state_dump_pot_idx = 1;
 		} else {
 			struct effect *e = effects[state_dump_eff_idx];
@@ -263,7 +270,7 @@ static void send_state_dump_chunk(void)
 			} else if (state_dump_packet_idx == 1) {
 				packet[0] = 0x04; packet[1] = state_dump_eff_idx;
 				if (state_dump_pot_idx == 1) {
-					packet[2] = 0; packet[3] = e->target ? 127 : 0;
+					packet[2] = 0; packet[3] = (e->mix_pot * 120) / EFF_ENABLE_STEPS;
 				} else {
 					packet[2] = state_dump_pot_idx - 1;
 					packet[3] = e->pot_values[e->seq & 1][state_dump_pot_idx - 2];
@@ -272,7 +279,8 @@ static void send_state_dump_chunk(void)
 				packet[0] = 0x05; packet[1] = 0xF7; packet[2] = 0; packet[3] = 0;
 			}
 
-			if (!tud_midi_packet_write(packet)) return;
+			if (!tud_midi_packet_write(packet))
+				return;
 
 			state_dump_packet_idx++;
 			if (state_dump_packet_idx == 3) {
@@ -286,8 +294,53 @@ static void send_state_dump_chunk(void)
 		}
 	}
 
-	state_dump_eff_idx = -1;
+	if (state_dump_routing_idx == -1) {
+		uint8_t packet[4] = { 0x04, 0xF0, 0x7D, 0x08 };
+		if (!tud_midi_packet_write(packet))
+			return;
+		state_dump_routing_idx = 0;
+	}
+
+	while (state_dump_routing_idx < routed_effect_count) {
+		int remaining = routed_effect_count - state_dump_routing_idx;
+		uint8_t packet[4];
+		if (remaining >= 3) {
+			packet[0] = 0x04; // 3 bytes
+			packet[1] = effect_chain[state_dump_routing_idx++];
+			packet[2] = effect_chain[state_dump_routing_idx++];
+			packet[3] = effect_chain[state_dump_routing_idx++];
+		} else if (remaining == 2) {
+			packet[0] = 0x07; // 3 bytes, ends with F7
+			packet[1] = effect_chain[state_dump_routing_idx++];
+			packet[2] = effect_chain[state_dump_routing_idx++];
+			packet[3] = 0xF7;
+		} else if (remaining == 1) {
+			packet[0] = 0x06; // 2 bytes, ends with F7
+			packet[1] = effect_chain[state_dump_routing_idx++];
+			packet[2] = 0xF7;
+			packet[3] = 0;
+		}
+		if (!tud_midi_packet_write(packet)) {
+			state_dump_routing_idx -= (remaining >= 3) ? 3 : remaining;
+			return;
+		}
+
+		if (remaining <= 2) {
+			// Finished!
+			state_dump_eff_idx = -1;
+			return;
+		}
+	}
+
+	// If routed_effect_count was a multiple of 3, we need to send just F7
+	if (state_dump_routing_idx == routed_effect_count) {
+		uint8_t packet[4] = { 0x05, 0xF7, 0, 0 }; // 1 byte (F7)
+		if (!tud_midi_packet_write(packet))
+			return;
+		state_dump_eff_idx = -1;
+	}
 }
+
 static uint8_t sysex_buf[32];
 static int sysex_len = 0;
 static bool in_sysex = false;
@@ -297,7 +350,7 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 	uint8_t cmd = sysex_buf[0];
 	if (cmd == 0x01) { // Schema Request
 		schema_tx_index = 0;
-	} else if (cmd == 0x03 && sysex_len >= 3) { // Set Parameter
+	} else if (cmd == 0x03 && sysex_len >= 4) { // Set Parameter
 		uint8_t eff_id = sysex_buf[1];
 		uint8_t pot_idx = sysex_buf[2];
 		uint8_t val = sysex_buf[3];
@@ -307,7 +360,13 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 		}
 		if (e) {
 			if (pot_idx == 0) {
-				e->target = val > 0 ? EFF_ENABLE_STEPS : 0;
+				e->mix_pot = (val * EFF_ENABLE_STEPS) / 120;
+
+				bool routed = (e == effects[0] || e == effects[EFFECT_COUNT - 1]);
+				for (int i = 0; !routed && i < effect_chain_len; i++) {
+					if (effects[effect_chain[i]] == e) routed = true;
+				}
+				e->target = routed ? e->mix_pot : 0;
 			} else if (pot_idx <= 10) {
 				unsigned int seq = e->seq;
 				unsigned char *cur_pot = e->pot_values[seq & 1];
@@ -321,12 +380,40 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 	} else if (cmd == 0x04 && sysex_len >= 2) { // Save Scene
 		uint8_t scene_id = sysex_buf[1];
 		save_scene(scene_id);
+
 	} else if (cmd == 0x05) { // State Dump Request
 		state_dump_eff_idx = 0;
 		state_dump_pot_idx = 0;
 		state_dump_packet_idx = 0;
+		state_dump_routing_idx = -1;
+	} else if (cmd == 0x08) { // Set Routing Order
+		routed_effect_count = 0;
+
+		// Routing order
+		for (int i = 1; i < sysex_len && routed_effect_count < 14; i++) {
+			uint8_t eff_id = sysex_buf[i];
+			effect_chain[routed_effect_count++] = eff_id;
+			if (eff_id < EFFECT_COUNT) {
+				effects[eff_id]->target = effects[eff_id]->mix_pot;
+			}
+		}
+
+		// Append unrouted effects and set target to 0
+		effect_chain_len = routed_effect_count;
+		for (int i = 1; i < EFFECT_COUNT - 1; i++) {
+			bool routed = false;
+			for (int j = 0; j < routed_effect_count; j++) {
+				if (effect_chain[j] == i) { routed = true; break; }
+			}
+			if (!routed) {
+				effect_chain[effect_chain_len++] = i;
+				effects[i]->target = 0;
+			}
+		}
+		ui_sync_changed = true;
 	}
 }
+
 
 bool handle_midi_packet(const uint8_t packet[4])
 {
@@ -587,9 +674,19 @@ static void init_effects(void)
 {
 	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
 		struct effect *effect = effects[i];
-
 		reset_effect(effect);
-		load_effect_state(i, effect);
+	}
+
+	if (!load_scene(0)) {
+		// Default chain if EEPROM is empty
+		routed_effect_count = 0;
+		effect_chain_len = 0;
+		extern struct effect gate_effect;
+		extern struct effect settings_effect;
+	}
+
+	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
+		struct effect *effect = effects[i];
 		effect->init(effect->pot_values[0]);
 	}
 }

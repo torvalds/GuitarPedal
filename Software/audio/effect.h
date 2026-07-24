@@ -35,6 +35,8 @@ struct pot_descr {
 struct effect {
 	const char *name, *short_name;
 	unsigned int mix, target;
+	unsigned int mix_pot;
+	float def_mix;
 	volatile unsigned int seq, last;
 	unsigned char intense, active_pot;
 	unsigned char pot_values[2][10];
@@ -49,6 +51,8 @@ struct effect {
 #define EFFECT_POT(...) { __VA_ARGS__ }
 
 // Effects and MIDI mapping auto-generated from scripts/gen_effects.py
+extern uint8_t effect_chain[15];
+extern uint8_t effect_chain_len;
 #include "effect_map.h"
 
 static inline void generic_effect_describe(struct effect *e, unsigned char pots[10])
@@ -73,17 +77,18 @@ static unsigned int dropped;
 // Effects are purely mono... For now
 static inline sample_t do_effect_step(struct effect *effect, sample_t val)
 {
-	if (effect->mix == effect->target) {
-		if (effect->mix)
-			val.right = val.left = effect->step(val.left);
-	} else {
+	if (effect->mix != effect->target) {
 		int dir = effect->mix < effect->target ? +1 : -1;
-		float mix = effect->mix / (float) EFF_ENABLE_STEPS;
 		effect->mix += dir;
-		float effect_val = effect->step(val.left);
-		val.left = linear(mix, val.left, effect_val);
-		val.right = linear(mix, val.right, effect_val);
 	}
+
+	if (effect->mix == 0) return val;
+
+	float mix = effect->mix / (float) EFF_ENABLE_STEPS;
+	float effect_val = effect->step(val.left);
+	val.left = linear(mix, val.left, effect_val);
+	val.right = linear(mix, val.right, effect_val);
+
 	return val;
 }
 
@@ -136,8 +141,9 @@ static inline void single_sample(float mix)
 	}
 
 	sample_t out = in;
-	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
-		out = do_effect_step(effects[i], out);
+	out = do_effect_step(effects[0], out); // Gate is always index 0 and runs first
+	for (int i = 0; i < effect_chain_len; i++) {
+		out = do_effect_step(effects[effect_chain[i]], out);
 	}
 
 	out.left = linear(mix, in.left, out.left);

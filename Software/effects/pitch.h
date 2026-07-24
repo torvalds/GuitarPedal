@@ -2,7 +2,7 @@
 // PRIORITY: 100
 // POT: "Octave" LINEAR(-2.0 2.0) = 1.0
 // POT: "Feedback" LINEAR(0.0 1.0) = 0.5
-// POT: "Mix" LINEAR(0.0 1.0) = 0.5
+// DEFAULT_MIX: 0.5
 //
 // Entirely random pitch shifting effect walking the
 // sample buffer at varying speeds, and hiding the
@@ -19,7 +19,7 @@
 #define DISCONT_STEPS (1 << DISCONT_SHIFT)
 
 struct {
-	float step, feedback, mix;
+	float step, feedback;
 	unsigned phase, idx;
 	float array[4*DISCONT_STEPS];
 } pitch;
@@ -34,7 +34,6 @@ static void pitch_init(unsigned char pot[10])
 	float step = pow2(pitch_pot0(pot[0]));	//  0.25 .. 4
 	pitch.step = step - 1;				// -0.75 .. 3
 	pitch.feedback = pitch_pot1(pot[1]);
-	pitch.mix = pitch_pot2(pot[2]);
 }
 
 // i is discontinuous when sin**2 is 0
@@ -62,5 +61,5 @@ static float pitch_step(float in)
 
 	sample_array_write(linear(pitch.feedback, in, out), &pitch.idx, pitch.array);
 
-	return linear(pitch.mix, in, out);
+	return out;
 }

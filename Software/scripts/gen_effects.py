@@ -32,6 +32,9 @@ def generate(audio_dir, out_h, out_js, out_md):
         priority = int(priority_match.group(1)) if priority_match else 100
         graph_fn = graph_match.group(1) if graph_match else None
 
+        def_mix_match = re.search(r'//\s*DEFAULT_MIX:\s*(\S+)', content)
+        def_mix = float(def_mix_match.group(1)) if def_mix_match else 1.0
+
         pots = []
         # Match: // POT: "Name" CURVE(a b c) = 1.0 Unit
         pot_lines = re.findall(r'//[ \t]*POT:[ \t]*"([^"]+)"[ \t]+(LINEAR|FREQUENCY|SQUARED|EXPONENTIAL|RAW|ENUM)(?:\(([^)]+)\))?(?:[ \t]*=[ \t]*(\S+))?(?:[ \t]+(\S+))?[ \t]*\n?', content)
@@ -66,6 +69,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             'full_name': full_name,
             'short_name': short_name,
             'priority': priority,
+            'def_mix': def_mix,
             'graph': graph_fn,
             'pots': pots,
             'header_path': header_path
@@ -113,6 +117,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             "base": e_data['base'],
             "name": e_data['full_name'],
             "shortName": e_data['short_name'],
+            "defMix": e_data['def_mix'],
             "pots": ui_pots
         })
 
@@ -159,6 +164,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             f.write(f"static struct effect {struct_name} = {{\n")
             f.write(f"\t.name = \"{e_data['full_name']}\",\n")
             f.write(f"\t.short_name = \"{e_data['short_name']}\",\n")
+            f.write(f"\t.def_mix = {e_data['def_mix']}f,\n")
             if e_data['graph']:
                 f.write(f"\t.graph = {e_data['graph']},\n")
             f.write(f"\t.init = {base}_init,\n")

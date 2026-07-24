@@ -255,7 +255,7 @@ function handleSysex(data) {
 
         const idx = effectIdMap.get(effId);
         if (idx !== undefined) {
-            const idKey = potIdx === 0 ? `eff-${idx}-bypass` : `eff-${idx}-pot-${potIdx-1}`;
+            const idKey = potIdx === 0 ? `eff-${idx}-mix` : `eff-${idx}-pot-${potIdx-1}`;
             const el = ccToElementMap.get(idKey);
             if (el) {
                 if (el.type === 'checkbox') {
@@ -280,6 +280,12 @@ function handleSysex(data) {
                 }
             }
         }
+    } else if (cmd === 0x08) { // Routing order
+        const routeIds = [];
+        for (let i = 3; i < data.length - 1; i++) {
+            routeIds.push(data[i]);
+        }
+        reorderEffectsInDOM(routeIds);
     }
 }
 
@@ -538,6 +544,32 @@ function formatPotValue(pot, val) {
     return displayStr;
 }
 
+
+function sendUpdatedRouting() {
+    const cards = Array.from(effectsContainer.children);
+    const routeIds = [];
+    let isUnrouted = false;
+
+    cards.forEach(card => {
+        if (card.classList.contains('unrouted-divider')) {
+            isUnrouted = true;
+            return;
+        }
+        if (isUnrouted) return;
+
+        const id = parseInt(card.dataset.effectId);
+        const eff = PEDAL_EFFECTS.find(e => e.id === id);
+        if (eff && eff.name !== 'Settings' && eff.name !== 'Noise Gate') {
+            routeIds.push(id);
+        }
+    });
+
+    const data = [0x08, ...routeIds.slice(0, 14)];
+    sendSysex(data);
+    reorderEffectsInDOM(routeIds);
+}
+
+
 function getInitialPotValue(pot) {
     if (pot.default === undefined) return 60;
     const y = pot.default;
@@ -562,8 +594,98 @@ function getInitialPotValue(pot) {
     return Math.max(0, Math.min(120, val));
 }
 
+
+function reorderEffectsInDOM(routeIds) {
+    const activeRouteIds = new Set(routeIds);
+    const cards = Array.from(effectsContainer.children);
+    cards.sort((a, b) => {
+        const idA = a.classList.contains('unrouted-divider') ? 'div' : parseInt(a.dataset.effectId);
+        const idB = b.classList.contains('unrouted-divider') ? 'div' : parseInt(b.dataset.effectId);
+
+        let idxA, idxB;
+        if (idA === 'div') {
+            idxA = 998;
+        } else {
+            const effA = PEDAL_EFFECTS.find(e => e.id === idA);
+            if (effA && effA.name === "Noise Gate") idxA = -2;
+            else if (effA && effA.name === "Settings") idxA = 997;
+            else idxA = routeIds.indexOf(idA) === -1 ? 999 : routeIds.indexOf(idA);
+        }
+
+        if (idB === 'div') {
+            idxB = 998;
+        } else {
+            const effB = PEDAL_EFFECTS.find(e => e.id === idB);
+            if (effB && effB.name === "Noise Gate") idxB = -2;
+            else if (effB && effB.name === "Settings") idxB = 997;
+            else idxB = routeIds.indexOf(idB) === -1 ? 999 : routeIds.indexOf(idB);
+        }
+
+        if (idxA !== idxB) return idxA - idxB;
+        if (idA === 'div' || idB === 'div') return 0;
+        return idA - idB;
+    });
+
+    cards.forEach(card => {
+        effectsContainer.appendChild(card);
+        if (card.classList.contains('unrouted-divider')) return;
+
+        const id = parseInt(card.dataset.effectId);
+        const isRouted = activeRouteIds.has(id);
+        const eff = PEDAL_EFFECTS.find(e => e.id === id);
+        const isAlwaysRouted = eff && (eff.name === "Noise Gate" || eff.name === "Settings");
+
+        if (isRouted || isAlwaysRouted) {
+            card.classList.remove('unrouted');
+            // Auto expand when routed
+            const controls = card.querySelector('.effect-controls');
+            const chevron = card.querySelector('.collapse-chevron');
+            if (controls) controls.style.display = '';
+            if (chevron) chevron.style.transform = 'rotate(0deg)';
+        } else {
+            card.classList.add('unrouted');
+            // Auto collapse unrouted effects
+            const controls = card.querySelector('.effect-controls');
+            const chevron = card.querySelector('.collapse-chevron');
+            if (controls) controls.style.display = 'none';
+            if (chevron) chevron.style.transform = 'rotate(-90deg)';
+        }
+    });
+}
+
+
+// Add some styles dynamically for drag and drop
+const style = document.createElement('style');
+style.textContent = `
+    .effect-card.dragging {
+        opacity: 0.5;
+        border: 2px dashed var(--primary);
+    }
+`;
+document.head.appendChild(style);
+
 function renderUI() {
     effectsContainer.innerHTML = '';
+
+    // Add unrouted divider
+    const divider = document.createElement('div');
+    divider.className = 'unrouted-divider';
+    divider.textContent = '--- Unrouted Effects ---';
+
+    divider.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const draggingCard = document.querySelector('.dragging');
+        if (!draggingCard) return;
+        divider.parentNode.insertBefore(draggingCard, divider.nextSibling);
+    });
+
+    divider.addEventListener('drop', (e) => {
+        e.preventDefault();
+        sendUpdatedRouting();
+    });
+
+    effectsContainer.appendChild(divider);
 
     PEDAL_EFFECTS.forEach((effect, idx) => {
         const card = document.createElement('section');
@@ -574,17 +696,35 @@ function renderUI() {
         const header = document.createElement('div');
         header.className = 'effect-header';
 
+        card.dataset.effectId = effect.id;
+
         const title = document.createElement('div');
         title.className = 'effect-title';
-        title.textContent = effect.name;
+        title.style.display = 'flex';
+        title.style.alignItems = 'center';
+
+        // Settings effect cannot be reordered or collapsed (maybe collapsed is fine, but no drag)
+        if (effect.name !== "Settings" && effect.name !== "Noise Gate") {
+            title.innerHTML = `<span class="drag-handle" style="cursor: grab; margin-right: 12px; font-size: 1.4em; opacity: 0.7;">≡</span>
+                               <span class="collapse-chevron" style="cursor: pointer; margin-right: 8px; font-size: 0.8em; transition: transform 0.2s;">▼</span>
+                               <span>${effect.name}</span>`;
+
+            // Enable dragging only when hovering the drag handle
+            const dragHandle = title.querySelector('.drag-handle');
+            if (dragHandle) {
+                dragHandle.addEventListener('mouseenter', () => card.draggable = true);
+                dragHandle.addEventListener('mouseleave', () => card.draggable = false);
+                dragHandle.addEventListener('touchstart', () => card.draggable = true, {passive: true});
+                dragHandle.addEventListener('touchend', () => card.draggable = false);
+            }
+        } else {
+            title.innerHTML = `<span class="collapse-chevron" style="cursor: pointer; margin-right: 8px; font-size: 0.8em; transition: transform 0.2s;">▼</span>
+                               <span>${effect.name}</span>`;
+        }
 
         const enableGroup = document.createElement('div');
         enableGroup.className = 'control-group enable-group';
         enableGroup.innerHTML = `
-            <label class="switch">
-              <input type="checkbox" id="enable-${idx}">
-              <span class="slider round"></span>
-            </label>
             <button class="action-btn effect-reset-btn" title="Reset to Defaults">↺</button>
         `;
 
@@ -592,24 +732,82 @@ function renderUI() {
         header.appendChild(enableGroup);
         card.appendChild(header);
 
+        // Collapse toggle
+        const chevron = title.querySelector('.collapse-chevron');
+        if (chevron) {
+            chevron.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const controls = card.querySelector('.effect-controls');
+                if (controls.style.display === 'none') {
+                    controls.style.display = 'flex';
+                    chevron.style.transform = 'rotate(0deg)';
+                } else {
+                    controls.style.display = 'none';
+                    chevron.style.transform = 'rotate(-90deg)';
+                }
+            });
+        }
+
+        // Drag and drop logic
+        card.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', effect.id);
+            e.dataTransfer.effectAllowed = 'move';
+            card.classList.add('dragging');
+        });
+
+        card.addEventListener('dragend', (e) => {
+            card.classList.remove('dragging');
+        });
+
+        card.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            const draggingCard = document.querySelector('.dragging');
+            if (!draggingCard || draggingCard === card) return;
+
+            if (effect.name === "Noise Gate") {
+                card.parentNode.insertBefore(draggingCard, card.nextSibling);
+                return;
+            }
+            if (effect.name === "Settings") {
+                card.parentNode.insertBefore(draggingCard, card);
+                return;
+            }
+
+            // Determine whether to insert before or after
+            const rect = card.getBoundingClientRect();
+            const midpoint = rect.top + rect.height / 2;
+            if (e.clientY < midpoint) {
+                card.parentNode.insertBefore(draggingCard, card);
+            } else {
+                card.parentNode.insertBefore(draggingCard, card.nextSibling);
+            }
+        });
+
+        card.addEventListener('drop', (e) => {
+            e.preventDefault();
+            // Send new routing array via SysEx
+            sendUpdatedRouting();
+        });
+
+        // The Reset button resets all pots. We should also reset the Mix pot!
         const resetBtn = enableGroup.querySelector('.effect-reset-btn');
         resetBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // prevent toggling effect header or other click events
+            e.stopPropagation();
             effect.pots.forEach((potDef, pIdx) => {
                 const initialVal = getInitialPotValue(potDef);
                 const inputEl = ccToElementMap.get(`eff-${idx}-pot-${pIdx}`);
                 if (inputEl) {
                     inputEl.value = initialVal;
-                    // Trigger the event so the UI updates and Sysex gets sent
                     inputEl.dispatchEvent(new Event(inputEl.tagName === 'SELECT' ? 'change' : 'input'));
                 }
             });
-        });
-
-        const enableInput = enableGroup.querySelector('input');
-        ccToElementMap.set(`eff-${idx}-bypass`, enableInput);
-        enableInput.addEventListener('change', (e) => {
-            sendSysex([0x03, effect.id, 0, e.target.checked ? 127 : 0]);
+            const mixEl = ccToElementMap.get(`eff-${idx}-mix`);
+            if (mixEl) {
+                const defaultMixVal = Math.round((effect.defMix !== undefined ? effect.defMix : 1.0) * 120);
+                mixEl.value = defaultMixVal;
+                mixEl.dispatchEvent(new Event('input'));
+            }
         });
 
         // Controls
@@ -936,6 +1134,50 @@ function renderUI() {
             controls.className = 'effect-controls';
         }
 
+        // Generate Mix slider
+        if (effect.name !== 'Settings' && effect.name !== 'Noise Gate') {
+            const mixPotDef = { name: 'Mix', curve: 'LINEAR', min: 0, max: 100, unit: '%' };
+            const mixDiv = document.createElement('div');
+            mixDiv.className = 'pot-control mix-pot-control';
+
+            const mixLabel = document.createElement('div');
+            mixLabel.className = 'pot-label';
+            mixLabel.textContent = mixPotDef.name;
+
+            const defaultMixVal = Math.round((effect.defMix !== undefined ? effect.defMix : 1.0) * 120);
+
+            const mixValDisplay = document.createElement('div');
+            mixValDisplay.className = 'pot-value';
+            mixValDisplay.textContent = formatPotValue(mixPotDef, defaultMixVal);
+
+            const mixInput = document.createElement('input');
+            mixInput.type = 'range';
+            mixInput.min = 0;
+            mixInput.max = 120;
+            mixInput.value = defaultMixVal;
+            mixInput.potDef = mixPotDef;
+
+            ccToElementMap.set(`eff-${idx}-mix`, mixInput);
+            mixInput.addEventListener('input', (e) => {
+                const midiVal = parseInt(e.target.value);
+                mixValDisplay.textContent = formatPotValue(mixPotDef, midiVal);
+                sendSysex([0x03, effect.id, 0, midiVal]);
+            });
+
+            mixDiv.appendChild(mixLabel);
+            mixDiv.appendChild(mixValDisplay);
+            mixDiv.appendChild(mixInput);
+
+            // Add active pot triggers
+            const activateMixPot = () => {
+                setActivePot(`eff-${idx}-mix`, mixPotDef, parseInt(mixInput.value), effect.name);
+            };
+            mixDiv.addEventListener('mousedown', activateMixPot);
+            mixDiv.addEventListener('touchstart', activateMixPot, { passive: true });
+
+            controls.appendChild(mixDiv);
+        }
+
         effect.pots.forEach((pot, pIdx) => {
             const potIdKey = `eff-${idx}-pot-${pIdx}`;
 
@@ -1027,7 +1269,6 @@ function renderUI() {
         if (effect.name === 'Parametric EQ') {
             setTimeout(() => effect.redrawCurve(), 0);
         }
-
         card.appendChild(controls);
         effectsContainer.appendChild(card);
     });
@@ -1169,13 +1410,17 @@ appTitleEl.addEventListener('click', () => {
             }
 
             // Parse activePotCc to get effectId and potIdx
-            // activePotCc is like "eff-2-pot-0"
+            // activePotCc is like "eff-2-pot-0" or "eff-2-mix"
             const parts = activePotCc.split('-');
-            if (parts.length >= 4) {
+            if (parts.length >= 4 && parts[2] === 'pot') {
                 const idx = parseInt(parts[1]);
                 const pIdx = parseInt(parts[3]);
                 const effId = PEDAL_EFFECTS[idx].id;
                 sendSysex([0x03, effId, pIdx + 1, val]);
+            } else if (parts.length === 3 && parts[2] === 'mix') {
+                const idx = parseInt(parts[1]);
+                const effId = PEDAL_EFFECTS[idx].id;
+                sendSysex([0x03, effId, 0, val]);
             }
         });
     }

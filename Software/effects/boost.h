@@ -4,9 +4,9 @@
 // POT: "Level" LINEAR(-40.0 0.0) = 0.0 dB
 // POT: "Basscut" FREQUENCY(10.0 200.0) = 30 Hz
 // POT: "Highcut" FREQUENCY(1.0 20.0) = 3.4 kHz
-// POT: "Mix" LINEAR(0.0 1.0) = 0.5
+// DEFAULT_MIX: 0.5
 struct {
-	float mult, level, mix;
+	float mult, level;
 	struct biquad basscut, highcut;
 } boost;
 
@@ -16,7 +16,6 @@ void boost_init(unsigned char pot[10])
 	boost.level = db_to_level(boost_pot1(pot[1]));
 	biquad_hpf(&boost.basscut, boost_pot2(pot[2]), 0.707);
 	biquad_lpf(&boost.highcut, boost_pot3(pot[3])*1000, 0.707);
-	boost.mix = boost_pot4(pot[4]);
 }
 
 
@@ -50,5 +49,5 @@ static float boost_step(float in)
 	else if (out < -boost.level)
 		out = -fold(-out, boost.level);
 
-	return linear(boost.mix, in, out);
+	return out;
 }

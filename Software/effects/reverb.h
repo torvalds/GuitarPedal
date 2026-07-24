@@ -1,6 +1,6 @@
 // NAME: Reverb [VERB]
 // PRIORITY: 90
-// POT: "Mix" LINEAR(0.0 1.0) = 0.18
+// DEFAULT_MIX: 0.18
 // POT: "Room" LINEAR(0.70 0.98) = 0.88
 // POT: "Damp" LINEAR(0.1 0.5) = 0.25
 //
@@ -66,9 +66,8 @@ static struct {
 
 static void reverb_init(unsigned char pot[10])
 {
-	reverb_state.g         = reverb_pot1(pot[1]);
-	reverb_state.damp      = reverb_pot2(pot[2]);
-	reverb_state.wet_level = reverb_pot0(pot[0]);
+	reverb_state.g         = reverb_pot0(pot[0]);
+	reverb_state.damp      = reverb_pot1(pot[1]);
 
 	for (int i = 0; i < 8; i++)
 		reverb_state.combs[i].delay = reverb_comb_L[i];

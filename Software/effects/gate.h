@@ -1,5 +1,6 @@
 // NAME: Noise Gate [GATE]
-// PRIORITY: 10
+// PRIORITY: 0 (Special: always runs first outside of effect_chain)
+// POT: "Active" ENUM(Off On) = On
 // POT: "Level" LINEAR(-100.0 -40.0) = -70.0 dB
 // POT: "Attack" LINEAR(0.0 10.0) = 1.5 ms
 // POT: "Release" LINEAR(50.0 500.0) = 150.0 ms
@@ -15,20 +16,23 @@
 static struct {
 	struct envelope envelope;
 	float mult, level;
+	int active;
 } gate;
 
 static inline void gate_init(unsigned char pot[10])
 {
-	float level_db = gate_pot0(pot[0]);
+	gate.active = (int)gate_pot0(pot[0]);
+	float level_db = gate_pot1(pot[1]);
 	gate.level = db_to_level(level_db);
 
-	float attack_ms = gate_pot1(pot[1]);
-	float release_ms = gate_pot2(pot[2]);
+	float attack_ms = gate_pot2(pot[2]);
+	float release_ms = gate_pot3(pot[3]);
 	envelope_init(&gate.envelope, attack_ms, release_ms);
 }
 
 static inline float gate_step(float in)
 {
+	if (!gate.active) return in;
 	float env = envelope_step(&gate.envelope, in);
 	float mult = gate.mult;
 
