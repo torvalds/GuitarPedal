@@ -35,7 +35,6 @@ static union {
 } eeprom_cache;
 static uint16_t eeprom_dirty_mask[MAX_SCENES] = {0};
 static uint8_t current_scene_id = 0;
-extern volatile bool ui_sync_changed;
 
 static inline uint8_t string_checksum(const char *cstr)
 {

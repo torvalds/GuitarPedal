@@ -159,7 +159,6 @@ static void update_ui(void)
 			int val = effect->pot_values[effect->seq & 1][i];
 			send_sysex_set_param(effect_idx, i+1, val);
 		}
-		last_effect = NULL;	// Force list_effects();
 		effect->seq += 2;	// Force saving
 	}
 
@@ -222,11 +221,6 @@ static void update_ui(void)
 			}
 		}
 		effect->seq++;
-	}
-
-	extern volatile bool ui_sync_changed;
-	if (__atomic_exchange_n(&ui_sync_changed, false, __ATOMIC_RELAXED)) {
-		last_effect = NULL;
 	}
 
 	if (effect->active_pot != last_active_pot) {

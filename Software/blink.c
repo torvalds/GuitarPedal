@@ -42,7 +42,6 @@
 static int tuner_mode = 0;
 static volatile int user_interaction = 0;
 static volatile int next_state_seq = 1;
-static const struct effect *last_effect = NULL;
 
 #include "audio/effect.h"
 
@@ -161,7 +160,6 @@ static void switch_irq(void)
 		if (!gpio_get(GPIO_SW1) && !gpio_get(GPIO_SW2)) {
 			if (usb_is_connected())
 				reset_usb_boot(0, 0);
-			last_effect = NULL;
 			for (int i = 0; i < ARRAY_SIZE(effects); i++) {
 				struct effect *eff = effects[i];
 				reset_effect(eff);
@@ -170,8 +168,6 @@ static void switch_irq(void)
 	}
 	user_interaction = 1;
 }
-
-volatile bool ui_sync_changed = false;
 
 int current_midi_effect_idx = 0;
 
@@ -327,7 +323,6 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 				new_pot[pot_idx - 1] = val;
 				e->seq++;
 			}
-			ui_sync_changed = true;
 		}
 	} else if (cmd == 0x04 && sysex_len >= 2) { // Save Scene
 		uint8_t scene_id = sysex_buf[1];
@@ -365,7 +360,6 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 				effects[i]->target = 0;
 			}
 		}
-		ui_sync_changed = true;
 	}
 }
 
@@ -420,13 +414,11 @@ bool handle_midi_packet(const uint8_t packet[4])
 			} else {
 				disable_all = (data2 == 0) ? EFF_ENABLE_STEPS : 0;
 			}
-			ui_sync_changed = true;
 		} else if (data1 == 7) { // Volume
 			// Not yet wired globally
 		} else if (data1 == MIDI_CC_ACTIVE_POT) {
 			if (current_midi_effect_idx < ARRAY_SIZE(effects)) {
 				effects[current_midi_effect_idx]->active_pot = data2;
-				ui_sync_changed = true;
 			}
 		}
 	} else if ((status & 0xF0) == 0xC0) {
@@ -434,7 +426,6 @@ bool handle_midi_packet(const uint8_t packet[4])
 		// Program Change -> Load Scene
 		if (data1 < MAX_SCENES) {
 			load_scene(data1);
-			ui_sync_changed = true;
 		}
 	}
 
