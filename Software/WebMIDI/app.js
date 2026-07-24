@@ -248,6 +248,17 @@ function handleSysex(data) {
         } catch (e) {
             console.error("Failed to parse schema", e);
         }
+    } else if (cmd === 0x09) { // Diagnostic Response
+        let jsonStr = '';
+        for (let i = 3; i < data.length - 1; i++) {
+            jsonStr += String.fromCharCode(data[i]);
+        }
+        const diagnosticOutput = document.getElementById('diagnostic-output');
+        if (diagnosticOutput && jsonStr.trim() !== '') {
+            const timeStr = new Date().toLocaleTimeString();
+            diagnosticOutput.value += `[${timeStr}] ${jsonStr}\n`;
+            diagnosticOutput.scrollTop = diagnosticOutput.scrollHeight;
+        }
     } else if (cmd === 0x03 && data.length >= 6) { // Set Parameter
         const effId = data[3];
         const potIdx = data[4];
@@ -1503,6 +1514,17 @@ appTitleEl.addEventListener('click', () => {
             const sceneId = parseInt(sceneSelect.value);
             sendSysex([0x04, sceneId]);
             showButtonSuccess(saveSceneBtn, 'Saved!');
+        });
+    }
+
+    const diagBtn = document.getElementById('global-diag-btn');
+    if (diagBtn) {
+        diagBtn.addEventListener('click', () => {
+            if (!midiOutput) {
+                showButtonError(diagBtn, 'Not Connected');
+                return;
+            }
+            sendSysex([0x09]);
         });
     }
 

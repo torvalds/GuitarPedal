@@ -13,6 +13,7 @@
 
 #include "board.h"
 
+#include "status.h"
 #include "ws2812.pio.h"
 #include "debounce.pio.h"
 #include "rotary.pio.h"
@@ -251,6 +252,25 @@ static int state_dump_pot_idx = 0;
 static int state_dump_packet_idx = 0;
 static int state_dump_routing_idx = -1;
 
+bool send_status_tx = false;
+static void sysex_send_status(void)
+{
+	if (!send_status_tx)
+		return;
+	send_status_tx = false;
+
+	static const uint8_t sysex_status_header[] = { 0xF0, 0x7D, 0x09 };
+	static const uint8_t sysex_status_trailer[] = { 0xF7 };
+
+	char *status = get_status();
+	if (!status)
+		return;
+
+	tud_midi_stream_write(0, sysex_status_header, sizeof(sysex_status_header));
+	tud_midi_stream_write(0, (uint8_t *)status, strlen(status));
+	tud_midi_stream_write(0, sysex_status_trailer, sizeof(sysex_status_trailer));
+}
+
 static void send_state_dump_chunk(void)
 {
 	if (state_dump_eff_idx < 0) return;
@@ -380,6 +400,10 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 	} else if (cmd == 0x04 && sysex_len >= 2) { // Save Scene
 		uint8_t scene_id = sysex_buf[1];
 		save_scene(scene_id);
+
+	} else if (cmd == 0x09) { // Diagnostic Request
+
+		send_status_tx = true;
 
 	} else if (cmd == 0x05) { // State Dump Request
 		state_dump_eff_idx = 0;
@@ -753,6 +777,7 @@ int main()
 		tud_task();
 		send_sysex_schema_chunk();
 		send_state_dump_chunk();
+		sysex_send_status();
 		usb_audio_task();
 #endif
 		sh1106_task();

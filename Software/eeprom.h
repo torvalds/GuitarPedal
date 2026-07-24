@@ -3,6 +3,7 @@
 
 #include "hardware/i2c.h"
 #include "board.h"
+#include "status.h"
 #include <string.h>
 
 #if EEPROM_64KBIT
@@ -106,7 +107,7 @@ static void eeprom_task(void)
 		// Write at most a page per call to handle the 5ms
 		// latency.
 		//
-		// Isolate the lowest bit and clear it.
+		// Isolate the lowest bit.
 		mask &= -mask;
 		eeprom_dirty_mask[scene] &= ~mask;
 
@@ -124,9 +125,8 @@ static void eeprom_task(void)
 #if !EEPROM_64KBIT
 		p++; len--;
 #endif
-		// If this fails, it fails.. We can't just continue to
-		// try write failures forever.
-		i2c_write_blocking(MC24Cxx_I2C, p, len, false);
+		if (i2c_write_blocking(MC24Cxx_I2C, p, len, false) != len)
+			report_status("EEPROM write failed");
 		return;
 	}
 }
@@ -184,6 +184,8 @@ static bool load_effect_state_from_slot(unsigned int slot, struct effect *effect
 	effect->mix_pot = (state->mix_level * EFF_ENABLE_STEPS) / 127;
 	effect->target = (slot == 0 || slot == 15 || slot <= routed_effect_count) ? effect->mix_pot : 0;
 	effect->mix = effect->target;
+	if (effect->init)
+		effect->init(effect->pot_values[0]);
 	if (effect->load)
 		effect->load(effect, state->pots);
 	return true;
