@@ -297,7 +297,7 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 	uint8_t cmd = sysex_buf[0];
 	if (cmd == 0x01) { // Schema Request
 		schema_tx_index = 0;
-	} else if (cmd == 0x03 && sysex_len >= 3) { // Set Parameter
+	} else if (cmd == 0x03 && sysex_len >= 4) { // Set Parameter
 		uint8_t eff_id = sysex_buf[1];
 		uint8_t pot_idx = sysex_buf[2];
 		uint8_t val = sysex_buf[3];
