@@ -190,12 +190,6 @@ static void update_ui(void)
 	bool led1 = !disable_all, led1_intense = clipping;
 	bool led2 = effect->target, led2_intense = effect->intense;
 
-#ifdef USB_MODE_HOST
-	extern uint8_t remote_clipping;
-	extern uint8_t remote_intense;
-	led1_intense = remote_clipping;
-	led2_intense = remote_intense;
-#endif
 	set_led(PWM_PIN1, led1, led1_intense);
 	set_led(PWM_PIN2, led2, led2_intense);
 

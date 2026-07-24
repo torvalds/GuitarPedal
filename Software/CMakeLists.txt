@@ -19,9 +19,6 @@ set(MIDI_HW OFF CACHE BOOL "Enable MIDI HW (not just MIDI over USB-C) support")
 # and they aren't sw-compatible
 set(EEPROM_64KBIT OFF CACHE BOOL "Configure for 64kbit eeprom chip")
 
-set(USB_MODE "DEVICE" CACHE STRING "USB Mode: DEVICE (default) or HOST")
-set_property(CACHE USB_MODE PROPERTY STRINGS DEVICE HOST)
-
 set(SAMPLES_PER_SEC 48000.0)
 set(SCRIPT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
 
@@ -102,7 +99,6 @@ target_compile_definitions(blink PRIVATE
 	PLL_SYS_POSTDIV2=1
 	MIDI_HW=$<BOOL:${MIDI_HW}>
 	EEPROM_64KBIT=$<BOOL:${EEPROM_64KBIT}>
-	USB_MODE_${USB_MODE}=1
 	SAMPLES_PER_SEC=${SAMPLES_PER_SEC}f
 	CFG_TUSB_MCU=OPT_MCU_RP2040
 	CFG_TUSB_OS=OPT_OS_PICO
@@ -116,21 +112,12 @@ target_sources(blink PRIVATE
 	tinyusb/src/portable/raspberrypi/rp2040/rp2040_usb.c
 )
 
-if(USB_MODE STREQUAL "HOST")
-	target_sources(blink PRIVATE
-		usb-host.c
-		tinyusb/src/host/usbh.c
-		tinyusb/src/host/hub.c
-		tinyusb/src/class/midi/midi_host.c
-		tinyusb/src/portable/raspberrypi/rp2040/hcd_rp2040.c)
-else()
-	target_sources(blink PRIVATE
-		usb-device.c
-		tinyusb/src/device/usbd.c
-		tinyusb/src/class/audio/audio_device.c
-		tinyusb/src/class/midi/midi_device.c
-		tinyusb/src/portable/raspberrypi/rp2040/dcd_rp2040.c)
-endif()
+target_sources(blink PRIVATE
+	usb-device.c
+	tinyusb/src/device/usbd.c
+	tinyusb/src/class/audio/audio_device.c
+	tinyusb/src/class/midi/midi_device.c
+	tinyusb/src/portable/raspberrypi/rp2040/dcd_rp2040.c)
 
 target_link_libraries(blink
 	pico_stdlib

@@ -132,11 +132,7 @@ static void init_sw_pin(PIO pio, int pin)
 // supply or the USB line, but ...
 static inline bool usb_is_connected(void)
 {
-#ifdef USB_MODE_HOST
-	return true;
-#else
 	return tud_ready();
-#endif
 }
 
 // We use PIO1 for the SW pins.
@@ -176,16 +172,6 @@ static void switch_irq(void)
 }
 
 volatile bool ui_sync_changed = false;
-
-#ifdef USB_MODE_HOST
-uint8_t remote_clipping = 0;
-uint8_t remote_intense = 0;
-uint8_t remote_dropped = 0;
-#endif
-
-static bool remote_tuner_data = false;
-static uint8_t remote_note_idx[9] = {0};
-static int8_t remote_cents[9] = {0};
 
 int current_midi_effect_idx = 0;
 
@@ -442,41 +428,6 @@ bool handle_midi_packet(const uint8_t packet[4])
 				effects[current_midi_effect_idx]->active_pot = data2;
 				ui_sync_changed = true;
 			}
-		} else if (data1 == MIDI_CC_AUDIO_CLIPPING) {
-#ifdef USB_MODE_HOST
-			remote_clipping = (data2 > 0);
-#endif
-		} else if (data1 == MIDI_CC_EFFECT_INTENSE) {
-#ifdef USB_MODE_HOST
-			remote_intense = (data2 > 0);
-#endif
-		} else if (data1 == MIDI_CC_CPU_LATENCY) {
-#ifdef USB_MODE_HOST
-			remote_dropped = data2;
-#endif
-		}
-	} else if ((status & 0xF0) == 0x90) { // Note On
-		handled = true;
-		uint8_t ch = status & 0x0F;
-		if (ch < 9) {
-			remote_note_idx[ch] = data1;
-			remote_tuner_data = true;
-		}
-	} else if ((status & 0xF0) == 0x80) { // Note Off
-		handled = true;
-		uint8_t ch = status & 0x0F;
-		if (ch < 9 && remote_note_idx[ch] == data1) {
-			remote_note_idx[ch] = 0;
-			remote_tuner_data = true;
-		}
-	} else if ((status & 0xF0) == 0xE0) { // Pitch Bend
-		handled = true;
-		uint8_t ch = status & 0x0F;
-		if (ch < 9) {
-			uint16_t bend = data1 | (data2 << 7);
-			int cents = ((int)bend - 8192) / 41;
-			remote_cents[ch] = (int8_t)cents;
-			remote_tuner_data = true;
 		}
 	} else if ((status & 0xF0) == 0xC0) {
 		handled = true;
@@ -690,15 +641,11 @@ int main()
 	for (;;) {
 		absolute_time_t now = get_absolute_time();
 
-#ifdef USB_MODE_HOST
-		tuh_task();
-#else
 		tud_task();
 		sysex_send_schema();
 		sysex_send_state_dump();
 		sysex_send_status();
 		usb_audio_task();
-#endif
 		uart_midi_poll();
 
 		// Claim 25Hz screen updates
@@ -721,14 +668,12 @@ int main()
 
 			update_ui();
 
-#ifndef USB_MODE_HOST
 			unsigned int current_dropped = __atomic_exchange_n(&dropped, 0, __ATOMIC_RELAXED);
 			if (current_dropped) {
 				int midi_dropped = current_dropped;
 				if (midi_dropped > 127) midi_dropped = 127;
 				send_midi_cc(MIDI_CC_CPU_LATENCY, midi_dropped);
 			}
-#endif
 		}
 	}
 }
