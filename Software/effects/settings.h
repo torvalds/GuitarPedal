@@ -22,7 +22,6 @@ struct {
 	enum usb_input usb_input;
 	int midi_channel;
 	float led_pwm, led_intense;
-	int screensaver;
 	int tuning;
 } settings;
 

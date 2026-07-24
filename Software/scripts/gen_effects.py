@@ -20,7 +20,6 @@ def generate(audio_dir, out_h, out_js, out_md):
 
         name_match = re.search(r'//\s*NAME:\s*(.*?)\s*\[(.*?)\]', content)
         priority_match = re.search(r'//\s*PRIORITY:\s*(\d+)', content)
-        graph_match = re.search(r'//\s*GRAPH:\s*(\w+)', content)
         if not name_match:
             continue
 
@@ -30,7 +29,6 @@ def generate(audio_dir, out_h, out_js, out_md):
         full_name = name_match.group(1).strip()
         short_name = name_match.group(2).strip()
         priority = int(priority_match.group(1)) if priority_match else 100
-        graph_fn = graph_match.group(1) if graph_match else None
 
         def_mix_match = re.search(r'//\s*DEFAULT_MIX:\s*(\S+)', content)
         def_mix = float(def_mix_match.group(1)) if def_mix_match else 1.0
@@ -70,7 +68,6 @@ def generate(audio_dir, out_h, out_js, out_md):
             'short_name': short_name,
             'priority': priority,
             'def_mix': def_mix,
-            'graph': graph_fn,
             'pots': pots,
             'header_path': header_path
         })
@@ -165,8 +162,6 @@ def generate(audio_dir, out_h, out_js, out_md):
             f.write(f"\t.name = \"{e_data['full_name']}\",\n")
             f.write(f"\t.short_name = \"{e_data['short_name']}\",\n")
             f.write(f"\t.def_mix = {e_data['def_mix']}f,\n")
-            if e_data['graph']:
-                f.write(f"\t.graph = {e_data['graph']},\n")
             f.write(f"\t.init = {base}_init,\n")
             f.write(f"\t.step = {base}_step,\n")
             f.write(f"\t.pots = {{\n")

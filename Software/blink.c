@@ -37,7 +37,6 @@
 #include "uart.h"
 #include "tusb.h"
 #include "usb-audio.h"
-#include "sh1106.h"
 #include "switch.h"
 
 static int tuner_mode = 0;
@@ -45,7 +44,6 @@ static volatile int user_interaction = 0;
 static volatile int next_state_seq = 1;
 static const struct effect *last_effect = NULL;
 
-#include "audio/tac5112.h"
 #include "audio/effect.h"
 
 uint8_t effect_chain[15];
@@ -662,28 +660,10 @@ static void init_effects(void)
 	}
 }
 
-#include "tuner_ui.h"
-
-static void tuner_mode_ui(void)
-{
-	// UI update at 25Hz -> ~10s cycle -> 5s half-cycle of sin^2
-	static struct lfo_state breathe = { .step = 0x01000000 };
-
-	float led = lfo_step(&breathe, lfo_sinewave);
-	led = led*led;
-
-	int level = led_pwm_mapping(led * settings.led_pwm);
-	pwm_set_gpio_level(PWM_PIN1, level);
-	level = led_pwm_mapping((1-led) * settings.led_pwm);
-	pwm_set_gpio_level(PWM_PIN2, level);
-
-	draw_analyzer();
-}
+#include "tuner.h"
 
 int main()
 {
-	int forced_update = 1;
-
 	enable_ftz();
 
 	init_i2s();
@@ -699,24 +679,16 @@ int main()
 
 	absolute_time_t now = get_absolute_time();
 
-	// Power-up delay for sh1106
-	absolute_time_t next_ui_update = delayed_by_ms(now, 500);
+	absolute_time_t next_ui_update = delayed_by_ms(now, 50);
 
-	tac5112_init();
 	init_eeprom();
 
 	init_effects();
-
-	// Idle animation setup
-	absolute_time_t next_idle_time = delayed_by_ms(now, settings.screensaver);
 
 	multicore_launch_core1(audio_processing);
 
 	for (;;) {
 		absolute_time_t now = get_absolute_time();
-
-		if (__atomic_exchange_n(&user_interaction, 0, __ATOMIC_RELAXED))
-			next_idle_time = delayed_by_ms(now, settings.screensaver);
 
 #ifdef USB_MODE_HOST
 		tuh_task();
@@ -727,7 +699,6 @@ int main()
 		sysex_send_status();
 		usb_audio_task();
 #endif
-		sh1106_task();
 		uart_midi_poll();
 
 		// Claim 25Hz screen updates
@@ -742,19 +713,13 @@ int main()
 				send_midi_cc(MIDI_CC_GLOBAL_ENABLE, tuner_mode ? 68 : 69);
 			}
 
-			// Are we in tuner mode? Don't do normal
-			// screen updates
+			// Are we in tuner mode?
 			if (tuner_mode) {
 				tuner_mode_ui();
-				forced_update = 1;
 				continue;
 			}
 
-			if (now > next_idle_time)
-				/* screensaver logic */;
-
-			update_ui(forced_update);
-			forced_update = 0;
+			update_ui();
 
 #ifndef USB_MODE_HOST
 			unsigned int current_dropped = __atomic_exchange_n(&dropped, 0, __ATOMIC_RELAXED);

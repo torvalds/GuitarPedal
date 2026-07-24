@@ -314,10 +314,6 @@ static inline void polyphonic_tuner_magnitudes(const struct tuning *current_tuni
 }
 
 
-// Forward declare to_ascii from ui.h
-static char *to_ascii(unsigned char term, uint32_t val, char *p, int digits, int decimals);
-static char *float_to_ascii(float val, int places);
-
 // Helper to calculate the MIDI note number (69 = A4 440Hz) and cent deviation.
 static inline struct tune_result calculate_note_and_cents(float freq)
 {
@@ -356,113 +352,6 @@ static const char *const note_names[12] = {
 	"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
 };
 
-static void draw_chromatic(const struct tune_result *result)
-{
-	if (!result->note_idx)
-		return;
-
-	int note_idx = result->note_idx;
-	float cents = result->cents;
-
-	int name_idx = note_idx % 12;
-	if (name_idx < 0) name_idx += 12;
-
-	const char *name = note_names[name_idx];
-	int octave = (note_idx / 12) - 1;
-
-	// Build a string like "C#4"
-	char full_name[8];
-	int name_len = 0;
-	while (name[name_len]) {
-		full_name[name_len] = name[name_len];
-		name_len++;
-	}
-	full_name[name_len++] = '0' + octave;
-	full_name[name_len] = '\0';
-
-	char cents_str[8];
-	char *end = cents_str + 8;
-	end = to_ascii('\0', abs((int)cents), end, 1, 0);
-	if (cents <= -0.5f) *--end = '-';
-	else if (cents >= 0.5f) *--end = '+';
-
-	sh1106_puts_8x16(64 - name_len * 4, 46, full_name);
-
-	int cents_len = strlen(end);
-	sh1106_puts_6x8(64 - cents_len * 3, 66, end);
-
-	// Display exact frequency to the right of the chromatic section
-	sh1106_puts_6x8(126 - 5 * 6, 50, float_to_ascii(tuner_state.dominant_freq, 4));
-
-	// Huge needle spanning most of screen
-	int bar_x = 64 + (int)cents; // 50 cents = 50 pixels -> 14 to 114
-	if (bar_x < 14) bar_x = 14;
-	if (bar_x > 114) bar_x = 114;
-
-	sh1106_hline(14, 104, 100); // Axis line
-	sh1106_vline(64, 94, 21); // Center tick
-	sh1106_rectangle(bar_x - 2, 84, 5, 41, rect_filled); // Needle
-}
-
-static void draw_polyphonic(const struct tune_result *result, int s, int base_x, int col_w)
-{
-	int s_x = base_x + s * col_w;
-
-	if (!result->note_idx) {
-		// Inactive string: no result, so we draw nothing.
-		return;
-	}
-
-	int name_idx = result->note_idx % 12;
-	if (name_idx < 0) name_idx += 12;
-	const char *name = note_names[name_idx];
-
-	// Center the 8x16 char in the column
-	sh1106_puts_8x16(s_x + (col_w - 8) / 2, 0, name);
-
-	int cents = result->cents >> 2;
-
-	// Build an arrow pointing in the right direction
-	//
-	// 10 is not entirely random: the sprites are
-	// max 24 pixels high (32 bit in the sprite map,
-	// but shifted up to 8 bits by the Y position)
-	//
-	cents = cents < -10 ? -10 : cents > 10 ? 10 : cents;
-	unsigned int arrow[32];
-	int arrow_w = col_w;
-	if (arrow_w > 32) arrow_w = 32;
-
-	arrow_w = (arrow_w-3)/2;
-	unsigned int pixels = 0;
-	for (int i = 0; i < arrow_w; i++) {
-		unsigned int val = 10 + cents*i/arrow_w;
-		pixels |= 7 << val;
-		arrow[i] = pixels;
-		arrow[2*arrow_w - i - 1] = pixels;
-	}
-	sh1106_sprite(s_x, 17, 2*arrow_w, arrow, arrow);
-}
-
-static void render_tuner_results(const struct tuner_results *results, const struct tuning *current_tuning)
-{
-	sh1106_clear(0, 0, 128, 128);
-
-	draw_chromatic(&results->results[0]);
-
-	// Clear top background for polyphonic tuning display
-	sh1106_clear(0, 0, 128, 36);
-
-	int col_w = 128 / current_tuning->num_strings;
-	int base_x = (128 - (current_tuning->num_strings * col_w)) / 2;
-
-	for (int s = 0; s < current_tuning->num_strings; s++) {
-		draw_polyphonic(&results->results[1 + s], s, base_x, col_w);
-	}
-
-	sh1106_draw();
-}
-
 static int prev_note_idx[1 + MAX_STRINGS] = {0};
 
 static void send_tuner_midi(const struct tuner_results *results)
@@ -496,7 +385,7 @@ static void send_tuner_midi(const struct tuner_results *results)
 	}
 }
 
-static void draw_analyzer(void)
+static void tuner_mode_ui(void)
 {
 	unsigned int tuning_idx = settings.tuning;
 	if (tuning_idx >= ARRAY_SIZE(tunings))
@@ -510,21 +399,8 @@ static void draw_analyzer(void)
 		analyzer.read_index = write_idx - FFT_SIZE;
 	}
 
-	if (write_idx - analyzer.read_index < FFT_SIZE) {
-		if (!remote_tuner_data)
-			return;
-
-		struct tuner_results remote_results;
-		remote_results.num_results = 1 + current_tuning->num_strings;
-
-		for (int i = 0; i < remote_results.num_results; i++) {
-			remote_results.results[i].note_idx = remote_note_idx[i];
-			remote_results.results[i].cents = remote_cents[i];
-			remote_results.results[i].mag = 0.0f; // We don't render remote magnitude on OLED yet
-		}
-		render_tuner_results(&remote_results, current_tuning);
+	if (write_idx - analyzer.read_index < FFT_SIZE)
 		return;
-	}
 
 	// Copy data from ring buffer and apply Hann window
 	for (int i = 0; i < FFT_SIZE; i++) {
@@ -566,7 +442,6 @@ static void draw_analyzer(void)
 	compute_tuner_results(current_tuning, &results);
 
 	send_tuner_midi(&results);
-	render_tuner_results(&results, current_tuning);
 
 	// Overlap by advancing read_idx by a fraction of FFT_SIZE
 	// FFT_SIZE / 16 = 512 samples. At 12kHz, this means 23 updates per second.

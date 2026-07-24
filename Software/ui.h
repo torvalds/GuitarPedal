@@ -89,197 +89,6 @@ static bool read_pots(struct effect *effect, unsigned char *pots)
 	return true;
 }
 
-static char *to_ascii(unsigned char term, uint32_t val, char *p, int digits, int decimals)
-{
-	digits += decimals;
-	*--p = term;
-	do {
-		*--p = '0' + val % 10;
-		val /= 10;
-		if (!--decimals)
-			*--p = '.';
-		digits--;
-	} while (val || digits > 0);
-	return p;
-}
-
-//
-// Helper wrapper for printing floats. The 'places' thing
-// is very much just approximate, and it's really a mix of
-// 'significant digits' and 'places' depending on what you
-// are printing out (ie it will limit to both).
-//
-// So printing out -12345678.9 to three "places" will result
-// in ten bytes ("-12300000"), while printing out 0.0099 will
-// result in "0.010"
-//
-static char *float_to_ascii(float val, int places)
-{
-	unsigned int target = 1;
-	for (int i = 1; i < places; i++)
-		target *= 10;
-
-	float abs_val = fabsf(val);
-	unsigned int decimals = 0, int_val;
-	int_val = lrintf(abs_val);
-
-	// Do we need to remove precision or add decimals?
-	if (int_val > 10*target) {
-		int remove = 0;
-		do {
-			remove++;
-			abs_val /= 10;
-			int_val = lrintf(abs_val);
-		} while (int_val > 10*target);
-		do { int_val *= 10; } while (--remove);
-	} else {
-		for (decimals = 0; int_val < target; decimals++) {
-			if (decimals >= places)
-				break;
-			abs_val *= 10;
-			int_val = lrintf(abs_val);
-		}
-	}
-
-	// Old-school interfaces. We're not re-entrant
-	static char internal_buffer[16];
-	char *p = internal_buffer + sizeof(internal_buffer);
-
-	p = to_ascii(0, int_val, p, 1, decimals);
-	if (val < 0)
-		*--p = '-';
-	return p;
-}
-
-static void list_effects(struct effect *active)
-{
-	int x = 3;
-	int y = 116;
-
-	int pos = 0, mid = 0;
-	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
-		struct effect *effect = effects[i];
-		const char *name = effect->short_name;
-		int width = strlen(name)*6 + 6;
-
-		if (effect == active)
-			mid = pos + width / 2;
-		pos += width;
-	}
-
-	if (mid > 64) {
-		int diff = mid - 64;
-		if (pos - diff < 128)
-			diff = pos - 128;
-		x -= diff;
-	}
-
-	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
-		struct effect *effect = effects[i];
-		const char *name = effect->short_name;
-		int width = strlen(name)*6;
-
-		if (effect == active)
-			sh1106_rectangle(x-3, y-3, width+6, 8+6, rect_border);
-		sh1106_puts_6x8(x,y,name);
-		if (effect->target)
-			sh1106_reverse(x-1, y-1, width+2, 10);
-		x += width+6;
-	}
-}
-
-static void list_enums(const struct pot_descr *pot, int active_val, int y)
-{
-	int x = 3;
-	int pos = 0, mid = 0;
-	int count = 0;
-
-	sh1106_clear(0,y,128,11);
-
-	while (pot->enum_names[count]) {
-		const char *name = pot->enum_names[count];
-		int width = strlen(name)*6 + 6;
-		if (count == active_val)
-			mid = pos + width / 2;
-		pos += width;
-		count++;
-	}
-
-	if (pos < 128) {
-		x = (128 - pos) / 2;
-	} else if (mid > 64) {
-		int diff = mid - 64;
-		if (pos - diff < 128)
-			diff = pos - 128;
-		x -= diff;
-	}
-
-	for (int i = 0; i < count; i++) {
-		const char *name = pot->enum_names[i];
-		int width = strlen(name)*6;
-
-		sh1106_puts_6x8(x,y+1,name);
-		if (i == active_val)
-			sh1106_reverse(x-1, y, width+2, 10);
-		x += width+6;
-	}
-}
-
-static void pot_describe(const struct pot_descr *pot, int val, int posY)
-{
-	// 8 characters for label
-	// 7 characters for numerical value
-	// 5 characters for units
-	char desc[22] = "                     ";
-	char *end = desc+16;
-	int decimals = 0;
-
-	if (pot->unit) {
-		int len = strlen(pot->unit);
-		if (len > 5) len = 5;
-		memcpy(end, pot->unit, len);
-	}
-
-	if (pot->enum_names) {
-		int e_val = val;
-		if (e_val < 0) e_val = 0;
-		const char *name = pot->enum_names[e_val];
-		if (name) {
-			int len = strlen(name);
-			if (len > 11) len = 11;
-			memcpy(desc + 10, name, len);
-		}
-	} else {
-		if (pot->convert) {
-			float fval = pot->convert(val);
-			if (fabsf(fval) < 100) {
-				fval *= 10;
-				decimals = 1;
-				if (fabsf(fval) < 100) {
-					fval *= 10;
-					decimals = 2;
-				}
-			}
-			val = lrintf(fval);
-			if (decimals > 1 && !(val % 100)) {
-				end--;
-				decimals--;
-				val /= 10;
-			}
-		}
-		end = to_ascii(' ', abs(val), end, 1, decimals);
-		if (val < 0)
-			*--end = '-';
-	}
-
-	const char *label = pot->label;
-	int len = strlen(label);
-	if (len > 8) len = 8;
-	memcpy(desc, label, len);
-	desc[len] = ':';
-	sh1106_puts_6x8(10, posY, desc);
-}
-
 static int switch_effect(int idx)
 {
 	// Ignore low two bits of rotary select
@@ -320,18 +129,12 @@ static void set_led(int pin, bool on, bool intense)
 }
 
 // 'update_ui()' is called every few ms to react to user events.
-static void update_ui(int force_update)
+static void update_ui(void)
 {
 	static int effect_idx = 0;
 	static int last_active_pot = -1;
 
 	struct effect *effect = effects[effect_idx];
-	bool update_screen = false;
-
-	if (force_update) {
-		last_effect = NULL;
-		update_screen = true;
-	}
 
 	// Left stomp or bottom rotary long-press: save effect state to EEPROM
 	if (switch_pressed(LONGPRESS(1)) || switch_pressed(LONGPRESS(3))) {
@@ -344,7 +147,6 @@ static void update_ui(int force_update)
 		effect->seq = 0;
 
 		save_effect_state(effect_idx, effect);
-		update_screen = true;
 	}
 
 	// Left stomp (or bottom rotary):
@@ -357,7 +159,6 @@ static void update_ui(int force_update)
 			int val = effect->pot_values[effect->seq & 1][i];
 			send_sysex_set_param(effect_idx, i+1, val);
 		}
-		update_screen = true;
 		last_effect = NULL;	// Force list_effects();
 		effect->seq += 2;	// Force saving
 	}
@@ -367,7 +168,6 @@ static void update_ui(int force_update)
 		switch_clear(2); switch_clear(4);
 		disable_all = EFF_ENABLE_STEPS * !disable_all;
 		send_midi_cc(MIDI_CC_GLOBAL_ENABLE, disable_all ? 0 : 127);
-		update_screen = true;
 	}
 
 	// Effect switching: lower rotary
@@ -384,8 +184,6 @@ static void update_ui(int force_update)
 		last_active_pot = -1; // Force active_pot update on screen switch
 
 		send_midi_pc(effect_idx);
-
-		update_screen = true;
 	}
 
 	// The LED mappings have changed between boards
@@ -430,92 +228,15 @@ static void update_ui(int force_update)
 			}
 		}
 		effect->seq++;
-		update_screen = true;
 	}
 
 	extern volatile bool ui_sync_changed;
 	if (__atomic_exchange_n(&ui_sync_changed, false, __ATOMIC_RELAXED)) {
 		last_effect = NULL;
-		update_screen = true;
-	}
-
-	if (effect != last_effect) {
-		last_effect = effect;
-		sh1106_clear(0, 0, 128, 128);
-		sh1106_puts_8x16(10, 70, effect->name);
-		list_effects(effect);
-		update_screen = true;
 	}
 
 	if (effect->active_pot != last_active_pot) {
 		send_midi_cc(MIDI_CC_ACTIVE_POT, effect->active_pot);
 		last_active_pot = effect->active_pot;
 	}
-
-#if 0
-	char buffer[16], *end = buffer+sizeof(buffer);
-
-	unsigned int tx = i2s_dma_tx_ptr() - i2s_dma_buf;
-	unsigned int rx = i2s_dma_rx_ptr() - i2s_dma_buf;
-	unsigned int cpu = cpu_idx;
-
-	char *p = to_ascii(0, (rx - tx) & 31, end, 1, 0);
-	sh1106_puts_6x8(126-6*(end-p-1),64,p);
-	p = to_ascii(0, (cpu - tx) & 31, end, 1, 0);
-	sh1106_puts_6x8(126-6*(end-p-1),72,p);
-	update_screen = true;
-#endif
-
-	if (!update_screen)
-		return;
-
-	int active = effect->active_pot;
-	if (effect->graph) {
-		effect->graph(effect, active, new_pot);
-	} else {
-		int total_pots = 0;
-		while (total_pots < 10 && effect->pots[total_pots].label)
-			total_pots++;
-
-		int start_pot = active - 2;
-		if (start_pot + 5 > total_pots)
-			start_pot = total_pots - 5;
-		if (start_pot < 0)
-			start_pot = 0;
-
-		for (int i = 0; i < 5; i++) {
-			int pot_idx = start_pot + i;
-			if (pot_idx >= total_pots)
-				break;
-			const struct pot_descr *pot = effect->pots + pot_idx;
-			pot_describe(pot, new_pot[pot_idx], 12*i);
-			sh1106_puts_6x8(0,12*i, (pot_idx == active) ? ">" : " ");
-		}
-	}
-
-	const struct pot_descr *pot = effect->pots + active;
-	const char *label = pot->label;
-	if (label) {
-		int val = new_pot[active];
-		int posY = 100;
-
-		pot_describe(pot, val, 90);
-
-		if (pot->enum_names) {
-			list_enums(pot, val, posY);
-		} else {
-			struct pot_range range = get_pot_range(pot);
-
-			int half = (range.max - range.min)/2;
-
-			int x = 64 + 64 * (val - range.min - half) / half;
-			int def_x = 64 + 64 * (pot->def_val - range.min - half) / half;
-
-			sh1106_rectangle(0,posY,128,11,rect_clear);
-			sh1106_rectangle(def_x,posY,1,11,rect_lines);
-			sh1106_rectangle(x-3,posY,7,11,rect_lines);
-		}
-	}
-
-	sh1106_draw();
 }

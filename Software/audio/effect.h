@@ -40,7 +40,6 @@ struct effect {
 	volatile unsigned int seq, last;
 	unsigned char intense, active_pot;
 	unsigned char pot_values[2][10];
-	void (*graph)(struct effect *, int, unsigned char[10]);
 	void (*init)(unsigned char[10]);
 	void (*load)(struct effect *, unsigned char[10]);
 	void (*save)(struct effect *, unsigned char[10]);
