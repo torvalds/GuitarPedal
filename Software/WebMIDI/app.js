@@ -100,6 +100,7 @@ function stopAllNotes() {
 // Initialize MIDI
 async function initMidi() {
     try {
+        console.log("[WebMIDI] Requesting MIDI access...");
         if (!navigator.requestMIDIAccess) {
             appTitleEl.textContent = "Browser Not Supported";
             console.error("Web MIDI API is not supported in this browser.");
@@ -154,6 +155,15 @@ function updateMidiState() {
     let foundInput = null;
     let foundOutput = null;
 
+    console.log("[WebMIDI] updating MIDI state. Available inputs:");
+    for (let input of midiAccess.inputs.values()) {
+        console.log("  Input:", input.name, input.id);
+    }
+    console.log("[WebMIDI] Available outputs:");
+    for (let output of midiAccess.outputs.values()) {
+        console.log("  Output:", output.name, output.id);
+    }
+
     if (selectedInputId && midiAccess.inputs.has(selectedInputId)) {
         foundInput = midiAccess.inputs.get(selectedInputId);
     } else {
@@ -193,6 +203,7 @@ function updateMidiState() {
 
         // Request initial state dump
         sendSysex([0x01]);
+        sendSysex([0x09]); // Request diagnostic status
     } else {
         midiInput = null;
         midiOutput = null;
@@ -221,10 +232,21 @@ if (updateAppBtn) {
 }
 
 
+let diagnosticTimeout = null;
+function scheduleDiagnostic() {
+    if (diagnosticTimeout) clearTimeout(diagnosticTimeout);
+    diagnosticTimeout = setTimeout(() => {
+        sendSysex([0x09]);
+    }, 1000);
+}
+
 function sendSysex(data) {
     if (!midiOutput) return;
     const msg = new Uint8Array([0xF0, 0x7D, ...data, 0xF7]);
     midiOutput.send(msg);
+    if (data[0] !== 0x09 && data[0] !== 0x01 && data[0] !== 0x05) {
+        scheduleDiagnostic();
+    }
 }
 
 let PEDAL_EFFECTS = [];
@@ -232,6 +254,7 @@ let effectIdMap = new Map();
 
 function handleSysex(data) {
     const cmd = data[2];
+    console.debug(`[WebMIDI] Received SysEx cmd=0x${cmd.toString(16)}, data=[${Array.from(data).map(b => '0x' + b.toString(16).padStart(2, '0')).join(', ')}]`);
     if (cmd === 0x02) {
         // Schema Response
         let jsonStr = '';
@@ -253,11 +276,8 @@ function handleSysex(data) {
         for (let i = 3; i < data.length - 1; i++) {
             jsonStr += String.fromCharCode(data[i]);
         }
-        const diagnosticOutput = document.getElementById('diagnostic-output');
-        if (diagnosticOutput && jsonStr.trim() !== '') {
-            const timeStr = new Date().toLocaleTimeString();
-            diagnosticOutput.value += `[${timeStr}] ${jsonStr}\n`;
-            diagnosticOutput.scrollTop = diagnosticOutput.scrollHeight;
+        if (jsonStr.trim() !== '') {
+            console.log(`[Pedal Diagnostic] ${jsonStr.trim()}`);
         }
     } else if (cmd === 0x03 && data.length >= 6) { // Set Parameter
         const effId = data[3];
@@ -303,9 +323,11 @@ function handleSysex(data) {
 function handleMidiMessage(event) {
     if (event.data[0] === 0xF0) {
         if (event.data[1] === 0x7D) handleSysex(event.data);
+        else console.debug(`[WebMIDI] Unknown SysEx: [${Array.from(event.data).map(b => '0x' + b.toString(16).padStart(2, '0')).join(', ')}]`);
         return;
     }
     const [status, data1, data2] = event.data;
+    console.debug(`[WebMIDI] Received normal MIDI message: status=0x${status ? status.toString(16) : 'undefined'}, data1=${data1}, data2=${data2}`);
 
     // Control Change (0xB0 to 0xBF, we just mask to 0xB0 for channel 1)
     if ((status & 0xF0) === 0xB0) {
@@ -514,6 +536,7 @@ function updateTunerDisplay() {
 function sendMidiPc(pc) {
     if (!midiOutput) return;
     midiOutput.send([0xC0 | (activeTransmitChannel & 0x0F), pc]);
+    scheduleDiagnostic();
 }
 
 function sendMidiCc(cc, val) {
@@ -523,6 +546,7 @@ function sendMidiCc(cc, val) {
     if (cc === 107) {
         activeTransmitChannel = (val === 0) ? 0xB0 : (0xB0 | ((val - 1) & 0x0F));
     }
+    scheduleDiagnostic();
 }
 
 function formatPotValue(pot, val) {
@@ -1514,17 +1538,6 @@ appTitleEl.addEventListener('click', () => {
             const sceneId = parseInt(sceneSelect.value);
             sendSysex([0x04, sceneId]);
             showButtonSuccess(saveSceneBtn, 'Saved!');
-        });
-    }
-
-    const diagBtn = document.getElementById('global-diag-btn');
-    if (diagBtn) {
-        diagBtn.addEventListener('click', () => {
-            if (!midiOutput) {
-                showButtonError(diagBtn, 'Not Connected');
-                return;
-            }
-            sendSysex([0x09]);
         });
     }
 

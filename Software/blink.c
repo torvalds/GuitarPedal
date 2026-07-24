@@ -237,6 +237,8 @@ static void sysex_send_schema(void)
 	sysex_stream_write(sysex_schema_header, sizeof(sysex_schema_header));
 	sysex_stream_write((const uint8_t *)midi_schema_json, strlen(midi_schema_json));
 	sysex_stream_write(sysex_schema_trailer, sizeof(sysex_schema_trailer));
+
+	report_info("Sent schema information");
 }
 
 bool send_status_tx = false;
@@ -275,27 +277,36 @@ static void sysex_send_state_dump(void)
 	state_dump_tx = false;
 
 	// Send the global enable state
+	report_info("Sending global-enable state");
 	uint8_t cc_packet[4] = { 0x0B, 0xB0, MIDI_CC_GLOBAL_ENABLE, disable_all ? 0 : 127 };
 	usb_midi_write(cc_packet);
 
 	// Then send the effect states
+	report_info("Sending effect pot state");
 	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
 		struct effect *e = effects[i];
+		const struct pot_descr *desc = e->pots;
 		unsigned char *pot_values = e->pot_values[e->seq & 1];
 
 		// We send the mix as "pot 0", and then pots numbered from 1
 		sysex_send_pot_value(i, 0,  (e->mix_pot * 120) / EFF_ENABLE_STEPS);
-		for (int pot = 0; pot < 10; pot++)
+		for (int pot = 0; pot < 10; pot++) {
+			if (!desc[pot].label)
+				break;
 			sysex_send_pot_value(i, pot+1, pot_values[pot]);
+		}
 	}
 
 	// And finally, send the routing order
+	report_info("Sending routing information");
 	static const uint8_t sysex_routing_header[] = { 0xF0, 0x7D, 0x08 };
 	static const uint8_t sysex_routing_trailer[] = { 0xF7 };
 
 	sysex_stream_write(sysex_routing_header, sizeof(sysex_routing_header));
 	sysex_stream_write(effect_chain, routed_effect_count);
 	sysex_stream_write(sysex_routing_trailer, sizeof(sysex_routing_trailer));
+
+	report_info("Sent state dump");
 }
 
 static uint8_t sysex_buf[32];
