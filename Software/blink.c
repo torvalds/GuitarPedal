@@ -193,64 +193,51 @@ int current_midi_effect_idx = 0;
 
 #include "midi_schema.h"
 
-static int schema_tx_index = -1;
+extern void usb_midi_write(const uint8_t packet[4]);
 
-static void send_sysex_schema_chunk(void)
+static uint8_t sysex_pack_buf[3];
+static int sysex_pack_len = 0;
+static bool sysex_pack_active = false;
+
+static void sysex_stream_write(const uint8_t *buffer, size_t len)
 {
-	if (schema_tx_index < 0) return;
-
-	int len = strlen(midi_schema_json);
-	while (schema_tx_index <= len + 1) {
-		uint8_t packet[4];
-		int next_idx = schema_tx_index;
-
-		if (schema_tx_index == 0) {
-			packet[0] = 0x04; packet[1] = 0xF0; packet[2] = 0x7D; packet[3] = 0x02;
-			next_idx = 1;
-		} else {
-			int i = schema_tx_index - 1;
-			int remain = len - i;
-			if (remain >= 3) {
-				packet[0] = 0x04;
-				packet[1] = midi_schema_json[i++];
-				packet[2] = midi_schema_json[i++];
-				packet[3] = midi_schema_json[i++];
-				next_idx = i + 1;
-			} else if (remain == 2) {
-				packet[0] = 0x07;
-				packet[1] = midi_schema_json[i++];
-				packet[2] = midi_schema_json[i++];
-				packet[3] = 0xF7;
-				next_idx = len + 2;
-			} else if (remain == 1) {
-				packet[0] = 0x06;
-				packet[1] = midi_schema_json[i++];
-				packet[2] = 0xF7;
-				packet[3] = 0;
-				next_idx = len + 2;
-			} else {
-				packet[0] = 0x05;
-				packet[1] = 0xF7;
-				packet[2] = 0;
-				packet[3] = 0;
-				next_idx = len + 2;
-			}
+	for (size_t i = 0; i < len; i++) {
+		uint8_t b = buffer[i];
+		if (b == 0xF0) {
+			sysex_pack_active = true;
+			sysex_pack_len = 0;
 		}
-
-		if (!tud_midi_packet_write(packet)) break; // FIFO full
-		schema_tx_index = next_idx;
-
-		if (schema_tx_index >= len + 2) {
-			schema_tx_index = -1;
-			break;
+		if (sysex_pack_active) {
+			sysex_pack_buf[sysex_pack_len++] = b;
+			if (b == 0xF7) {
+				uint8_t packet[4] = { (uint8_t)(0x04 + sysex_pack_len), 0, 0, 0 };
+				for (int j = 0; j < sysex_pack_len; j++) packet[1+j] = sysex_pack_buf[j];
+				usb_midi_write(packet);
+				sysex_pack_active = false;
+				sysex_pack_len = 0;
+			} else if (sysex_pack_len == 3) {
+				uint8_t packet[4] = { 0x04, sysex_pack_buf[0], sysex_pack_buf[1], sysex_pack_buf[2] };
+				usb_midi_write(packet);
+				sysex_pack_len = 0;
+			}
 		}
 	}
 }
 
-static int state_dump_eff_idx = -1;
-static int state_dump_pot_idx = 0;
-static int state_dump_packet_idx = 0;
-static int state_dump_routing_idx = -1;
+bool send_schema_tx = false;
+static void sysex_send_schema(void)
+{
+	if (!send_schema_tx)
+		return;
+	send_schema_tx = false;
+
+	static const uint8_t sysex_schema_header[] = { 0xF0, 0x7D, 0x02 };
+	static const uint8_t sysex_schema_trailer[] = { 0xF7 };
+
+	sysex_stream_write(sysex_schema_header, sizeof(sysex_schema_header));
+	sysex_stream_write((const uint8_t *)midi_schema_json, strlen(midi_schema_json));
+	sysex_stream_write(sysex_schema_trailer, sizeof(sysex_schema_trailer));
+}
 
 bool send_status_tx = false;
 static void sysex_send_status(void)
@@ -262,103 +249,53 @@ static void sysex_send_status(void)
 	static const uint8_t sysex_status_header[] = { 0xF0, 0x7D, 0x09 };
 	static const uint8_t sysex_status_trailer[] = { 0xF7 };
 
-	char *status = get_status();
+	const char *status = get_status();
 	if (!status)
 		return;
 
-	tud_midi_stream_write(0, sysex_status_header, sizeof(sysex_status_header));
-	tud_midi_stream_write(0, (uint8_t *)status, strlen(status));
-	tud_midi_stream_write(0, sysex_status_trailer, sizeof(sysex_status_trailer));
+	sysex_stream_write(sysex_status_header, sizeof(sysex_status_header));
+	sysex_stream_write((const uint8_t *)status, strlen(status));
+	sysex_stream_write(sysex_status_trailer, sizeof(sysex_status_trailer));
 }
 
-static void send_state_dump_chunk(void)
+static void sysex_send_pot_value(int eff, int pot, int value)
 {
-	if (state_dump_eff_idx < 0) return;
+	// This should never happen. But just in case...
+	if (value < 0 || value > 120) value = 0;
 
-	while (state_dump_eff_idx < ARRAY_SIZE(effects)) {
-		if (state_dump_eff_idx == 0 && state_dump_pot_idx == 0) {
-			uint8_t packet[4] = { 0x0B, 0xB0, MIDI_CC_GLOBAL_ENABLE, disable_all ? 0 : 127 };
-			if (!tud_midi_packet_write(packet))
-				return;
-			state_dump_pot_idx = 1;
-		} else {
-			struct effect *e = effects[state_dump_eff_idx];
-			uint8_t packet[4];
+	uint8_t sysex_pot_message[] = { 0xF0, 0x7D, 0x03, eff, pot, value, 0xF7 };
+	sysex_stream_write(sysex_pot_message, sizeof(sysex_pot_message));
+}
 
-			if (state_dump_packet_idx == 0) {
-				packet[0] = 0x04; packet[1] = 0xF0; packet[2] = 0x7D; packet[3] = 0x03;
-			} else if (state_dump_packet_idx == 1) {
-				packet[0] = 0x04; packet[1] = state_dump_eff_idx;
-				if (state_dump_pot_idx == 1) {
-					packet[2] = 0; packet[3] = (e->mix_pot * 120) / EFF_ENABLE_STEPS;
-				} else {
-					packet[2] = state_dump_pot_idx - 1;
-					packet[3] = e->pot_values[e->seq & 1][state_dump_pot_idx - 2];
-				}
-			} else {
-				packet[0] = 0x05; packet[1] = 0xF7; packet[2] = 0; packet[3] = 0;
-			}
+bool state_dump_tx = false;
+static void sysex_send_state_dump(void)
+{
+	if (!state_dump_tx)
+		return;
+	state_dump_tx = false;
 
-			if (!tud_midi_packet_write(packet))
-				return;
+	// Send the global enable state
+	uint8_t cc_packet[4] = { 0x0B, 0xB0, MIDI_CC_GLOBAL_ENABLE, disable_all ? 0 : 127 };
+	usb_midi_write(cc_packet);
 
-			state_dump_packet_idx++;
-			if (state_dump_packet_idx == 3) {
-				state_dump_packet_idx = 0;
-				state_dump_pot_idx++;
-				if (state_dump_pot_idx == 12) {
-					state_dump_pot_idx = 1;
-					state_dump_eff_idx++;
-				}
-			}
-		}
+	// Then send the effect states
+	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
+		struct effect *e = effects[i];
+		unsigned char *pot_values = e->pot_values[e->seq & 1];
+
+		// We send the mix as "pot 0", and then pots numbered from 1
+		sysex_send_pot_value(i, 0,  (e->mix_pot * 120) / EFF_ENABLE_STEPS);
+		for (int pot = 0; pot < 10; pot++)
+			sysex_send_pot_value(i, pot+1, pot_values[pot]);
 	}
 
-	if (state_dump_routing_idx == -1) {
-		uint8_t packet[4] = { 0x04, 0xF0, 0x7D, 0x08 };
-		if (!tud_midi_packet_write(packet))
-			return;
-		state_dump_routing_idx = 0;
-	}
+	// And finally, send the routing order
+	static const uint8_t sysex_routing_header[] = { 0xF0, 0x7D, 0x08 };
+	static const uint8_t sysex_routing_trailer[] = { 0xF7 };
 
-	while (state_dump_routing_idx < routed_effect_count) {
-		int remaining = routed_effect_count - state_dump_routing_idx;
-		uint8_t packet[4];
-		if (remaining >= 3) {
-			packet[0] = 0x04; // 3 bytes
-			packet[1] = effect_chain[state_dump_routing_idx++];
-			packet[2] = effect_chain[state_dump_routing_idx++];
-			packet[3] = effect_chain[state_dump_routing_idx++];
-		} else if (remaining == 2) {
-			packet[0] = 0x07; // 3 bytes, ends with F7
-			packet[1] = effect_chain[state_dump_routing_idx++];
-			packet[2] = effect_chain[state_dump_routing_idx++];
-			packet[3] = 0xF7;
-		} else if (remaining == 1) {
-			packet[0] = 0x06; // 2 bytes, ends with F7
-			packet[1] = effect_chain[state_dump_routing_idx++];
-			packet[2] = 0xF7;
-			packet[3] = 0;
-		}
-		if (!tud_midi_packet_write(packet)) {
-			state_dump_routing_idx -= (remaining >= 3) ? 3 : remaining;
-			return;
-		}
-
-		if (remaining <= 2) {
-			// Finished!
-			state_dump_eff_idx = -1;
-			return;
-		}
-	}
-
-	// If routed_effect_count was a multiple of 3, we need to send just F7
-	if (state_dump_routing_idx == routed_effect_count) {
-		uint8_t packet[4] = { 0x05, 0xF7, 0, 0 }; // 1 byte (F7)
-		if (!tud_midi_packet_write(packet))
-			return;
-		state_dump_eff_idx = -1;
-	}
+	sysex_stream_write(sysex_routing_header, sizeof(sysex_routing_header));
+	sysex_stream_write(effect_chain, routed_effect_count);
+	sysex_stream_write(sysex_routing_trailer, sizeof(sysex_routing_trailer));
 }
 
 static uint8_t sysex_buf[32];
@@ -369,7 +306,7 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 {
 	uint8_t cmd = sysex_buf[0];
 	if (cmd == 0x01) { // Schema Request
-		schema_tx_index = 0;
+		send_schema_tx = true;
 	} else if (cmd == 0x03 && sysex_len >= 4) { // Set Parameter
 		uint8_t eff_id = sysex_buf[1];
 		uint8_t pot_idx = sysex_buf[2];
@@ -406,10 +343,9 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 		send_status_tx = true;
 
 	} else if (cmd == 0x05) { // State Dump Request
-		state_dump_eff_idx = 0;
-		state_dump_pot_idx = 0;
-		state_dump_packet_idx = 0;
-		state_dump_routing_idx = -1;
+
+		state_dump_tx = true;
+
 	} else if (cmd == 0x08) { // Set Routing Order
 		routed_effect_count = 0;
 
@@ -775,8 +711,8 @@ int main()
 		tuh_task();
 #else
 		tud_task();
-		send_sysex_schema_chunk();
-		send_state_dump_chunk();
+		sysex_send_schema();
+		sysex_send_state_dump();
 		sysex_send_status();
 		usb_audio_task();
 #endif
