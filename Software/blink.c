@@ -339,13 +339,24 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 	} else if (cmd == 0x08) { // Set Routing Order
 		routed_effect_count = 0;
 
-		// Routing order
+		// Routing order. Only accept valid, non-duplicate middle
+		// effects - the gate (0) and settings (EFFECT_COUNT-1) are
+		// never part of the chain (same rule as load_scene()). Without
+		// this an out-of-range id would index effects[] out of bounds
+		// in the audio loop, and duplicates would let the append loop
+		// below run effect_chain_len past the end of effect_chain[].
 		for (int i = 1; i < sysex_len && routed_effect_count < 14; i++) {
 			uint8_t eff_id = sysex_buf[i];
-			effect_chain[routed_effect_count++] = eff_id;
-			if (eff_id < EFFECT_COUNT) {
-				effects[eff_id]->target = effects[eff_id]->mix_pot;
+			if (eff_id == 0 || eff_id >= EFFECT_COUNT - 1)
+				continue;
+			bool dup = false;
+			for (int j = 0; j < routed_effect_count; j++) {
+				if (effect_chain[j] == eff_id) { dup = true; break; }
 			}
+			if (dup)
+				continue;
+			effect_chain[routed_effect_count++] = eff_id;
+			effects[eff_id]->target = effects[eff_id]->mix_pot;
 		}
 
 		// Append unrouted effects and set target to 0
