@@ -1,5 +1,5 @@
 // NAME: Phaser [PHSR]
-// PRIORITY: 50
+// PRIORITY: 55
 // POT: "LFO" FREQUENCY(25.0 2000.0) = 270.0 ms
 // POT: "Feedback" LINEAR(0.0 0.75) = 0.376
 // POT: "Freq" FREQUENCY(220.0 6460.0) = 1000.0 Hz

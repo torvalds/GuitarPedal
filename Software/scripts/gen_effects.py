@@ -9,7 +9,7 @@ def generate(audio_dir, out_h, out_js, out_md):
     ui_effects = [] # List of dicts for JS/Schema output
     effects_data = []
 
-    for filename in os.listdir(audio_dir):
+    for filename in sorted(os.listdir(audio_dir)):
         if not filename.endswith('.h'):
             continue
         base = filename[:-2]
