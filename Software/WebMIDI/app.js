@@ -612,6 +612,55 @@ function formatPotValue(pot, val) {
 }
 
 
+// What the pedal is currently routing, as far as we know. Kept up to
+// date by reorderEffectsInDOM(), which is the one place routing becomes
+// known - whether we decided it or the pedal told us.
+let currentRouting = [];
+
+//
+// An effect that isn't routed has no values: it goes back to the
+// defaults from the schema.
+//
+// We do that here, in the app, rather than letting the pedal reset and
+// then asking it what happened.  Going and fetching the state back is a
+// round trip we would have to race against, and the answer arrives in a
+// couple of hundred SysEx messages - so the sliders end up showing the
+// old values for a while, or a mix of old and new.  Doing it locally and
+// pushing the result means the UI is right by construction.
+//
+// Only effects that just *left* the chain are touched.  Rewriting every
+// unrouted effect on every reorder would be a flood for no reason.
+//
+function resetUnroutedEffects(newRouted) {
+    const wasRouted = new Set(currentRouting);
+    const nowRouted = new Set(newRouted);
+
+    PEDAL_EFFECTS.forEach((effect, idx) => {
+        if (!wasRouted.has(effect.id) || nowRouted.has(effect.id)) return;
+
+        effect.pots.forEach((potDef, pIdx) => {
+            const val = getInitialPotValue(potDef);
+            const el = ccToElementMap.get(`eff-${idx}-pot-${pIdx}`);
+            if (el) {
+                el.value = val;
+                const disp = el.parentElement.querySelector('.pot-value');
+                if (disp) disp.textContent = formatPotValue(potDef, val);
+                if (el.redrawCurve) el.redrawCurve();
+            }
+            sendSysex([SYSEX_CMD.PARAM_UPDATE, effect.id, pIdx + 1, val]);
+        });
+
+        const mixVal = Math.round((effect.defMix !== undefined ? effect.defMix : 1.0) * 120);
+        const mixEl = ccToElementMap.get(`eff-${idx}-mix`);
+        if (mixEl) {
+            mixEl.value = mixVal;
+            const disp = mixEl.parentElement.querySelector('.pot-value');
+            if (disp && mixEl.potDef) disp.textContent = formatPotValue(mixEl.potDef, mixVal);
+        }
+        sendSysex([SYSEX_CMD.PARAM_UPDATE, effect.id, 0, mixVal]);
+    });
+}
+
 function sendUpdatedRouting() {
     const cards = Array.from(effectsContainer.children);
     const routeIds = [];
@@ -631,13 +680,24 @@ function sendUpdatedRouting() {
         }
     });
 
-    const data = [SYSEX_CMD.ROUTING_ORDER, ...routeIds.slice(0, 14)];
-    sendSysex(data);
-    reorderEffectsInDOM(routeIds);
+    // The firmware routes at most 14 effects and silently drops the rest,
+    // so cap the list before it is used for anything. Redrawing from the
+    // uncapped list would show effects sitting in the routed section that
+    // the pedal never heard about.
+    const routed = routeIds.slice(0, 14);
+    sendSysex([SYSEX_CMD.ROUTING_ORDER, ...routed]);
+    resetUnroutedEffects(routed);
+    reorderEffectsInDOM(routed);
 }
 
 
 function getInitialPotValue(pot) {
+    // The generator hands us the exact raw value the firmware has in its
+    // own table, so there is nothing to recompute and nothing to get
+    // subtly wrong. The rest of this is only a fallback for a pedal
+    // running a schema older than that field.
+    if (pot.defaultPot !== undefined) return pot.defaultPot;
+
     if (pot.default === undefined) return 60;
     const y = pot.default;
 
@@ -663,6 +723,7 @@ function getInitialPotValue(pot) {
 
 
 function reorderEffectsInDOM(routeIds) {
+    currentRouting = routeIds.slice();
     const activeRouteIds = new Set(routeIds);
     const cards = Array.from(effectsContainer.children);
     cards.sort((a, b) => {
@@ -744,12 +805,23 @@ function renderUI() {
         e.dataTransfer.dropEffect = 'move';
         const draggingCard = document.querySelector('.dragging');
         if (!draggingCard) return;
-        divider.parentNode.insertBefore(draggingCard, divider.nextSibling);
+
+        // Use the same midpoint test as the effect cards: above the middle
+        // of the divider means routed, below means unrouted. This used to
+        // insert after the divider unconditionally, which made it very hard
+        // to route anything - you have to drag across the divider to get to
+        // the routed section, and doing so shoved the card straight back
+        // down again.
+        const rect = divider.getBoundingClientRect();
+        if (e.clientY < rect.top + rect.height / 2) {
+            divider.parentNode.insertBefore(draggingCard, divider);
+        } else {
+            divider.parentNode.insertBefore(draggingCard, divider.nextSibling);
+        }
     });
 
     divider.addEventListener('drop', (e) => {
         e.preventDefault();
-        sendUpdatedRouting();
     });
 
     effectsContainer.appendChild(divider);
@@ -824,6 +896,18 @@ function renderUI() {
 
         card.addEventListener('dragend', (e) => {
             card.classList.remove('dragging');
+
+            // Commit the reorder here, not in 'drop'.  A drop event only
+            // fires when the pointer is released over an element that
+            // handled dragover, so letting go over a gap between cards, or
+            // over the container's own padding, quietly threw the whole
+            // thing away - and because dragover has already moved the card
+            // as a live preview, it looked like it had worked while nothing
+            // had been sent to the pedal at all.
+            //
+            // dragend always fires on the card being dragged, wherever it
+            // ends up.
+            sendUpdatedRouting();
         });
 
         card.addEventListener('dragover', (e) => {
@@ -851,10 +935,9 @@ function renderUI() {
             }
         });
 
+        // Only needed to allow the drop; dragend does the committing
         card.addEventListener('drop', (e) => {
             e.preventDefault();
-            // Send new routing array via SysEx
-            sendUpdatedRouting();
         });
 
         // The Reset button resets all pots. We should also reset the Mix pot!
@@ -1537,6 +1620,7 @@ appTitleEl.addEventListener('click', () => {
             // routing order to begin with - it always runs first - and the
             // same goes for the settings pseudo-effect.
             sendSysex([SYSEX_CMD.ROUTING_ORDER]);
+            resetUnroutedEffects([]);
             reorderEffectsInDOM([]);
             showButtonSuccess(globalUnrouteBtn, 'All Unrouted');
         });

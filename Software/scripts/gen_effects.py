@@ -5,6 +5,46 @@ import re
 import json
 import math
 
+def default_pot_value(pot):
+    """Turn a pot default in engineering units into the raw 0..120 value.
+
+    This is deliberately the *only* place that conversion happens.  The
+    same number goes into the C table and into the schema the web app
+    reads, so the two can't drift apart - which they did, back when the
+    app recomputed it for itself."""
+    y = pot['default']
+    curve = pot['curve']
+
+    if curve in ('RAW', 'ENUM'):
+        return int(round(y))
+
+    a, b = 0.0, 1.0
+    if len(pot['args']) >= 2:
+        a = float(pot['args'][0])
+        b = float(pot['args'][1])
+
+    if b == a:
+        p = 0.0
+    else:
+        # A default outside the declared range is a mistake in the effect
+        # header, but don't take a fractional root of a negative number
+        # over it - python hands back a complex and the build dies
+        # somewhere confusing.
+        ratio = max(0.0, (y - a) / (b - a))
+        if curve == 'LINEAR':
+            p = ratio
+        elif curve == 'FREQUENCY':
+            p = ratio ** (1/3.0)
+        elif curve == 'SQUARED':
+            p = ratio ** 0.5
+        elif curve == 'EXPONENTIAL':
+            p = math.log2(y / a) / math.log2(b / a) if (a != 0 and y != 0) else 0.0
+        else:
+            p = 0.0
+
+    return max(0, min(120, int(round(p * 120))))
+
+
 def generate(audio_dir, out_h, out_js, out_md):
     ui_effects = [] # List of dicts for JS/Schema output
     effects_data = []
@@ -99,6 +139,8 @@ def generate(audio_dir, out_h, out_js, out_md):
             elif pot['curve'] == 'ENUM' and pot['enum']:
                 max_v = float(len(pot['enum']) - 1)
 
+            pot['pot_val'] = default_pot_value(pot)
+
             ui_pots.append({
                 "name": pot['label'],
                 "unit": pot['unit'],
@@ -106,6 +148,7 @@ def generate(audio_dir, out_h, out_js, out_md):
                 "min": min_v,
                 "max": max_v,
                 "default": pot['default'],
+                "defaultPot": pot['pot_val'],
                 "enum": pot['enum']
             })
 
@@ -173,32 +216,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             f.write(f"\t.pots = {{\n")
 
             for p_idx, pot in enumerate(e_data['pots']):
-                y = pot['default']
-                curve = pot['curve']
-
-                a = 0.0
-                b = 1.0
-                if curve != 'ENUM' and len(pot['args']) >= 2:
-                    a = float(pot['args'][0])
-                    b = float(pot['args'][1])
-
-                if curve == 'RAW' or curve == 'ENUM':
-                    p = y
-                elif curve == 'LINEAR':
-                    p = (y - a) / (b - a) if b != a else 0
-                elif curve == 'FREQUENCY':
-                    p = ((y - a) / (b - a)) ** (1/3.0) if b != a else 0
-                elif curve == 'SQUARED':
-                    p = ((y - a) / (b - a)) ** 0.5 if b != a else 0
-                elif curve == 'EXPONENTIAL':
-                    p = math.log2(y / a) / math.log2(b / a) if (b != a and a != 0 and y != 0) else 0
-
-                if curve == 'RAW' or curve == 'ENUM':
-                    pot_val = int(round(y))
-                else:
-                    pot_val = int(round(p * 120))
-                    if pot_val < 0: pot_val = 0
-                    if pot_val > 120: pot_val = 120
+                pot_val = pot['pot_val']
 
                 unit_str = f"\"{pot['unit']}\"" if pot['unit'] and pot['unit'] != "none" else "NULL"
                 enum_str = f", {pot['enum_name']}" if 'enum_name' in pot else ""
