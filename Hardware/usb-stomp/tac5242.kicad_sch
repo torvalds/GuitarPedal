@@ -796,6 +796,184 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "Device:L"
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 1.016)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "L"
+				(at -1.27 0 90)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "L"
+				(at 1.905 0 90)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Description" "Inductor"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "inductor choke coil reactor magnetic"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_fp_filters" "Choke_* *Coil* Inductor_* L_*"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(symbol "L_0_1"
+				(arc
+					(start 0 2.54)
+					(mid 0.6323 1.905)
+					(end 0 1.27)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 1.27)
+					(mid 0.6323 0.635)
+					(end 0 0)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 0)
+					(mid 0.6323 -0.635)
+					(end 0 -1.27)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 -1.27)
+					(mid 0.6323 -1.905)
+					(end 0 -2.54)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "L_1_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 1.27)
+					(name "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 1.27)
+					(name "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "Device:R"
 			(pin_numbers
 				(hide yes)
@@ -2323,6 +2501,26 @@
 		)
 		(uuid "1a6537b7-016d-4ac8-8ea1-5df8a989485a")
 	)
+	(text_box "Output re-biasing and lowpass filter"
+		(exclude_from_sim no)
+		(at 13.97 144.78 0)
+		(size 108.585 41.275)
+		(margins 0.9525 0.9525 0.9525 0.9525)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(fill
+			(type none)
+		)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left top)
+		)
+		(uuid "a1bec2f3-53a1-4280-a440-f93b0f2419a3")
+	)
 	(text_box "TAC5242 HW-strapped CODEC\n\nMD0 to ground: Target i2s mode (Table 7-2)\nMD2/MD1 low/low: 3.3V, 32-bit, linear-phase filter (Table 7-3)\nMD3 low: 50ms inputy cap charge, 1Hz HPF filter (Table 7-11)\nMD5/MD4 high/low: Single-ended AC coupled input, SE output (Table 7-10)"
 		(exclude_from_sim no)
 		(at 168.91 142.24 0)
@@ -2354,6 +2552,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "0e4e458f-b84c-4a0f-9497-8c014f6e4347")
+	)
+	(junction
+		(at 110.49 160.02)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "0f03348e-b88a-4393-9fb1-247e0dbe1388")
 	)
 	(junction
 		(at 181.61 50.8)
@@ -2404,6 +2608,18 @@
 		(uuid "1e989916-e1f0-466f-b045-f290649aebaf")
 	)
 	(junction
+		(at 60.96 160.02)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "2585a69b-f253-4a5f-b891-7b1f84e38be6")
+	)
+	(junction
+		(at 134.62 158.75)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "35b6eeb6-8480-4b73-8c8a-1563102099d4")
+	)
+	(junction
 		(at 128.27 127)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2434,10 +2650,16 @@
 		(uuid "4d747c0e-10bf-4227-ab80-989e8f2c4960")
 	)
 	(junction
-		(at 138.43 173.99)
+		(at 163.83 158.75)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "508d08f0-9cf4-426c-b681-f90cc0672f93")
+	)
+	(junction
+		(at 71.12 160.02)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "53229d72-a86f-44aa-96a3-2e62e85c38dd")
 	)
 	(junction
 		(at 128.27 86.36)
@@ -2456,12 +2678,6 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "5d742627-51dd-455d-bc0b-2ba5ca681790")
-	)
-	(junction
-		(at 118.11 173.99)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "642d2385-692b-444e-9951-cd2f68b79f12")
 	)
 	(junction
 		(at 209.55 50.8)
@@ -2488,7 +2704,7 @@
 		(uuid "79815ca2-e0b6-4d58-a1de-cb386b7b747c")
 	)
 	(junction
-		(at 130.81 184.15)
+		(at 156.21 168.91)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "7c2077a7-f318-4447-9723-9a8763e56dcf")
@@ -2504,6 +2720,18 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "8e67685f-01de-4db0-aad1-d3207b005f97")
+	)
+	(junction
+		(at 143.51 158.75)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "9d64fefc-225c-4158-b8e3-ad6104b29dbb")
+	)
+	(junction
+		(at 100.33 160.02)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "a3cccfbc-f117-4e6f-a474-0d0a4871ff02")
 	)
 	(junction
 		(at 240.03 129.54)
@@ -2524,7 +2752,7 @@
 		(uuid "b38f9127-7439-4c63-a88b-7e2dbf7d6694")
 	)
 	(junction
-		(at 143.51 173.99)
+		(at 168.91 158.75)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "b92ae7c5-d60d-4cea-b129-8442c3aa6dda")
@@ -2542,6 +2770,12 @@
 		(uuid "ca72545e-b0fb-4b9b-a842-d238b79df2bf")
 	)
 	(junction
+		(at 127 158.75)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "d91c18ab-c6ac-464d-9141-2f94ac4f2ffa")
+	)
+	(junction
 		(at 195.58 50.8)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2554,12 +2788,20 @@
 		(uuid "ededc4f3-692c-403e-825c-80980d8a09ee")
 	)
 	(no_connect
-		(at 123.19 176.53)
+		(at 148.59 161.29)
 		(uuid "03dae769-5872-4d8e-a29c-7f0d123a5f8c")
+	)
+	(no_connect
+		(at 33.02 168.91)
+		(uuid "1d6ba316-8705-45d8-bcac-0cadd3acd198")
 	)
 	(no_connect
 		(at 257.81 90.17)
 		(uuid "6bedae3a-6573-470a-b647-a8d73332f074")
+	)
+	(no_connect
+		(at 33.02 173.99)
+		(uuid "8afe8ebc-a47c-4cfb-a283-e1826df365b8")
 	)
 	(no_connect
 		(at 257.81 95.25)
@@ -2617,6 +2859,16 @@
 	)
 	(wire
 		(pts
+			(xy 59.69 160.02) (xy 60.96 160.02)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0128e35b-72d8-480a-afe5-b9c9356b29ae")
+	)
+	(wire
+		(pts
 			(xy 237.49 50.8) (xy 237.49 49.53)
 		)
 		(stroke
@@ -2637,7 +2889,27 @@
 	)
 	(wire
 		(pts
-			(xy 118.11 172.72) (xy 118.11 173.99)
+			(xy 100.33 160.02) (xy 100.33 161.29)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "03f3004d-48f8-4de1-8d9e-c1e376251600")
+	)
+	(wire
+		(pts
+			(xy 127 158.75) (xy 127 161.29)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "04093f55-0e69-4747-a05c-6bfaee131888")
+	)
+	(wire
+		(pts
+			(xy 125.73 156.21) (xy 125.73 158.75)
 		)
 		(stroke
 			(width 0)
@@ -2674,6 +2946,16 @@
 			(type default)
 		)
 		(uuid "0a1c0f7e-2e6b-4e61-b882-2518ce3f9060")
+	)
+	(wire
+		(pts
+			(xy 143.51 158.75) (xy 143.51 160.02)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0b1beb7a-ae26-466e-a6ca-3beb413ae8ab")
 	)
 	(wire
 		(pts
@@ -2717,6 +2999,16 @@
 	)
 	(wire
 		(pts
+			(xy 134.62 158.75) (xy 134.62 161.29)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1236a272-296c-48e0-8c06-133672fb6d98")
+	)
+	(wire
+		(pts
 			(xy 83.82 114.3) (xy 91.44 114.3)
 		)
 		(stroke
@@ -2744,6 +3036,16 @@
 			(type default)
 		)
 		(uuid "1530b280-6307-4e6f-ba36-82feb4a22a17")
+	)
+	(wire
+		(pts
+			(xy 69.85 160.02) (xy 71.12 160.02)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1722acc7-750d-4799-a7d6-b481e59bbdda")
 	)
 	(wire
 		(pts
@@ -2817,6 +3119,16 @@
 	)
 	(wire
 		(pts
+			(xy 71.12 160.02) (xy 72.39 160.02)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "22ba02b2-db9a-463d-8b96-e2c44d98b4b4")
+	)
+	(wire
+		(pts
 			(xy 181.61 66.04) (xy 189.23 66.04)
 		)
 		(stroke
@@ -2824,6 +3136,16 @@
 			(type default)
 		)
 		(uuid "25334f09-2ecb-46b2-a805-c80d67c9a076")
+	)
+	(wire
+		(pts
+			(xy 50.8 160.02) (xy 52.07 160.02)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2796124b-b5a6-49ef-947b-87c7bd938c18")
 	)
 	(wire
 		(pts
@@ -2837,7 +3159,7 @@
 	)
 	(wire
 		(pts
-			(xy 138.43 173.99) (xy 138.43 176.53)
+			(xy 163.83 158.75) (xy 163.83 161.29)
 		)
 		(stroke
 			(width 0)
@@ -2957,6 +3279,16 @@
 	)
 	(wire
 		(pts
+			(xy 134.62 158.75) (xy 143.51 158.75)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "40836c0c-0b89-4b0f-8bc7-bc52df68ff50")
+	)
+	(wire
+		(pts
 			(xy 107.95 116.84) (xy 107.95 125.73)
 		)
 		(stroke
@@ -2997,7 +3329,7 @@
 	)
 	(wire
 		(pts
-			(xy 143.51 182.88) (xy 143.51 184.15)
+			(xy 168.91 167.64) (xy 168.91 168.91)
 		)
 		(stroke
 			(width 0)
@@ -3014,6 +3346,16 @@
 			(type default)
 		)
 		(uuid "4e61590a-280e-4aee-bf55-280b74bf3506")
+	)
+	(wire
+		(pts
+			(xy 100.33 160.02) (xy 101.6 160.02)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "513f0381-0aa2-4043-b615-b526be994dcb")
 	)
 	(wire
 		(pts
@@ -3037,16 +3379,6 @@
 	)
 	(wire
 		(pts
-			(xy 118.11 182.88) (xy 118.11 184.15)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "5b3823e4-db13-411b-bfe7-4f9a659a1202")
-	)
-	(wire
-		(pts
 			(xy 128.27 128.27) (xy 128.27 127)
 		)
 		(stroke
@@ -3067,6 +3399,16 @@
 	)
 	(wire
 		(pts
+			(xy 60.96 160.02) (xy 60.96 161.29)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "64892ad5-ce31-40a1-88dd-6c44b779495c")
+	)
+	(wire
+		(pts
 			(xy 242.57 129.54) (xy 245.11 129.54)
 		)
 		(stroke
@@ -3084,6 +3426,16 @@
 			(type default)
 		)
 		(uuid "6601dbbf-70ab-4400-bcb3-956086f0a746")
+	)
+	(wire
+		(pts
+			(xy 90.17 160.02) (xy 91.44 160.02)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "661e3f62-5b76-4033-a80e-239ee89704be")
 	)
 	(wire
 		(pts
@@ -3187,7 +3539,7 @@
 	)
 	(wire
 		(pts
-			(xy 138.43 173.99) (xy 143.51 173.99)
+			(xy 163.83 158.75) (xy 168.91 158.75)
 		)
 		(stroke
 			(width 0)
@@ -3197,23 +3549,23 @@
 	)
 	(wire
 		(pts
-			(xy 118.11 175.26) (xy 118.11 173.99)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "8f51e505-b066-43b6-b9e6-5714fe5c5ba3")
-	)
-	(wire
-		(pts
-			(xy 143.51 173.99) (xy 143.51 172.72)
+			(xy 168.91 158.75) (xy 168.91 157.48)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "9035b8e7-44df-4625-a2e1-35b842fb5d38")
+	)
+	(wire
+		(pts
+			(xy 60.96 160.02) (xy 62.23 160.02)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "91761ef5-6da3-42eb-98a2-dc2c569afc8b")
 	)
 	(wire
 		(pts
@@ -3267,6 +3619,16 @@
 	)
 	(wire
 		(pts
+			(xy 99.06 160.02) (xy 100.33 160.02)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9d4aa2bb-722c-493c-a4b0-ad53acbbda7f")
+	)
+	(wire
+		(pts
 			(xy 49.53 95.25) (xy 67.31 95.25)
 		)
 		(stroke
@@ -3297,7 +3659,7 @@
 	)
 	(wire
 		(pts
-			(xy 143.51 175.26) (xy 143.51 173.99)
+			(xy 168.91 160.02) (xy 168.91 158.75)
 		)
 		(stroke
 			(width 0)
@@ -3437,7 +3799,7 @@
 	)
 	(wire
 		(pts
-			(xy 128.27 184.15) (xy 130.81 184.15)
+			(xy 153.67 168.91) (xy 156.21 168.91)
 		)
 		(stroke
 			(width 0)
@@ -3547,6 +3909,16 @@
 	)
 	(wire
 		(pts
+			(xy 109.22 160.02) (xy 110.49 160.02)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "cf8294a5-fb2f-4b9d-a49b-e5a9152c3aba")
+	)
+	(wire
+		(pts
 			(xy 49.53 96.52) (xy 49.53 95.25)
 		)
 		(stroke
@@ -3607,6 +3979,16 @@
 	)
 	(wire
 		(pts
+			(xy 71.12 160.02) (xy 71.12 161.29)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "def6c2ee-b1c1-4f4b-8af4-63c46047868a")
+	)
+	(wire
+		(pts
 			(xy 67.31 114.3) (xy 71.12 114.3)
 		)
 		(stroke
@@ -3614,6 +3996,16 @@
 			(type default)
 		)
 		(uuid "e0c405c1-7ef5-49ff-a5df-9879e57d74ca")
+	)
+	(wire
+		(pts
+			(xy 110.49 160.02) (xy 110.49 161.29)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e2d43b07-c1bb-4e84-9732-77cce8e30383")
 	)
 	(wire
 		(pts
@@ -3634,6 +4026,16 @@
 			(type default)
 		)
 		(uuid "ea49dec6-e8b0-4f97-a8ea-533574c96b1e")
+	)
+	(wire
+		(pts
+			(xy 127 158.75) (xy 125.73 158.75)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "eb9f740a-3892-4903-a883-ec7e9c57bf1e")
 	)
 	(wire
 		(pts
@@ -3687,7 +4089,7 @@
 	)
 	(wire
 		(pts
-			(xy 123.19 173.99) (xy 118.11 173.99)
+			(xy 148.59 158.75) (xy 143.51 158.75)
 		)
 		(stroke
 			(width 0)
@@ -3724,6 +4126,16 @@
 			(type default)
 		)
 		(uuid "f579812d-d0a5-4334-bcbc-6a55d16e7333")
+	)
+	(wire
+		(pts
+			(xy 110.49 160.02) (xy 111.76 160.02)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f68a013f-d685-4e13-818a-7b204bcadefa")
 	)
 	(wire
 		(pts
@@ -3825,6 +4237,16 @@
 		)
 		(uuid "5161146e-61e7-4d03-b0b5-abc14eebf248")
 	)
+	(label "OUT2P"
+		(at 90.17 160.02 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "528dc090-b569-4e0d-8934-1d113a6c47fe")
+	)
 	(label "I2S.BCLK"
 		(at 212.09 105.41 0)
 		(effects
@@ -3875,6 +4297,26 @@
 		)
 		(uuid "7a5e063b-5445-45d4-bd2f-802542ac852e")
 	)
+	(label "OUT^{RIGHT}"
+		(at 111.76 160.02 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "8c73fe33-fb32-493e-8306-6e054549eb43")
+	)
+	(label "OUT^{LEFT}"
+		(at 33.02 171.45 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "92e7bd93-6ddb-4f50-ad75-5ef4038f5f22")
+	)
 	(label "I2S.DOUT"
 		(at 212.09 110.49 0)
 		(effects
@@ -3884,6 +4326,16 @@
 			(justify left bottom)
 		)
 		(uuid "941ac9f0-0561-4f17-ad13-a93ad99573ce")
+	)
+	(label "OUT1P"
+		(at 50.8 160.02 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "9e9ba511-132d-4aee-a460-6988797865cd")
 	)
 	(label "VREF"
 		(at 245.11 71.12 90)
@@ -3944,6 +4396,26 @@
 			(justify left bottom)
 		)
 		(uuid "b5897246-8959-49da-b384-f6c1277d4019")
+	)
+	(label "OUT^{LEFT}"
+		(at 72.39 160.02 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "c1e5a322-e5d0-45a2-9411-44463d662e56")
+	)
+	(label "OUT^{RIGHT}"
+		(at 33.02 166.37 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "d6ff3707-cb71-480b-ba0a-c863519e9056")
 	)
 	(label "IN^{RIGHT}"
 		(at 48.26 114.3 180)
@@ -4030,7 +4502,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "003702d5-5069-4700-b472-2b18a2e0e99f")
-		(property "Reference" "#PWR0311"
+		(property "Reference" "#PWR0314"
 			(at 93.98 38.1 0)
 			(hide yes)
 			(show_name no)
@@ -4090,7 +4562,186 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0311")
+					(reference "#PWR0314")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 66.04 160.02 90)
+		(mirror x)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "00fc0edc-bf21-4872-919b-63fbee7caad6")
+		(property "Reference" "C305"
+			(at 66.04 152.4 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "2.2uF"
+			(at 66.04 154.94 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
+			(at 69.85 160.9852 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 66.04 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "2.2uF 25V X7R ±10% 0603"
+			(at 66.04 160.02 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC PN" "C415535"
+			(at 66.04 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" ""
+			(at 66.04 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Library" ""
+			(at 66.04 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Name" ""
+			(at 66.04 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Params" ""
+			(at 66.04 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Field6" ""
+			(at 66.04 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 66.04 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 66.04 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 66.04 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "5f9f8a4b-8ae5-40fa-a489-504648990bbc")
+		)
+		(pin "2"
+			(uuid "516e93c6-48cb-43b1-ab5a-4596610ebefe")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
+					(reference "C305")
 					(unit 1)
 				)
 			)
@@ -4152,7 +4803,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2uF 25V X7R ±10% 0603"
 			(at 49.53 100.33 0)
 			(hide yes)
 			(show_name no)
@@ -4350,6 +5001,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 49.53 100.33 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 49.53 100.33 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 49.53 100.33 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 49.53 100.33 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "b1f56131-fbfc-4397-abbc-84928c3535e2")
 		)
@@ -4377,7 +5072,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "0479135e-d5a6-45fd-ba22-3b930eb13f3f")
-		(property "Reference" "#PWR0310"
+		(property "Reference" "#PWR0313"
 			(at 83.82 132.08 0)
 			(hide yes)
 			(show_name no)
@@ -4437,7 +5132,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0310")
+					(reference "#PWR0313")
 					(unit 1)
 				)
 			)
@@ -4455,7 +5150,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "05cc5bba-39b6-4305-83cf-7164922a2817")
-		(property "Reference" "#PWR0314"
+		(property "Reference" "#PWR0320"
 			(at 128.27 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -4515,7 +5210,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0314")
+					(reference "#PWR0320")
 					(unit 1)
 				)
 			)
@@ -4523,7 +5218,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 130.81 184.15 0)
+		(at 156.21 168.91 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -4533,8 +5228,8 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "068c4463-a16e-4334-b97b-a86ba9957530")
-		(property "Reference" "#PWR0133"
-			(at 130.81 190.5 0)
+		(property "Reference" "#PWR0322"
+			(at 156.21 175.26 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4545,7 +5240,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 133.35 185.4199 0)
+			(at 158.75 170.1799 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4556,7 +5251,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 130.81 184.15 0)
+			(at 156.21 168.91 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4567,7 +5262,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 130.81 184.15 0)
+			(at 156.21 168.91 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4578,7 +5273,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 130.81 184.15 0)
+			(at 156.21 168.91 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4593,7 +5288,321 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0133")
+					(reference "#PWR0322")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 110.49 165.1 0)
+		(mirror y)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "077035ff-96a2-4c83-8079-6b7e02a10184")
+		(property "Reference" "R310"
+			(at 113.03 163.8299 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "1MEG"
+			(at 113.03 166.3699 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
+			(at 112.268 165.1 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "1MΩ 50V Thin Film Resistor ±1% ±50ppm/℃ 0402"
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Availability" ""
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Check_prices" ""
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description_1" ""
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" ""
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MF" ""
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MP" ""
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "PROD_ID" ""
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Package" ""
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Price" ""
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Device" ""
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Pins" ""
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "SnapEDA_Link" ""
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "VENDOR" ""
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC PN" "C1884615"
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "JLCPCB" ""
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" ""
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Params" ""
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Field6" ""
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 110.49 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "60e9245e-6066-4062-95bb-83a552467018")
+		)
+		(pin "2"
+			(uuid "3716824b-bb7a-467d-9f38-b8bb68c57d1a")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
+					(reference "R310")
 					(unit 1)
 				)
 			)
@@ -4611,7 +5620,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "079aadae-b3d5-4798-8b47-fcfa5bfc64ba")
-		(property "Reference" "#PWR0324"
+		(property "Reference" "#PWR0334"
 			(at 261.62 160.02 0)
 			(hide yes)
 			(show_name no)
@@ -4671,7 +5680,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0324")
+					(reference "#PWR0334")
 					(unit 1)
 				)
 			)
@@ -4679,7 +5688,7 @@
 	)
 	(symbol
 		(lib_id "power:+5V")
-		(at 118.11 172.72 0)
+		(at 125.73 156.21 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -4689,8 +5698,8 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "08566449-1f33-4756-a393-72aee31c8c96")
-		(property "Reference" "#PWR0136"
-			(at 118.11 176.53 0)
+		(property "Reference" "#PWR0318"
+			(at 125.73 160.02 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4701,7 +5710,7 @@
 			)
 		)
 		(property "Value" "+5V"
-			(at 118.11 167.64 0)
+			(at 125.73 151.13 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4711,7 +5720,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 118.11 172.72 0)
+			(at 125.73 156.21 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4722,7 +5731,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 118.11 172.72 0)
+			(at 125.73 156.21 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4733,7 +5742,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 118.11 172.72 0)
+			(at 125.73 156.21 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4749,7 +5758,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0136")
+					(reference "#PWR0318")
 					(unit 1)
 				)
 			)
@@ -4767,7 +5776,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "0ca2cc81-acdd-4b85-97f6-8e31cfd1e641")
-		(property "Reference" "C316"
+		(property "Reference" "C322"
 			(at 185.42 113.0299 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4811,7 +5820,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2uF 25V X7R ±10% 0603"
 			(at 181.61 114.3 0)
 			(hide yes)
 			(show_name no)
@@ -4844,6 +5853,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 181.61 114.3 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 181.61 114.3 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 181.61 114.3 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 181.61 114.3 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "9a05a2ea-2c0d-4e56-9af5-0e3a6cba23f0")
 		)
@@ -4853,7 +5906,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "C316")
+					(reference "C322")
 					(unit 1)
 				)
 			)
@@ -4871,7 +5924,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "0d31d7a9-8c7b-4084-92ae-8c3b45e6e44e")
-		(property "Reference" "#PWR0308"
+		(property "Reference" "#PWR0311"
 			(at 78.74 52.07 0)
 			(hide yes)
 			(show_name no)
@@ -4931,7 +5984,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0308")
+					(reference "#PWR0311")
 					(unit 1)
 				)
 			)
@@ -4949,7 +6002,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "0d9478ed-0105-43cd-8b53-0932f32ff215")
-		(property "Reference" "C306"
+		(property "Reference" "C308"
 			(at 80.01 120.6499 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4993,7 +6046,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "150pF 25V C0G ±5% 0402"
 			(at 83.82 121.92 0)
 			(hide yes)
 			(show_name no)
@@ -5191,6 +6244,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 83.82 121.92 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 83.82 121.92 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 83.82 121.92 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 83.82 121.92 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "9ff3fd15-b2a8-4579-9a5c-358c8d7d3ca9")
 		)
@@ -5200,7 +6297,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "C306")
+					(reference "C308")
 					(unit 1)
 				)
 			)
@@ -5219,7 +6316,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "0fc8fa62-9f19-44cc-aaef-28aa8eb46c64")
-		(property "Reference" "C309"
+		(property "Reference" "C313"
 			(at 135.89 68.58 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5261,7 +6358,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2uF 25V X7R ±10% 0603"
 			(at 135.89 76.2 0)
 			(hide yes)
 			(show_name no)
@@ -5459,6 +6556,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 135.89 76.2 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 135.89 76.2 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 135.89 76.2 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 135.89 76.2 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "a9c3e72e-a70a-44f4-8a0e-2640360fc5fd")
 		)
@@ -5468,7 +6609,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "C309")
+					(reference "C313")
 					(unit 1)
 				)
 			)
@@ -5486,7 +6627,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "11b9fdd8-7bc4-4916-a71e-462b5fa8c042")
-		(property "Reference" "#PWR0304"
+		(property "Reference" "#PWR0305"
 			(at 45.72 43.18 0)
 			(hide yes)
 			(show_name no)
@@ -5547,7 +6688,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0304")
+					(reference "#PWR0305")
 					(unit 1)
 				)
 			)
@@ -5565,7 +6706,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "17e48dde-2f23-4d57-8611-07845645b7fc")
-		(property "Reference" "#PWR0322"
+		(property "Reference" "#PWR0332"
 			(at 243.84 160.02 0)
 			(hide yes)
 			(show_name no)
@@ -5625,7 +6766,85 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0322")
+					(reference "#PWR0332")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 100.33 168.91 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "1951d2ce-3700-48af-b03a-c634e49c8c31")
+		(property "Reference" "#PWR0316"
+			(at 100.33 175.26 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 100.33 173.99 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 100.33 168.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 100.33 168.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 100.33 168.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "460f5050-3101-4b0d-a15c-71b54344c3bd")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
+					(reference "#PWR0316")
 					(unit 1)
 				)
 			)
@@ -5643,7 +6862,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "1b3a7752-2683-428d-93c4-9ca145664beb")
-		(property "Reference" "#PWR0325"
+		(property "Reference" "#PWR0335"
 			(at 270.51 128.27 0)
 			(hide yes)
 			(show_name no)
@@ -5703,7 +6922,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0325")
+					(reference "#PWR0335")
 					(unit 1)
 				)
 			)
@@ -5721,7 +6940,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "1bf3fc3a-7da6-4448-b2d5-8da78117a5c3")
-		(property "Reference" "#PWR0319"
+		(property "Reference" "#PWR0329"
 			(at 181.61 125.73 0)
 			(hide yes)
 			(show_name no)
@@ -5781,7 +7000,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0319")
+					(reference "#PWR0329")
 					(unit 1)
 				)
 			)
@@ -5799,7 +7018,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "28284212-92b5-41de-b1fb-71fa7aabcee1")
-		(property "Reference" "#PWR0309"
+		(property "Reference" "#PWR0312"
 			(at 83.82 91.44 0)
 			(hide yes)
 			(show_name no)
@@ -5859,7 +7078,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0309")
+					(reference "#PWR0312")
 					(unit 1)
 				)
 			)
@@ -5877,7 +7096,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "295f9996-7bad-4c06-ac41-e806669bcf15")
-		(property "Reference" "#PWR0317"
+		(property "Reference" "#PWR0327"
 			(at 181.61 83.82 0)
 			(hide yes)
 			(show_name no)
@@ -5937,7 +7156,763 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
+					(reference "#PWR0327")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 110.49 168.91 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "296e17d7-56c4-4dfc-ab2b-b4c2e27c0233")
+		(property "Reference" "#PWR0317"
+			(at 110.49 175.26 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 110.49 173.99 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 110.49 168.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 110.49 168.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 110.49 168.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "50674937-9128-45d3-9623-b5d47fd5865d")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
 					(reference "#PWR0317")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 143.51 167.64 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "2a53ae21-62d6-414b-9efb-e7d5917bea0a")
+		(property "Reference" "#PWR0321"
+			(at 143.51 173.99 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 143.51 172.72 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 143.51 167.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 143.51 167.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 143.51 167.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "f8e5a7e8-8aa7-48d8-97d0-35d226cde02c")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
+					(reference "#PWR0321")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 55.88 160.02 90)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "31a2f483-7c43-4c50-aaad-d9026b210a3e")
+		(property "Reference" "R303"
+			(at 55.88 154.94 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "1k"
+			(at 55.88 157.48 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
+			(at 55.88 161.798 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 55.88 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "1kΩ 50V Thin Film Resistor ±1% ±50ppm/℃ 0402"
+			(at 55.88 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Availability" ""
+			(at 55.88 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Check_prices" ""
+			(at 55.88 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description_1" ""
+			(at 55.88 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" ""
+			(at 55.88 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MF" ""
+			(at 55.88 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MP" ""
+			(at 55.88 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "PROD_ID" ""
+			(at 55.88 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Package" ""
+			(at 55.88 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Price" ""
+			(at 55.88 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Device" ""
+			(at 55.88 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Pins" ""
+			(at 55.88 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "SnapEDA_Link" ""
+			(at 55.88 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "VENDOR" ""
+			(at 55.88 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC PN" "C136974"
+			(at 55.88 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "JLCPCB" ""
+			(at 55.88 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" ""
+			(at 55.88 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Field6" ""
+			(at 55.88 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 55.88 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 55.88 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 55.88 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "ed700c7f-9676-4bcd-aa99-58027de8ab4d")
+		)
+		(pin "2"
+			(uuid "13200895-1b8f-494b-b2c6-2c339b2d9142")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
+					(reference "R303")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 95.25 160.02 90)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "328fd5d8-1b85-4c4d-8040-4049596b9ad3")
+		(property "Reference" "R309"
+			(at 95.25 154.94 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "1k"
+			(at 95.25 157.48 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
+			(at 95.25 161.798 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 95.25 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "1kΩ 50V Thin Film Resistor ±1% ±50ppm/℃ 0402"
+			(at 95.25 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Availability" ""
+			(at 95.25 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Check_prices" ""
+			(at 95.25 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description_1" ""
+			(at 95.25 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" ""
+			(at 95.25 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MF" ""
+			(at 95.25 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MP" ""
+			(at 95.25 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "PROD_ID" ""
+			(at 95.25 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Package" ""
+			(at 95.25 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Price" ""
+			(at 95.25 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Device" ""
+			(at 95.25 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Pins" ""
+			(at 95.25 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "SnapEDA_Link" ""
+			(at 95.25 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "VENDOR" ""
+			(at 95.25 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC PN" "C136974"
+			(at 95.25 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "JLCPCB" ""
+			(at 95.25 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" ""
+			(at 95.25 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Field6" ""
+			(at 95.25 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 95.25 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 95.25 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 95.25 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "61b4317c-0c13-46fa-9c6a-589c0a515a67")
+		)
+		(pin "2"
+			(uuid "7a6859e0-7fd4-482b-9dea-c7f2ed4ab387")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
+					(reference "R309")
 					(unit 1)
 				)
 			)
@@ -5955,7 +7930,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "357144c7-ddee-4416-966c-6eb247ee3722")
-		(property "Reference" "#PWR0301"
+		(property "Reference" "#PWR0302"
 			(at 38.1 90.17 0)
 			(hide yes)
 			(show_name no)
@@ -6015,7 +7990,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0301")
+					(reference "#PWR0302")
 					(unit 1)
 				)
 			)
@@ -6033,7 +8008,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "3ce9e998-c801-40e3-9aaf-98eab855dc01")
-		(property "Reference" "#PWR0321"
+		(property "Reference" "#PWR0331"
 			(at 240.03 139.7 0)
 			(hide yes)
 			(show_name no)
@@ -6093,7 +8068,320 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0321")
+					(reference "#PWR0331")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 100.33 165.1 0)
+		(mirror x)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "3ef5ac6c-f23d-49e6-8d38-d5a38429c435")
+		(property "Reference" "C309"
+			(at 96.52 163.8299 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "2.2nF"
+			(at 96.52 166.3699 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
+			(at 101.2952 161.29 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Availability" ""
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Check_prices" ""
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description_1" ""
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM1555C1H222GA01D"
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MF" ""
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MP" ""
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "PROD_ID" ""
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Package" ""
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Price" ""
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Device" ""
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Pins" ""
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "SnapEDA_Link" ""
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "VENDOR" ""
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC PN" "C2987940"
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "JLCPCB" ""
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" ""
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Params" ""
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Field6" ""
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 100.33 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "5c2def52-a79c-45d9-bda0-92016475e165")
+		)
+		(pin "1"
+			(uuid "d2d51ad1-c08f-408e-b8bd-bdffb1cfd92c")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
+					(reference "C309")
 					(unit 1)
 				)
 			)
@@ -6111,7 +8399,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "49648903-90a5-4928-9fd0-a794685f8d18")
-		(property "Reference" "#PWR0302"
+		(property "Reference" "#PWR0303"
 			(at 38.1 110.49 0)
 			(hide yes)
 			(show_name no)
@@ -6171,7 +8459,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0302")
+					(reference "#PWR0303")
 					(unit 1)
 				)
 			)
@@ -6233,7 +8521,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1MΩ 50V Thin Film Resistor ±1% ±50ppm/℃ 0402"
 			(at 38.1 100.33 0)
 			(hide yes)
 			(show_name no)
@@ -6431,6 +8719,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 38.1 100.33 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 38.1 100.33 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 38.1 100.33 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 38.1 100.33 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "cd2b8529-d857-48e2-9f53-1c79f1231bb1")
 		)
@@ -6457,7 +8789,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "541b6e1e-f75e-4b13-bd7d-6095099f7fe7")
-		(property "Reference" "C313"
+		(property "Reference" "C319"
 			(at 185.42 44.4499 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6534,6 +8866,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 181.61 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 181.61 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 181.61 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 181.61 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "bb213e04-7a61-45b5-8d5b-873d48dc9441")
 		)
@@ -6543,7 +8919,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "C313")
+					(reference "C319")
 					(unit 1)
 				)
 			)
@@ -6561,7 +8937,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "593b737f-e5be-4ff0-a2c3-cbe1046abc48")
-		(property "Reference" "#PWR0305"
+		(property "Reference" "#PWR0306"
 			(at 45.72 48.26 0)
 			(hide yes)
 			(show_name no)
@@ -6622,7 +8998,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0305")
+					(reference "#PWR0306")
 					(unit 1)
 				)
 			)
@@ -6640,7 +9016,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "5b07b6e9-b25f-4cf3-92a9-857e618b08a1")
-		(property "Reference" "C310"
+		(property "Reference" "C314"
 			(at 135.89 93.98 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6682,7 +9058,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2uF 25V X7R ±10% 0603"
 			(at 135.89 86.36 0)
 			(hide yes)
 			(show_name no)
@@ -6880,6 +9256,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 135.89 86.36 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 135.89 86.36 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 135.89 86.36 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 135.89 86.36 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "40cd9c20-2796-4cd1-8ac2-ea815eea5eba")
 		)
@@ -6889,7 +9309,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "C310")
+					(reference "C314")
 					(unit 1)
 				)
 			)
@@ -6906,7 +9326,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "5fde728b-60bf-40e6-8e30-860b5b87a14a")
-		(property "Reference" "R305"
+		(property "Reference" "R307"
 			(at 74.93 67.31 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7146,6 +9566,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 74.93 73.66 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 74.93 73.66 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 74.93 73.66 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 74.93 73.66 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "ab3c5ea4-9d3a-445d-a225-ed2862e25c34")
 		)
@@ -7155,7 +9619,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "R305")
+					(reference "R307")
 					(unit 1)
 				)
 			)
@@ -7251,7 +9715,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "631a6b7d-fdf9-4202-b283-1e6ccc6ad482")
-		(property "Reference" "C308"
+		(property "Reference" "C312"
 			(at 124.46 120.6499 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7493,6 +9957,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 128.27 121.92 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 128.27 121.92 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 128.27 121.92 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 128.27 121.92 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "75c67040-9b43-4242-9fd8-ed333d569625")
 		)
@@ -7502,7 +10010,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "C308")
+					(reference "C312")
 					(unit 1)
 				)
 			)
@@ -7520,7 +10028,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "6530a521-3d90-4374-9b76-cef4b1715eaa")
-		(property "Reference" "C314"
+		(property "Reference" "C320"
 			(at 177.8 69.8499 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7597,6 +10105,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 181.61 71.12 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 181.61 71.12 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 181.61 71.12 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 181.61 71.12 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "77b767b2-df79-4206-9679-37bf04cd11b3")
 		)
@@ -7606,7 +10158,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "C314")
+					(reference "C320")
 					(unit 1)
 				)
 			)
@@ -7624,7 +10176,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "65a4d691-ccf2-4b21-bd63-b9481636b3d7")
-		(property "Reference" "C305"
+		(property "Reference" "C307"
 			(at 80.01 80.0099 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7668,7 +10220,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "150pF 25V C0G ±5% 0402"
 			(at 83.82 81.28 0)
 			(hide yes)
 			(show_name no)
@@ -7866,6 +10418,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 83.82 81.28 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 83.82 81.28 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 83.82 81.28 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 83.82 81.28 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "60446236-06aa-425b-91c7-ea009067d1c9")
 		)
@@ -7875,7 +10471,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "C305")
+					(reference "C307")
 					(unit 1)
 				)
 			)
@@ -7937,7 +10533,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1MΩ 50V Thin Film Resistor ±1% ±50ppm/℃ 0402"
 			(at 38.1 90.17 0)
 			(hide yes)
 			(show_name no)
@@ -8135,6 +10731,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 38.1 90.17 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 38.1 90.17 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 38.1 90.17 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 38.1 90.17 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "053a6a23-0d4c-4387-a948-83258376e6e3")
 		)
@@ -8162,7 +10802,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "6ced7127-deab-401c-9ac0-30ab2a51215a")
-		(property "Reference" "C315"
+		(property "Reference" "C321"
 			(at 185.42 91.4399 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8206,7 +10846,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2uF 25V X7R ±10% 0603"
 			(at 181.61 92.71 0)
 			(hide yes)
 			(show_name no)
@@ -8239,6 +10879,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 181.61 92.71 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 181.61 92.71 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 181.61 92.71 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 181.61 92.71 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "7301aa55-fd47-47b0-b17a-20af4b7bf936")
 		)
@@ -8248,7 +10932,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "C315")
+					(reference "C321")
 					(unit 1)
 				)
 			)
@@ -8265,7 +10949,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "6d893b4f-bbc3-41e0-bfc0-4d7513c14e60")
-		(property "Reference" "R303"
+		(property "Reference" "R304"
 			(at 64.77 87.6301 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8309,7 +10993,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1MΩ 50V Thin Film Resistor ±1% ±50ppm/℃ 0402"
 			(at 67.31 86.36 0)
 			(hide yes)
 			(show_name no)
@@ -8507,6 +11191,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 67.31 86.36 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 67.31 86.36 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 67.31 86.36 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 67.31 86.36 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "c7c34d76-4bab-4944-93dc-d7b6a53b8312")
 		)
@@ -8516,7 +11244,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "R303")
+					(reference "R304")
 					(unit 1)
 				)
 			)
@@ -8533,7 +11261,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "6e3b6580-ed36-49b9-9fe4-04ec7b6a257b")
-		(property "Reference" "R306"
+		(property "Reference" "R308"
 			(at 74.93 107.95 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8773,6 +11501,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 74.93 114.3 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 74.93 114.3 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 74.93 114.3 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 74.93 114.3 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "0f26afdf-8106-4230-9633-fe5baee59cf2")
 		)
@@ -8782,7 +11554,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "R306")
+					(reference "R308")
 					(unit 1)
 				)
 			)
@@ -8800,7 +11572,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "6e4b21b3-9ea7-4eb2-953c-75155192e900")
-		(property "Reference" "#PWR0312"
+		(property "Reference" "#PWR0315"
 			(at 93.98 55.88 0)
 			(hide yes)
 			(show_name no)
@@ -8860,7 +11632,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0312")
+					(reference "#PWR0315")
 					(unit 1)
 				)
 			)
@@ -8878,7 +11650,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "6eba0417-ffce-46e2-8b43-6d203247c26f")
-		(property "Reference" "C321"
+		(property "Reference" "C327"
 			(at 241.3 44.4499 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8955,6 +11727,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 237.49 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 237.49 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 237.49 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 237.49 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "8f411852-176a-46a2-911e-bff82e6d7b8e")
 		)
@@ -8964,7 +11780,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "C321")
+					(reference "C327")
 					(unit 1)
 				)
 			)
@@ -9132,6 +11948,17 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 96.52 41.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "4"
 			(uuid "25557ac5-867b-4de8-a382-69d7d73fb814")
 		)
@@ -9177,7 +12004,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "7580422a-12ba-4fed-b14f-62575d19d209")
-		(property "Reference" "#PWR0320"
+		(property "Reference" "#PWR0330"
 			(at 233.68 72.39 0)
 			(hide yes)
 			(show_name no)
@@ -9237,7 +12064,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0320")
+					(reference "#PWR0330")
 					(unit 1)
 				)
 			)
@@ -9245,7 +12072,7 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 143.51 179.07 0)
+		(at 168.91 163.83 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -9254,8 +12081,8 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "75b91789-8bd9-4be6-9ba5-e215c5ec731a")
-		(property "Reference" "C127"
-			(at 146.431 177.9016 0)
+		(property "Reference" "C318"
+			(at 171.831 162.6616 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9266,7 +12093,7 @@
 			)
 		)
 		(property "Value" "2.2uF"
-			(at 146.431 180.213 0)
+			(at 171.831 164.973 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9277,7 +12104,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
-			(at 144.4752 182.88 0)
+			(at 169.8752 167.64 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9288,7 +12115,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 143.51 179.07 0)
+			(at 168.91 163.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9298,8 +12125,8 @@
 				)
 			)
 		)
-		(property "Description" ""
-			(at 143.51 179.07 0)
+		(property "Description" "2.2uF 25V X7R ±10% 0603"
+			(at 168.91 163.83 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9309,7 +12136,7 @@
 			)
 		)
 		(property "LCSC PN" "C415535"
-			(at 143.51 179.07 0)
+			(at 168.91 163.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9320,7 +12147,7 @@
 			)
 		)
 		(property "LCSC" ""
-			(at 143.51 179.07 0)
+			(at 168.91 163.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9331,7 +12158,7 @@
 			)
 		)
 		(property "Sim.Library" ""
-			(at 143.51 179.07 0)
+			(at 168.91 163.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9342,7 +12169,51 @@
 			)
 		)
 		(property "Sim.Name" ""
-			(at 143.51 179.07 0)
+			(at 168.91 163.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Field6" ""
+			(at 168.91 163.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 168.91 163.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 168.91 163.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 168.91 163.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9361,7 +12232,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "C127")
+					(reference "C318")
 					(unit 1)
 				)
 			)
@@ -9379,7 +12250,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "790856c7-adbd-4263-bf18-b20e896f995f")
-		(property "Reference" "C320"
+		(property "Reference" "C326"
 			(at 227.33 44.4499 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9456,6 +12327,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 223.52 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 223.52 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 223.52 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 223.52 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "7ce0657b-df42-4698-8a24-5e5faacb04b7")
 		)
@@ -9465,7 +12380,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "C320")
+					(reference "C326")
 					(unit 1)
 				)
 			)
@@ -9483,7 +12398,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "806e0d90-5d89-493c-bcbd-de875804a944")
-		(property "Reference" "J301"
+		(property "Reference" "J302"
 			(at 32.385 31.75 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9536,6 +12451,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 34.29 40.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 34.29 40.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 34.29 40.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 34.29 40.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "RN"
 			(uuid "66091ab8-91ca-4813-897a-e0da57966d5a")
 		)
@@ -9550,6 +12509,139 @@
 		)
 		(pin "TN"
 			(uuid "0112521f-22a2-44ee-aeb9-6873daffd92d")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
+					(reference "J302")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector_Audio:AudioJack3_SwitchTR")
+		(at 27.94 166.37 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "81e348e1-3934-4f0a-8519-29002821c05e")
+		(property "Reference" "J301"
+			(at 26.035 157.48 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "AudioJack3_SwitchTR"
+			(at 26.035 160.02 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Mylib:NRJ6HM-1-PRE"
+			(at 27.94 166.37 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 27.94 166.37 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Audio Jack, 3 Poles (Stereo / TRS), Switched TR Poles (Normalling)"
+			(at 27.94 166.37 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Field6" ""
+			(at 27.94 166.37 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 27.94 166.37 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 27.94 166.37 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 27.94 166.37 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "S"
+			(uuid "88094da8-2ea7-4049-844a-e08e4a34d110")
+		)
+		(pin "RN"
+			(uuid "8761694c-a6fc-49fc-8321-cc0f7621f777")
+		)
+		(pin "R"
+			(uuid "cedf5ad7-f9fb-4736-8cfb-b1f7ff2faa03")
+		)
+		(pin "T"
+			(uuid "4eb346c1-57eb-4294-bf6a-553093275e17")
+		)
+		(pin "TN"
+			(uuid "35045122-1274-48c6-913a-e50d3b64f4ae")
 		)
 		(instances
 			(project "usb-stomp"
@@ -9572,7 +12664,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "8560a723-1343-4e00-8e06-27cfd5a20a6a")
-		(property "Reference" "C317"
+		(property "Reference" "C323"
 			(at 193.04 69.8499 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9649,11 +12741,203 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 189.23 71.12 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 189.23 71.12 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 189.23 71.12 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 189.23 71.12 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "762e5856-f6ec-49ec-95fe-8c9340bfd84d")
 		)
 		(pin "1"
 			(uuid "9ba7105c-8e92-4601-b25d-54989a1245e9")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
+					(reference "C323")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 143.51 163.83 0)
+		(mirror y)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "864db307-876a-4a43-a082-187d484c2304")
+		(property "Reference" "C317"
+			(at 139.7 162.5599 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "22uF"
+			(at 139.7 165.0999 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_1210_3225Metric"
+			(at 142.5448 167.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 143.51 163.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "22uF 25V X7R ±10% 1210 MLCC"
+			(at 143.51 163.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC PN" "C309062"
+			(at 143.51 163.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "Samsung CL32B226KAJNNNE"
+			(at 143.51 163.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Field6" ""
+			(at 143.51 163.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 143.51 163.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 143.51 163.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 143.51 163.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "a3b731da-b049-4ef6-b646-e703ac66a5b0")
+		)
+		(pin "1"
+			(uuid "46057d01-a0ef-4fa4-a7bb-a308aa15b2ee")
 		)
 		(instances
 			(project "usb-stomp"
@@ -9665,8 +12949,9 @@
 		)
 	)
 	(symbol
-		(lib_id "Regulator_Linear:TLV76733DRVx")
-		(at 130.81 176.53 0)
+		(lib_id "Device:C")
+		(at 60.96 165.1 0)
+		(mirror x)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -9675,29 +12960,31 @@
 		(in_pos_files yes)
 		(dnp no)
 		(fields_autoplaced yes)
-		(uuid "8f9b08aa-fdca-4364-a38e-e3427e515279")
-		(property "Reference" "U103"
-			(at 130.81 166.37 0)
+		(uuid "868f899f-3759-4624-97b0-9b7d93841909")
+		(property "Reference" "C304"
+			(at 57.15 163.8299 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify right)
 			)
 		)
-		(property "Value" "TLV76733DRVx"
-			(at 130.81 168.91 0)
+		(property "Value" "2.2nF"
+			(at 57.15 166.3699 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify right)
 			)
 		)
-		(property "Footprint" "Package_SON:WSON-6-1EP_2x2mm_P0.65mm_EP1x1.6mm"
-			(at 130.81 165.1 0)
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
+			(at 61.9252 161.29 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9707,8 +12994,8 @@
 				)
 			)
 		)
-		(property "Datasheet" "www.ti.com/lit/gpn/TLV767"
-			(at 129.54 176.53 0)
+		(property "Datasheet" ""
+			(at 60.96 165.1 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9718,8 +13005,173 @@
 				)
 			)
 		)
-		(property "Description" "1A Precision Linear Voltage Regulator, with enable pin, Fixed Output 3.3V, WSON6"
-			(at 130.81 176.53 0)
+		(property "Description" "Unpolarized capacitor"
+			(at 60.96 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Availability" ""
+			(at 60.96 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Check_prices" ""
+			(at 60.96 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description_1" ""
+			(at 60.96 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM1555C1H222GA01D"
+			(at 60.96 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MF" ""
+			(at 60.96 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MP" ""
+			(at 60.96 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "PROD_ID" ""
+			(at 60.96 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Package" ""
+			(at 60.96 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Price" ""
+			(at 60.96 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Device" ""
+			(at 60.96 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Pins" ""
+			(at 60.96 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "SnapEDA_Link" ""
+			(at 60.96 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "VENDOR" ""
+			(at 60.96 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC PN" "C2987940"
+			(at 60.96 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "JLCPCB" ""
+			(at 60.96 165.1 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9730,7 +13182,231 @@
 			)
 		)
 		(property "LCSC" ""
-			(at 130.81 176.53 0)
+			(at 60.96 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Params" ""
+			(at 60.96 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Field6" ""
+			(at 60.96 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 60.96 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 60.96 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 60.96 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "989931b8-5348-45b9-8dce-8f01defb0894")
+		)
+		(pin "1"
+			(uuid "20d2d983-d4f6-49f6-98b2-4f0c744925b5")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
+					(reference "C304")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 60.96 168.91 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "8dd8b6d8-1f9e-4771-8019-936bcd48a064")
+		(property "Reference" "#PWR0308"
+			(at 60.96 175.26 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 60.96 173.99 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 60.96 168.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 60.96 168.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 60.96 168.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "aa980eaa-f019-42a1-a1b7-0be793bd2b62")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
+					(reference "#PWR0308")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Regulator_Linear:TLV76733DRVx")
+		(at 156.21 161.29 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "8f9b08aa-fdca-4364-a38e-e3427e515279")
+		(property "Reference" "U302"
+			(at 156.21 151.13 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "TLV76733DRVx"
+			(at 156.21 153.67 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Package_SON:WSON-6-1EP_2x2mm_P0.65mm_EP1x1.6mm"
+			(at 156.21 149.86 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "www.ti.com/lit/gpn/TLV767"
+			(at 154.94 161.29 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "1A Precision Linear Voltage Regulator, with enable pin, Fixed Output 3.3V, WSON6"
+			(at 156.21 161.29 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" ""
+			(at 156.21 161.29 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9741,7 +13417,7 @@
 			)
 		)
 		(property "LCSC PN" "C2848334"
-			(at 130.81 176.53 0)
+			(at 156.21 161.29 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9752,7 +13428,7 @@
 			)
 		)
 		(property "Sim.Library" ""
-			(at 130.81 176.53 0)
+			(at 156.21 161.29 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9763,7 +13439,51 @@
 			)
 		)
 		(property "Sim.Name" ""
-			(at 130.81 176.53 0)
+			(at 156.21 161.29 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Field6" ""
+			(at 156.21 161.29 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 156.21 161.29 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 156.21 161.29 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 156.21 161.29 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9797,7 +13517,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "U103")
+					(reference "U302")
 					(unit 1)
 				)
 			)
@@ -9815,7 +13535,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "8ff1a38d-e8a6-4c08-a0c2-b4afd0348cce")
-		(property "Reference" "#PWR0306"
+		(property "Reference" "#PWR0307"
 			(at 49.53 110.49 0)
 			(hide yes)
 			(show_name no)
@@ -9875,7 +13595,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0306")
+					(reference "#PWR0307")
 					(unit 1)
 				)
 			)
@@ -9893,7 +13613,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "913e4e63-cd24-42db-afbd-09a49214f713")
-		(property "Reference" "C307"
+		(property "Reference" "C311"
 			(at 124.46 80.0099 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10135,6 +13855,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 128.27 81.28 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 128.27 81.28 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 128.27 81.28 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 128.27 81.28 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "e967d1cf-7302-4725-b5be-b70d1cc7c0c7")
 		)
@@ -10144,132 +13908,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "C307")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C")
-		(at 118.11 179.07 0)
-		(mirror y)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "9258b9a0-e859-4d06-8853-eeca85ba4029")
-		(property "Reference" "C126"
-			(at 115.189 177.9016 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "2.2uF"
-			(at 115.189 180.213 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
-			(at 117.1448 182.88 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 118.11 179.07 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" ""
-			(at 118.11 179.07 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC PN" "C415535"
-			(at 118.11 179.07 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC" ""
-			(at 118.11 179.07 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Sim.Library" ""
-			(at 118.11 179.07 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Sim.Name" ""
-			(at 118.11 179.07 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "567cafe5-4554-4574-96b7-fb03d80f139b")
-		)
-		(pin "2"
-			(uuid "1ef0b77e-3f98-4047-a13c-be56868b4db6")
-		)
-		(instances
-			(project "usb-stomp"
-				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "C126")
+					(reference "C311")
 					(unit 1)
 				)
 			)
@@ -10288,7 +13927,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "972c6631-9fa8-4f7f-9432-5cb8b4007e8e")
-		(property "Reference" "C311"
+		(property "Reference" "C315"
 			(at 135.89 109.22 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10330,7 +13969,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2uF 25V X7R ±10% 0603"
 			(at 135.89 116.84 0)
 			(hide yes)
 			(show_name no)
@@ -10528,6 +14167,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 135.89 116.84 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 135.89 116.84 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 135.89 116.84 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 135.89 116.84 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "758f574c-9721-4494-a538-0bd0add63941")
 		)
@@ -10537,7 +14220,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "C311")
+					(reference "C315")
 					(unit 1)
 				)
 			)
@@ -10693,6 +14376,17 @@
 			)
 		)
 		(property "LCSC PN" "C130011"
+			(at 99.06 116.84 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Field6" ""
 			(at 99.06 116.84 0)
 			(hide yes)
 			(show_name no)
@@ -10896,6 +14590,17 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 99.06 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "4"
 			(uuid "25557ac5-867b-4de8-a382-69d7d73fb816")
 		)
@@ -10941,7 +14646,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "9e076fe7-4950-44dc-b9f7-510f410a1079")
-		(property "Reference" "R308"
+		(property "Reference" "R312"
 			(at 118.11 111.76 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11181,6 +14886,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 118.11 116.84 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 118.11 116.84 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 118.11 116.84 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 118.11 116.84 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "eee6af36-7ff9-4971-aef1-8082d4da09ea")
 		)
@@ -11190,84 +14939,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "R308")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 118.11 184.15 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "a2a0f823-3e35-4f84-b994-42dd5c314564")
-		(property "Reference" "#PWR0132"
-			(at 118.11 190.5 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "GND"
-			(at 118.11 189.23 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 118.11 184.15 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 118.11 184.15 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" ""
-			(at 118.11 184.15 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "c8b65c1e-a38a-4dc2-8a03-096edd34ee54")
-		)
-		(instances
-			(project "usb-stomp"
-				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0132")
+					(reference "R312")
 					(unit 1)
 				)
 			)
@@ -11285,7 +14957,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "a423dae1-977d-464b-bc24-53511c4e3334")
-		(property "Reference" "#PWR0307"
+		(property "Reference" "#PWR0310"
 			(at 78.74 41.91 0)
 			(hide yes)
 			(show_name no)
@@ -11345,7 +15017,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0307")
+					(reference "#PWR0310")
 					(unit 1)
 				)
 			)
@@ -11404,7 +15076,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2uF 25V X7R ±10% 0603"
 			(at 59.69 73.66 0)
 			(hide yes)
 			(show_name no)
@@ -11592,6 +15264,50 @@
 			)
 		)
 		(property "Sim.Params" ""
+			(at 59.69 73.66 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Field6" ""
+			(at 59.69 73.66 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 59.69 73.66 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 59.69 73.66 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
 			(at 59.69 73.66 90)
 			(hide yes)
 			(show_name no)
@@ -11671,7 +15387,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2uF 25V X7R ±10% 0603"
 			(at 59.69 114.3 0)
 			(hide yes)
 			(show_name no)
@@ -11869,6 +15585,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 59.69 114.3 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 59.69 114.3 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 59.69 114.3 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 59.69 114.3 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "c16011fc-f7ad-4db9-9724-a8ed446f719b")
 		)
@@ -11897,7 +15657,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "b18e4ea4-c1bd-4bb2-b977-10b99eb73540")
-		(property "Reference" "C304"
+		(property "Reference" "C306"
 			(at 74.93 40.6399 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -12139,6 +15899,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 78.74 41.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 78.74 41.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 78.74 41.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 78.74 41.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "cd77ec95-20cb-431b-af92-0c2cb62035b0")
 		)
@@ -12148,7 +15952,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "C304")
+					(reference "C306")
 					(unit 1)
 				)
 			)
@@ -12165,7 +15969,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "b32e6fee-aa21-47ce-a7ac-21211d15a1ec")
-		(property "Reference" "C319"
+		(property "Reference" "C325"
 			(at 213.36 44.4499 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -12242,6 +16046,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 209.55 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 209.55 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 209.55 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 209.55 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "8d7f068a-f54d-4ae3-854e-a77fff490fd4")
 		)
@@ -12251,7 +16099,153 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "C319")
+					(reference "C325")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 130.81 161.29 90)
+		(mirror x)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "b6faff38-c0e7-4614-9e5b-da705f33bcae")
+		(property "Reference" "R313"
+			(at 130.81 167.64 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "1R"
+			(at 130.81 165.1 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
+			(at 130.81 159.512 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 130.81 161.29 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 130.81 161.29 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC PN" "C2909329"
+			(at 130.81 161.29 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Params" ""
+			(at 130.81 161.29 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Field6" ""
+			(at 130.81 161.29 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 130.81 161.29 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 130.81 161.29 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 130.81 161.29 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "1c276851-a638-4b53-ae5f-3a0b39789388")
+		)
+		(pin "2"
+			(uuid "6a12d586-aabc-43f3-8ca9-9fabe2454dec")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
+					(reference "R313")
 					(unit 1)
 				)
 			)
@@ -12268,7 +16262,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "b7adf8ee-2bca-4d94-9e08-bbbbc245c6b0")
-		(property "Reference" "R304"
+		(property "Reference" "R305"
 			(at 64.77 105.4101 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -12312,7 +16306,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1MΩ 50V Thin Film Resistor ±1% ±50ppm/℃ 0402"
 			(at 67.31 104.14 0)
 			(hide yes)
 			(show_name no)
@@ -12510,6 +16504,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 67.31 104.14 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 67.31 104.14 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 67.31 104.14 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 67.31 104.14 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "c81684e7-24a0-45cc-b311-e48bcbd6a717")
 		)
@@ -12519,7 +16557,321 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "R304")
+					(reference "R305")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 71.12 165.1 0)
+		(mirror y)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "b85e8b20-3462-45af-9e8b-d79af303753a")
+		(property "Reference" "R306"
+			(at 73.66 163.8299 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "1MEG"
+			(at 73.66 166.3699 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
+			(at 72.898 165.1 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "1MΩ 50V Thin Film Resistor ±1% ±50ppm/℃ 0402"
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Availability" ""
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Check_prices" ""
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description_1" ""
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" ""
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MF" ""
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MP" ""
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "PROD_ID" ""
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Package" ""
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Price" ""
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Device" ""
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Pins" ""
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "SnapEDA_Link" ""
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "VENDOR" ""
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC PN" "C1884615"
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "JLCPCB" ""
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" ""
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Params" ""
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Field6" ""
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 71.12 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "68b3d184-9342-46a0-a9fe-e7de806291df")
+		)
+		(pin "2"
+			(uuid "ca0a580c-85cb-4287-93ab-15e11b8a21b5")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
+					(reference "R306")
 					(unit 1)
 				)
 			)
@@ -12537,7 +16889,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "b94d9932-299c-49bf-8500-744318bbcc19")
-		(property "Reference" "R307"
+		(property "Reference" "R311"
 			(at 118.11 71.12 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -12777,6 +17129,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 118.11 76.2 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 118.11 76.2 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 118.11 76.2 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 118.11 76.2 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "6171c13d-6ec4-4984-93fb-f3248db1e9ab")
 		)
@@ -12786,7 +17182,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "R307")
+					(reference "R311")
 					(unit 1)
 				)
 			)
@@ -12804,7 +17200,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "b986781f-a33c-4565-a034-a1ad3f4f1e7f")
-		(property "Reference" "#PWR0323"
+		(property "Reference" "#PWR0333"
 			(at 254 118.11 0)
 			(hide yes)
 			(show_name no)
@@ -12865,7 +17261,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0323")
+					(reference "#PWR0333")
 					(unit 1)
 				)
 			)
@@ -12883,7 +17279,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "c10e7bc1-9003-4283-be50-bde7b6909813")
-		(property "Reference" "#PWR0313"
+		(property "Reference" "#PWR0319"
 			(at 128.27 93.98 0)
 			(hide yes)
 			(show_name no)
@@ -12943,15 +17339,15 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0313")
+					(reference "#PWR0319")
 					(unit 1)
 				)
 			)
 		)
 	)
 	(symbol
-		(lib_id "power:+3.3VA")
-		(at 143.51 172.72 0)
+		(lib_id "power:GND")
+		(at 33.02 163.83 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -12960,9 +17356,9 @@
 		(in_pos_files yes)
 		(dnp no)
 		(fields_autoplaced yes)
-		(uuid "c5d11cdf-462e-4b77-8f46-1f4582e2d353")
-		(property "Reference" "#PWR0134"
-			(at 143.51 176.53 0)
+		(uuid "c2364cb4-c9d8-4f07-8e28-fa0ffe429b81")
+		(property "Reference" "#PWR0301"
+			(at 39.37 163.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -12972,18 +17368,19 @@
 				)
 			)
 		)
-		(property "Value" "+3.3VA"
-			(at 143.51 167.64 0)
+		(property "Value" "GND"
+			(at 36.83 163.8299 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify right)
 			)
 		)
 		(property "Footprint" ""
-			(at 143.51 172.72 0)
+			(at 33.02 163.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -12994,7 +17391,85 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 143.51 172.72 0)
+			(at 33.02 163.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 33.02 163.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "4e76348a-dc8d-4e0f-a99a-07542c1c76fe")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
+					(reference "#PWR0301")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+3.3VA")
+		(at 168.91 157.48 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "c5d11cdf-462e-4b77-8f46-1f4582e2d353")
+		(property "Reference" "#PWR0323"
+			(at 168.91 161.29 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "+3.3VA"
+			(at 168.91 152.4 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 168.91 157.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 168.91 157.48 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -13005,7 +17480,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+3.3VA\""
-			(at 143.51 172.72 0)
+			(at 168.91 157.48 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -13021,7 +17496,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0134")
+					(reference "#PWR0323")
 					(unit 1)
 				)
 			)
@@ -13038,7 +17513,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "cbade749-9dbf-4d76-961b-34168e39d4f2")
-		(property "Reference" "C318"
+		(property "Reference" "C324"
 			(at 199.39 44.4499 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -13115,6 +17590,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 195.58 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 195.58 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 195.58 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 195.58 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "a5f8f32e-0af7-4ba3-aac6-e6bd46a28b21")
 		)
@@ -13124,7 +17643,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "C318")
+					(reference "C324")
 					(unit 1)
 				)
 			)
@@ -13222,7 +17741,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "cfc4e804-7254-4d09-a3ab-c3eb2e6885cc")
-		(property "Reference" "#PWR0316"
+		(property "Reference" "#PWR0326"
 			(at 181.61 59.69 0)
 			(hide yes)
 			(show_name no)
@@ -13282,7 +17801,152 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0316")
+					(reference "#PWR0326")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:L")
+		(at 130.81 158.75 90)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "d59bc6c8-fc3f-4932-b5b5-137d6c99619a")
+		(property "Reference" "L301"
+			(at 130.81 153.67 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "2.2uH"
+			(at 130.81 156.21 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Mylib:L_0806"
+			(at 130.81 158.75 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "https://pim.murata.com/asset/pim4/inductor/J(E)TE243A-0006_PDF_INDUCTOR"
+			(at 130.81 158.75 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "1.8A 116mΩ 2.2uH 2.4A ±20% 0806 Power Inductor"
+			(at 130.81 158.75 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC PN" "C337893"
+			(at 130.81 158.75 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacutrer" "Murata DFE201612E-2R2M=P2"
+			(at 130.81 158.75 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Field6" ""
+			(at 130.81 158.75 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 130.81 158.75 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 130.81 158.75 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 130.81 158.75 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "25db5825-8b30-48fd-9ca2-4cdeb80ac7f4")
+		)
+		(pin "2"
+			(uuid "5eb81235-5a9d-4b31-8b23-b53cf9ed5b45")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
+					(reference "L301")
 					(unit 1)
 				)
 			)
@@ -13300,7 +17964,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "dd627964-0aaf-477d-b1b4-bdc52d7457f6")
-		(property "Reference" "#PWR0315"
+		(property "Reference" "#PWR0325"
 			(at 181.61 41.91 0)
 			(hide yes)
 			(show_name no)
@@ -13360,7 +18024,186 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0315")
+					(reference "#PWR0325")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 105.41 160.02 90)
+		(mirror x)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "e08e2585-7664-4f9d-90c7-623183e9e0f4")
+		(property "Reference" "C310"
+			(at 105.41 152.4 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "2.2uF"
+			(at 105.41 154.94 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
+			(at 109.22 160.9852 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 105.41 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "2.2uF 25V X7R ±10% 0603"
+			(at 105.41 160.02 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC PN" "C415535"
+			(at 105.41 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" ""
+			(at 105.41 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Library" ""
+			(at 105.41 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Name" ""
+			(at 105.41 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Params" ""
+			(at 105.41 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Field6" ""
+			(at 105.41 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 105.41 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 105.41 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 105.41 160.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "cad9f7dd-a47b-467d-8eea-4a642480b368")
+		)
+		(pin "2"
+			(uuid "bf378249-8c3d-4eba-8e23-6da292d6b10b")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
+					(reference "C310")
 					(unit 1)
 				)
 			)
@@ -13378,7 +18221,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "e1bc4d9a-4871-49e2-a05e-ba0791ecbfed")
-		(property "Reference" "U302"
+		(property "Reference" "U303"
 			(at 251.0633 69.85 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -13456,6 +18299,50 @@
 			)
 		)
 		(property "Sim.Params" ""
+			(at 240.03 100.33 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Field6" ""
+			(at 240.03 100.33 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 240.03 100.33 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 240.03 100.33 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
 			(at 240.03 100.33 0)
 			(hide yes)
 			(show_name no)
@@ -13556,7 +18443,85 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "U302")
+					(reference "U303")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 71.12 168.91 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "ead0bac9-ed18-4fbc-854f-bfca6cfb2516")
+		(property "Reference" "#PWR0309"
+			(at 71.12 175.26 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 71.12 173.99 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 71.12 168.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 71.12 168.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 71.12 168.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "32fe2eb0-faee-4c97-b7f3-a1580a75492d")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
+					(reference "#PWR0309")
 					(unit 1)
 				)
 			)
@@ -13574,7 +18539,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "efcc5142-4cdf-4bcb-9e1a-d1d6e83cb24d")
-		(property "Reference" "C312"
+		(property "Reference" "C316"
 			(at 135.89 134.62 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -13616,7 +18581,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2uF 25V X7R ±10% 0603"
 			(at 135.89 127 0)
 			(hide yes)
 			(show_name no)
@@ -13814,6 +18779,50 @@
 				)
 			)
 		)
+		(property "Field6" ""
+			(at 135.89 127 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S3.1" ""
+			(at 135.89 127 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S4.1" ""
+			(at 135.89 127 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "KLC_S6.2" ""
+			(at 135.89 127 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "a3b7f40d-46b9-476c-aa8f-471b9b2f361a")
 		)
@@ -13823,7 +18832,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "C312")
+					(reference "C316")
 					(unit 1)
 				)
 			)
@@ -13841,7 +18850,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "f3438300-bbc7-4cb4-86e6-4d4346f8173d")
-		(property "Reference" "#PWR0318"
+		(property "Reference" "#PWR0328"
 			(at 181.61 104.14 0)
 			(hide yes)
 			(show_name no)
@@ -13901,7 +18910,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0318")
+					(reference "#PWR0328")
 					(unit 1)
 				)
 			)
@@ -13919,7 +18928,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "f73b854f-594d-4404-905c-d74adf4a88ff")
-		(property "Reference" "#PWR0303"
+		(property "Reference" "#PWR0304"
 			(at 45.72 38.1 0)
 			(hide yes)
 			(show_name no)
@@ -13980,7 +18989,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0303")
+					(reference "#PWR0304")
 					(unit 1)
 				)
 			)
@@ -13988,7 +18997,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 143.51 184.15 0)
+		(at 168.91 168.91 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -13998,8 +19007,8 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "f8473aed-de75-4199-8a9b-6e6093860ff9")
-		(property "Reference" "#PWR0135"
-			(at 143.51 190.5 0)
+		(property "Reference" "#PWR0324"
+			(at 168.91 175.26 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -14010,7 +19019,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 143.51 189.23 0)
+			(at 168.91 173.99 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -14020,7 +19029,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 143.51 184.15 0)
+			(at 168.91 168.91 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -14031,7 +19040,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 143.51 184.15 0)
+			(at 168.91 168.91 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -14042,7 +19051,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 143.51 184.15 0)
+			(at 168.91 168.91 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -14057,7 +19066,7 @@
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01"
-					(reference "#PWR0135")
+					(reference "#PWR0324")
 					(unit 1)
 				)
 			)
