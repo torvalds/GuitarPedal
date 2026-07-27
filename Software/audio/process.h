@@ -54,27 +54,25 @@ static inline sample_t process_input(raw_sample_t sample)
 	return val;
 }
 
-// Be careful about FP overflows around +1.0
+//
+// Convert a nominal -1.0..1.0 signal to a full-scale s32 sample.
+//
+// Anything at or past full scale gets pinned to the end of the range.
+// The test has to be on the *input*: the FP->int conversion is only
+// defined for values that already fit, and testing the result can't
+// work anyway, since it comes back around into range at +-2.0, +-4.0...
+//
+// Below full scale there's nothing to worry about: the largest float
+// under 1.0 is (1 - 2^-24), so the scaled value tops out at 2^31 - 128
+// and the conversion cannot overflow.
+//
 static inline s32 convert_output(float out)
 {
-	s32 res = (s32)rintf(out * FLOAT_TO_SAMPLE_MULTIPLIER);
-	if (out > 0.99) {
+	if (fabsf(out) >= 1.0f) {
 		clipping = 1;
-
-		// Be careful about FP overflows close to +1.0,
-		// because even just under 1.0 can round to the
-		// max negative integer result
-		if (res < 0 || out >= 1.0) {
-			clipping = 1;
-			res = 0x7fffffff;
-		}
-	} else if (out < -1.0) {
-		clipping = 1;
-		res = 0x80000000;
+		return out > 0.0f ? INT32_MAX : INT32_MIN;
 	}
-
-	// We'll do stereo output some day
-	return res;
+	return lrintf(out * FLOAT_TO_SAMPLE_MULTIPLIER);
 }
 
 static inline raw_sample_t process_output(sample_t out, raw_sample_t dry)
