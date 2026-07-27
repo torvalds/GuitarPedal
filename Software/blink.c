@@ -63,14 +63,28 @@ static void reset_effect(struct effect *eff)
 }
 
 //
-// An unrouted effect isn't stepped at all any more, so there is nothing
-// left to ramp its mix down - just stop it dead.  That clicks, and that
-// is fine: routing is something you do while setting the pedal up, not
-// while playing.
+// Unrouting an effect throws its values away.  An effect that isn't in
+// the chain isn't supposed to have any state at all, so routing it again
+// starts from the defaults in the schema rather than from wherever it
+// happened to be left.
+//
+// The pot values go through the usual double-buffer dance - fill the
+// inactive set, publish it by bumping 'seq' - but the mix is just slammed
+// to zero, because an unrouted effect isn't stepped at all any more and
+// so has nothing left to ramp it down.  That clicks.  That's fine: you
+// route effects while setting the pedal up, not while playing.
 //
 static void unroute_effect(struct effect *eff)
 {
+	unsigned int seq = eff->seq;
+	unsigned char *new_pot = eff->pot_values[!(seq & 1)];
+
+	for (int i = 0; i < 10; i++)
+		new_pot[i] = eff->pots[i].def_val;
+
+	eff->mix_pot = (unsigned int)(eff->def_mix * EFF_ENABLE_STEPS);
 	eff->mix = eff->target = 0;
+	eff->seq = seq + 1;
 }
 
 //
