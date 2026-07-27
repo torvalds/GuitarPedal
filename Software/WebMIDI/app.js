@@ -1524,16 +1524,21 @@ appTitleEl.addEventListener('click', () => {
         });
     }
 
-    const globalDisableBtn = document.getElementById('global-disable-btn');
-    if (globalDisableBtn) {
-        globalDisableBtn.addEventListener('click', () => {
+    const globalUnrouteBtn = document.getElementById('global-unroute-btn');
+    if (globalUnrouteBtn) {
+        globalUnrouteBtn.addEventListener('click', () => {
             if (!midiOutput) {
-                showButtonError(globalDisableBtn, 'Not Connected');
+                showButtonError(globalUnrouteBtn, 'Not Connected');
                 return;
             }
 
-            sendMidiCc(GLOBAL_ENABLE_CC, 67);
-            showButtonSuccess(globalDisableBtn, 'Effects Disabled');
+            // A routing order with nothing in it unroutes everything. The
+            // noise gate is the anchor effect and is never part of the
+            // routing order to begin with - it always runs first - and the
+            // same goes for the settings pseudo-effect.
+            sendSysex([SYSEX_CMD.ROUTING_ORDER]);
+            reorderEffectsInDOM([]);
+            showButtonSuccess(globalUnrouteBtn, 'All Unrouted');
         });
     }
 
