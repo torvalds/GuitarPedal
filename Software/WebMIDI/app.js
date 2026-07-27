@@ -1497,7 +1497,7 @@ appTitleEl.addEventListener('click', () => {
         activePotCc = cc;
         activePotDef = potDef;
 
-        document.getElementById('active-pot-name').textContent = `${effectName} - ${potDef.name}`;
+        document.getElementById('active-pot-title').textContent = `${effectName} - ${potDef.name}`;
         const valDisplay = document.getElementById('active-pot-value');
         if (valDisplay) valDisplay.textContent = formatPotValue(potDef, currentVal);
 
