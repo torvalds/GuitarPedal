@@ -112,20 +112,20 @@ def generate(audio_dir, out_h, out_js, out_md):
             'header_path': header_path
         })
 
-    # Sort by priority
-    effects_data.sort(key=lambda x: x['priority'])
+    # Sort by priority, then by filename to break ties.
+    #
+    # Priorities are a hint about where an effect wants to sit in the
+    # chain, not a total order, so several effects sharing one is fine
+    # and expected.  What is not fine is the tie-break coming from
+    # os.listdir(), which is inode order: that made the ids depend on
+    # the filesystem, and the ids are what end up in saved scenes and on
+    # the wire.  Filenames are unique in a directory, so this key is a
+    # total order and the result is the same everywhere.
+    effects_data.sort(key=lambda x: (x['priority'], x['base']))
 
     # Auto-assign index as ID
     for i, e in enumerate(effects_data):
         e['id'] = i
-
-    # Check for duplicate IDs
-    seen_ids = set()
-    for e in effects_data:
-        if e['id'] in seen_ids:
-            print(f"Error: Duplicate ID {e['id']} found for {e['base']}", file=sys.stderr)
-            sys.exit(1)
-        seen_ids.add(e['id'])
 
     # Build maps
     for e_idx, e_data in enumerate(effects_data):
