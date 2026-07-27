@@ -495,7 +495,7 @@ void usb_audio_task(void)
 	}
 }
 
-sample_t get_usb_audio_input(void)
+sample_t __audio_func(get_usb_audio_input)(void)
 {
 	unsigned tail = usb_rx_tail;
 

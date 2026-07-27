@@ -567,7 +567,7 @@ static inline void enable_ftz(void)
 	__builtin_arm_set_fpscr(fpscr);
 }
 
-static void audio_processing(void)
+static void __audio_func(audio_processing)(void)
 {
 	enable_ftz();
 	for (;;)

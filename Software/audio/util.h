@@ -117,7 +117,7 @@ static inline float __sample_array_read_s16(float delay, unsigned *idxp, unsigne
 
 #define LOG2_STEPS (1<< LOG2_STEP_SHIFT)
 
-float log2f(float x)
+float __audio_func(log2f)(float x)
 {
 	union { float f; unsigned int i; } u = { x };
 
@@ -138,7 +138,7 @@ float log2f(float x)
 
 #define POW2_STEPS (1<< POW2_STEP_SHIFT)
 
-float pow2(float x)
+float __audio_func(pow2)(float x)
 {
 	// Integer and fractional parts
 	int exp = (int)floorf(x);
@@ -178,7 +178,7 @@ float pow2(float x)
 struct sincos { float sin, cos; };
 
 // positive phase numbers only, please..
-struct sincos fastsincos(float phase)
+struct sincos __audio_func(fastsincos)(float phase)
 {
 	phase *= 4;
 	int quadrant = (int)phase;

@@ -156,6 +156,12 @@ def generate(audio_dir, out_h, out_js, out_md):
                     log2_ratio = math.log2(b_val / a_val) if a_val != 0 else 0
                     f.write(f"static float {fn_name}(unsigned char pot) {{ float p = POT_TO_FLOAT(pot); return {a_val}f * pow2(p * {log2_ratio}f); }}\n")
 
+            # Declare the two entry points ahead of the header, marked as
+            # running on the audio core. Gcc carries a section attribute
+            # from the declaration to the definition, so the effect headers
+            # don't have to know about any of this.
+            f.write(f"static void __audio_func({base}_init)(unsigned char[10]);\n")
+            f.write(f"static float __audio_func({base}_step)(float);\n")
             f.write(f"#include \"../effects/{base}.h\"\n")
 
             f.write(f"static struct effect {struct_name} = {{\n")

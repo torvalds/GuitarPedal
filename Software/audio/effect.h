@@ -95,7 +95,7 @@ static inline raw_sample_t *i2s_dma_rx_ptr(void)
 	return (raw_sample_t *) (dma_hw->ch[dma_rx].write_addr & ~7);
 }
 
-static inline void single_sample(float mix)
+static inline void __audio_func(single_sample)(float mix)
 {
 	raw_sample_t *cpu_ptr = i2s_dma_buf + cpu_idx;
 	cpu_idx = (cpu_idx + 1) & 15;
@@ -146,7 +146,7 @@ static void bypass(void)
 	}
 }
 
-static __attribute__((noinline)) void make_one_noise(void)
+static __attribute__((noinline)) void __audio_func(make_one_noise)(void)
 {
 	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
 		struct effect *effect = effects[i];
