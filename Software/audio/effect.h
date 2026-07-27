@@ -49,9 +49,19 @@ struct effect {
 
 #define EFFECT_POT(...) { __VA_ARGS__ }
 
+//
+// How many effects one scene can route.
+//
+// This is a storage limit, not a limit on how many effects exist - the
+// point of routing is that there are more effects to choose from than
+// you can have in a chain at once.  eeprom.h checks that a scene has the
+// slots for it.
+//
+#define MAX_ROUTED_EFFECTS 14
+
 // Effects and MIDI mapping auto-generated from scripts/gen_effects.py
-extern uint8_t effect_chain[15];
-extern uint8_t effect_chain_len;
+extern uint8_t effect_chain[MAX_ROUTED_EFFECTS];
+extern uint8_t routed_effect_count;
 #include "effect_map.h"
 
 static unsigned int dropped;
@@ -124,7 +134,7 @@ static inline void __audio_func(single_sample)(float mix)
 
 	sample_t out = in;
 	out = do_effect_step(effects[0], out); // Gate is always index 0 and runs first
-	for (int i = 0; i < effect_chain_len; i++) {
+	for (int i = 0; i < routed_effect_count; i++) {
 		out = do_effect_step(effects[effect_chain[i]], out);
 	}
 

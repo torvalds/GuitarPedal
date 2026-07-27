@@ -21,6 +21,12 @@
 #define EEPROM_PAGE_SIZE 16
 #define SCENE_SIZE (16*MAX_SCENE_EFFECTS)
 
+// Slot 0 is the noise gate, the last slot is the settings, and the
+// routed chain has to fit in between.
+_Static_assert(MAX_ROUTED_EFFECTS + 2 <= MAX_SCENE_EFFECTS,
+	       "a scene has no room for that many routed effects");
+#define SETTINGS_SLOT (MAX_SCENE_EFFECTS - 1)
+
 struct effect_state {
 	unsigned char pots[10];
 	unsigned char mix_level;
@@ -154,7 +160,7 @@ extern uint8_t routed_effect_count;
 
 static int find_effect_slot(struct effect *effect)
 {
-	if (effect == effects[EFFECT_COUNT - 1]) return 15;
+	if (effect == effects[EFFECT_COUNT - 1]) return SETTINGS_SLOT;
 	if (effect == effects[0]) return 0;
 	for (int i = 0; i < routed_effect_count; i++) {
 		if (effects[effect_chain[i]] == effect) return i + 1;
@@ -181,7 +187,7 @@ static bool load_effect_state_from_slot(unsigned int slot, struct effect *effect
 	memcpy(effect->pot_values[0], state->pots, 10);
 	memcpy(effect->pot_values[1], state->pots, 10);
 	effect->mix_pot = (state->mix_level * EFF_ENABLE_STEPS) / 127;
-	effect->target = (slot == 0 || slot == 15 || slot <= routed_effect_count) ? effect->mix_pot : 0;
+	effect->target = effect->mix_pot;
 	effect->mix = effect->target;
 	if (effect->init)
 		effect->init(effect->pot_values[0]);
@@ -216,41 +222,28 @@ static bool load_scene(uint8_t scene_id)
 	if (scene_id >= MAX_SCENES) return false;
 
 	current_scene_id = scene_id;
-	routed_effect_count = 0;
-	extern struct effect gate_effect;
 	extern struct effect settings_effect;
 
-	if (!load_effect_state_from_slot(0, effects[0])) {
-		// If corrupt, fallback
-	}
+	load_effect_state_from_slot(0, effects[0]);
+
+	// The chain is a linked list through each slot's 'reserved[0]'.
+	// routing_add() rejects anything bogus, so a corrupt scene can't
+	// build a chain with repeats in it or run off the end.
+	routing_bitmap_t routable = routing_start();
 
 	uint8_t next_id = eeprom_cache.state[current_scene_id][0].reserved[0];
 	int current_slot = 1;
 
-	while (next_id != 0xFF && routed_effect_count < 14 && current_slot < 15) {
-		if (next_id > 0 && next_id < EFFECT_COUNT - 1) {
-			effect_chain[routed_effect_count++] = next_id;
+	while (next_id != 0xFF && current_slot < SETTINGS_SLOT) {
+		if (routing_add(&routable, next_id))
 			load_effect_state_from_slot(current_slot, effects[next_id]);
-		}
 		next_id = eeprom_cache.state[current_scene_id][current_slot].reserved[0];
 		current_slot++;
 	}
 
-	// Always load settings from slot 15
-	load_effect_state_from_slot(15, &settings_effect);
+	load_effect_state_from_slot(SETTINGS_SLOT, &settings_effect);
 
-	extern uint8_t effect_chain_len;
-	effect_chain_len = routed_effect_count;
-	for (int i = 1; i < EFFECT_COUNT - 1; i++) {
-		bool routed = false;
-		for (int j = 0; j < routed_effect_count; j++) {
-			if (effect_chain[j] == i) { routed = true; break; }
-		}
-		if (!routed) {
-			effect_chain[effect_chain_len++] = i;
-			effects[i]->target = 0;
-		}
-	}
+	routing_end(routable);
 	return true;
 }
 
@@ -284,7 +277,7 @@ static bool save_scene(uint8_t scene_id)
 	}
 
 	extern struct effect settings_effect;
-	struct effect_state *state15 = &eeprom_cache.state[current_scene_id][15];
+	struct effect_state *state15 = &eeprom_cache.state[current_scene_id][SETTINGS_SLOT];
 	int seq15 = settings_effect.seq & 1;
 	if (settings_effect.save)
 		settings_effect.save(&settings_effect, settings_effect.pot_values[seq15]);
