@@ -19,7 +19,21 @@ float sqrtf(float);
 float fabsf(float);
 float floorf(float);
 float ceilf(float);
-long int lrintf(float);
+
+//
+// 'lrintf()' is *not* one of them.  Gcc has no scalar VFP lrint
+// pattern for M-profile, so it never expands inline and instead
+// turns into a call to the newlib software implementation - stack
+// frame, magic-number rounding, bit extraction and all.
+//
+// Casting the result of 'rintf()' generates the two instructions we
+// actually wanted ('vrintx.f32' + 'vcvt.s32.f32'), so just do that
+// and keep the standard name.
+//
+static inline long int lrintf(float x)
+{
+	return (long int)rintf(x);
+}
 
 #define log10f(x) (log2f(x)/LOG2_10)
 
