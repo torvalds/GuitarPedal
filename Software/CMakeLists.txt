@@ -148,6 +148,10 @@ target_compile_options(blink PRIVATE
 	-fsingle-precision-constant
 	-Wfloat-conversion)
 
+# Our own sources only - we don't get to pick the SDK's warnings
+set_source_files_properties(blink.c usb-device.c PROPERTIES
+	COMPILE_OPTIONS -Wdouble-promotion)
+
 # create map/bin/hex/uf2 file in addition to ELF.
 pico_add_extra_outputs(blink)
 

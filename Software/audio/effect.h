@@ -54,23 +54,6 @@ extern uint8_t effect_chain[15];
 extern uint8_t effect_chain_len;
 #include "effect_map.h"
 
-static inline void generic_effect_describe(struct effect *e, unsigned char pots[10])
-{
-	for (int i = 0; i < 10; i++) {
-		if (e->pots[i].label) {
-			const char *unit = e->pots[i].unit ? e->pots[i].unit : "";
-			if (e->pots[i].enum_names) {
-				int idx = (int)e->pots[i].convert(pots[i]);
-				fprintf(stderr, " %s=%s %s", e->pots[i].label, e->pots[i].enum_names[idx], unit);
-			} else if (e->pots[i].convert) {
-				float val = e->pots[i].convert(pots[i]);
-				fprintf(stderr, " %s=%g %s", e->pots[i].label, val, unit);
-			}
-		}
-	}
-	fprintf(stderr, "\n");
-}
-
 static unsigned int dropped;
 
 // Effects are purely mono... For now
