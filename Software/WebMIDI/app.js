@@ -1319,7 +1319,9 @@ function renderUI() {
             mixDiv.appendChild(mixInput);
 
             // Add active pot triggers
-            const activateMixPot = () => {
+            const activateMixPot = (e) => {
+                if (e.type === 'mousedown' && e.target === mixInput)
+                    return;
                 setActivePot(`eff-${idx}-mix`, mixPotDef, parseInt(mixInput.value), effect.name);
             };
             mixDiv.addEventListener('mousedown', activateMixPot);
@@ -1399,12 +1401,22 @@ function renderUI() {
                     potDiv.appendChild(input);
                 }
 
-                // Add active pot triggers
-                const activatePot = () => {
+                //
+                // Tapping the pot opens the big slider panel - except for
+                // a mouse grab of the inline slider itself, which is
+                // someone dragging it, and having the panel and its
+                // backdrop appear on top mid-drag is no help to anybody.
+                //
+                // Touch still opens it either way: the inline slider is
+                // too small to use with a thumb, which is what the panel
+                // is there for.
+                //
+                const activatePot = (e) => {
+                    if (e.type === 'mousedown' && e.target === input)
+                        return;
                     setActivePot(potIdKey, pot, parseInt(input.value), effect.name);
                 };
 
-                // Allow interaction with the pot div to open the active pot panel
                 potDiv.addEventListener('mousedown', activatePot);
                 potDiv.addEventListener('touchstart', activatePot, { passive: true });
             }
