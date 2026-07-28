@@ -581,6 +581,81 @@ function sendMidiCc(cc, val) {
     scheduleDiagnostic();
 }
 
+//
+// Let the scroll wheel adjust whichever slider it is over.
+//
+// The catch is that wheel events go to whatever happens to be under the
+// pointer, and the pointer doesn't move while you scroll - the page does.
+// So a naive version means that scrolling past a slider hands it the
+// wheel, and since the page keeps moving underneath, you end up dragging
+// one value after another while trying to get down the list. Every one
+// of those goes straight to the pedal.
+//
+// A scroll gesture has a beginning, though, so settle it there: whatever
+// was under the pointer when the gesture started owns the whole gesture.
+// Start on a slider and it's yours until you pause; start anywhere else
+// and sliders sliding past underneath are ignored.
+//
+const WHEEL_NOTCH = 100;        // about one detent of a mouse wheel
+const WHEEL_GESTURE_GAP = 400;  // ms of quiet before it counts as a new one
+const WHEEL_STEP = 3;           // pot units per detent - 40 of them end to end
+const WHEEL_STEP_FINE = 1;      // ...and with shift held
+
+const wheelZones = new Map();   // hoverable area -> the slider it drives
+let wheelOwner = null;
+let wheelLast = 0;
+
+function wheelZoneAt(el) {
+    for (; el; el = el.parentElement)
+        if (wheelZones.has(el))
+            return el;
+    return null;
+}
+
+// Capture, so this settles ownership before the zone's own handler runs
+window.addEventListener('wheel', (e) => {
+    if (e.timeStamp - wheelLast > WHEEL_GESTURE_GAP)
+        wheelOwner = wheelZoneAt(e.target);
+    wheelLast = e.timeStamp;
+}, { passive: true, capture: true });
+
+//
+// 'zone' is the area the wheel answers over.  It wants to be the whole
+// pot - name, readout and slider together - because aiming at the few
+// pixels of the slider itself just reads as "it doesn't work".
+//
+function enableWheelAdjust(input, zone = input) {
+    let acc = 0;
+
+    wheelZones.set(zone, input);
+    zone.addEventListener('wheel', (e) => {
+        if (wheelOwner !== zone)
+            return;
+        e.preventDefault();
+
+        // Accumulate, so that a trackpad's stream of small deltas adds
+        // up to the same thing as one click of a wheel
+        acc -= e.deltaY;                        // wheel up raises the value
+        const notches = Math.trunc(acc / WHEEL_NOTCH);
+        if (!notches)
+            return;
+        acc -= notches * WHEEL_NOTCH;
+
+        const step = e.shiftKey ? WHEEL_STEP_FINE : WHEEL_STEP;
+        const now = parseInt(input.value);
+        const val = Math.max(parseInt(input.min),
+                             Math.min(parseInt(input.max), now + notches * step));
+        if (val === now)
+            return;
+
+        // Go through the normal 'input' path, so the readout, the eq
+        // curve and the sysex all happen exactly as they would if you
+        // had dragged it
+        input.value = val;
+        input.dispatchEvent(new Event('input'));
+    }, { passive: false });
+}
+
 function formatPotValue(pot, val) {
     const p = val / 120.0;
     let y = val;
@@ -1428,6 +1503,7 @@ function renderUI() {
             mixInput.value = defaultMixVal;
             mixInput.potDef = mixPotDef;
 
+            enableWheelAdjust(mixInput, mixDiv);
             ccToElementMap.set(`eff-${idx}-mix`, mixInput);
             mixInput.addEventListener('input', (e) => {
                 const midiVal = parseInt(e.target.value);
@@ -1500,6 +1576,7 @@ function renderUI() {
                     eqPotsInputs.push(input);
                 }
 
+                enableWheelAdjust(input, potDiv);
                 ccToElementMap.set(potIdKey, input);
                 input.addEventListener('input', (e) => {
                     const midiVal = parseInt(e.target.value);
@@ -1677,6 +1754,9 @@ appTitleEl.addEventListener('click', () => {
 
     const activePotSlider = document.getElementById('active-pot-slider');
     if (activePotSlider) {
+        // the whole panel: its name and readout are part of the pot too
+        enableWheelAdjust(activePotSlider,
+                          document.getElementById('active-pot-panel') || activePotSlider);
         activePotSlider.addEventListener('input', (e) => {
             if (activePotCc === null || !activePotDef) return;
 
