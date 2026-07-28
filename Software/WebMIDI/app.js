@@ -1696,10 +1696,18 @@ appTitleEl.addEventListener('click', () => {
         });
     }
 
+    function closeMenu() {
+        const menu = document.getElementById('global-menu');
+        const burger = document.getElementById('burger-btn');
+        if (menu) menu.classList.add('hidden');
+        if (burger) burger.setAttribute('aria-expanded', 'false');
+    }
+
     function closeAllPanels() {
         if (document.getElementById('panel-backdrop')) document.getElementById('panel-backdrop').classList.add('hidden');
-        if (document.getElementById('global-menu-panel')) document.getElementById('global-menu-panel').classList.add('hidden');
+        if (document.getElementById('settings-panel')) document.getElementById('settings-panel').classList.add('hidden');
         if (document.getElementById('active-pot-panel')) document.getElementById('active-pot-panel').classList.add('hidden');
+        closeMenu();
         activePotCc = null;
         activePotDef = null;
     }
@@ -1729,27 +1737,53 @@ appTitleEl.addEventListener('click', () => {
         }, 1500);
     }
 
-    // Global Menu Panel
+    // The burger menu
     const burgerBtn = document.getElementById('burger-btn');
-    const closeGlobalMenuBtn = document.getElementById('close-global-menu');
-    const globalMenuPanel = document.getElementById('global-menu-panel');
+    const globalMenu = document.getElementById('global-menu');
 
-    if (burgerBtn) {
-        burgerBtn.addEventListener('click', () => {
-            if (globalMenuPanel.classList.contains('hidden')) {
-                closeAllPanels();
-                globalMenuPanel.classList.remove('hidden');
-                if (backdrop) backdrop.classList.remove('hidden');
-            } else {
-                closeAllPanels();
+    if (burgerBtn && globalMenu) {
+        burgerBtn.addEventListener('click', (e) => {
+            // Or the document listener below sees this same click and
+            // closes what we just opened.
+            e.stopPropagation();
+            const wasOpen = !globalMenu.classList.contains('hidden');
+            closeAllPanels();
+            if (!wasOpen) {
+                globalMenu.classList.remove('hidden');
+                burgerBtn.setAttribute('aria-expanded', 'true');
             }
+        });
+
+        // A menu goes away when you press somewhere else, which the
+        // backdrop used to do for us and a dropdown has no backdrop for.
+        document.addEventListener('click', (e) => {
+            if (!globalMenu.classList.contains('hidden') &&
+                !globalMenu.contains(e.target))
+                closeMenu();
         });
     }
 
-    if (closeGlobalMenuBtn) {
-        closeGlobalMenuBtn.addEventListener('click', () => {
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape')
             closeAllPanels();
+    });
+
+    // Settings, which is the one menu item that opens something rather
+    // than doing something.
+    const openSettingsBtn = document.getElementById('open-settings-btn');
+    const settingsPanel = document.getElementById('settings-panel');
+    const closeSettingsBtn = document.getElementById('close-settings');
+
+    if (openSettingsBtn && settingsPanel) {
+        openSettingsBtn.addEventListener('click', () => {
+            closeAllPanels();
+            settingsPanel.classList.remove('hidden');
+            if (backdrop) backdrop.classList.remove('hidden');
         });
+    }
+
+    if (closeSettingsBtn) {
+        closeSettingsBtn.addEventListener('click', closeAllPanels);
     }
 
     // Active Pot initialization

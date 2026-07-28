@@ -14,12 +14,32 @@
     <header class="glass-panel app-header">
       <h1 id="app-title" class="title-disconnected">RP2350 Pedal</h1>
       <div class="header-controls">
+        <!-- Scenes are the one thing in here used often enough to be
+             worth a click rather than two, so they live in the header
+             rather than behind the menu. -->
+        <div class="header-scenes">
+          <select id="global-scene-select" title="Scene">
+            <!-- Options injected via JS -->
+          </select>
+          <button id="global-save-scene-btn" title="Save to this scene">💾 Save</button>
+          <button id="global-load-scene-btn" title="Load this scene">Load</button>
+        </div>
         <button id="tuner-btn" class="action-btn" title="Tuner Mode">🎵</button>
         <label class="switch" title="Global Enable">
           <input type="checkbox" id="global-enable">
           <span class="slider round"></span>
         </label>
-        <button id="burger-btn" class="action-btn" title="Menu">☰</button>
+        <div class="burger-wrap">
+          <button id="burger-btn" class="action-btn" title="Menu"
+                  aria-haspopup="true" aria-expanded="false">☰</button>
+          <div id="global-menu" class="menu-dropdown hidden" role="menu">
+            <button id="global-unroute-btn" role="menuitem">⏏&nbsp;&nbsp;Unroute All Effects</button>
+            <button id="update-app-btn" role="menuitem">⬇️&nbsp;&nbsp;Update App</button>
+            <button id="open-settings-btn" role="menuitem">⚙️&nbsp;&nbsp;Settings…</button>
+            <hr>
+            <button id="global-program-btn" class="danger-item" role="menuitem">⚠️&nbsp;&nbsp;Reboot to Programming Mode</button>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -55,32 +75,25 @@
     <!-- Panel Backdrop -->
     <div id="panel-backdrop" class="hidden"></div>
 
-    <!-- Global Menu Panel -->
-    <div id="global-menu-panel" class="glass-panel bottom-panel hidden">
+    <!-- Settings, reached from the menu. Everything here is set once and
+         then left alone, which is why it isn't in the menu itself. -->
+    <div id="settings-panel" class="glass-panel dialog-panel hidden" role="dialog" aria-modal="true">
       <div class="panel-header">
-        <h2>Global Settings</h2>
-        <button id="close-global-menu" class="action-btn" title="Close">✕</button>
+        <h2>Settings</h2>
+        <button id="close-settings" class="action-btn" title="Close">✕</button>
       </div>
-      <div class="panel-content menu-actions">
-        <div class="midi-selection" style="margin-bottom: 15px; text-align: left; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
-          <label style="display:block; margin-bottom: 5px; color: var(--text-muted); font-size: 0.9em;">MIDI Input Device</label>
-          <select id="midi-input-select" style="width: 100%; margin-bottom: 10px; background: #222; color: #fff; padding: 8px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.2); font-family: inherit; font-size: 1em;"></select>
-          <label style="display:block; margin-bottom: 5px; color: var(--text-muted); font-size: 0.9em;">MIDI Output Device</label>
-          <select id="midi-output-select" style="width: 100%; background: #222; color: #fff; padding: 8px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.2); font-family: inherit; font-size: 1em;"></select>
-        </div>
-        <button id="global-unroute-btn" class="menu-btn">⏏ Unroute All Effects</button>
-        <div class="scene-selection" style="margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
-          <label style="display:block; margin-bottom: 5px; color: var(--text-muted); font-size: 0.9em;">Scene Selection</label>
-          <div style="display: flex; gap: 10px; align-items: center;">
-            <select id="global-scene-select" style="flex: 1; background: #222; color: #fff; padding: 8px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.2); font-family: inherit; font-size: 1em;">
-              <!-- Options injected via JS -->
-            </select>
-            <button id="global-save-scene-btn" class="glass-button" style="padding: 8px 15px; font-size: 0.9em;">💾 Save</button>
-            <button id="global-load-scene-btn" class="glass-button" style="padding: 8px 15px; font-size: 0.9em;">Load</button>
+      <div class="dialog-body">
+        <div class="menu-section">
+          <h3>Connection</h3>
+          <div class="menu-field">
+            <label for="midi-input-select">MIDI Input</label>
+            <select id="midi-input-select" class="menu-select"></select>
+          </div>
+          <div class="menu-field">
+            <label for="midi-output-select">MIDI Output</label>
+            <select id="midi-output-select" class="menu-select"></select>
           </div>
         </div>
-        <button id="update-app-btn" class="menu-btn">⬇️ Update App</button>
-        <button id="global-program-btn" class="menu-btn danger-btn">⚠️ Reboot to Programming Mode</button>
       </div>
     </div>
 
