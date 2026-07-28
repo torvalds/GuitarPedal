@@ -392,7 +392,7 @@ static void tuner_mode_ui(void)
 		tuning_idx = 0;
 	const struct tuning *current_tuning = tunings[tuning_idx];
 
-	unsigned int write_idx = analyzer.write_index;
+	unsigned int write_idx = smp_load_acquire(&analyzer.write_index);
 
 	// Catch up if CPU0 falls too far behind CPU1
 	if (write_idx - analyzer.read_index > ANALYZE_RING_SIZE - FFT_SIZE) {

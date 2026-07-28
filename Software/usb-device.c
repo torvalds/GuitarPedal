@@ -452,8 +452,8 @@ bool tud_audio_get_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
 
 #define USB_RX_BUF_SIZE 512
 static raw_sample_t usb_rx_buf[USB_RX_BUF_SIZE];
-static volatile unsigned usb_rx_head;
-static volatile unsigned usb_rx_tail;
+static unsigned usb_rx_head;
+static unsigned usb_rx_tail;
 
 void usb_audio_task(void)
 {
@@ -487,10 +487,11 @@ void usb_audio_task(void)
 		for (unsigned i = 0; i < samples_read; i++) {
 			unsigned head = usb_rx_head;
 			unsigned next_head = (head + 1) % USB_RX_BUF_SIZE;
-			if (next_head != usb_rx_tail) {
-				usb_rx_buf[head] = temp_buf[i];
-				usb_rx_head = next_head;
-			}
+
+			if (next_head == smp_load_acquire(&usb_rx_tail))
+				break;
+			usb_rx_buf[head] = temp_buf[i];
+			smp_store_release(&usb_rx_head, next_head);
 		}
 	}
 }
@@ -499,9 +500,9 @@ sample_t __audio_func(get_usb_audio_input)(void)
 {
 	unsigned tail = usb_rx_tail;
 
-	if (tail != usb_rx_head) {
+	if (tail != smp_load_acquire(&usb_rx_head)) {
 		raw_sample_t sample = usb_rx_buf[tail];
-		usb_rx_tail = (tail + 1) % USB_RX_BUF_SIZE;
+		smp_store_release(&usb_rx_tail, (tail + 1) % USB_RX_BUF_SIZE);
 
 		return (sample_t) {
 			.left = sample.left * (1.0f / 2147483648.0f),

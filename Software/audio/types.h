@@ -18,6 +18,23 @@
 //
 #define __audio_func(name) __not_in_flash("audio_" #name) name
 
+//
+// One-way barriers, kernel style.
+//
+// 'smp_store_release()' makes everything written before it visible to
+// the other cpu before the store itself becomes visible.  The matching
+// 'smp_load_acquire()' makes everything read after it happen after the
+// load.  That is exactly the pattern this code keeps needing: fill a
+// buffer and then release the index, acquire the index and then read
+// the buffer.
+//
+// On armv8-m these are a single 'stl' and 'lda', so they cost nothing
+// over the plain accesses they replace - and rather less than the
+// 'volatile' they replace, which forced reloads for no ordering.
+//
+#define smp_store_release(p, v)	__atomic_store_n(p, v, __ATOMIC_RELEASE)
+#define smp_load_acquire(p)	__atomic_load_n(p, __ATOMIC_ACQUIRE)
+
 typedef int s32;
 typedef unsigned int u32;
 typedef long long s64;

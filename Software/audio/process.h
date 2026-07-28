@@ -18,8 +18,8 @@ static int clipping;
 
 static struct {
 	unsigned phase;
-	volatile unsigned head, tail;
-	volatile raw_sample_t buf[USB_OUTPUT_SIZE];
+	unsigned head, tail;
+	raw_sample_t buf[USB_OUTPUT_SIZE];
 } usb_output;
 
 //
@@ -89,9 +89,13 @@ static inline raw_sample_t process_output(sample_t out, raw_sample_t dry)
 	case LR_Dry: usb = dry; break;
 	default: usb.left = wet.left; usb.right = dry.left; break;
 	}
-	unsigned idx = usb_output.head & USB_OUTPUT_MASK;
-	usb_output.head++;
-	usb_output.buf[idx] = usb;
+	unsigned head = usb_output.head;
+
+	// Store the sample, *then* publish it. The other way round - which
+	// is what this used to do - lets cpu0 see the new head and read the
+	// slot before cpu1 has written it.
+	usb_output.buf[head & USB_OUTPUT_MASK] = usb;
+	smp_store_release(&usb_output.head, head + 1);
 	return wet;
 }
 
@@ -105,7 +109,7 @@ static inline unsigned output_buffer_size(void)
 
 static inline unsigned get_output_samples(s32 *buffer, unsigned nr)
 {
-	unsigned head = usb_output.head;
+	unsigned head = smp_load_acquire(&usb_output.head);
 	unsigned tail = usb_output.tail;
 
 	// If more than 75% of the buffer is filled, we
@@ -130,11 +134,11 @@ static inline unsigned get_output_samples(s32 *buffer, unsigned nr)
 	unsigned batch = nr;
 	if (tail + batch > USB_OUTPUT_SIZE) {
 		batch = USB_OUTPUT_SIZE - tail;
-		memcpy(buffer, (void *)(usb_output.buf + tail), batch * sizeof(raw_sample_t));
+		memcpy(buffer, usb_output.buf + tail, batch * sizeof(raw_sample_t));
 		buffer += batch * 2;
 		batch = nr - batch;
 		tail = 0;
 	}
-	memcpy(buffer, (void *)(usb_output.buf + tail), batch * sizeof(raw_sample_t));
+	memcpy(buffer, usb_output.buf + tail, batch * sizeof(raw_sample_t));
 	return nr;
 }

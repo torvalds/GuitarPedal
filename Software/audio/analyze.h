@@ -13,7 +13,7 @@
 //
 struct analyze_state {
 	float ring_buf[ANALYZE_RING_SIZE];
-	volatile unsigned int write_index;
+	unsigned int write_index;
 	unsigned int read_index;
 } analyzer;
 
@@ -57,6 +57,7 @@ static inline void analyze_process_sample(sample_t sample)
 	sample_sum = 0;
 
 	unsigned int idx = analyzer.write_index;
+
 	analyzer.ring_buf[idx & ANALYZE_RING_MASK] = left;
-	analyzer.write_index = idx + 1;
+	smp_store_release(&analyzer.write_index, idx + 1);
 }

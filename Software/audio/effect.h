@@ -37,7 +37,7 @@ struct effect {
 	unsigned int mix, target;
 	unsigned int mix_pot;
 	float def_mix;
-	volatile unsigned int seq, last;
+	unsigned int seq, last;
 	unsigned char intense, active_pot;
 	unsigned char pot_values[2][10];
 	void (*init)(unsigned char[10]);
@@ -161,7 +161,7 @@ static __attribute__((noinline)) void __audio_func(make_one_noise)(void)
 	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
 		struct effect *effect = effects[i];
 
-		unsigned seq = effect->seq;
+		unsigned seq = smp_load_acquire(&effect->seq);
 		if (seq == effect->last)
 			continue;
 		effect->last = seq;

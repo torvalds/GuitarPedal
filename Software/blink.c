@@ -84,7 +84,7 @@ static void unroute_effect(struct effect *eff)
 
 	eff->mix_pot = (unsigned int)(eff->def_mix * EFF_ENABLE_STEPS);
 	eff->mix = eff->target = 0;
-	eff->seq = seq + 1;
+	smp_store_release(&eff->seq, seq + 1);
 }
 
 //
@@ -397,7 +397,7 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 				unsigned char *new_pot = e->pot_values[!(seq & 1)];
 				memcpy(new_pot, cur_pot, 10);
 				new_pot[pot_idx - 1] = val;
-				e->seq++;
+				smp_store_release(&e->seq, seq + 1);
 			}
 		}
 	} else if (cmd == 0x04 && sysex_len >= 2) { // Save Scene
