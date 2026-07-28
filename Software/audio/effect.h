@@ -55,9 +55,15 @@ struct pot_descr {
 struct effect {
 	const char *name, *short_name;
 	unsigned int mix, target;
-	unsigned int mix_pot;
+	float mix_pot;
 	float def_mix;
 	enum mix_law mix_law;
+
+	// What the mix law works out to, and where we are on the way
+	// there. Slewed rather than applied straight so that dragging
+	// the mix around doesn't click.
+	float dry, wet;
+	float dry_target, wet_target;
 	unsigned int seq, last;
 	unsigned char intense, active_pot;
 	unsigned char pot_values[2][10];
@@ -87,6 +93,31 @@ extern uint8_t routed_effect_count;
 
 static unsigned int dropped;
 
+//
+// Work out the two multipliers for a mix setting.
+//
+// Only called when the setting changes, which is why the equal-power
+// case can afford a fastsincos(): a quarter cycle, so sin climbs from 0
+// to 1 as cos falls from 1 to 0, and sin^2 + cos^2 stays 1 the whole way
+// across. fastsincos() takes its phase in cycles rather than radians.
+//
+static void set_mix_pot(struct effect *eff, float m)
+{
+	eff->mix_pot = m;
+
+	if (eff->mix_law == MIX_POWER) {
+		struct sincos w = fastsincos(0.25f * m);
+		eff->dry_target = w.cos;
+		eff->wet_target = w.sin;
+	} else {
+		eff->dry_target = 1.0f - m;
+		eff->wet_target = m;
+	}
+}
+
+// How fast the multipliers chase their target: ~10ms at 48kHz
+#define MIX_SLEW (1.0f / 512)
+
 // Effects are purely mono... For now
 static inline sample_t do_effect_step(struct effect *effect, sample_t val)
 {
@@ -97,10 +128,20 @@ static inline sample_t do_effect_step(struct effect *effect, sample_t val)
 
 	if (effect->mix == 0) return val;
 
-	float mix = effect->mix / (float) EFF_ENABLE_STEPS;
+	// Chase the mix setting, so moving it doesn't step the gain
+	effect->dry += (effect->dry_target - effect->dry) * MIX_SLEW;
+	effect->wet += (effect->wet_target - effect->wet) * MIX_SLEW;
+
+	// ...and fade the whole thing in on top of that, which is what
+	// 'mix' counting up to 'target' is for now that it no longer
+	// carries the setting itself.
+	float r = effect->mix * (1.0f / EFF_ENABLE_STEPS);
+	float dry = 1.0f + r * (effect->dry - 1.0f);
+	float wet = r * effect->wet;
+
 	float effect_val = effect->step(val.left);
-	val.left = linear(mix, val.left, effect_val);
-	val.right = linear(mix, val.right, effect_val);
+	val.left = dry * val.left + wet * effect_val;
+	val.right = dry * val.right + wet * effect_val;
 
 	return val;
 }

@@ -54,7 +54,9 @@ static void reset_effect(struct effect *eff)
 	eff->last = -1;
 	eff->seq = 0;
 	eff->mix = eff->target = 0;
-	eff->mix_pot = (unsigned int)(eff->def_mix * EFF_ENABLE_STEPS);
+	eff->dry = 1.0f;
+	eff->wet = 0.0f;
+	set_mix_pot(eff, eff->def_mix);
 	for (int i = 0; i < 10; i++) {
 		unsigned char def_val = eff->pots[i].def_val;
 		eff->pot_values[0][i] = def_val;
@@ -82,8 +84,10 @@ static void unroute_effect(struct effect *eff)
 	for (int i = 0; i < 10; i++)
 		new_pot[i] = eff->pots[i].def_val;
 
-	eff->mix_pot = (unsigned int)(eff->def_mix * EFF_ENABLE_STEPS);
+	set_mix_pot(eff, eff->def_mix);
 	eff->mix = eff->target = 0;
+	eff->dry = 1.0f;
+	eff->wet = 0.0f;
 	smp_store_release(&eff->seq, seq + 1);
 }
 
@@ -124,7 +128,7 @@ static bool routing_add(routing_bitmap_t *routable, uint8_t eff_id)
 
 	*routable &= ~(1u << eff_id);
 	effect_chain[routed_effect_count++] = eff_id;
-	effects[eff_id]->target = effects[eff_id]->mix_pot;
+	effects[eff_id]->target = EFF_ENABLE_STEPS;
 	return true;
 }
 
@@ -345,7 +349,7 @@ static void sysex_send_state_dump(void)
 		unsigned char *pot_values = e->pot_values[e->seq & 1];
 
 		// We send the mix as "pot 0", and then pots numbered from 1
-		sysex_send_pot_value(i, 0,  (e->mix_pot * 120) / EFF_ENABLE_STEPS);
+		sysex_send_pot_value(i, 0, FLOAT_TO_POT(e->mix_pot));
 		for (int pot = 0; pot < 10; pot++) {
 			if (!desc[pot].label)
 				break;
@@ -384,13 +388,13 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 		}
 		if (e) {
 			if (pot_idx == 0) {
-				e->mix_pot = (val * EFF_ENABLE_STEPS) / 120;
+				set_mix_pot(e, POT_TO_FLOAT(val));
 
 				bool routed = (e == effects[0] || e == effects[EFFECT_COUNT - 1]);
 				for (int i = 0; !routed && i < routed_effect_count; i++) {
 					if (effects[effect_chain[i]] == e) routed = true;
 				}
-				e->target = routed ? e->mix_pot : 0;
+				e->target = routed ? EFF_ENABLE_STEPS : 0;
 			} else if (pot_idx <= 10) {
 				unsigned int seq = e->seq;
 				unsigned char *cur_pot = e->pot_values[seq & 1];

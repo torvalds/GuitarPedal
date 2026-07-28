@@ -186,8 +186,8 @@ static bool load_effect_state_from_slot(unsigned int slot, struct effect *effect
 
 	memcpy(effect->pot_values[0], state->pots, 10);
 	memcpy(effect->pot_values[1], state->pots, 10);
-	effect->mix_pot = (state->mix_level * EFF_ENABLE_STEPS) / 127;
-	effect->target = effect->mix_pot;
+	set_mix_pot(effect, state->mix_level * (1.0f / 127));
+	effect->target = EFF_ENABLE_STEPS;
 	effect->mix = effect->target;
 	if (effect->init)
 		effect->init(effect->pot_values[0]);
@@ -208,7 +208,7 @@ static bool save_effect_state(unsigned int effect_idx, struct effect *effect)
 		effect->save(effect, effect->pot_values[seq]);
 	memcpy(state->pots, effect->pot_values[seq], 10);
 
-	state->mix_level = (effect->mix_pot * 127) / EFF_ENABLE_STEPS;
+	state->mix_level = lrintf(effect->mix_pot * 127);
 	// Note: we leave reserved[0] (next_id) unchanged to avoid messing with routing
 	state->magic = effect_checksum(effect, state);
 
@@ -260,7 +260,7 @@ static bool save_scene(uint8_t scene_id)
 		gate_eff->save(gate_eff, gate_eff->pot_values[gate_seq]);
 	memcpy(gate_state->pots, gate_eff->pot_values[gate_seq], 10);
 
-	gate_state->mix_level = (gate_eff->mix_pot * 127) / EFF_ENABLE_STEPS;
+	gate_state->mix_level = lrintf(gate_eff->mix_pot * 127);
 	gate_state->reserved[0] = (0 < routed_effect_count) ? effect_chain[0] : 0xFF;
 	gate_state->magic = effect_checksum(gate_eff, gate_state);
 
@@ -271,7 +271,7 @@ static bool save_scene(uint8_t scene_id)
 
 		if (e->save) e->save(e, e->pot_values[seq]);
 		memcpy(state->pots, e->pot_values[seq], 10);
-		state->mix_level = (e->mix_pot * 127) / EFF_ENABLE_STEPS;
+		state->mix_level = lrintf(e->mix_pot * 127);
 		state->reserved[0] = (i + 1 < routed_effect_count) ? effect_chain[i+1] : 0xFF;
 		state->magic = effect_checksum(e, state);
 	}
@@ -283,7 +283,7 @@ static bool save_scene(uint8_t scene_id)
 		settings_effect.save(&settings_effect, settings_effect.pot_values[seq15]);
 	memcpy(state15->pots, settings_effect.pot_values[seq15], 10);
 
-	state15->mix_level = (settings_effect.mix_pot * 127) / EFF_ENABLE_STEPS;
+	state15->mix_level = lrintf(settings_effect.mix_pot * 127);
 	state15->reserved[0] = 0xFF;
 	state15->magic = effect_checksum(&settings_effect, state15);
 

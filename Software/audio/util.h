@@ -45,8 +45,9 @@ static inline long int lrintf(float x)
 
 #define SAMPLES_PER_MSEC (SAMPLES_PER_SEC * 0.001)
 
-// Turn 0..120 pot to 0.0..1.0 float internally
+// Turn 0..120 pot to 0.0..1.0 float internally, and back again
 #define POT_TO_FLOAT(pot) ((pot) / 120.0f)
+#define FLOAT_TO_POT(f) lrintf((f) * 120.0f)
 
 // Turn 0..1 into a range
 #define linear(pot, a, b)	((a)+(pot)*((b)-(a)))
