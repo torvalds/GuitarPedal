@@ -355,10 +355,31 @@ bool tud_audio_set_req_itf_cb(uint8_t rhport, tusb_control_request_t const * p_r
 	return false;
 }
 
-static bool mute[3];
-static int16_t volume[3];
+//
+// Feature unit controls, per channel: 0 is the master, 1 and 2 are
+// left and right.
+//
+// The channel number arrives inside the host's control request, so it
+// can be anything at all.  Hand out a pointer or NULL and check it in
+// one place, rather than having every call site index the arrays and
+// hope for the best.
+//
+#define AUDIO_CHANNELS 3
+
+static bool mute[AUDIO_CHANNELS];
+static int16_t volume[AUDIO_CHANNELS];
 static uint32_t sampFreq = 48000;
 static uint8_t clkValid = 1;
+
+static bool *channel_mute(uint8_t ch)
+{
+	return ch < AUDIO_CHANNELS ? &mute[ch] : NULL;
+}
+
+static int16_t *channel_volume(uint8_t ch)
+{
+	return ch < AUDIO_CHANNELS ? &volume[ch] : NULL;
+}
 
 // Invoked when audio class specific set request received for an entity
 bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * p_request, uint8_t *pBuff)
@@ -371,10 +392,18 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
 	if (p_request->bRequest == AUDIO20_CS_REQ_CUR) {
 		if (entityID == UAC2_ENTITY_MIC_FEATURE_UNIT || entityID == UAC2_ENTITY_SPK_FEATURE_UNIT) {
 			if (ctrlSel == AUDIO20_FU_CTRL_MUTE) {
-				mute[channelNum] = ((audio20_control_cur_1_t *) pBuff)->bCur;
+				bool *mutep = channel_mute(channelNum);
+
+				if (!mutep)
+					return false;
+				*mutep = ((audio20_control_cur_1_t *) pBuff)->bCur;
 				return true;
 			} else if (ctrlSel == AUDIO20_FU_CTRL_VOLUME) {
-				volume[channelNum] = (int16_t) ((audio20_control_cur_2_t *) pBuff)->bCur;
+				int16_t *volp = channel_volume(channelNum);
+
+				if (!volp)
+					return false;
+				*volp = (int16_t) ((audio20_control_cur_2_t *) pBuff)->bCur;
 				return true;
 			}
 		} else if (entityID == UAC2_ENTITY_CLOCK) {
@@ -417,10 +446,18 @@ bool tud_audio_get_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
 		}
 	} else if (entityID == UAC2_ENTITY_MIC_FEATURE_UNIT || entityID == UAC2_ENTITY_SPK_FEATURE_UNIT) { // Feature Unit
 		if (ctrlSel == AUDIO20_FU_CTRL_MUTE) {
-			return tud_audio_buffer_and_schedule_control_xfer(rhport, p_request, &mute[channelNum], 1);
+			bool *mutep = channel_mute(channelNum);
+
+			if (!mutep)
+				return false;
+			return tud_audio_buffer_and_schedule_control_xfer(rhport, p_request, mutep, 1);
 		} else if (ctrlSel == AUDIO20_FU_CTRL_VOLUME) {
 			if (p_request->bRequest == AUDIO20_CS_REQ_CUR) {
-				return tud_audio_buffer_and_schedule_control_xfer(rhport, p_request, &volume[channelNum], sizeof(volume[channelNum]));
+				int16_t *volp = channel_volume(channelNum);
+
+				if (!volp)
+					return false;
+				return tud_audio_buffer_and_schedule_control_xfer(rhport, p_request, volp, sizeof(*volp));
 			} else if (p_request->bRequest == AUDIO20_CS_REQ_RANGE) {
 				audio20_control_range_2_n_t(1) ret;
 				ret.wNumSubRanges = 1;
