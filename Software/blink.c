@@ -189,9 +189,9 @@ static void init_i2s(void)
 
 static void init_ws2812(void)
 {
-#ifdef WS2812_PIN
+#ifdef WS2812_GPIO
 	uint offset = pio_add_program(pio0, &ws2812_program);
-	ws2812_program_init(pio0, PIO0_WS2812_SM, offset, WS2812_PIN);
+	ws2812_program_init(pio0, PIO0_WS2812_SM, offset, WS2812_GPIO);
 #endif
 }
 
@@ -528,10 +528,8 @@ static void init_one_pwm_pin(int pin)
 
 static void init_pwm_pins(void)
 {
-	init_one_pwm_pin(PWM_PIN1);
-	init_one_pwm_pin(PWM_PIN2);
-	pwm_set_gpio_level(PWM_PIN1, 0);
-	pwm_set_gpio_level(PWM_PIN2, 0);
+	init_one_pwm_pin(LED_GPIO);
+	pwm_set_gpio_level(LED_GPIO, 0);
 }
 
 static void init_i2c_bus(i2c_inst_t *i2c, int kbps, int sda, int scl)

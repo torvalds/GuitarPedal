@@ -17,8 +17,8 @@
 #define GPIO_SW3		13
 #define GPIO_SW4		29
 
-#define PWM_PIN1		0
-#define PWM_PIN2		1
+// The one LED.  Plain PWM brightness; see set_led().
+#define LED_GPIO		0
 
 #define I2S_BCLK		8
 #define I2S_FSYNC		9
@@ -49,7 +49,12 @@
 #define TAC5112_I2C		i2c0, 0x51
 #define SH1106_I2C		i2c1, 0x3c
 
-// Nor all boards have this
+//
+// Not all boards have this.  It is the next generation's LED - a smart
+// one where there is currently a plain one - and it wants GPIO1, which
+// is free precisely because the second LED that used to be there is
+// gone.
+//
 #if 0
-#define WS2812_PIN		1	// WS2812 RGB LED
+#define WS2812_GPIO		1
 #endif

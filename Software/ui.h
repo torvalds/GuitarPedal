@@ -185,12 +185,14 @@ static void update_ui(void)
 		send_midi_pc(effect_idx);
 	}
 
-	// The LED mappings have changed between boards
-	bool led1 = !disable_all, led1_intense = clipping;
-	bool led2 = effect->target, led2_intense = effect->intense;
-
-	set_led(PWM_PIN1, led1, led1_intense);
-	set_led(PWM_PIN2, led2, led2_intense);
+	//
+	// One LED, so it has one job: lit when the pedal is passing
+	// effects, brighter when the output is clipping.  There used to
+	// be a second one showing the current effect's state, and that
+	// is what the smart LED is meant to bring back with room to say
+	// rather more than "on".
+	//
+	set_led(LED_GPIO, !disable_all, clipping);
 
 	static uint8_t last_clipping = 0;
 	static uint8_t last_intense = 0;
