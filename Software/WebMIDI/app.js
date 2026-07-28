@@ -581,6 +581,81 @@ function sendMidiCc(cc, val) {
     scheduleDiagnostic();
 }
 
+//
+// Let the scroll wheel adjust whichever slider it is over.
+//
+// The catch is that wheel events go to whatever happens to be under the
+// pointer, and the pointer doesn't move while you scroll - the page does.
+// So a naive version means that scrolling past a slider hands it the
+// wheel, and since the page keeps moving underneath, you end up dragging
+// one value after another while trying to get down the list. Every one
+// of those goes straight to the pedal.
+//
+// A scroll gesture has a beginning, though, so settle it there: whatever
+// was under the pointer when the gesture started owns the whole gesture.
+// Start on a slider and it's yours until you pause; start anywhere else
+// and sliders sliding past underneath are ignored.
+//
+const WHEEL_NOTCH = 100;        // about one detent of a mouse wheel
+const WHEEL_GESTURE_GAP = 400;  // ms of quiet before it counts as a new one
+const WHEEL_STEP = 3;           // pot units per detent - 40 of them end to end
+const WHEEL_STEP_FINE = 1;      // ...and with shift held
+
+const wheelZones = new Map();   // hoverable area -> the slider it drives
+let wheelOwner = null;
+let wheelLast = 0;
+
+function wheelZoneAt(el) {
+    for (; el; el = el.parentElement)
+        if (wheelZones.has(el))
+            return el;
+    return null;
+}
+
+// Capture, so this settles ownership before the zone's own handler runs
+window.addEventListener('wheel', (e) => {
+    if (e.timeStamp - wheelLast > WHEEL_GESTURE_GAP)
+        wheelOwner = wheelZoneAt(e.target);
+    wheelLast = e.timeStamp;
+}, { passive: true, capture: true });
+
+//
+// 'zone' is the area the wheel answers over.  It wants to be the whole
+// pot - name, readout and slider together - because aiming at the few
+// pixels of the slider itself just reads as "it doesn't work".
+//
+function enableWheelAdjust(input, zone = input) {
+    let acc = 0;
+
+    wheelZones.set(zone, input);
+    zone.addEventListener('wheel', (e) => {
+        if (wheelOwner !== zone)
+            return;
+        e.preventDefault();
+
+        // Accumulate, so that a trackpad's stream of small deltas adds
+        // up to the same thing as one click of a wheel
+        acc -= e.deltaY;                        // wheel up raises the value
+        const notches = Math.trunc(acc / WHEEL_NOTCH);
+        if (!notches)
+            return;
+        acc -= notches * WHEEL_NOTCH;
+
+        const step = e.shiftKey ? WHEEL_STEP_FINE : WHEEL_STEP;
+        const now = parseInt(input.value);
+        const val = Math.max(parseInt(input.min),
+                             Math.min(parseInt(input.max), now + notches * step));
+        if (val === now)
+            return;
+
+        // Go through the normal 'input' path, so the readout, the eq
+        // curve and the sysex all happen exactly as they would if you
+        // had dragged it
+        input.value = val;
+        input.dispatchEvent(new Event('input'));
+    }, { passive: false });
+}
+
 function formatPotValue(pot, val) {
     const p = val / 120.0;
     let y = val;
@@ -612,6 +687,233 @@ function formatPotValue(pot, val) {
 }
 
 
+//
+// Dragging effect cards around.
+//
+// This is done with pointer events rather than html5 drag-and-drop.
+// html5 dnd is a file-transfer api from 2008 with a stateful 'draggable'
+// attribute, drop events that only fire over registered targets, and no
+// touch support worth the name - ios safari has none at all, so
+// reordering simply did not work on a phone.  Pointer events are one
+// code path for mouse, touch and pen, and capturing the pointer means
+// every move and the release come to us no matter what ends up under
+// the cursor.
+//
+// The card is moved in the list as you go, rather than dragging a
+// floating copy about: it is less code, and the list ends up in exactly
+// the state that sendUpdatedRouting() then reads back out of the dom.
+//
+const DRAG_THRESHOLD = 4;       // px before a press counts as a drag
+const DRAG_EDGE = 80;           // px from the edge where we start scrolling
+const DRAG_SCROLL_MAX = 18;     // px per frame at the very edge
+
+let cardDrag = null;
+let dragScrollRaf = 0;
+
+// Which element should the gap sit in front of? null means last.
+function dragInsertionRef(y) {
+    for (const el of effectsContainer.children) {
+        // The dragged card is out of flow and the gap is what we're
+        // placing, so neither is a landmark
+        if (el === cardDrag.card || el === cardDrag.gap)
+            continue;
+        // Never let anything land above the anchor effect
+        if (el.dataset.effectId !== undefined) {
+            const eff = PEDAL_EFFECTS.find(e => e.id === parseInt(el.dataset.effectId));
+            if (eff && eff.name === "Noise Gate")
+                continue;
+        }
+        const r = el.getBoundingClientRect();
+        if (y < r.top + r.height / 2)
+            return el;
+    }
+    return null;
+}
+
+// Take the card out of the flow and leave a gap the same size behind it,
+// so it can follow the pointer instead of only jumping between slots
+// when you cross a midpoint. The gap is what actually gets moved around
+// the list, and it's also where the card goes back when you let go.
+function dragLift() {
+    const r = cardDrag.card.getBoundingClientRect();
+
+    cardDrag.gap = document.createElement('div');
+    cardDrag.gap.className = 'drag-placeholder';
+    cardDrag.gap.style.height = r.height + 'px';
+    effectsContainer.insertBefore(cardDrag.gap, cardDrag.card);
+
+    cardDrag.grabX = cardDrag.x - r.left;
+    cardDrag.grabY = cardDrag.y - r.top;
+
+    cardDrag.card.style.width = r.width + 'px';
+    cardDrag.card.classList.add('dragging');
+    dragFollow();
+}
+
+// The card is position:fixed, so these are plain viewport coordinates -
+// which is also why auto-scrolling slides the list underneath without
+// the card drifting away from the pointer.
+function dragFollow() {
+    cardDrag.card.style.left = (cardDrag.x - cardDrag.grabX) + 'px';
+    cardDrag.card.style.top = (cardDrag.y - cardDrag.grabY) + 'px';
+}
+
+function dragReposition() {
+    const ref = dragInsertionRef(cardDrag.y);
+    if (ref !== cardDrag.gap.nextSibling)
+        effectsContainer.insertBefore(cardDrag.gap, ref);
+}
+
+function dragDrop() {
+    cardDrag.card.classList.remove('dragging');
+    cardDrag.card.style.width = '';
+    cardDrag.card.style.left = '';
+    cardDrag.card.style.top = '';
+    effectsContainer.insertBefore(cardDrag.card, cardDrag.gap);
+    cardDrag.gap.remove();
+}
+
+// Keep scrolling while the pointer is held near an edge, which matters
+// on a phone where the list is a lot taller than the screen. Has to be
+// on a timer rather than driven by pointermove, or holding still at the
+// edge would stop it.
+function dragScrollTick() {
+    if (!cardDrag || !cardDrag.moved) {
+        dragScrollRaf = 0;
+        return;
+    }
+    const h = window.innerHeight;
+    let dy = 0;
+
+    if (cardDrag.y < DRAG_EDGE)
+        dy = -DRAG_SCROLL_MAX * (1 - cardDrag.y / DRAG_EDGE);
+    else if (cardDrag.y > h - DRAG_EDGE)
+        dy = DRAG_SCROLL_MAX * (1 - (h - cardDrag.y) / DRAG_EDGE);
+
+    if (dy) {
+        window.scrollBy(0, dy);
+        dragReposition();
+    }
+    dragScrollRaf = requestAnimationFrame(dragScrollTick);
+}
+
+function cardDragStart(card, handle, e) {
+    if (!e.isPrimary || cardDrag)
+        return;
+
+    //
+    // Capture stops the browser reinterpreting the gesture - a touch
+    // that wanders off the handle would otherwise become a scroll - but
+    // don't rely on it lasting.  Repositioning the card moves the handle
+    // along with it, and moving the element that holds a capture
+    // releases the capture, after which pointerup goes to whatever is
+    // under the pointer instead of to us.
+    //
+    // So take the capture for the browser's benefit, and listen on the
+    // window for ours.
+    //
+    try {
+        handle.setPointerCapture(e.pointerId);
+    } catch (err) {
+        /* not fatal, the window listeners are what matter */
+    }
+
+    cardDrag = { card, handle, id: e.pointerId, gap: null,
+                 startY: e.clientY, x: e.clientX, y: e.clientY, moved: false };
+
+    window.addEventListener('pointermove', cardDragMove);
+    window.addEventListener('pointerup', cardDragEnd);
+    window.addEventListener('pointercancel', cardDragEnd);
+}
+
+function cardDragMove(e) {
+    if (!cardDrag || e.pointerId !== cardDrag.id)
+        return;
+    cardDrag.x = e.clientX;
+    cardDrag.y = e.clientY;
+
+    if (!cardDrag.moved) {
+        // A press that never moves is a press, not a drag - otherwise
+        // just clicking the handle would send a routing update.
+        if (Math.abs(e.clientY - cardDrag.startY) < DRAG_THRESHOLD)
+            return;
+        cardDrag.moved = true;
+        document.body.style.userSelect = 'none';
+        dragLift();
+        if (!dragScrollRaf)
+            dragScrollRaf = requestAnimationFrame(dragScrollTick);
+    }
+    dragFollow();
+    dragReposition();
+}
+
+function cardDragEnd(e) {
+    if (!cardDrag || e.pointerId !== cardDrag.id)
+        return;
+    const moved = cardDrag.moved;
+
+    window.removeEventListener('pointermove', cardDragMove);
+    window.removeEventListener('pointerup', cardDragEnd);
+    window.removeEventListener('pointercancel', cardDragEnd);
+
+    if (moved)
+        dragDrop();
+    cardDrag = null;
+    document.body.style.userSelect = '';
+
+    if (moved)
+        sendUpdatedRouting();
+}
+
+// What the pedal is currently routing, as far as we know. Kept up to
+// date by reorderEffectsInDOM(), which is the one place routing becomes
+// known - whether we decided it or the pedal told us.
+let currentRouting = [];
+
+//
+// An effect that isn't routed has no values: it goes back to the
+// defaults from the schema.
+//
+// We do that here, in the app, rather than letting the pedal reset and
+// then asking it what happened.  Going and fetching the state back is a
+// round trip we would have to race against, and the answer arrives in a
+// couple of hundred SysEx messages - so the sliders end up showing the
+// old values for a while, or a mix of old and new.  Doing it locally and
+// pushing the result means the UI is right by construction.
+//
+// Only effects that just *left* the chain are touched.  Rewriting every
+// unrouted effect on every reorder would be a flood for no reason.
+//
+function resetUnroutedEffects(newRouted) {
+    const wasRouted = new Set(currentRouting);
+    const nowRouted = new Set(newRouted);
+
+    PEDAL_EFFECTS.forEach((effect, idx) => {
+        if (!wasRouted.has(effect.id) || nowRouted.has(effect.id)) return;
+
+        effect.pots.forEach((potDef, pIdx) => {
+            const val = getInitialPotValue(potDef);
+            const el = ccToElementMap.get(`eff-${idx}-pot-${pIdx}`);
+            if (el) {
+                el.value = val;
+                const disp = el.parentElement.querySelector('.pot-value');
+                if (disp) disp.textContent = formatPotValue(potDef, val);
+                if (el.redrawCurve) el.redrawCurve();
+            }
+            sendSysex([SYSEX_CMD.PARAM_UPDATE, effect.id, pIdx + 1, val]);
+        });
+
+        const mixVal = Math.round((effect.defMix !== undefined ? effect.defMix : 1.0) * 120);
+        const mixEl = ccToElementMap.get(`eff-${idx}-mix`);
+        if (mixEl) {
+            mixEl.value = mixVal;
+            const disp = mixEl.parentElement.querySelector('.pot-value');
+            if (disp && mixEl.potDef) disp.textContent = formatPotValue(mixEl.potDef, mixVal);
+        }
+        sendSysex([SYSEX_CMD.PARAM_UPDATE, effect.id, 0, mixVal]);
+    });
+}
+
 function sendUpdatedRouting() {
     const cards = Array.from(effectsContainer.children);
     const routeIds = [];
@@ -631,13 +933,24 @@ function sendUpdatedRouting() {
         }
     });
 
-    const data = [SYSEX_CMD.ROUTING_ORDER, ...routeIds.slice(0, 14)];
-    sendSysex(data);
-    reorderEffectsInDOM(routeIds);
+    // The firmware routes at most 14 effects and silently drops the rest,
+    // so cap the list before it is used for anything. Redrawing from the
+    // uncapped list would show effects sitting in the routed section that
+    // the pedal never heard about.
+    const routed = routeIds.slice(0, 14);
+    sendSysex([SYSEX_CMD.ROUTING_ORDER, ...routed]);
+    resetUnroutedEffects(routed);
+    reorderEffectsInDOM(routed);
 }
 
 
 function getInitialPotValue(pot) {
+    // The generator hands us the exact raw value the firmware has in its
+    // own table, so there is nothing to recompute and nothing to get
+    // subtly wrong. The rest of this is only a fallback for a pedal
+    // running a schema older than that field.
+    if (pot.defaultPot !== undefined) return pot.defaultPot;
+
     if (pot.default === undefined) return 60;
     const y = pot.default;
 
@@ -663,6 +976,7 @@ function getInitialPotValue(pot) {
 
 
 function reorderEffectsInDOM(routeIds) {
+    currentRouting = routeIds.slice();
     const activeRouteIds = new Set(routeIds);
     const cards = Array.from(effectsContainer.children);
     cards.sort((a, b) => {
@@ -721,12 +1035,26 @@ function reorderEffectsInDOM(routeIds) {
 }
 
 
-// Add some styles dynamically for drag and drop
+// Drag styling, kept next to the code that relies on it
 const style = document.createElement('style');
 style.textContent = `
     .effect-card.dragging {
-        opacity: 0.5;
+        position: fixed;
+        z-index: 1000;
+        margin: 0;
+        pointer-events: none;
+        cursor: grabbing;
+        /* a lifted card should look lifted, not disabled - override
+           whatever .unrouted was doing to it */
+        opacity: 1;
+        filter: none;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    }
+    .drag-placeholder {
+        box-sizing: border-box;
         border: 2px dashed var(--primary);
+        border-radius: 12px;
+        opacity: 0.4;
     }
 `;
 document.head.appendChild(style);
@@ -739,19 +1067,9 @@ function renderUI() {
     divider.className = 'unrouted-divider';
     divider.textContent = '--- Unrouted Effects ---';
 
-    divider.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        const draggingCard = document.querySelector('.dragging');
-        if (!draggingCard) return;
-        divider.parentNode.insertBefore(draggingCard, divider.nextSibling);
-    });
-
-    divider.addEventListener('drop', (e) => {
-        e.preventDefault();
-        sendUpdatedRouting();
-    });
-
+    // The divider is just a marker in the list now - dragInsertionRef()
+    // treats it like any other element you can drop above or below, and
+    // which side of it you end up on is what decides routed or not.
     effectsContainer.appendChild(divider);
 
     PEDAL_EFFECTS.forEach((effect, idx) => {
@@ -776,13 +1094,16 @@ function renderUI() {
                                <span class="collapse-chevron" style="cursor: pointer; margin-right: 8px; font-size: 0.8em; transition: transform 0.2s;">▼</span>
                                <span>${effect.name}</span>`;
 
-            // Enable dragging only when hovering the drag handle
+            // A drag starts on the handle and nowhere else, so there is
+            // never any question of whether you meant the card or the
+            // slider you happen to be over.
             const dragHandle = title.querySelector('.drag-handle');
             if (dragHandle) {
-                dragHandle.addEventListener('mouseenter', () => card.draggable = true);
-                dragHandle.addEventListener('mouseleave', () => card.draggable = false);
-                dragHandle.addEventListener('touchstart', () => card.draggable = true, {passive: true});
-                dragHandle.addEventListener('touchend', () => card.draggable = false);
+                // Without this the browser claims the gesture for
+                // scrolling and we never see the moves.
+                dragHandle.style.touchAction = 'none';
+                dragHandle.addEventListener('pointerdown',
+                                            (e) => cardDragStart(card, dragHandle, e));
             }
         } else {
             title.innerHTML = `<span class="collapse-chevron" style="cursor: pointer; margin-right: 8px; font-size: 0.8em; transition: transform 0.2s;">▼</span>
@@ -814,48 +1135,6 @@ function renderUI() {
                 }
             });
         }
-
-        // Drag and drop logic
-        card.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('text/plain', effect.id);
-            e.dataTransfer.effectAllowed = 'move';
-            card.classList.add('dragging');
-        });
-
-        card.addEventListener('dragend', (e) => {
-            card.classList.remove('dragging');
-        });
-
-        card.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            const draggingCard = document.querySelector('.dragging');
-            if (!draggingCard || draggingCard === card) return;
-
-            if (effect.name === "Noise Gate") {
-                card.parentNode.insertBefore(draggingCard, card.nextSibling);
-                return;
-            }
-            if (effect.name === "Settings") {
-                card.parentNode.insertBefore(draggingCard, card);
-                return;
-            }
-
-            // Determine whether to insert before or after
-            const rect = card.getBoundingClientRect();
-            const midpoint = rect.top + rect.height / 2;
-            if (e.clientY < midpoint) {
-                card.parentNode.insertBefore(draggingCard, card);
-            } else {
-                card.parentNode.insertBefore(draggingCard, card.nextSibling);
-            }
-        });
-
-        card.addEventListener('drop', (e) => {
-            e.preventDefault();
-            // Send new routing array via SysEx
-            sendUpdatedRouting();
-        });
 
         // The Reset button resets all pots. We should also reset the Mix pot!
         const resetBtn = enableGroup.querySelector('.effect-reset-btn');
@@ -1224,6 +1503,7 @@ function renderUI() {
             mixInput.value = defaultMixVal;
             mixInput.potDef = mixPotDef;
 
+            enableWheelAdjust(mixInput, mixDiv);
             ccToElementMap.set(`eff-${idx}-mix`, mixInput);
             mixInput.addEventListener('input', (e) => {
                 const midiVal = parseInt(e.target.value);
@@ -1236,7 +1516,9 @@ function renderUI() {
             mixDiv.appendChild(mixInput);
 
             // Add active pot triggers
-            const activateMixPot = () => {
+            const activateMixPot = (e) => {
+                if (e.type === 'mousedown' && e.target === mixInput)
+                    return;
                 setActivePot(`eff-${idx}-mix`, mixPotDef, parseInt(mixInput.value), effect.name);
             };
             mixDiv.addEventListener('mousedown', activateMixPot);
@@ -1294,6 +1576,7 @@ function renderUI() {
                     eqPotsInputs.push(input);
                 }
 
+                enableWheelAdjust(input, potDiv);
                 ccToElementMap.set(potIdKey, input);
                 input.addEventListener('input', (e) => {
                     const midiVal = parseInt(e.target.value);
@@ -1316,12 +1599,22 @@ function renderUI() {
                     potDiv.appendChild(input);
                 }
 
-                // Add active pot triggers
-                const activatePot = () => {
+                //
+                // Tapping the pot opens the big slider panel - except for
+                // a mouse grab of the inline slider itself, which is
+                // someone dragging it, and having the panel and its
+                // backdrop appear on top mid-drag is no help to anybody.
+                //
+                // Touch still opens it either way: the inline slider is
+                // too small to use with a thumb, which is what the panel
+                // is there for.
+                //
+                const activatePot = (e) => {
+                    if (e.type === 'mousedown' && e.target === input)
+                        return;
                     setActivePot(potIdKey, pot, parseInt(input.value), effect.name);
                 };
 
-                // Allow interaction with the pot div to open the active pot panel
                 potDiv.addEventListener('mousedown', activatePot);
                 potDiv.addEventListener('touchstart', activatePot, { passive: true });
             }
@@ -1461,6 +1754,9 @@ appTitleEl.addEventListener('click', () => {
 
     const activePotSlider = document.getElementById('active-pot-slider');
     if (activePotSlider) {
+        // the whole panel: its name and readout are part of the pot too
+        enableWheelAdjust(activePotSlider,
+                          document.getElementById('active-pot-panel') || activePotSlider);
         activePotSlider.addEventListener('input', (e) => {
             if (activePotCc === null || !activePotDef) return;
 
@@ -1524,16 +1820,22 @@ appTitleEl.addEventListener('click', () => {
         });
     }
 
-    const globalDisableBtn = document.getElementById('global-disable-btn');
-    if (globalDisableBtn) {
-        globalDisableBtn.addEventListener('click', () => {
+    const globalUnrouteBtn = document.getElementById('global-unroute-btn');
+    if (globalUnrouteBtn) {
+        globalUnrouteBtn.addEventListener('click', () => {
             if (!midiOutput) {
-                showButtonError(globalDisableBtn, 'Not Connected');
+                showButtonError(globalUnrouteBtn, 'Not Connected');
                 return;
             }
 
-            sendMidiCc(GLOBAL_ENABLE_CC, 67);
-            showButtonSuccess(globalDisableBtn, 'Effects Disabled');
+            // A routing order with nothing in it unroutes everything. The
+            // noise gate is the anchor effect and is never part of the
+            // routing order to begin with - it always runs first - and the
+            // same goes for the settings pseudo-effect.
+            sendSysex([SYSEX_CMD.ROUTING_ORDER]);
+            resetUnroutedEffects([]);
+            reorderEffectsInDOM([]);
+            showButtonSuccess(globalUnrouteBtn, 'All Unrouted');
         });
     }
 

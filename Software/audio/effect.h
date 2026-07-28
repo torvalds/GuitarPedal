@@ -4,6 +4,26 @@ sample_t get_usb_audio_input(void);
 
 typedef float (*pot_convert_fn)(unsigned char);
 
+//
+// How an effect's wet and dry get mixed together.
+//
+// Linear is right when the wet signal is a filtered version of the dry
+// and the two stay correlated - amplitudes add, so half of each gives
+// you back what you started with.  Almost everything here is like that.
+//
+// Equal power is right when they aren't correlated: a modulated delay,
+// an echo tail, a reverb.  There the *powers* add rather than the
+// amplitudes, and a linear mix leaves a 3dB hole in the middle of the
+// sweep.  sin^2 + cos^2 == 1 fills it.
+//
+// Getting this backwards costs 3dB either way, so it is per effect
+// rather than one law for all of them.
+//
+enum mix_law {
+	MIX_LINEAR,
+	MIX_POWER,
+};
+
 struct pot_descr {
 	const char *label;
 	const char *unit;
@@ -35,9 +55,16 @@ struct pot_descr {
 struct effect {
 	const char *name, *short_name;
 	unsigned int mix, target;
-	unsigned int mix_pot;
+	float mix_pot;
 	float def_mix;
-	volatile unsigned int seq, last;
+	enum mix_law mix_law;
+
+	// What the mix law works out to, and where we are on the way
+	// there. Slewed rather than applied straight so that dragging
+	// the mix around doesn't click.
+	float dry, wet;
+	float dry_target, wet_target;
+	unsigned int seq, last;
 	unsigned char intense, active_pot;
 	unsigned char pot_values[2][10];
 	void (*init)(unsigned char[10]);
@@ -49,29 +76,47 @@ struct effect {
 
 #define EFFECT_POT(...) { __VA_ARGS__ }
 
+//
+// How many effects one scene can route.
+//
+// This is a storage limit, not a limit on how many effects exist - the
+// point of routing is that there are more effects to choose from than
+// you can have in a chain at once.  eeprom.h checks that a scene has the
+// slots for it.
+//
+#define MAX_ROUTED_EFFECTS 14
+
 // Effects and MIDI mapping auto-generated from scripts/gen_effects.py
-extern uint8_t effect_chain[15];
-extern uint8_t effect_chain_len;
+extern uint8_t effect_chain[MAX_ROUTED_EFFECTS];
+extern uint8_t routed_effect_count;
 #include "effect_map.h"
 
-static inline void generic_effect_describe(struct effect *e, unsigned char pots[10])
+static unsigned int dropped;
+
+//
+// Work out the two multipliers for a mix setting.
+//
+// Only called when the setting changes, which is why the equal-power
+// case can afford a fastsincos(): a quarter cycle, so sin climbs from 0
+// to 1 as cos falls from 1 to 0, and sin^2 + cos^2 stays 1 the whole way
+// across. fastsincos() takes its phase in cycles rather than radians.
+//
+static void set_mix_pot(struct effect *eff, float m)
 {
-	for (int i = 0; i < 10; i++) {
-		if (e->pots[i].label) {
-			const char *unit = e->pots[i].unit ? e->pots[i].unit : "";
-			if (e->pots[i].enum_names) {
-				int idx = (int)e->pots[i].convert(pots[i]);
-				fprintf(stderr, " %s=%s %s", e->pots[i].label, e->pots[i].enum_names[idx], unit);
-			} else if (e->pots[i].convert) {
-				float val = e->pots[i].convert(pots[i]);
-				fprintf(stderr, " %s=%g %s", e->pots[i].label, val, unit);
-			}
-		}
+	eff->mix_pot = m;
+
+	if (eff->mix_law == MIX_POWER) {
+		struct sincos w = fastsincos(0.25f * m);
+		eff->dry_target = w.cos;
+		eff->wet_target = w.sin;
+	} else {
+		eff->dry_target = 1.0f - m;
+		eff->wet_target = m;
 	}
-	fprintf(stderr, "\n");
 }
 
-static unsigned int dropped;
+// How fast the multipliers chase their target: ~10ms at 48kHz
+#define MIX_SLEW (1.0f / 512)
 
 // Effects are purely mono... For now
 static inline sample_t do_effect_step(struct effect *effect, sample_t val)
@@ -83,10 +128,20 @@ static inline sample_t do_effect_step(struct effect *effect, sample_t val)
 
 	if (effect->mix == 0) return val;
 
-	float mix = effect->mix / (float) EFF_ENABLE_STEPS;
+	// Chase the mix setting, so moving it doesn't step the gain
+	effect->dry += (effect->dry_target - effect->dry) * MIX_SLEW;
+	effect->wet += (effect->wet_target - effect->wet) * MIX_SLEW;
+
+	// ...and fade the whole thing in on top of that, which is what
+	// 'mix' counting up to 'target' is for now that it no longer
+	// carries the setting itself.
+	float r = effect->mix * (1.0f / EFF_ENABLE_STEPS);
+	float dry = 1.0f + r * (effect->dry - 1.0f);
+	float wet = r * effect->wet;
+
 	float effect_val = effect->step(val.left);
-	val.left = linear(mix, val.left, effect_val);
-	val.right = linear(mix, val.right, effect_val);
+	val.left = dry * val.left + wet * effect_val;
+	val.right = dry * val.right + wet * effect_val;
 
 	return val;
 }
@@ -112,7 +167,7 @@ static inline raw_sample_t *i2s_dma_rx_ptr(void)
 	return (raw_sample_t *) (dma_hw->ch[dma_rx].write_addr & ~7);
 }
 
-static inline void single_sample(float mix)
+static inline void __audio_func(single_sample)(float mix)
 {
 	raw_sample_t *cpu_ptr = i2s_dma_buf + cpu_idx;
 	cpu_idx = (cpu_idx + 1) & 15;
@@ -141,7 +196,7 @@ static inline void single_sample(float mix)
 
 	sample_t out = in;
 	out = do_effect_step(effects[0], out); // Gate is always index 0 and runs first
-	for (int i = 0; i < effect_chain_len; i++) {
+	for (int i = 0; i < routed_effect_count; i++) {
 		out = do_effect_step(effects[effect_chain[i]], out);
 	}
 
@@ -163,12 +218,12 @@ static void bypass(void)
 	}
 }
 
-static __attribute__((noinline)) void make_one_noise(void)
+static __attribute__((noinline)) void __audio_func(make_one_noise)(void)
 {
 	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
 		struct effect *effect = effects[i];
 
-		unsigned seq = effect->seq;
+		unsigned seq = smp_load_acquire(&effect->seq);
 		if (seq == effect->last)
 			continue;
 		effect->last = seq;

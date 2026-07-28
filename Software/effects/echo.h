@@ -1,5 +1,6 @@
 // NAME: Tape Echo [ECHO]
 // PRIORITY: 80
+// MIX: POWER		// the tail is old signal, uncorrelated with what's playing now
 // POT: "Blend" LINEAR(0.0 1.0) = 0.2
 // POT: "Sustain" LINEAR(0.0 1.1) = 0.3
 // POT: "Time" EXPONENTIAL(50.0 672.0) = 375.0 ms

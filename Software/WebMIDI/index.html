@@ -69,7 +69,7 @@
           <select id="midi-output-select" style="width: 100%; background: #222; color: #fff; padding: 8px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.2); font-family: inherit; font-size: 1em;"></select>
         </div>
         <button id="global-reset-btn" class="menu-btn">↺ Reset All to Defaults</button>
-        <button id="global-disable-btn" class="menu-btn">⏸ Disable All Effects</button>
+        <button id="global-unroute-btn" class="menu-btn">⏏ Unroute All Effects</button>
         <div class="scene-selection" style="margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
           <label style="display:block; margin-bottom: 5px; color: var(--text-muted); font-size: 0.9em;">Scene Selection</label>
           <div style="display: flex; gap: 10px; align-items: center;">
@@ -105,16 +105,28 @@
   <script src="effects.js"></script>
   <script src="app.js"></script>
   <script>
+    // Keep the service worker away from local development.  Unregistering
+    // one does not stop it controlling the page - the active worker stays
+    // in charge of already-controlled clients until they all go away - so
+    // a stale app.js can happily survive several reloads and an "Update
+    // App" or three.  The PWA only matters for the deployed copy anyway.
+    const swIsLocal = ['localhost', '127.0.0.1', '::1', ''].includes(location.hostname);
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js')
-          .then(registration => {
-            console.log('ServiceWorker registration successful');
-          })
-          .catch(err => {
-            console.log('ServiceWorker registration failed: ', err);
-          });
-      });
+      if (swIsLocal) {
+        // And clean up after any worker registered here previously
+        navigator.serviceWorker.getRegistrations()
+          .then(regs => regs.forEach(reg => reg.unregister()));
+      } else {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./service-worker.js')
+            .then(registration => {
+              console.log('ServiceWorker registration successful');
+            })
+            .catch(err => {
+              console.log('ServiceWorker registration failed: ', err);
+            });
+        });
+      }
     }
   </script>
 </body>

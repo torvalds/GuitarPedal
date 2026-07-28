@@ -1,5 +1,6 @@
 // NAME: Reverb [VERB]
 // PRIORITY: 90
+// MIX: POWER		// same as the echo, only more so
 // DEFAULT_MIX: 0.18
 // POT: "Room" LINEAR(0.70 0.98) = 0.88
 // POT: "Damp" LINEAR(0.1 0.5) = 0.25

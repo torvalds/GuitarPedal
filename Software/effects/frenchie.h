@@ -43,7 +43,7 @@ struct frenchie_density {
 	float smooth;				/* smoothing coefficient              */
 };
 
-static inline void frenchie_density_init(struct frenchie_density *d)
+static inline void __audio_func(frenchie_density_init)(struct frenchie_density *d)
 {
 	biquad_lpf(&d->f_lo, 250.0f, 0.7f);
 	biquad_lpf(&d->f_mid_lo, 2000.0f, 0.7f);

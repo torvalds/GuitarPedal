@@ -22,7 +22,12 @@ set(EEPROM_64KBIT OFF CACHE BOOL "Configure for 64kbit eeprom chip")
 set(SAMPLES_PER_SEC 48000.0)
 set(SCRIPT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
 
-pico_set_binary_type(blink copy_to_ram)
+#
+# Only the audio core runs from RAM: everything marked with
+# __audio_func() lands in a '.time_critical.audio_*' section, which the
+# default linker script already pulls out of flash. The rest is cold
+# enough to run from XIP.
+#
 
 # Math table generation
 set(POW2_STEP_SHIFT 8)
@@ -148,6 +153,18 @@ target_compile_options(blink PRIVATE
 	-fsingle-precision-constant
 	-Wfloat-conversion)
 
+# Our own sources only - we don't get to pick the SDK's warnings
+set_source_files_properties(blink.c usb-device.c PROPERTIES
+	COMPILE_OPTIONS -Wdouble-promotion)
+
 # create map/bin/hex/uf2 file in addition to ELF.
 pico_add_extra_outputs(blink)
+
+# Nothing on the audio core is allowed to call out to a library
+add_custom_command(TARGET blink POST_BUILD
+	COMMAND "${SCRIPT_DIR}/check-audio.py"
+		"$<TARGET_FILE:blink>.map"
+		"$<TARGET_FILE:blink>"
+		"${CMAKE_OBJDUMP}"
+	VERBATIM)
 

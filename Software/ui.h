@@ -144,7 +144,7 @@ static void update_ui(void)
 		unsigned char *cur_pot = effect->pot_values[seq & 1];
 		unsigned char *new_pot = effect->pot_values[!(seq & 1)];
 		memcpy(new_pot, cur_pot, 10);
-		effect->seq = 0;
+		smp_store_release(&effect->seq, 0);
 
 		save_effect_state(effect_idx, effect);
 	}
@@ -159,7 +159,7 @@ static void update_ui(void)
 			int val = effect->pot_values[effect->seq & 1][i];
 			send_sysex_set_param(effect_idx, i+1, val);
 		}
-		effect->seq += 2;	// Force saving
+		smp_store_release(&effect->seq, effect->seq + 2);	// Force re-init
 	}
 
 	// Right stomp: enable/disable all effects
@@ -220,7 +220,7 @@ static void update_ui(void)
 				send_sysex_set_param(effect_idx, i+1, val);
 			}
 		}
-		effect->seq++;
+		smp_store_release(&effect->seq, seq + 1);
 	}
 
 	if (effect->active_pot != last_active_pot) {

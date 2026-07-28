@@ -5,6 +5,46 @@ import re
 import json
 import math
 
+def default_pot_value(pot):
+    """Turn a pot default in engineering units into the raw 0..120 value.
+
+    This is deliberately the *only* place that conversion happens.  The
+    same number goes into the C table and into the schema the web app
+    reads, so the two can't drift apart - which they did, back when the
+    app recomputed it for itself."""
+    y = pot['default']
+    curve = pot['curve']
+
+    if curve in ('RAW', 'ENUM'):
+        return int(round(y))
+
+    a, b = 0.0, 1.0
+    if len(pot['args']) >= 2:
+        a = float(pot['args'][0])
+        b = float(pot['args'][1])
+
+    if b == a:
+        p = 0.0
+    else:
+        # A default outside the declared range is a mistake in the effect
+        # header, but don't take a fractional root of a negative number
+        # over it - python hands back a complex and the build dies
+        # somewhere confusing.
+        ratio = max(0.0, (y - a) / (b - a))
+        if curve == 'LINEAR':
+            p = ratio
+        elif curve == 'FREQUENCY':
+            p = ratio ** (1/3.0)
+        elif curve == 'SQUARED':
+            p = ratio ** 0.5
+        elif curve == 'EXPONENTIAL':
+            p = math.log2(y / a) / math.log2(b / a) if (a != 0 and y != 0) else 0.0
+        else:
+            p = 0.0
+
+    return max(0, min(120, int(round(p * 120))))
+
+
 def generate(audio_dir, out_h, out_js, out_md):
     ui_effects = [] # List of dicts for JS/Schema output
     effects_data = []
@@ -32,6 +72,10 @@ def generate(audio_dir, out_h, out_js, out_md):
 
         def_mix_match = re.search(r'//\s*DEFAULT_MIX:\s*(\S+)', content)
         def_mix = float(def_mix_match.group(1)) if def_mix_match else 1.0
+
+        # LINEAR unless the effect says otherwise - see 'enum mix_law'
+        mix_match = re.search(r'//\s*MIX:\s*(LINEAR|POWER)', content)
+        mix_law = mix_match.group(1) if mix_match else 'LINEAR'
 
         pots = []
         # Match: // POT: "Name" CURVE(a b c) = 1.0 Unit
@@ -68,24 +112,25 @@ def generate(audio_dir, out_h, out_js, out_md):
             'short_name': short_name,
             'priority': priority,
             'def_mix': def_mix,
+            'mix_law': mix_law,
             'pots': pots,
             'header_path': header_path
         })
 
-    # Sort by priority
-    effects_data.sort(key=lambda x: x['priority'])
+    # Sort by priority, then by filename to break ties.
+    #
+    # Priorities are a hint about where an effect wants to sit in the
+    # chain, not a total order, so several effects sharing one is fine
+    # and expected.  What is not fine is the tie-break coming from
+    # os.listdir(), which is inode order: that made the ids depend on
+    # the filesystem, and the ids are what end up in saved scenes and on
+    # the wire.  Filenames are unique in a directory, so this key is a
+    # total order and the result is the same everywhere.
+    effects_data.sort(key=lambda x: (x['priority'], x['base']))
 
     # Auto-assign index as ID
     for i, e in enumerate(effects_data):
         e['id'] = i
-
-    # Check for duplicate IDs
-    seen_ids = set()
-    for e in effects_data:
-        if e['id'] in seen_ids:
-            print(f"Error: Duplicate ID {e['id']} found for {e['base']}", file=sys.stderr)
-            sys.exit(1)
-        seen_ids.add(e['id'])
 
     # Build maps
     for e_idx, e_data in enumerate(effects_data):
@@ -99,6 +144,8 @@ def generate(audio_dir, out_h, out_js, out_md):
             elif pot['curve'] == 'ENUM' and pot['enum']:
                 max_v = float(len(pot['enum']) - 1)
 
+            pot['pot_val'] = default_pot_value(pot)
+
             ui_pots.append({
                 "name": pot['label'],
                 "unit": pot['unit'],
@@ -106,6 +153,7 @@ def generate(audio_dir, out_h, out_js, out_md):
                 "min": min_v,
                 "max": max_v,
                 "default": pot['default'],
+                "defaultPot": pot['pot_val'],
                 "enum": pot['enum']
             })
 
@@ -115,6 +163,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             "name": e_data['full_name'],
             "shortName": e_data['short_name'],
             "defMix": e_data['def_mix'],
+            "mixLaw": e_data['mix_law'],
             "pots": ui_pots
         })
 
@@ -156,43 +205,25 @@ def generate(audio_dir, out_h, out_js, out_md):
                     log2_ratio = math.log2(b_val / a_val) if a_val != 0 else 0
                     f.write(f"static float {fn_name}(unsigned char pot) {{ float p = POT_TO_FLOAT(pot); return {a_val}f * pow2(p * {log2_ratio}f); }}\n")
 
+            # Declare the two entry points ahead of the header, marked as
+            # running on the audio core. Gcc carries a section attribute
+            # from the declaration to the definition, so the effect headers
+            # don't have to know about any of this.
+            f.write(f"static void __audio_func({base}_init)(unsigned char[10]);\n")
+            f.write(f"static float __audio_func({base}_step)(float);\n")
             f.write(f"#include \"../effects/{base}.h\"\n")
 
             f.write(f"static struct effect {struct_name} = {{\n")
             f.write(f"\t.name = \"{e_data['full_name']}\",\n")
             f.write(f"\t.short_name = \"{e_data['short_name']}\",\n")
             f.write(f"\t.def_mix = {e_data['def_mix']}f,\n")
+            f.write(f"\t.mix_law = MIX_{e_data['mix_law']},\n")
             f.write(f"\t.init = {base}_init,\n")
             f.write(f"\t.step = {base}_step,\n")
             f.write(f"\t.pots = {{\n")
 
             for p_idx, pot in enumerate(e_data['pots']):
-                y = pot['default']
-                curve = pot['curve']
-
-                a = 0.0
-                b = 1.0
-                if curve != 'ENUM' and len(pot['args']) >= 2:
-                    a = float(pot['args'][0])
-                    b = float(pot['args'][1])
-
-                if curve == 'RAW' or curve == 'ENUM':
-                    p = y
-                elif curve == 'LINEAR':
-                    p = (y - a) / (b - a) if b != a else 0
-                elif curve == 'FREQUENCY':
-                    p = ((y - a) / (b - a)) ** (1/3.0) if b != a else 0
-                elif curve == 'SQUARED':
-                    p = ((y - a) / (b - a)) ** 0.5 if b != a else 0
-                elif curve == 'EXPONENTIAL':
-                    p = math.log2(y / a) / math.log2(b / a) if (b != a and a != 0 and y != 0) else 0
-
-                if curve == 'RAW' or curve == 'ENUM':
-                    pot_val = int(round(y))
-                else:
-                    pot_val = int(round(p * 120))
-                    if pot_val < 0: pot_val = 0
-                    if pot_val > 120: pot_val = 120
+                pot_val = pot['pot_val']
 
                 unit_str = f"\"{pot['unit']}\"" if pot['unit'] and pot['unit'] != "none" else "NULL"
                 enum_str = f", {pot['enum_name']}" if 'enum_name' in pot else ""

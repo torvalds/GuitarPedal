@@ -19,7 +19,21 @@ float sqrtf(float);
 float fabsf(float);
 float floorf(float);
 float ceilf(float);
-long int lrintf(float);
+
+//
+// 'lrintf()' is *not* one of them.  Gcc has no scalar VFP lrint
+// pattern for M-profile, so it never expands inline and instead
+// turns into a call to the newlib software implementation - stack
+// frame, magic-number rounding, bit extraction and all.
+//
+// Casting the result of 'rintf()' generates the two instructions we
+// actually wanted ('vrintx.f32' + 'vcvt.s32.f32'), so just do that
+// and keep the standard name.
+//
+static inline long int lrintf(float x)
+{
+	return (long int)rintf(x);
+}
 
 #define log10f(x) (log2f(x)/LOG2_10)
 
@@ -31,8 +45,9 @@ long int lrintf(float);
 
 #define SAMPLES_PER_MSEC (SAMPLES_PER_SEC * 0.001)
 
-// Turn 0..120 pot to 0.0..1.0 float internally
+// Turn 0..120 pot to 0.0..1.0 float internally, and back again
 #define POT_TO_FLOAT(pot) ((pot) / 120.0f)
+#define FLOAT_TO_POT(f) lrintf((f) * 120.0f)
 
 // Turn 0..1 into a range
 #define linear(pot, a, b)	((a)+(pot)*((b)-(a)))
@@ -103,7 +118,7 @@ static inline float __sample_array_read_s16(float delay, unsigned *idxp, unsigne
 
 #define LOG2_STEPS (1<< LOG2_STEP_SHIFT)
 
-float log2f(float x)
+float __audio_func(log2f)(float x)
 {
 	union { float f; unsigned int i; } u = { x };
 
@@ -124,7 +139,7 @@ float log2f(float x)
 
 #define POW2_STEPS (1<< POW2_STEP_SHIFT)
 
-float pow2(float x)
+float __audio_func(pow2)(float x)
 {
 	// Integer and fractional parts
 	int exp = (int)floorf(x);
@@ -164,7 +179,7 @@ float pow2(float x)
 struct sincos { float sin, cos; };
 
 // positive phase numbers only, please..
-struct sincos fastsincos(float phase)
+struct sincos __audio_func(fastsincos)(float phase)
 {
 	phase *= 4;
 	int quadrant = (int)phase;

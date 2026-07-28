@@ -45,11 +45,8 @@ static volatile int next_state_seq = 1;
 
 #include "audio/effect.h"
 
-uint8_t effect_chain[15];
-uint8_t effect_chain_len = 0;
+uint8_t effect_chain[MAX_ROUTED_EFFECTS];
 uint8_t routed_effect_count = 0;
-
-#include "eeprom.h"
 
 static void reset_effect(struct effect *eff)
 {
@@ -57,13 +54,96 @@ static void reset_effect(struct effect *eff)
 	eff->last = -1;
 	eff->seq = 0;
 	eff->mix = eff->target = 0;
-	eff->mix_pot = (unsigned int)(eff->def_mix * EFF_ENABLE_STEPS);
+	eff->dry = 1.0f;
+	eff->wet = 0.0f;
+	set_mix_pot(eff, eff->def_mix);
 	for (int i = 0; i < 10; i++) {
 		unsigned char def_val = eff->pots[i].def_val;
 		eff->pot_values[0][i] = def_val;
 		eff->pot_values[1][i] = def_val;
 	}
 }
+
+//
+// Unrouting an effect throws its values away.  An effect that isn't in
+// the chain isn't supposed to have any state at all, so routing it again
+// starts from the defaults in the schema rather than from wherever it
+// happened to be left.
+//
+// The pot values go through the usual double-buffer dance - fill the
+// inactive set, publish it by bumping 'seq' - but the mix is just slammed
+// to zero, because an unrouted effect isn't stepped at all any more and
+// so has nothing left to ramp it down.  That clicks.  That's fine: you
+// route effects while setting the pedal up, not while playing.
+//
+static void unroute_effect(struct effect *eff)
+{
+	unsigned int seq = eff->seq;
+	unsigned char *new_pot = eff->pot_values[!(seq & 1)];
+
+	for (int i = 0; i < 10; i++)
+		new_pot[i] = eff->pots[i].def_val;
+
+	set_mix_pot(eff, eff->def_mix);
+	eff->mix = eff->target = 0;
+	eff->dry = 1.0f;
+	eff->wet = 0.0f;
+	smp_store_release(&eff->seq, seq + 1);
+}
+
+//
+// Building the routing chain.
+//
+// Effects get added one at a time out of a bitmask of what is still
+// available, which makes it structurally impossible to route the same
+// effect twice or to route something that isn't a routable effect at
+// all.  Both used to be possible, and both used to walk off the end of
+// effect_chain[].
+//
+// Bit N set means effect N can still be added.  The gate and the
+// settings pseudo-effect are never in the mask: the gate always runs
+// first, outside the chain, and settings isn't an audio effect.
+//
+typedef uint32_t routing_bitmap_t;
+
+_Static_assert(EFFECT_COUNT <= 32, "routing_bitmap_t is too narrow for this many effects");
+
+// Bits 1 .. EFFECT_COUNT-2, ie everything that can go in the chain.
+#define ROUTABLE_EFFECTS ((routing_bitmap_t)((1u << (EFFECT_COUNT - 1)) - 2))
+
+static routing_bitmap_t routing_start(void)
+{
+	routed_effect_count = 0;
+	return ROUTABLE_EFFECTS;
+}
+
+static bool routing_add(routing_bitmap_t *routable, uint8_t eff_id)
+{
+	if (eff_id >= EFFECT_COUNT)
+		return false;
+	if (!(*routable & (1u << eff_id)))
+		return false;
+	if (routed_effect_count >= MAX_ROUTED_EFFECTS)
+		return false;
+
+	*routable &= ~(1u << eff_id);
+	effect_chain[routed_effect_count++] = eff_id;
+	effects[eff_id]->target = EFF_ENABLE_STEPS;
+	return true;
+}
+
+//
+// Whatever is left in the bitmap didn't get routed, so throw it away.
+//
+static void routing_end(routing_bitmap_t routable)
+{
+	while (routable) {
+		unroute_effect(effects[__builtin_ctz(routable)]);
+		routable &= routable - 1;
+	}
+}
+
+#include "eeprom.h"
 
 static void init_i2s(void)
 {
@@ -269,7 +349,7 @@ static void sysex_send_state_dump(void)
 		unsigned char *pot_values = e->pot_values[e->seq & 1];
 
 		// We send the mix as "pot 0", and then pots numbered from 1
-		sysex_send_pot_value(i, 0,  (e->mix_pot * 120) / EFF_ENABLE_STEPS);
+		sysex_send_pot_value(i, 0, FLOAT_TO_POT(e->mix_pot));
 		for (int pot = 0; pot < 10; pot++) {
 			if (!desc[pot].label)
 				break;
@@ -308,20 +388,20 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 		}
 		if (e) {
 			if (pot_idx == 0) {
-				e->mix_pot = (val * EFF_ENABLE_STEPS) / 120;
+				set_mix_pot(e, POT_TO_FLOAT(val));
 
 				bool routed = (e == effects[0] || e == effects[EFFECT_COUNT - 1]);
-				for (int i = 0; !routed && i < effect_chain_len; i++) {
+				for (int i = 0; !routed && i < routed_effect_count; i++) {
 					if (effects[effect_chain[i]] == e) routed = true;
 				}
-				e->target = routed ? e->mix_pot : 0;
+				e->target = routed ? EFF_ENABLE_STEPS : 0;
 			} else if (pot_idx <= 10) {
 				unsigned int seq = e->seq;
 				unsigned char *cur_pot = e->pot_values[seq & 1];
 				unsigned char *new_pot = e->pot_values[!(seq & 1)];
 				memcpy(new_pot, cur_pot, 10);
 				new_pot[pot_idx - 1] = val;
-				e->seq++;
+				smp_store_release(&e->seq, seq + 1);
 			}
 		}
 	} else if (cmd == 0x04 && sysex_len >= 2) { // Save Scene
@@ -337,29 +417,12 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 		state_dump_tx = true;
 
 	} else if (cmd == 0x08) { // Set Routing Order
-		routed_effect_count = 0;
+		routing_bitmap_t routable = routing_start();
 
-		// Routing order
-		for (int i = 1; i < sysex_len && routed_effect_count < 14; i++) {
-			uint8_t eff_id = sysex_buf[i];
-			effect_chain[routed_effect_count++] = eff_id;
-			if (eff_id < EFFECT_COUNT) {
-				effects[eff_id]->target = effects[eff_id]->mix_pot;
-			}
-		}
+		for (int i = 1; i < sysex_len; i++)
+			routing_add(&routable, sysex_buf[i]);
 
-		// Append unrouted effects and set target to 0
-		effect_chain_len = routed_effect_count;
-		for (int i = 1; i < EFFECT_COUNT - 1; i++) {
-			bool routed = false;
-			for (int j = 0; j < routed_effect_count; j++) {
-				if (effect_chain[j] == i) { routed = true; break; }
-			}
-			if (!routed) {
-				effect_chain[effect_chain_len++] = i;
-				effects[i]->target = 0;
-			}
-		}
+		routing_end(routable);
 	}
 }
 
@@ -567,7 +630,7 @@ static inline void enable_ftz(void)
 	__builtin_arm_set_fpscr(fpscr);
 }
 
-static void audio_processing(void)
+static void __audio_func(audio_processing)(void)
 {
 	enable_ftz();
 	for (;;)
@@ -591,9 +654,6 @@ static void init_effects(void)
 	if (!load_scene(0)) {
 		// Default chain if EEPROM is empty
 		routed_effect_count = 0;
-		effect_chain_len = 0;
-		extern struct effect gate_effect;
-		extern struct effect settings_effect;
 	}
 
 	for (int i = 0; i < ARRAY_SIZE(effects); i++) {

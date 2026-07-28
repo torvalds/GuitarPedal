@@ -1,5 +1,6 @@
 // NAME: Vibrato [VIB]
 // PRIORITY: 70
+// MIX: POWER		// a modulated delay - the wet is the dry displaced in time
 // POT: "Rate" FREQUENCY(0.1 8.0) = 2.0 Hz
 // POT: "Depth" LINEAR(0.0 5.0) = 0.875 ms
 // Vibrato: LFO-modulated delay line for a classic Doppler shift.
