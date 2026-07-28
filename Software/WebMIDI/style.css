@@ -62,6 +62,19 @@ h2 {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  /*
+   * The menu hangs out of the bottom of this, and has to be able to
+   * cover the cards below.  It can't do that on its own z-index:
+   * .glass-panel sets backdrop-filter, which creates a stacking
+   * context, so the menu's z-index only ranks it inside this header.
+   * The cards are .glass-panel too and come later in the document, so
+   * without this they paint over the menu - and being backdrop
+   * filters, they blur it while they're at it.
+   *
+   * Stays well below the backdrop (900) and the panels above it.
+   */
+  position: relative;
+  z-index: 20;
 }
 
 .header-controls {
