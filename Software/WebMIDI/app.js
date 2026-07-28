@@ -612,6 +612,184 @@ function formatPotValue(pot, val) {
 }
 
 
+//
+// Dragging effect cards around.
+//
+// This is done with pointer events rather than html5 drag-and-drop.
+// html5 dnd is a file-transfer api from 2008 with a stateful 'draggable'
+// attribute, drop events that only fire over registered targets, and no
+// touch support worth the name - ios safari has none at all, so
+// reordering simply did not work on a phone.  Pointer events are one
+// code path for mouse, touch and pen, and capturing the pointer means
+// every move and the release come to us no matter what ends up under
+// the cursor.
+//
+// The card is moved in the list as you go, rather than dragging a
+// floating copy about: it is less code, and the list ends up in exactly
+// the state that sendUpdatedRouting() then reads back out of the dom.
+//
+const DRAG_THRESHOLD = 4;       // px before a press counts as a drag
+const DRAG_EDGE = 80;           // px from the edge where we start scrolling
+const DRAG_SCROLL_MAX = 18;     // px per frame at the very edge
+
+let cardDrag = null;
+let dragScrollRaf = 0;
+
+// Which element should the gap sit in front of? null means last.
+function dragInsertionRef(y) {
+    for (const el of effectsContainer.children) {
+        // The dragged card is out of flow and the gap is what we're
+        // placing, so neither is a landmark
+        if (el === cardDrag.card || el === cardDrag.gap)
+            continue;
+        // Never let anything land above the anchor effect
+        if (el.dataset.effectId !== undefined) {
+            const eff = PEDAL_EFFECTS.find(e => e.id === parseInt(el.dataset.effectId));
+            if (eff && eff.name === "Noise Gate")
+                continue;
+        }
+        const r = el.getBoundingClientRect();
+        if (y < r.top + r.height / 2)
+            return el;
+    }
+    return null;
+}
+
+// Take the card out of the flow and leave a gap the same size behind it,
+// so it can follow the pointer instead of only jumping between slots
+// when you cross a midpoint. The gap is what actually gets moved around
+// the list, and it's also where the card goes back when you let go.
+function dragLift() {
+    const r = cardDrag.card.getBoundingClientRect();
+
+    cardDrag.gap = document.createElement('div');
+    cardDrag.gap.className = 'drag-placeholder';
+    cardDrag.gap.style.height = r.height + 'px';
+    effectsContainer.insertBefore(cardDrag.gap, cardDrag.card);
+
+    cardDrag.grabX = cardDrag.x - r.left;
+    cardDrag.grabY = cardDrag.y - r.top;
+
+    cardDrag.card.style.width = r.width + 'px';
+    cardDrag.card.classList.add('dragging');
+    dragFollow();
+}
+
+// The card is position:fixed, so these are plain viewport coordinates -
+// which is also why auto-scrolling slides the list underneath without
+// the card drifting away from the pointer.
+function dragFollow() {
+    cardDrag.card.style.left = (cardDrag.x - cardDrag.grabX) + 'px';
+    cardDrag.card.style.top = (cardDrag.y - cardDrag.grabY) + 'px';
+}
+
+function dragReposition() {
+    const ref = dragInsertionRef(cardDrag.y);
+    if (ref !== cardDrag.gap.nextSibling)
+        effectsContainer.insertBefore(cardDrag.gap, ref);
+}
+
+function dragDrop() {
+    cardDrag.card.classList.remove('dragging');
+    cardDrag.card.style.width = '';
+    cardDrag.card.style.left = '';
+    cardDrag.card.style.top = '';
+    effectsContainer.insertBefore(cardDrag.card, cardDrag.gap);
+    cardDrag.gap.remove();
+}
+
+// Keep scrolling while the pointer is held near an edge, which matters
+// on a phone where the list is a lot taller than the screen. Has to be
+// on a timer rather than driven by pointermove, or holding still at the
+// edge would stop it.
+function dragScrollTick() {
+    if (!cardDrag || !cardDrag.moved) {
+        dragScrollRaf = 0;
+        return;
+    }
+    const h = window.innerHeight;
+    let dy = 0;
+
+    if (cardDrag.y < DRAG_EDGE)
+        dy = -DRAG_SCROLL_MAX * (1 - cardDrag.y / DRAG_EDGE);
+    else if (cardDrag.y > h - DRAG_EDGE)
+        dy = DRAG_SCROLL_MAX * (1 - (h - cardDrag.y) / DRAG_EDGE);
+
+    if (dy) {
+        window.scrollBy(0, dy);
+        dragReposition();
+    }
+    dragScrollRaf = requestAnimationFrame(dragScrollTick);
+}
+
+function cardDragStart(card, handle, e) {
+    if (!e.isPrimary || cardDrag)
+        return;
+
+    //
+    // Capture stops the browser reinterpreting the gesture - a touch
+    // that wanders off the handle would otherwise become a scroll - but
+    // don't rely on it lasting.  Repositioning the card moves the handle
+    // along with it, and moving the element that holds a capture
+    // releases the capture, after which pointerup goes to whatever is
+    // under the pointer instead of to us.
+    //
+    // So take the capture for the browser's benefit, and listen on the
+    // window for ours.
+    //
+    try {
+        handle.setPointerCapture(e.pointerId);
+    } catch (err) {
+        /* not fatal, the window listeners are what matter */
+    }
+
+    cardDrag = { card, handle, id: e.pointerId, gap: null,
+                 startY: e.clientY, x: e.clientX, y: e.clientY, moved: false };
+
+    window.addEventListener('pointermove', cardDragMove);
+    window.addEventListener('pointerup', cardDragEnd);
+    window.addEventListener('pointercancel', cardDragEnd);
+}
+
+function cardDragMove(e) {
+    if (!cardDrag || e.pointerId !== cardDrag.id)
+        return;
+    cardDrag.x = e.clientX;
+    cardDrag.y = e.clientY;
+
+    if (!cardDrag.moved) {
+        // A press that never moves is a press, not a drag - otherwise
+        // just clicking the handle would send a routing update.
+        if (Math.abs(e.clientY - cardDrag.startY) < DRAG_THRESHOLD)
+            return;
+        cardDrag.moved = true;
+        document.body.style.userSelect = 'none';
+        dragLift();
+        if (!dragScrollRaf)
+            dragScrollRaf = requestAnimationFrame(dragScrollTick);
+    }
+    dragFollow();
+    dragReposition();
+}
+
+function cardDragEnd(e) {
+    if (!cardDrag || e.pointerId !== cardDrag.id)
+        return;
+    const moved = cardDrag.moved;
+
+    window.removeEventListener('pointermove', cardDragMove);
+    window.removeEventListener('pointerup', cardDragEnd);
+    window.removeEventListener('pointercancel', cardDragEnd);
+
+    if (moved)
+        dragDrop();
+    cardDrag = null;
+    document.body.style.userSelect = '';
+
+    if (moved)
+        sendUpdatedRouting();
+}
+
 // What the pedal is currently routing, as far as we know. Kept up to
 // date by reorderEffectsInDOM(), which is the one place routing becomes
 // known - whether we decided it or the pedal told us.
@@ -782,12 +960,26 @@ function reorderEffectsInDOM(routeIds) {
 }
 
 
-// Add some styles dynamically for drag and drop
+// Drag styling, kept next to the code that relies on it
 const style = document.createElement('style');
 style.textContent = `
     .effect-card.dragging {
-        opacity: 0.5;
+        position: fixed;
+        z-index: 1000;
+        margin: 0;
+        pointer-events: none;
+        cursor: grabbing;
+        /* a lifted card should look lifted, not disabled - override
+           whatever .unrouted was doing to it */
+        opacity: 1;
+        filter: none;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    }
+    .drag-placeholder {
+        box-sizing: border-box;
         border: 2px dashed var(--primary);
+        border-radius: 12px;
+        opacity: 0.4;
     }
 `;
 document.head.appendChild(style);
@@ -800,30 +992,9 @@ function renderUI() {
     divider.className = 'unrouted-divider';
     divider.textContent = '--- Unrouted Effects ---';
 
-    divider.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        const draggingCard = document.querySelector('.dragging');
-        if (!draggingCard) return;
-
-        // Use the same midpoint test as the effect cards: above the middle
-        // of the divider means routed, below means unrouted. This used to
-        // insert after the divider unconditionally, which made it very hard
-        // to route anything - you have to drag across the divider to get to
-        // the routed section, and doing so shoved the card straight back
-        // down again.
-        const rect = divider.getBoundingClientRect();
-        if (e.clientY < rect.top + rect.height / 2) {
-            divider.parentNode.insertBefore(draggingCard, divider);
-        } else {
-            divider.parentNode.insertBefore(draggingCard, divider.nextSibling);
-        }
-    });
-
-    divider.addEventListener('drop', (e) => {
-        e.preventDefault();
-    });
-
+    // The divider is just a marker in the list now - dragInsertionRef()
+    // treats it like any other element you can drop above or below, and
+    // which side of it you end up on is what decides routed or not.
     effectsContainer.appendChild(divider);
 
     PEDAL_EFFECTS.forEach((effect, idx) => {
@@ -848,13 +1019,16 @@ function renderUI() {
                                <span class="collapse-chevron" style="cursor: pointer; margin-right: 8px; font-size: 0.8em; transition: transform 0.2s;">▼</span>
                                <span>${effect.name}</span>`;
 
-            // Enable dragging only when hovering the drag handle
+            // A drag starts on the handle and nowhere else, so there is
+            // never any question of whether you meant the card or the
+            // slider you happen to be over.
             const dragHandle = title.querySelector('.drag-handle');
             if (dragHandle) {
-                dragHandle.addEventListener('mouseenter', () => card.draggable = true);
-                dragHandle.addEventListener('mouseleave', () => card.draggable = false);
-                dragHandle.addEventListener('touchstart', () => card.draggable = true, {passive: true});
-                dragHandle.addEventListener('touchend', () => card.draggable = false);
+                // Without this the browser claims the gesture for
+                // scrolling and we never see the moves.
+                dragHandle.style.touchAction = 'none';
+                dragHandle.addEventListener('pointerdown',
+                                            (e) => cardDragStart(card, dragHandle, e));
             }
         } else {
             title.innerHTML = `<span class="collapse-chevron" style="cursor: pointer; margin-right: 8px; font-size: 0.8em; transition: transform 0.2s;">▼</span>
@@ -886,59 +1060,6 @@ function renderUI() {
                 }
             });
         }
-
-        // Drag and drop logic
-        card.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('text/plain', effect.id);
-            e.dataTransfer.effectAllowed = 'move';
-            card.classList.add('dragging');
-        });
-
-        card.addEventListener('dragend', (e) => {
-            card.classList.remove('dragging');
-
-            // Commit the reorder here, not in 'drop'.  A drop event only
-            // fires when the pointer is released over an element that
-            // handled dragover, so letting go over a gap between cards, or
-            // over the container's own padding, quietly threw the whole
-            // thing away - and because dragover has already moved the card
-            // as a live preview, it looked like it had worked while nothing
-            // had been sent to the pedal at all.
-            //
-            // dragend always fires on the card being dragged, wherever it
-            // ends up.
-            sendUpdatedRouting();
-        });
-
-        card.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            const draggingCard = document.querySelector('.dragging');
-            if (!draggingCard || draggingCard === card) return;
-
-            if (effect.name === "Noise Gate") {
-                card.parentNode.insertBefore(draggingCard, card.nextSibling);
-                return;
-            }
-            if (effect.name === "Settings") {
-                card.parentNode.insertBefore(draggingCard, card);
-                return;
-            }
-
-            // Determine whether to insert before or after
-            const rect = card.getBoundingClientRect();
-            const midpoint = rect.top + rect.height / 2;
-            if (e.clientY < midpoint) {
-                card.parentNode.insertBefore(draggingCard, card);
-            } else {
-                card.parentNode.insertBefore(draggingCard, card.nextSibling);
-            }
-        });
-
-        // Only needed to allow the drop; dragend does the committing
-        card.addEventListener('drop', (e) => {
-            e.preventDefault();
-        });
 
         // The Reset button resets all pots. We should also reset the Mix pot!
         const resetBtn = enableGroup.querySelector('.effect-reset-btn');
