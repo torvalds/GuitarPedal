@@ -5,8 +5,6 @@
 
 #define FLOAT_TO_SAMPLE_MULTIPLIER (0x80000000 / 1.0)
 
-static int clipping;
-
 // Random buffer size. Note that we only expose
 // half the data in the buffer so that we don't
 // need to worry about new input overwriting
@@ -69,7 +67,7 @@ static inline sample_t process_input(raw_sample_t sample)
 static inline s32 convert_output(float out)
 {
 	if (fabsf(out) >= 1.0f) {
-		clipping = 1;
+		output_clipped = 1;
 		return out > 0.0f ? INT32_MAX : INT32_MIN;
 	}
 	return lrintf(out * FLOAT_TO_SAMPLE_MULTIPLIER);

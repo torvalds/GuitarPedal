@@ -141,19 +141,21 @@ static void update_ui(void)
 	}
 
 	//
-	// One LED, so it has one job: lit when the pedal is passing
-	// effects, brighter when the output is clipping.  There used to
-	// be a second one showing the current effect's state, and that
-	// is what the smart LED is meant to bring back with room to say
-	// rather more than "on".
+	// One LED: lit while the pedal is passing effects, bright when
+	// something wants your attention.  See status.h for why all three
+	// of those share the one brightness.
 	//
-	set_led(LED_GPIO, !disable_all, clipping);
+	// 'samples_dropped' is not cleared here - the main loop drains it just
+	// after this, and reports the count over MIDI.
+	//
+	set_led(LED_GPIO, !disable_all,
+		output_clipped || samples_dropped || attention_preview);
 
-	static uint8_t last_clipping = 0;
+	static uint8_t last_clipped = 0;
 	static uint8_t last_intense = 0;
-	if (clipping != last_clipping) {
-		send_midi_cc(MIDI_CC_AUDIO_CLIPPING, clipping ? 127 : 0);
-		last_clipping = clipping;
+	if (output_clipped != last_clipped) {
+		send_midi_cc(MIDI_CC_AUDIO_CLIPPING, output_clipped ? 127 : 0);
+		last_clipped = output_clipped;
 	}
 	if (effect->intense != last_intense) {
 		send_midi_cc(MIDI_CC_EFFECT_INTENSE, effect->intense ? 127 : 0);
@@ -161,7 +163,9 @@ static void update_ui(void)
 	}
 
 	effect->intense = 0;
-	clipping = 0;
+	output_clipped = 0;
+	if (attention_preview)
+		attention_preview--;
 
 	unsigned int seq = effect->seq;
 	unsigned char *cur_pot = effect->pot_values[seq & 1];
