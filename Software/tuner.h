@@ -63,8 +63,21 @@ struct peak_info {
 
 static inline bool get_peak(int i, struct peak_info *peak, float min_peak)
 {
-	float *center = tuner_state.magnitudes + i;
-	float mag = *center;
+	float *center, mag;
+
+	//
+	// We look at two bins to either side, so anything that close to
+	// the ends of the array simply isn't a peak we can evaluate.
+	//
+	// That's just one more "not a peak" case as far as the callers are
+	// concerned, and a lot better than expecting each of them to
+	// remember the margins.
+	//
+	if (i < 2 || i > FFT_SIZE/2 - 3)
+		return false;
+
+	center = tuner_state.magnitudes + i;
+	mag = *center;
 
 	//
 	// Note that the min_peak argument is only a quick
@@ -182,8 +195,6 @@ static inline void tuner_magnitudes(void)
 	// Search frequencies between ~15Hz and ~1.5kHz (E6 is 1318.5Hz)
 	int min_bin = (int)(15.0f * FFT_SIZE / 12000.0f);
 	int max_bin = (int)(1500.0f * FFT_SIZE / 12000.0f);
-	if (min_bin < 2) min_bin = 2; // Need margin for i-2 check
-	if (max_bin > FFT_SIZE / 2 - 3) max_bin = FFT_SIZE / 2 - 3; // Need margin for i+2 check
 
 	for (int i = min_bin; i < max_bin; i++) {
 		struct peak_info peak;
@@ -283,7 +294,11 @@ static inline void find_string_peak(const struct tuning *current_tuning, int s)
 	// tuning arrows to a +/- 40 cent range anyway.
 	int min_b = lrintf(target_bin * 0.975f);
 	int max_b = lrintf(target_bin * 1.025f);
-	if (min_b < 2) min_b = 2;
+
+	// get_peak() looks after itself, but the scan below indexes the
+	// array directly, so that much we do have to bound.
+	if (min_b < 0) min_b = 0;
+	if (max_b > FFT_SIZE/2 - 1) max_b = FFT_SIZE/2 - 1;
 
 	float max_mag = 0.0f;
 	int peak_b = 0;
