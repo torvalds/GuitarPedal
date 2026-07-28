@@ -12,7 +12,11 @@
 <body>
   <div class="app-container">
     <header class="glass-panel app-header">
-      <h1 id="app-title" class="title-disconnected">RP2350 Pedal</h1>
+      <div class="app-title-group">
+        <h1 id="app-title" class="title-disconnected">RP2350 Pedal</h1>
+        <!-- Shown only when this is a local copy; see IS_LOCAL_DEV -->
+        <span id="dev-badge" class="dev-badge hidden" title="Served locally: confirmations for destructive actions are skipped">local</span>
+      </div>
       <div class="header-controls">
         <!-- Scenes are the one thing in here used often enough to be
              worth a click rather than two, so they live in the header
@@ -121,9 +125,10 @@
     // in charge of already-controlled clients until they all go away - so
     // a stale app.js can happily survive several reloads and an "Update
     // App" or three.  The PWA only matters for the deployed copy anyway.
-    const swIsLocal = ['localhost', '127.0.0.1', '::1', ''].includes(location.hostname);
+    //
+    // IS_LOCAL_DEV comes from app.js, which is loaded above.
     if ('serviceWorker' in navigator) {
-      if (swIsLocal) {
+      if (IS_LOCAL_DEV) {
         // And clean up after any worker registered here previously
         navigator.serviceWorker.getRegistrations()
           .then(regs => regs.forEach(reg => reg.unregister()));

@@ -74,6 +74,32 @@ h2 {
   transition: color 0.3s;
 }
 
+.app-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/*
+ * Says this page came off a laptop rather than off the deployment.
+ * Worth showing rather than just knowing, because it is why the
+ * bootloader button stopped asking whether you meant it.
+ */
+.dev-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.dev-badge.hidden {
+  display: none;
+}
+
 .title-connected {
   color: var(--success);
 }

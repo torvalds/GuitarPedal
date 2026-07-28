@@ -222,6 +222,24 @@ function updateMidiState() {
     }
 }
 
+//
+// Are we the copy served off a laptop, or the deployed one?
+//
+// The two want to behave differently in small ways, and the difference
+// was already being made once - index.html keeps the service worker
+// away from a local page, because a stale worker outliving several
+// reloads is a miserable way to spend an afternoon.  This is that same
+// test, made once and shared, so the two can't drift apart.
+//
+// An empty hostname is a file:// URL.
+//
+const IS_LOCAL_DEV = ['localhost', '127.0.0.1', '::1', ''].includes(location.hostname);
+
+if (IS_LOCAL_DEV) {
+    const devBadge = document.getElementById('dev-badge');
+    if (devBadge) devBadge.classList.remove('hidden');
+}
+
 const updateAppBtn = document.getElementById('update-app-btn');
 if (updateAppBtn) {
     updateAppBtn.addEventListener('click', async () => {
@@ -1922,10 +1940,14 @@ appTitleEl.addEventListener('click', () => {
                 showButtonError(globalProgramBtn, 'Not Connected');
                 return;
             }
-            if (confirm("Reboot pedal into programming mode?")) {
-                sendMidiCc(GLOBAL_ENABLE_CC, 126);
-                closeAllPanels();
-            }
+            // The confirmation is there because rebooting into the
+            // bootloader in the middle of playing would be a nasty
+            // surprise.  Developing against the thing, you do it over
+            // and over on purpose, and the prompt is pure friction.
+            if (!IS_LOCAL_DEV && !confirm("Reboot pedal into programming mode?"))
+                return;
+            sendMidiCc(GLOBAL_ENABLE_CC, 126);
+            closeAllPanels();
         });
     }
 
