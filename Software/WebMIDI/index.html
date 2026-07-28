@@ -39,7 +39,7 @@
             <button id="global-unroute-btn" role="menuitem">⏏&nbsp;&nbsp;Unroute All Effects</button>
             <hr>
             <button id="update-app-btn" role="menuitem">⬇️&nbsp;&nbsp;Update App</button>
-            <button id="open-settings-btn" role="menuitem">⚙️&nbsp;&nbsp;Settings…</button>
+            <button id="open-settings-btn" role="menuitem">🔌&nbsp;&nbsp;MIDI Connection…</button>
             <hr>
             <button id="global-program-btn" class="danger-item" role="menuitem">⚠️&nbsp;&nbsp;Reboot to Programming Mode</button>
           </div>
@@ -79,24 +79,39 @@
     <!-- Panel Backdrop -->
     <div id="panel-backdrop" class="hidden"></div>
 
-    <!-- Settings, reached from the menu. Everything here is set once and
-         then left alone, which is why it isn't in the menu itself. -->
+    <!-- Reached from the menu. Set once and then left alone, which is
+         why it isn't in the menu itself. -->
     <div id="settings-panel" class="glass-panel dialog-panel hidden" role="dialog" aria-modal="true">
       <div class="panel-header">
-        <h2>Settings</h2>
+        <h2>MIDI Connection</h2>
         <button id="close-settings" class="action-btn" title="Close">✕</button>
       </div>
       <div class="dialog-body">
         <div class="menu-section">
-          <h3>Connection</h3>
+          <h3>Devices</h3>
           <div class="menu-field">
-            <label for="midi-input-select">MIDI Input</label>
+            <label for="midi-input-select">Input</label>
             <select id="midi-input-select" class="menu-select"></select>
           </div>
           <div class="menu-field">
-            <label for="midi-output-select">MIDI Output</label>
+            <label for="midi-output-select">Output</label>
             <select id="midi-output-select" class="menu-select"></select>
           </div>
+        </div>
+        <div class="menu-section">
+          <h3>Channel</h3>
+          <!-- The same value as the Settings card's "MIDI Ch" pot, and
+               the same control underneath - see bindMidiChannel(). It
+               is repeated here because this is where you come looking
+               when Control Change stops working, and the channel is the
+               usual reason. -->
+          <div class="menu-field">
+            <select id="midi-channel-select" class="menu-select"></select>
+          </div>
+          <p class="menu-hint">The pedal filters Control Change and Program
+             Change by this, so bypass, the tuner and scene changes need it to
+             match. Parameter edits are SysEx and work either way — which is
+             how this dialog can still fix it when it is wrong.</p>
         </div>
       </div>
     </div>

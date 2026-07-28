@@ -90,6 +90,7 @@ h2 {
   transition: color 0.3s;
 }
 
+
 /*
  * The title is the pedal-state light, and it carries where the page
  * came from as well: hue says which copy this is, brightness says
@@ -655,6 +656,12 @@ input[type=range].eq-range {
   font-size: 0.82rem;
   color: var(--text-muted);
   margin-bottom: 4px;
+}
+
+.menu-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 6px;
 }
 
 .menu-select {

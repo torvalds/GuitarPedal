@@ -23,7 +23,83 @@ const ccToElementMap = new Map();
 let isGlobalEnabled = false;
 let activePotCc = null;
 let activePotDef = null;
+//
+// The pedal filters Control Change and Program Change by
+// settings.midi_channel and lets SysEx through regardless.  Transmit on
+// the wrong one and global bypass, the tuner toggle, scene loads and the
+// reboot all go quietly nowhere, while parameter edits carry on working
+// - which is a confusing thing to debug, so keep this in step with the
+// pedal rather than assuming channel 1 forever.
+//
 let activeTransmitChannel = 0xB0;
+
+// Which pot in the schema is the channel. Found rather than hardcoded,
+// and found by 'base' - the effect header's filename - because that is
+// a steadier handle than the display name (see issue 20).
+let midiChannelRef = null;
+
+function findMidiChannelPot() {
+    const idx = PEDAL_EFFECTS.findIndex(e => e.base === 'settings');
+    if (idx < 0)
+        return null;
+    const eff = PEDAL_EFFECTS[idx];
+    const pot = eff.pots.findIndex(p => p.name === 'MIDI Ch');
+    return pot < 0 ? null : { idx, effId: eff.id, pot };
+}
+
+//
+// Pot value 0 is Omni, 1..16 are Ch1..Ch16.  On Omni the pedal takes
+// whatever arrives, so channel 1 is as good as any.
+//
+function setTransmitChannel(potVal) {
+    activeTransmitChannel = 0xB0 | (potVal > 0 ? (potVal - 1) & 0x0F : 0);
+
+    // Keep the dialog's copy showing the same thing. Assigning .value
+    // fires nothing, so this can't come back round.
+    const sel = document.getElementById('midi-channel-select');
+    if (sel && parseInt(sel.value) !== potVal)
+        sel.value = potVal;
+}
+
+// Called once the schema has been rendered: pick the channel up from the
+// control, and follow it when it is changed here. Changes arriving from
+// the pedal come through the PARAM_UPDATE case instead, because setting
+// .value from script fires no event.
+function bindMidiChannel() {
+    midiChannelRef = findMidiChannelPot();
+    if (!midiChannelRef)
+        return;
+
+    const el = ccToElementMap.get(`eff-${midiChannelRef.idx}-pot-${midiChannelRef.pot}`);
+    if (!el)
+        return;
+
+    //
+    // The dialog gets a second view of this pot, built from the same
+    // schema enum so the names can't drift.  It is a view and not a
+    // second setting: changing it drives the card's control, which is
+    // the one wired to the pedal, so there is still exactly one place
+    // that decides what gets sent.
+    //
+    const sel = document.getElementById('midi-channel-select');
+    if (sel) {
+        const names = PEDAL_EFFECTS[midiChannelRef.idx].pots[midiChannelRef.pot].enum || [];
+        sel.innerHTML = '';
+        names.forEach((name, i) => {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = name;
+            sel.appendChild(opt);
+        });
+        sel.addEventListener('change', () => {
+            el.value = sel.value;
+            el.dispatchEvent(new Event('change'));
+        });
+    }
+
+    el.addEventListener('change', () => setTransmitChannel(parseInt(el.value)));
+    setTransmitChannel(parseInt(el.value));
+}
 
 // Tuner State
 let isTunerMode = false;
@@ -300,6 +376,7 @@ function handleSysex(data) {
                 effectIdMap.clear();
                 PEDAL_EFFECTS.forEach((e, idx) => effectIdMap.set(e.id, idx));
                 renderUI();
+                bindMidiChannel();
                 // Request State and Status
                 sendSysex([SYSEX_CMD.REQ_STATE]);
                 sendSysex([SYSEX_CMD.DIAGNOSTIC]);
@@ -327,6 +404,13 @@ function handleSysex(data) {
             const effId = data[3];
             const potIdx = data[4];
             const val = data[5];
+
+            // The pedal telling us its channel changed - on a scene
+            // load, say. Do this before the element update below, which
+            // sets .value from script and so fires nothing.
+            if (midiChannelRef && effId === midiChannelRef.effId &&
+                potIdx === midiChannelRef.pot + 1)
+                setTransmitChannel(val);
 
             const idx = effectIdMap.get(effId);
             if (idx !== undefined) {
@@ -405,9 +489,6 @@ function handleMidiMessage(event) {
                 globalEnableEl.checked = isGlobalEnabled;
             }
         } else {
-            if (cc === 107) { // MIDI Ch
-                activeTransmitChannel = (val === 0) ? 0xB0 : (0xB0 | ((val - 1) & 0x0F));
-            }
             // It's a pot or an effect enable
             const el = ccToElementMap.get(cc);
             if (el) {
@@ -596,10 +677,6 @@ function sendMidiPc(pc) {
 function sendMidiCc(cc, val) {
     if (!midiOutput) return;
     midiOutput.send([activeTransmitChannel, cc, val]);
-
-    if (cc === 107) {
-        activeTransmitChannel = (val === 0) ? 0xB0 : (0xB0 | ((val - 1) & 0x0F));
-    }
     scheduleDiagnostic();
 }
 
