@@ -1735,24 +1735,29 @@ appTitleEl.addEventListener('click', () => {
         backdrop.addEventListener('click', closeAllPanels);
     }
 
+    // A button whose label depends on something that can change while
+    // the message is up rebuilds it rather than restoring whatever it
+    // happened to say a second and a half ago.
+    function restoreButton(btn, originalText) {
+        if (btn.relabel)
+            btn.relabel();
+        else
+            btn.innerHTML = originalText;
+        btn.classList.remove('success', 'error');
+    }
+
     function showButtonSuccess(btn, successText) {
         const originalText = btn.innerHTML;
         btn.innerHTML = `✓ ${successText}`;
         btn.classList.add('success');
-        setTimeout(() => {
-            btn.innerHTML = originalText;
-            btn.classList.remove('success');
-        }, 1500);
+        setTimeout(() => restoreButton(btn, originalText), 1500);
     }
 
     function showButtonError(btn, errorText) {
         const originalText = btn.innerHTML;
         btn.innerHTML = `⚠️ ${errorText}`;
         btn.classList.add('error');
-        setTimeout(() => {
-            btn.innerHTML = originalText;
-            btn.classList.remove('error');
-        }, 1500);
+        setTimeout(() => restoreButton(btn, originalText), 1500);
     }
 
     // The burger menu
@@ -1902,6 +1907,20 @@ appTitleEl.addEventListener('click', () => {
         }
     }
 
+    //
+    // The picker is in the header and the two things that act on it are
+    // in the menu, so the menu says which scene it means. Otherwise you
+    // are trusting your memory of a control that isn't on screen while
+    // you press the one that overwrites it.
+    //
+    function updateSceneLabels() {
+        const scene = sceneSelect ? sceneSelect.value : '0';
+        const saveBtn = document.getElementById('global-save-scene-btn');
+        const loadBtn = document.getElementById('global-load-scene-btn');
+        if (saveBtn) saveBtn.innerHTML = `💾&nbsp;&nbsp;Save to Scene ${scene}`;
+        if (loadBtn) loadBtn.innerHTML = `📂&nbsp;&nbsp;Load Scene ${scene}`;
+    }
+
     const loadSceneBtn = document.getElementById('global-load-scene-btn');
     if (loadSceneBtn) {
         loadSceneBtn.addEventListener('click', () => {
@@ -1915,7 +1934,7 @@ appTitleEl.addEventListener('click', () => {
                 sendSysex([SYSEX_CMD.REQ_STATE]);
                 sendSysex([SYSEX_CMD.DIAGNOSTIC]); // Check status after load
             }, 100);
-            showButtonSuccess(loadSceneBtn, 'Loaded!');
+            showButtonSuccess(loadSceneBtn, `Loaded ${sceneId}`);
         });
     }
 
@@ -1929,8 +1948,15 @@ appTitleEl.addEventListener('click', () => {
             const sceneId = parseInt(sceneSelect.value);
             sendSysex([SYSEX_CMD.SAVE_SCENE, sceneId]);
             sendSysex([SYSEX_CMD.DIAGNOSTIC]); // Check status after save
-            showButtonSuccess(saveSceneBtn, 'Saved!');
+            showButtonSuccess(saveSceneBtn, `Saved to ${sceneId}`);
         });
+    }
+
+    if (sceneSelect) {
+        sceneSelect.addEventListener('change', updateSceneLabels);
+        if (loadSceneBtn) loadSceneBtn.relabel = updateSceneLabels;
+        if (saveSceneBtn) saveSceneBtn.relabel = updateSceneLabels;
+        updateSceneLabels();
     }
 
     const globalProgramBtn = document.getElementById('global-program-btn');

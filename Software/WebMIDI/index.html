@@ -18,15 +18,14 @@
         <span id="dev-badge" class="dev-badge hidden" title="Served locally: confirmations for destructive actions are skipped">local</span>
       </div>
       <div class="header-controls">
-        <!-- Scenes are the one thing in here used often enough to be
-             worth a click rather than two, so they live in the header
-             rather than behind the menu. -->
+        <!-- Which scene you're on is worth seeing without opening
+             anything.  Acting on it is not: Save overwrites the eeprom
+             and Load throws away what you have, so both sit behind the
+             menu where you can't reach them by accident. -->
         <div class="header-scenes">
           <select id="global-scene-select" title="Scene">
             <!-- Options injected via JS -->
           </select>
-          <button id="global-save-scene-btn" title="Save to this scene">💾 Save</button>
-          <button id="global-load-scene-btn" title="Load this scene">Load</button>
         </div>
         <button id="tuner-btn" class="action-btn" title="Tuner Mode">🎵</button>
         <label class="switch" title="Global Enable">
@@ -37,7 +36,12 @@
           <button id="burger-btn" class="action-btn" title="Menu"
                   aria-haspopup="true" aria-expanded="false">☰</button>
           <div id="global-menu" class="menu-dropdown hidden" role="menu">
+            <!-- The scene labels are filled in from the picker, so it
+                 always says which one it is about to overwrite. -->
+            <button id="global-save-scene-btn" role="menuitem">💾&nbsp;&nbsp;Save Scene</button>
+            <button id="global-load-scene-btn" role="menuitem">📂&nbsp;&nbsp;Load Scene</button>
             <button id="global-unroute-btn" role="menuitem">⏏&nbsp;&nbsp;Unroute All Effects</button>
+            <hr>
             <button id="update-app-btn" role="menuitem">⬇️&nbsp;&nbsp;Update App</button>
             <button id="open-settings-btn" role="menuitem">⚙️&nbsp;&nbsp;Settings…</button>
             <hr>

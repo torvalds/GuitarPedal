@@ -591,16 +591,15 @@ input[type=range].eq-range {
   margin: 6px 8px;
 }
 
-/* Scene picking, promoted out of the menu into the header */
+/* Which scene you're on, promoted out of the menu into the header.
+   Saving and loading stayed behind the menu - see index.html. */
 .header-scenes {
   display: flex;
-  gap: 6px;
   align-items: center;
-  margin-right: 14px;
+  margin-right: 4px;
 }
 
-.header-scenes select,
-.header-scenes button {
+.header-scenes select {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-main);
   border: 1px solid var(--panel-border);
@@ -608,15 +607,6 @@ input[type=range].eq-range {
   padding: 6px 10px;
   font: inherit;
   font-size: 0.88rem;
-}
-
-.header-scenes button {
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.header-scenes button:hover {
-  background: rgba(255, 255, 255, 0.12);
 }
 
 /*
