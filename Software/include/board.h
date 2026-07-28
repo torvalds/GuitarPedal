@@ -1,44 +1,42 @@
 //
 // Board GPIO pin definitions
 //
-
+// Named for what the pin does, not for the order someone happened to
+// wire it up in.  The board has been through several generations and
+// the old numbering survived none of them: "SW1" was the first rotary's
+// shaft switch, "SW3" was the first stomp, and SW2/SW4 were a second
+// rotary and a second stomp that no longer exist.  None of that was
+// visible in the names.
 //
-// New custom carrier board:
-//  - WS2812 on GPIO1
+// The pedal as it stands has one rotary encoder - and most boards do
+// not even populate that - one stomp switch, and one LED.
 //
-// I2C0 on GPIO4/5 (and I2C1 on GPIO2/3)
-//
-// Foot (or finger) switches on GPIO 6/7/8. Internal
-// pull-up with switch closing to GND.
-//
-
-#define GPIO_SW1		12
-#define GPIO_SW2		28
-#define GPIO_SW3		13
-#define GPIO_SW4		29
 
 // The one LED.  Plain PWM brightness; see set_led().
 #define LED_GPIO		0
+
+//
+// The one rotary encoder: A and B are the quadrature pair, SW is the
+// shaft pressing down.
+//
+#define ROTARY_A_GPIO		6
+#define ROTARY_B_GPIO		7
+#define ROTARY_SW_GPIO		12
+
+// The one stomp switch.  Internal pull-up, closing to GND.
+#define STOMP_GPIO		13
 
 #define I2S_BCLK		8
 #define I2S_FSYNC		9
 #define I2S_DIN			10
 #define I2S_DOUT		11
 
-#define GPIO_ROT1A		6
-#define GPIO_ROT1B		7
-
-// The MIDI-controlled ones do not have
-// the second rotary encoder
+// Hardware MIDI TRS, on the pins the second rotary encoder used to have
 #if MIDI_HW
   #define MIDI_OUT		26
   #define MIDI_IN		27
   #define MIDI_UART		uart1
-#else
-  #define GPIO_ROT2A		26
-  #define GPIO_ROT2B		27
 #endif
-
 
 #define I2C0_SDA		4
 #define I2C0_SCL		5
@@ -58,3 +56,13 @@
 #if 0
 #define WS2812_GPIO		1
 #endif
+
+//
+// Pins that used to be something and no longer are, recorded so nobody
+// has to go through the git history to find out why there are gaps:
+//
+//	GPIO 1		second LED (now WS2812_GPIO, above)
+//	GPIO 26/27	second rotary's quadrature pair (now hardware MIDI)
+//	GPIO 28		second rotary's shaft switch
+//	GPIO 29		second stomp switch
+//

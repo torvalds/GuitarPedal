@@ -66,13 +66,13 @@ static bool read_pots(struct effect *effect, unsigned char *pots)
 			return true;
 		}
 
-		// No rotary changes. Switch pressed?
+		// No rotary changes. Shaft pressed?
 		//
-		// Clear and ignore long-press, it's the result
+		// Clear and ignore the long press, it's the result
 		// of "hold and rotate"
-		unsigned int sw = __atomic_fetch_and(&switch_val, ~0x10001, __ATOMIC_RELAXED);
-		sw &= 1;
-		if (!sw)
+		unsigned int both = (1u << ROTARY_SWITCH) | (1u << LONGPRESS(ROTARY_SWITCH));
+		unsigned int sw = __atomic_fetch_and(&switch_val, ~both, __ATOMIC_RELAXED);
+		if (!(sw & (1u << ROTARY_SWITCH)))
 			return false;
 		move_pot(effect, 1);
 		return true;
@@ -89,21 +89,6 @@ static bool read_pots(struct effect *effect, unsigned char *pots)
 	return true;
 }
 
-static int switch_effect(int idx)
-{
-	// Ignore low two bits of rotary select
-	int select = __atomic_fetch_and(&rotary_effect, 3, __ATOMIC_RELAXED);
-	select &= ~3;
-	if (!select)
-		return idx;
-
-	idx += (select < 0) ? -1 : 1;
-	if (idx < 0)
-		idx = 0;
-	if (idx >= ARRAY_SIZE(effects))
-		idx = ARRAY_SIZE(effects)-1;
-	return idx;
-}
 
 // Human perception isn't linear, but neither
 // is LED intensity, particularly since we're
@@ -136,50 +121,20 @@ static void update_ui(void)
 
 	struct effect *effect = effects[effect_idx];
 
-	// Left stomp or bottom rotary long-press: save effect state to EEPROM
-	if (switch_pressed(LONGPRESS(1)) || switch_pressed(LONGPRESS(3))) {
-		switch_clear(LONGPRESS(1));
-		switch_clear(LONGPRESS(3));
-		unsigned int seq = effect->seq;
-		unsigned char *cur_pot = effect->pot_values[seq & 1];
-		unsigned char *new_pot = effect->pot_values[!(seq & 1)];
-		memcpy(new_pot, cur_pot, 10);
-		smp_store_release(&effect->seq, 0);
-
-		save_effect_state(effect_idx, effect);
-	}
-
-	// Left stomp (or bottom rotary):
-	// enable/disable current effect
-	if (switch_pressed(1) || switch_pressed(3)) {
-		switch_clear(1); switch_clear(3);
-		effect->target = EFF_ENABLE_STEPS * !effect->target;
-		send_sysex_set_param(effect_idx, 0, effect->target ? 127 : 0);
-		for (int i=0; i<10; i++) {
-			int val = effect->pot_values[effect->seq & 1][i];
-			send_sysex_set_param(effect_idx, i+1, val);
-		}
-		smp_store_release(&effect->seq, effect->seq + 2);	// Force re-init
-	}
-
-	// Right stomp: enable/disable all effects
-	if (switch_pressed(2) || switch_pressed(4)) {
-		switch_clear(2); switch_clear(4);
+	// Stomp: enable/disable all effects
+	if (switch_pressed(STOMP_SWITCH)) {
+		switch_clear(STOMP_SWITCH);
 		disable_all = EFF_ENABLE_STEPS * !disable_all;
 		send_midi_cc(MIDI_CC_GLOBAL_ENABLE, disable_all ? 0 : 127);
 	}
 
-	// Effect switching: lower rotary
-	int idx = switch_effect(effect_idx);
-
-	if (idx == effect_idx && current_midi_effect_idx != effect_idx) {
-		idx = current_midi_effect_idx;
-	}
+	// Which effect is being edited is decided over MIDI now that the
+	// encoder that used to do it is gone.
+	int idx = current_midi_effect_idx;
 
 	if (idx != effect_idx) {
 		effect_idx = idx;
 		effect = effects[idx];
-		current_midi_effect_idx = idx;
 		last_active_pot = -1; // Force active_pot update on screen switch
 
 		send_midi_pc(effect_idx);

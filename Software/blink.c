@@ -23,6 +23,11 @@
 #define PIO0_I2S_RX_SM 1
 #define PIO0_WS2812_SM 2
 
+// PIO1 runs one debounce state machine per switch, and the state
+// machine index is the switch id - see switch.h.  PIO2 has the one
+// rotary encoder.
+#define ROTARY_SM 0
+
 #define PWM_WRAP 4096	// Entirely arbitrary
 
 #include "audio/types.h"
@@ -214,38 +219,22 @@ static inline bool usb_is_connected(void)
 	return tud_ready();
 }
 
-// We use PIO1 for the SW pins.
+// We use PIO1 for the switches.
 //
 // They share the same program, just a separate state machine
-// for each pin.
+// for each pin - state machine N is switch id N, see switch.h.
 static void switch_irq(void)
 {
 	PIO pio = pio1;
 
-	for (int idx = 0; idx < 4; idx++) {
-		if (pio_sm_is_rx_fifo_empty(pio, idx))
+	for (int sw = 0; sw < NR_SWITCHES; sw++) {
+		if (pio_sm_is_rx_fifo_empty(pio, sw))
 			continue;
 
-		int bit = idx + 16*!!pio_sm_get(pio, idx);
-		switch_val |= 1 << bit;
+		int bit = pio_sm_get(pio, sw) ? LONGPRESS(sw) : sw;
+		switch_val |= 1u << bit;
 	}
 
-	// Long-press with *both* SW1/2 pressed down
-	// turns it into programming mode, but only when
-	// it's already connected to USB
-	//
-	// Otherwise it resets all effects to their
-	// default pot values
-	if (switch_val & 0x30000) {
-		if (!gpio_get(GPIO_SW1) && !gpio_get(GPIO_SW2)) {
-			if (usb_is_connected())
-				reset_usb_boot(0, 0);
-			for (int i = 0; i < ARRAY_SIZE(effects); i++) {
-				struct effect *eff = effects[i];
-				reset_effect(eff);
-			}
-		}
-	}
 	user_interaction = 1;
 }
 
@@ -500,17 +489,16 @@ static void init_sw_pins(void)
 	PIO pio = pio1;
 	uint offset = pio_add_program(pio, &debounce_program);
 
-	init_sw_pin(pio, GPIO_SW1);
-	init_sw_pin(pio, GPIO_SW2);
-	init_sw_pin(pio, GPIO_SW3);
-	init_sw_pin(pio, GPIO_SW4);
-
-	// We use the same PIO program for both SW pins
-	// just with different state machines
-	debounce_program_init(pio, 0, offset, GPIO_SW1);
-	debounce_program_init(pio, 1, offset, GPIO_SW2);
-	debounce_program_init(pio, 2, offset, GPIO_SW3);
-	debounce_program_init(pio, 3, offset, GPIO_SW4);
+	//
+	// Same PIO program for every switch, one state machine each,
+	// walked in switch id order so that state machine N really is
+	// switch N.  switch_irq() relies on that and has no other way
+	// to know which pin a fifo entry came from.
+	//
+	for (int sw = 0; sw < NR_SWITCHES; sw++) {
+		init_sw_pin(pio, switch_gpio[sw]);
+		debounce_program_init(pio, sw, offset, switch_gpio[sw]);
+	}
 
 	irq_set_exclusive_handler(PIO1_IRQ_0, switch_irq);
 	irq_set_enabled(PIO1_IRQ_0, true);
@@ -541,26 +529,24 @@ static void init_i2c_bus(i2c_inst_t *i2c, int kbps, int sda, int scl)
 	gpio_pull_up(scl);
 }
 
-// Top rotary for values:
-//  - rotate to change
-//  - press to switch to next value
-//  - hold and rotate to move values
-#define rotary_value (rotary_array[0])
-#define rotary_select (rotary_array[2])
-
-// Bottom rotary for effects:
-//  - rotate to change
-//  - press to enable/disable
-//  - hold and rotate for what?
-#define rotary_effect (rotary_array[1])
-#define rotary_what (rotary_array[3])
-
-static volatile int rotary_array[4];
+//
+// The one rotary encoder.  Which of these a click lands in depends on
+// whether the shaft is held down at the time:
+//
+//	turn		change the selected pot's value
+//	press and turn	select a different pot
+//
+// Accumulated by the interrupt, drained by update_ui().  There used to
+// be a second encoder for picking the effect; it is gone, and picking
+// the effect is done over MIDI.
+//
+static volatile int rotary_value;
+static volatile int rotary_select;
 
 static void rotary_irq(void)
 {
-	// Initial impossible previous values
-	static int prev_value[2] = { 4, 4 };
+	// Initial impossible previous value
+	static int prev_value = 4;
 	static const int lookup[32] = {
 		// CW: 00 -> 10 -> 11 -> 01 -> 00
 		[2] = 1, [11] = 1, [13] = 1, [4] = 1,
@@ -568,25 +554,22 @@ static void rotary_irq(void)
 		[1] = -1, [7] = -1, [14] = -1, [8] = -1
 	};
 
-	for (int sm = 0; sm < 2; ) {
-		if (pio_sm_is_rx_fifo_empty(pio2, sm)) {
-			sm++;
-			continue;
-		}
-		int curr = pio_sm_get(pio2, sm) & 3;
-		int prev = prev_value[sm];
+	while (!pio_sm_is_rx_fifo_empty(pio2, ROTARY_SM)) {
+		int curr = pio_sm_get(pio2, ROTARY_SM) & 3;
+		int prev = prev_value;
 
 		int val = lookup[(prev << 2) | curr];
-		prev_value[sm] = curr;
+		prev_value = curr;
 
 		if (!val)
 			continue;
 
-		// Is the switch pressed?
-		int gpio = sm ? GPIO_SW2 : GPIO_SW1;
-		int rotary_idx = gpio_get(gpio) ? sm : sm+2;
-
-		rotary_array[rotary_idx] += val;
+		// Held down while turning means "pick a pot" rather
+		// than "change this one".  Pull-up, so low is pressed.
+		if (gpio_get(ROTARY_SW_GPIO))
+			rotary_value += val;
+		else
+			rotary_select += val;
 	}
 	user_interaction = 1;
 }
@@ -598,15 +581,14 @@ static void init_rotary_encoder(void)
 	PIO pio = pio2;
 	uint offset = pio_add_program(pio, &rotary_program);
 
-	init_sw_pin(pio, GPIO_ROT1A);
-	init_sw_pin(pio, GPIO_ROT1B);
-	rotary_program_init(pio, 0, offset, GPIO_ROT1A);
+	// The program reads both pins of the quadrature pair starting
+	// at the one it is given, so A and B have to stay adjacent.
+	_Static_assert(ROTARY_B_GPIO == ROTARY_A_GPIO + 1,
+		       "the quadrature pair has to be adjacent");
 
-#if !MIDI_HW
-	init_sw_pin(pio, GPIO_ROT2A);
-	init_sw_pin(pio, GPIO_ROT2B);
-	rotary_program_init(pio, 1, offset, GPIO_ROT2A);
-#endif
+	init_sw_pin(pio, ROTARY_A_GPIO);
+	init_sw_pin(pio, ROTARY_B_GPIO);
+	rotary_program_init(pio, ROTARY_SM, offset, ROTARY_A_GPIO);
 
 	irq_set_exclusive_handler(PIO2_IRQ_0, rotary_irq);
 	irq_set_enabled(PIO2_IRQ_0, true);
@@ -702,9 +684,9 @@ int main()
 			next_ui_update = delayed_by_ms(now, 40);
 			eeprom_task();
 
-			// Right stomp long-ress: switch to tuner mode
-			if (switch_pressed(LONGPRESS(2))) {
-				switch_clear(LONGPRESS(2));
+			// Stomp held down: switch to tuner mode
+			if (switch_pressed(LONGPRESS(STOMP_SWITCH))) {
+				switch_clear(LONGPRESS(STOMP_SWITCH));
 				tuner_mode = !tuner_mode;
 				send_midi_cc(MIDI_CC_GLOBAL_ENABLE, tuner_mode ? 68 : 69);
 			}

@@ -164,15 +164,6 @@ static int max_pot_val(struct effect *effect, int pot)
 
 extern uint8_t routed_effect_count;
 
-static int find_effect_slot(struct effect *effect)
-{
-	if (effect == effects[EFFECT_COUNT - 1]) return SETTINGS_SLOT;
-	if (effect == effects[0]) return 0;
-	for (int i = 0; i < routed_effect_count; i++) {
-		if (effects[effect_chain[i]] == effect) return i + 1;
-	}
-	return -1;
-}
 
 static bool load_effect_state_from_slot(unsigned int slot, struct effect *effect)
 {
@@ -202,25 +193,6 @@ static bool load_effect_state_from_slot(unsigned int slot, struct effect *effect
 	return true;
 }
 
-static bool save_effect_state(unsigned int effect_idx, struct effect *effect)
-{
-	int slot = find_effect_slot(effect);
-	if (slot < 0) return false;
-
-	struct effect_state *state = &eeprom_cache.state[current_scene_id][slot];
-	int seq = effect->seq & 1;
-
-	if (effect->save)
-		effect->save(effect, effect->pot_values[seq]);
-	memcpy(state->pots, effect->pot_values[seq], 10);
-
-	state->mix_level = FLOAT_TO_POT(effect->mix_pot);
-	// Note: we leave reserved[0] (next_id) unchanged to avoid messing with routing
-	state->magic = effect_checksum(effect, state);
-
-	eeprom_dirty_mask[current_scene_id] |= 1u << slot;
-	return true;
-}
 
 
 static bool load_scene(uint8_t scene_id)
