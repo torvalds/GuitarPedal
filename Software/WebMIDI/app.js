@@ -1761,7 +1761,10 @@ appTitleEl.addEventListener('click', () => {
             if (activePotCc === null || !activePotDef) return;
 
             const val = parseInt(e.target.value);
-            document.getElementById('active-pot-value').textContent = formatPotValue(activePotDef, val);
+            const valDisplay = document.getElementById('active-pot-value');
+
+            if (valDisplay)
+                valDisplay.textContent = formatPotValue(activePotDef, val);
 
             // Update original element
             const origInput = ccToElementMap.get(activePotCc);
@@ -1789,17 +1792,24 @@ appTitleEl.addEventListener('click', () => {
     }
 
     function setActivePot(cc, potDef, currentVal, effectName) {
+        const panel = document.getElementById('active-pot-panel');
+        const name = document.getElementById('active-pot-title');
+        const valDisplay = document.getElementById('active-pot-value');
+
+        // No panel, nothing to make active - and in particular don't set
+        // activePotCc, which everything else takes as "the panel is up".
+        if (!panel)
+            return;
+
         closeAllPanels();
         activePotCc = cc;
         activePotDef = potDef;
 
-        document.getElementById('active-pot-name').textContent = `${effectName} - ${potDef.name}`;
-        const valDisplay = document.getElementById('active-pot-value');
+        if (name) name.textContent = `${effectName} - ${potDef.name}`;
         if (valDisplay) valDisplay.textContent = formatPotValue(potDef, currentVal);
-
         if (activePotSlider) activePotSlider.value = currentVal;
 
-        document.getElementById('active-pot-panel').classList.remove('hidden');
+        panel.classList.remove('hidden');
         if (backdrop) backdrop.classList.remove('hidden');
     }
 
