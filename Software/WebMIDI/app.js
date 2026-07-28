@@ -713,8 +713,27 @@ function wheelZoneAt(el) {
 
 // Capture, so this settles ownership before the zone's own handler runs
 window.addEventListener('wheel', (e) => {
-    if (e.timeStamp - wheelLast > WHEEL_GESTURE_GAP)
+    if (e.timeStamp - wheelLast > WHEEL_GESTURE_GAP) {
         wheelOwner = wheelZoneAt(e.target);
+
+        //
+        // Move the focus to whatever the wheel just took charge of.
+        //
+        // The ring is the only thing on screen saying which slider is
+        // about to move, and it used to follow clicks while the wheel
+        // followed the pointer - so clicking one and then scrolling
+        // over another left it pointing at the wrong control.  One
+        // notion of "the active pot" rather than two, and the arrow
+        // keys now act on whatever the wheel last did.
+        //
+        // preventScroll because the default is to scroll the element
+        // into view, and doing that in the middle of a scroll would
+        // fight the user for the thing they are actually doing.
+        //
+        const input = wheelOwner && wheelZones.get(wheelOwner);
+        if (input && input !== document.activeElement)
+            input.focus({ preventScroll: true });
+    }
     wheelLast = e.timeStamp;
 }, { passive: true, capture: true });
 
