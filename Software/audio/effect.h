@@ -4,6 +4,26 @@ sample_t get_usb_audio_input(void);
 
 typedef float (*pot_convert_fn)(unsigned char);
 
+//
+// How an effect's wet and dry get mixed together.
+//
+// Linear is right when the wet signal is a filtered version of the dry
+// and the two stay correlated - amplitudes add, so half of each gives
+// you back what you started with.  Almost everything here is like that.
+//
+// Equal power is right when they aren't correlated: a modulated delay,
+// an echo tail, a reverb.  There the *powers* add rather than the
+// amplitudes, and a linear mix leaves a 3dB hole in the middle of the
+// sweep.  sin^2 + cos^2 == 1 fills it.
+//
+// Getting this backwards costs 3dB either way, so it is per effect
+// rather than one law for all of them.
+//
+enum mix_law {
+	MIX_LINEAR,
+	MIX_POWER,
+};
+
 struct pot_descr {
 	const char *label;
 	const char *unit;
@@ -37,6 +57,7 @@ struct effect {
 	unsigned int mix, target;
 	unsigned int mix_pot;
 	float def_mix;
+	enum mix_law mix_law;
 	unsigned int seq, last;
 	unsigned char intense, active_pot;
 	unsigned char pot_values[2][10];

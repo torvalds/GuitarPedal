@@ -1,5 +1,6 @@
 // NAME: Pitch [PITCH]
 // PRIORITY: 100
+// MIX: POWER		// shifted, so it decorrelates almost immediately
 // POT: "Octave" LINEAR(-2.0 2.0) = 1.0
 // POT: "Feedback" LINEAR(0.0 1.0) = 0.5
 // DEFAULT_MIX: 0.5

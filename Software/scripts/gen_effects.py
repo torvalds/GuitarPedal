@@ -73,6 +73,10 @@ def generate(audio_dir, out_h, out_js, out_md):
         def_mix_match = re.search(r'//\s*DEFAULT_MIX:\s*(\S+)', content)
         def_mix = float(def_mix_match.group(1)) if def_mix_match else 1.0
 
+        # LINEAR unless the effect says otherwise - see 'enum mix_law'
+        mix_match = re.search(r'//\s*MIX:\s*(LINEAR|POWER)', content)
+        mix_law = mix_match.group(1) if mix_match else 'LINEAR'
+
         pots = []
         # Match: // POT: "Name" CURVE(a b c) = 1.0 Unit
         pot_lines = re.findall(r'//[ \t]*POT:[ \t]*"([^"]+)"[ \t]+(LINEAR|FREQUENCY|SQUARED|EXPONENTIAL|RAW|ENUM)(?:\(([^)]+)\))?(?:[ \t]*=[ \t]*(\S+))?(?:[ \t]+(\S+))?[ \t]*\n?', content)
@@ -108,6 +112,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             'short_name': short_name,
             'priority': priority,
             'def_mix': def_mix,
+            'mix_law': mix_law,
             'pots': pots,
             'header_path': header_path
         })
@@ -158,6 +163,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             "name": e_data['full_name'],
             "shortName": e_data['short_name'],
             "defMix": e_data['def_mix'],
+            "mixLaw": e_data['mix_law'],
             "pots": ui_pots
         })
 
@@ -211,6 +217,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             f.write(f"\t.name = \"{e_data['full_name']}\",\n")
             f.write(f"\t.short_name = \"{e_data['short_name']}\",\n")
             f.write(f"\t.def_mix = {e_data['def_mix']}f,\n")
+            f.write(f"\t.mix_law = MIX_{e_data['mix_law']},\n")
             f.write(f"\t.init = {base}_init,\n")
             f.write(f"\t.step = {base}_step,\n")
             f.write(f"\t.pots = {{\n")
