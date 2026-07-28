@@ -1821,23 +1821,6 @@ appTitleEl.addEventListener('click', () => {
         if (backdrop) backdrop.classList.remove('hidden');
     }
 
-    const globalResetBtn = document.getElementById('global-reset-btn');
-    if (globalResetBtn) {
-        globalResetBtn.addEventListener('click', () => {
-            if (!midiOutput) {
-                showButtonError(globalResetBtn, 'Not Connected');
-                return;
-            }
-            sendMidiCc(GLOBAL_ENABLE_CC, 64);
-            setTimeout(() => {
-                sendMidiCc(GLOBAL_ENABLE_CC, 127);
-                sendSysex([SYSEX_CMD.REQ_SCHEMA]);
-                sendSysex([SYSEX_CMD.DIAGNOSTIC]); // Check status after reset
-            }, 100);
-            showButtonSuccess(globalResetBtn, 'Reset Complete');
-        });
-    }
-
     const globalUnrouteBtn = document.getElementById('global-unroute-btn');
     if (globalUnrouteBtn) {
         globalUnrouteBtn.addEventListener('click', () => {
