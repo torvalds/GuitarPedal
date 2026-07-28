@@ -235,9 +235,13 @@ function updateMidiState() {
 //
 const IS_LOCAL_DEV = ['localhost', '127.0.0.1', '::1', ''].includes(location.hostname);
 
+// Colours the title amber rather than green - see style.css. The tooltip
+// is set here rather than in the markup so the deployed copy doesn't
+// carry an explanation of something it doesn't do.
 if (IS_LOCAL_DEV) {
-    const devBadge = document.getElementById('dev-badge');
-    if (devBadge) devBadge.classList.remove('hidden');
+    document.body.classList.add('local-dev');
+    if (appTitleEl)
+        appTitleEl.title = 'Served locally — confirmations for destructive actions are skipped';
 }
 
 const updateAppBtn = document.getElementById('update-app-btn');
