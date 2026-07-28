@@ -226,9 +226,19 @@ static __attribute__((noinline)) void __audio_func(make_one_noise)(void)
 		unsigned seq = smp_load_acquire(&effect->seq);
 		if (seq == effect->last)
 			continue;
+
+		//
+		// An effect that isn't running doesn't need its
+		// coefficients recomputed - but don't mark the update as
+		// consumed either, or it just gets lost.  'target' is
+		// already set by the time an effect is routed back in, so
+		// this picks the change up before it can be heard.
+		//
+		if (!effect->mix && !effect->target)
+			continue;
+
 		effect->last = seq;
-		if (effect->mix)
-			effect->init(effect->pot_values[seq & 1]);
+		effect->init(effect->pot_values[seq & 1]);
 	}
 
 	static int disable = 0;
