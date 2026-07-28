@@ -797,14 +797,19 @@ function dragScrollTick() {
     dragScrollRaf = requestAnimationFrame(dragScrollTick);
 }
 
-function cardDragStart(card, handle, e) {
+function cardDragStart(card, grip, e) {
     if (!e.isPrimary || cardDrag)
+        return;
+
+    // The header carries controls of its own. A press that lands on one
+    // of those belongs to it, not to a drag.
+    if (e.target.closest('.collapse-chevron, .action-btn'))
         return;
 
     //
     // Capture stops the browser reinterpreting the gesture - a touch
-    // that wanders off the handle would otherwise become a scroll - but
-    // don't rely on it lasting.  Repositioning the card moves the handle
+    // that wanders off the header would otherwise become a scroll - but
+    // don't rely on it lasting.  Repositioning the card moves the header
     // along with it, and moving the element that holds a capture
     // releases the capture, after which pointerup goes to whatever is
     // under the pointer instead of to us.
@@ -813,12 +818,18 @@ function cardDragStart(card, handle, e) {
     // window for ours.
     //
     try {
-        handle.setPointerCapture(e.pointerId);
+        grip.setPointerCapture(e.pointerId);
     } catch (err) {
         /* not fatal, the window listeners are what matter */
     }
 
-    cardDrag = { card, handle, id: e.pointerId, gap: null,
+    // Suppress selection from the press, not from the drag. Waiting for
+    // the threshold is too late - a phone has put the selection UI up
+    // by then. The header itself is user-select: none in the stylesheet;
+    // this covers everything the pointer travels over afterwards.
+    document.body.style.userSelect = 'none';
+
+    cardDrag = { card, grip, id: e.pointerId, gap: null,
                  startY: e.clientY, x: e.clientX, y: e.clientY, moved: false };
 
     window.addEventListener('pointermove', cardDragMove);
@@ -838,7 +849,6 @@ function cardDragMove(e) {
         if (Math.abs(e.clientY - cardDrag.startY) < DRAG_THRESHOLD)
             return;
         cardDrag.moved = true;
-        document.body.style.userSelect = 'none';
         dragLift();
         if (!dragScrollRaf)
             dragScrollRaf = requestAnimationFrame(dragScrollTick);
@@ -1090,21 +1100,19 @@ function renderUI() {
 
         // Settings effect cannot be reordered or collapsed (maybe collapsed is fine, but no drag)
         if (effect.name !== "Settings" && effect.name !== "Noise Gate") {
-            title.innerHTML = `<span class="drag-handle" style="cursor: grab; margin-right: 12px; font-size: 1.4em; opacity: 0.7;">≡</span>
+            title.innerHTML = `<span class="drag-handle">≡</span>
                                <span class="collapse-chevron" style="cursor: pointer; margin-right: 8px; font-size: 0.8em; transition: transform 0.2s;">▼</span>
                                <span>${effect.name}</span>`;
 
-            // A drag starts on the handle and nowhere else, so there is
+            // A drag starts on the header and nowhere else, so there is
             // never any question of whether you meant the card or the
-            // slider you happen to be over.
-            const dragHandle = title.querySelector('.drag-handle');
-            if (dragHandle) {
-                // Without this the browser claims the gesture for
-                // scrolling and we never see the moves.
-                dragHandle.style.touchAction = 'none';
-                dragHandle.addEventListener('pointerdown',
-                                            (e) => cardDragStart(card, dragHandle, e));
-            }
+            // slider you happen to be over - and the header is big
+            // enough to hit with a thumb, which the handle was not.
+            // The controls that sit in the header keep their own
+            // presses; cardDragStart() steps out of the way for them.
+            header.classList.add('draggable');
+            header.addEventListener('pointerdown',
+                                    (e) => cardDragStart(card, header, e));
         } else {
             title.innerHTML = `<span class="collapse-chevron" style="cursor: pointer; margin-right: 8px; font-size: 0.8em; transition: transform 0.2s;">▼</span>
                                <span>${effect.name}</span>`;

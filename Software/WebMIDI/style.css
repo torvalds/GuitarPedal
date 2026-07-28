@@ -312,7 +312,38 @@ input[type=range]:focus::-moz-range-thumb {
   align-items: center;
   border-bottom: 1px solid var(--panel-border);
   padding-bottom: 10px;
-  cursor: pointer;
+  /*
+   * The header is what you grab to reorder, so none of it may behave
+   * like text.  A long press on text is the browser's select gesture,
+   * which on a phone is what you got instead of a drag, and iOS puts
+   * its callout menu up on top of that.  This has to be here rather
+   * than switched on once a drag is recognised: by then the selection
+   * has already started.
+   */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/*
+ * Dragging grabs the whole header rather than the handle glyph alone,
+ * which makes the target finger-sized by construction rather than by
+ * padding out a ~20px character to the ~44px a thumb wants.  The
+ * handle stays as the affordance that says the header can be grabbed.
+ *
+ * touch-action has to be on whatever the touch lands on: the browser
+ * decides whether a gesture may pan when it begins, from the element
+ * hit and its ancestors.
+ */
+.effect-header.draggable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.drag-handle {
+  margin-right: 12px;
+  font-size: 1.4em;
+  opacity: 0.7;
 }
 
 .effect-title {
