@@ -533,7 +533,17 @@ input[type=range].eq-range {
   z-index: 1000;
   top: calc(100% + 8px);
   right: 0;
+  /*
+   * Sized to whatever the longest item happens to be, rather than to a
+   * number that was right until someone added a word.  "Reboot to
+   * Programming Mode" wrapped at 260px, and the scene items change
+   * width as you pick different scenes, so nothing here has a length
+   * worth hard-coding.  The floor keeps a short menu from looking
+   * mean; the ceiling keeps a long one on the screen.
+   */
+  width: max-content;
   min-width: 260px;
+  max-width: calc(100vw - 32px);
   padding: 6px;
   background: rgba(20, 23, 29, 0.98);
   border: 1px solid var(--panel-border);
@@ -560,6 +570,7 @@ input[type=range].eq-range {
   cursor: pointer;
   font: inherit;
   font-size: 0.98rem;
+  white-space: nowrap;
 }
 
 .menu-dropdown button:hover {
