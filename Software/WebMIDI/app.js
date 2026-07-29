@@ -473,49 +473,12 @@ function handleMidiMessage(event) {
         const val = data2;
 
         if (cc === GLOBAL_ENABLE_CC) {
-            if (val === 68) {
-                isTunerMode = true;
+            if (val === 68 || val === 69) {
+                isTunerMode = (val === 68);
                 updateTunerModeUI();
-            } else if (val === 69) {
-                isTunerMode = false;
-                updateTunerModeUI();
-            } else if (val === 64 || val === 65 || val === 66 || val === 67 || val === 126) {
-                if (val === 67) {
-                    isGlobalEnabled = false;
-                    globalEnableEl.checked = false;
-                }
             } else {
                 isGlobalEnabled = (val > 0);
                 globalEnableEl.checked = isGlobalEnabled;
-            }
-        } else {
-            // It's a pot or an effect enable
-            const el = ccToElementMap.get(cc);
-            if (el) {
-                if (el.type === 'checkbox') {
-                    el.checked = (val > 0);
-                } else if (el.tagName === 'SELECT') {
-                    el.value = val;
-                } else if (el.type === 'range') {
-                    el.value = val;
-                    // Update display value if any
-                    const valDisplay = el.parentElement.querySelector('.pot-value');
-                    if (valDisplay && el.potDef) {
-                        valDisplay.textContent = formatPotValue(el.potDef, val);
-                    }
-                    // If it has a redraw callback (like EQ), trigger it
-                    if (el.redrawCurve) {
-                        el.redrawCurve();
-                    }
-
-                    // Update active pot panel if it is the currently active one
-                    if (cc === activePotCc && activePotDef) {
-                        const activeSlider = document.getElementById('active-pot-slider');
-                        if (activeSlider) activeSlider.value = val;
-                        const activeValue = document.getElementById('active-pot-value');
-                        if (activeValue) activeValue.textContent = formatPotValue(activePotDef, val);
-                    }
-                }
             }
         }
     } else if ((status & 0xF0) === 0x90) { // Note On
