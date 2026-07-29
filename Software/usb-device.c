@@ -549,30 +549,45 @@ sample_t __audio_func(get_usb_audio_input)(void)
 	return (sample_t) { 0, 0 };
 }
 
-bool in_tud_task = false;
-
-void tud_midi_rx_cb(uint8_t itf)
+//
+// Incoming MIDI is handled from the main loop, not from a callback.
+//
+// There is no tud_midi_rx_cb() here on purpose.  That callback runs
+// inside tud_task(), and tud_task() is exactly what usb_midi_write()
+// spins on when the transmit fifo is full - so handling a message
+// there meant an incoming routing change or parameter write could land
+// in the middle of any main-loop code that was part-way through
+// sending something and reading state as it went.  A state dump walking
+// effects[] was the worst of it, but every sender had the same hole.
+//
+// So nothing asynchronous, apart from the audio core: packets queue up
+// and the main loop deals with them, one at a time, in order.
+//
+// The queue is tinyusb's own rx fifo, which is what tud_midi_rx_cb()
+// was only ever a notification about.  Leaving packets in it costs
+// nothing and gets the flow control for free: when it fills, tinyusb
+// stops accepting from the endpoint and the host waits.  Nothing is
+// dropped, which matters most for SysEx, where losing one packet of a
+// stream corrupts the whole message rather than one value.
+//
+void usb_midi_poll(void)
 {
-	(void)itf;
 	uint8_t packet[4];
-	in_tud_task = true;
+
 	while (tud_midi_packet_read(packet)) {
 		// MIDI Thru: Echo to hardware UART if not for us
 		if (!handle_midi_packet(packet))
 			uart_midi_write(packet);
 	}
-	in_tud_task = false;
 }
 
 void usb_midi_write(const uint8_t packet[4])
 {
-	if (tud_midi_mounted()) {
-		if (in_tud_task) {
-			tud_midi_packet_write(packet);
-		} else {
-			while (!tud_midi_packet_write(packet)) {
-				tud_task();
-			}
-		}
-	}
+	if (!tud_midi_mounted())
+		return;
+
+	// Nothing calls this from inside tud_task() any more, so the
+	// spin cannot recurse into it.
+	while (!tud_midi_packet_write(packet))
+		tud_task();
 }

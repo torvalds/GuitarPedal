@@ -15,6 +15,7 @@
 extern int current_midi_effect_idx;
 
 bool handle_midi_packet(const uint8_t packet[4]);
+void usb_midi_poll(void);
 void usb_midi_write(const uint8_t packet[4]);
 void uart_midi_write(const uint8_t packet[4]);
 

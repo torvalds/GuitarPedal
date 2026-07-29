@@ -672,12 +672,19 @@ int main()
 	for (;;) {
 		absolute_time_t now = get_absolute_time();
 
+		//
+		// Everything the outside world asks for is taken in
+		// here, and acted on here, so a sender further down can
+		// never have the state it is reporting changed under it.
+		//
 		tud_task();
+		usb_midi_poll();
+		uart_midi_poll();
+
 		sysex_send_schema();
 		sysex_send_state_dump();
 		sysex_send_status();
 		usb_audio_task();
-		uart_midi_poll();
 
 		// Claim 25Hz screen updates
 		if (now > next_ui_update) {
