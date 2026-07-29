@@ -117,7 +117,6 @@ static void set_led(int pin, bool on, bool intense)
 static void update_ui(void)
 {
 	static int effect_idx = 0;
-	static int last_active_pot = -1;
 
 	struct effect *effect = effects[effect_idx];
 
@@ -140,7 +139,6 @@ static void update_ui(void)
 	if (idx != effect_idx) {
 		effect_idx = idx;
 		effect = effects[idx];
-		last_active_pot = -1; // Force active_pot update on screen switch
 	}
 
 	//
@@ -187,8 +185,4 @@ static void update_ui(void)
 		smp_store_release(&effect->seq, seq + 1);
 	}
 
-	if (effect->active_pot != last_active_pot) {
-		send_midi_cc(MIDI_CC_ACTIVE_POT, effect->active_pot);
-		last_active_pot = effect->active_pot;
-	}
 }

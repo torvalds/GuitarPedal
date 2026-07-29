@@ -531,10 +531,6 @@ bool handle_midi_packet(const uint8_t packet[4])
 			}
 		} else if (data1 == 7) { // Volume
 			// Not yet wired globally
-		} else if (data1 == MIDI_CC_ACTIVE_POT) {
-			if (current_midi_effect_idx < ARRAY_SIZE(effects)) {
-				effects[current_midi_effect_idx]->active_pot = data2;
-			}
 		}
 	} else if ((status & 0xF0) == 0xC0) {
 		handled = true;

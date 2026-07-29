@@ -2,11 +2,14 @@
 // MIDI connection code
 //
 
+//
 // MIDI Control Change (CC) constants
-#define MIDI_CC_POT_START        10 // CC 10-19 map to pots 0-9
+//
+// Deep editing is SysEx - it names the effect and the pot explicitly, so
+// nothing here needs to know about parameters.  What is left is
+// performance control coming in and status going out.
+//
 #define MIDI_CC_GLOBAL_ENABLE    20
-#define MIDI_CC_EFFECT_ENABLE    21
-#define MIDI_CC_ACTIVE_POT       22
 
 #define MIDI_CC_EFFECT_INTENSE   30
 #define MIDI_CC_AUDIO_CLIPPING   31
