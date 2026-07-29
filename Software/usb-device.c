@@ -581,13 +581,35 @@ void usb_midi_poll(void)
 	}
 }
 
-void usb_midi_write(const uint8_t packet[4])
+//
+// How long to wait for the host to make room, per packet.
+//
+// tud_midi_mounted() only says the interface is enumerated.  It says
+// nothing about whether anything is reading MIDI IN, and a host that
+// enumerates and then never reads used to hang core 0 outright - audio
+// carried on over on core 1, while the UI, the eeprom writes, USB audio
+// and the UART all stopped for good.
+//
+// A host that is reading drains every USB frame, so waiting is normally
+// a matter of a frame or two.  This is meant to be far beyond that and
+// still short enough that a dead host costs a stutter rather than the
+// pedal.
+//
+#define MIDI_TX_TIMEOUT_MS 20
+
+bool usb_midi_write(const uint8_t packet[4])
 {
 	if (!tud_midi_mounted())
-		return;
+		return false;
+
+	absolute_time_t deadline = make_timeout_time_ms(MIDI_TX_TIMEOUT_MS);
 
 	// Nothing calls this from inside tud_task() any more, so the
 	// spin cannot recurse into it.
-	while (!tud_midi_packet_write(packet))
+	while (!tud_midi_packet_write(packet)) {
+		if (time_reached(deadline))
+			return false;
 		tud_task();
+	}
+	return true;
 }

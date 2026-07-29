@@ -242,14 +242,43 @@ int current_midi_effect_idx = 0;
 
 #include "midi_schema.h"
 
-extern void usb_midi_write(const uint8_t packet[4]);
+extern bool usb_midi_write(const uint8_t packet[4]);
 
 static uint8_t sysex_pack_buf[3];
 static int sysex_pack_len = 0;
 static bool sysex_pack_active = false;
 
+//
+// A SysEx message is many packets, and a transmit that gives up part-way
+// through one would leave the rest of it stranded.  So the first failure
+// abandons the whole message: every later write in it turns into a
+// no-op, and no 0xF7 goes out.
+//
+// Abandoning is better than truncating.  Web MIDI only delivers SysEx
+// messages that were terminated, so a message that never ends is one the
+// app simply never sees, and it can ask again.  A truncated message with
+// an 0xF7 stuck on the end would arrive looking complete and be parsed
+// as garbage - half a JSON schema, say.
+//
+static bool sysex_tx_failed = false;
+
+static void sysex_tx_start(void)
+{
+	sysex_tx_failed = false;
+	sysex_pack_active = false;
+	sysex_pack_len = 0;
+}
+
+static void sysex_tx_finish(const char *sent)
+{
+	report_info(sysex_tx_failed ? "MIDI transmit stalled, message dropped" : sent);
+}
+
 static void sysex_stream_write(const uint8_t *buffer, size_t len)
 {
+	if (sysex_tx_failed)
+		return;
+
 	for (size_t i = 0; i < len; i++) {
 		uint8_t b = buffer[i];
 		if (b == 0xF0) {
@@ -261,13 +290,20 @@ static void sysex_stream_write(const uint8_t *buffer, size_t len)
 			if (b == 0xF7) {
 				uint8_t packet[4] = { (uint8_t)(0x04 + sysex_pack_len), 0, 0, 0 };
 				for (int j = 0; j < sysex_pack_len; j++) packet[1+j] = sysex_pack_buf[j];
-				usb_midi_write(packet);
 				sysex_pack_active = false;
 				sysex_pack_len = 0;
+				if (!usb_midi_write(packet)) {
+					sysex_tx_failed = true;
+					return;
+				}
 			} else if (sysex_pack_len == 3) {
 				uint8_t packet[4] = { 0x04, sysex_pack_buf[0], sysex_pack_buf[1], sysex_pack_buf[2] };
-				usb_midi_write(packet);
 				sysex_pack_len = 0;
+				if (!usb_midi_write(packet)) {
+					sysex_tx_failed = true;
+					sysex_pack_active = false;
+					return;
+				}
 			}
 		}
 	}
@@ -283,11 +319,11 @@ static void sysex_send_schema(void)
 	static const uint8_t sysex_schema_header[] = { 0xF0, 0x7D, 0x02 };
 	static const uint8_t sysex_schema_trailer[] = { 0xF7 };
 
+	sysex_tx_start();
 	sysex_stream_write(sysex_schema_header, sizeof(sysex_schema_header));
 	sysex_stream_write((const uint8_t *)midi_schema_json, strlen(midi_schema_json));
 	sysex_stream_write(sysex_schema_trailer, sizeof(sysex_schema_trailer));
-
-	report_info("Sent schema information");
+	sysex_tx_finish("Sent schema information");
 }
 
 bool send_status_tx = false;
@@ -304,9 +340,14 @@ static void sysex_send_status(void)
 	if (!status)
 		return;
 
+	sysex_tx_start();
 	sysex_stream_write(sysex_status_header, sizeof(sysex_status_header));
 	sysex_stream_write((const uint8_t *)status, strlen(status));
 	sysex_stream_write(sysex_status_trailer, sizeof(sysex_status_trailer));
+
+	// Not sysex_tx_finish(): reporting a failed status report as a
+	// status report is how you get an endless conversation with
+	// yourself.  The next one will go out or it won't.
 }
 
 static void sysex_send_pot_value(int eff, int pot, int value)
@@ -325,10 +366,22 @@ static void sysex_send_state_dump(void)
 		return;
 	state_dump_tx = false;
 
-	// Send the global enable state
+	// Send the global enable state.  A plain CC rather than SysEx,
+	// and if it will not go then nobody is reading and there is no
+	// point starting on the rest.
 	report_info("Sending global-enable state");
 	uint8_t cc_packet[4] = { 0x0B, 0xB0, MIDI_CC_GLOBAL_ENABLE, disable_all ? 0 : 127 };
-	usb_midi_write(cc_packet);
+	if (!usb_midi_write(cc_packet))
+		return;
+
+	//
+	// One give-up flag for the whole dump rather than one per
+	// message.  It is a couple of hundred messages, so retrying each
+	// in turn against a host that has stopped reading would block
+	// core 0 for the timeout times the message count - seconds.
+	// Once it is set every write below quietly does nothing.
+	//
+	sysex_tx_start();
 
 	// Then send the effect states
 	report_info("Sending effect pot state");
@@ -355,7 +408,7 @@ static void sysex_send_state_dump(void)
 	sysex_stream_write(effect_chain, routed_effect_count);
 	sysex_stream_write(sysex_routing_trailer, sizeof(sysex_routing_trailer));
 
-	report_info("Sent state dump");
+	sysex_tx_finish("Sent state dump");
 }
 
 static uint8_t sysex_buf[32];
