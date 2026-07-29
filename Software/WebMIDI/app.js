@@ -518,16 +518,6 @@ function handleMidiMessage(event) {
                 }
             }
         }
-    } else if ((status & 0xF0) === 0xC0) {
-        // Program Change (Active Effect)
-        // Scroll to the active effect!
-        const effectIdx = data1;
-        if (effectIdx >= 0 && effectIdx < PEDAL_EFFECTS.length) {
-            const effectCard = document.getElementById(`effect-${effectIdx}`);
-            if (effectCard) {
-                effectCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }
     } else if ((status & 0xF0) === 0x90) { // Note On
         const ch = status & 0x0F;
         const note = data1;

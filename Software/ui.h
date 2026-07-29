@@ -128,16 +128,19 @@ static void update_ui(void)
 		send_midi_cc(MIDI_CC_GLOBAL_ENABLE, disable_all ? 0 : 127);
 	}
 
-	// Which effect is being edited is decided over MIDI now that the
-	// encoder that used to do it is gone.
+	//
+	// Which effect the pedal itself is editing.  Nothing sets this
+	// yet: the encoder that used to pick the effect is gone, and
+	// what replaces it is bound up with making the stomp switch and
+	// the rotary programmable.  So this is the hook for that, and
+	// today it stays on effect 0.
+	//
 	int idx = current_midi_effect_idx;
 
 	if (idx != effect_idx) {
 		effect_idx = idx;
 		effect = effects[idx];
 		last_active_pot = -1; // Force active_pot update on screen switch
-
-		send_midi_pc(effect_idx);
 	}
 
 	//

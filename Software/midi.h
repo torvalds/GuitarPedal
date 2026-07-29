@@ -97,13 +97,6 @@ static inline void send_sysex_set_param(uint8_t eff_id, uint8_t pot_idx, uint8_t
 	usb_midi_write(p3);
 }
 
-static inline void send_midi_pc(uint8_t pc)
-{
-	uint8_t packet[4] = { 0x0C, 0xC0, pc, 0 };
-	usb_midi_write(packet);
-	uart_midi_write(packet);
-}
-
 static inline void send_midi_note_on(uint8_t ch, uint8_t note, uint8_t vel)
 {
 	uint8_t packet[4] = { 0x09, 0x90 | (ch & 0x0F), note, vel };
