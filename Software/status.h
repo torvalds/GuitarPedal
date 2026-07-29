@@ -1,7 +1,7 @@
 #ifndef STATUS_H
 #define STATUS_H
 
-const char *current_status = "Booting";
+static const char *current_status = "Booting";
 
 static inline void report_status(const char *msg)
 {
