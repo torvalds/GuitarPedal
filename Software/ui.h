@@ -102,9 +102,36 @@ static int led_pwm_mapping(float pwm)
 	return lrintf(pwm * sqrtf(pwm) * PWM_WRAP);
 }
 
-static void set_led(int pin, bool on, bool intense)
+//
+// Drive the one LED from the same status the host is given.
+//
+// It takes the bits rather than a single 'intense' flag it could have
+// been handed instead, and that is the whole point of the shape.  This
+// LED is a WS2812B on the next board, with colours to spend on telling a
+// closed gate from a dropped sample, and this is the function that will
+// spend them.  Giving it everything now means that change is local to
+// here rather than a new argument list and a new caller.
+//
+// What it can say today is bright or not, so:
+//
+//  - faults always count.  Clipping and a missed deadline are wrong
+//    whatever else is going on.
+//
+//  - effect activity counts only while the pedal is in circuit.  The
+//    chain still runs when bypassed - make_one_noise() keeps stepping it
+//    and crossfades the result away - so the compressor goes on
+//    compressing into an output nobody hears, and that is not news.
+//
+//  - the attention preview counts because it *is* the thing being set;
+//    see status.h.
+//
+static void set_led(int pin, bool on, uint8_t global, unsigned int chain)
 {
+	bool fault = global & (STATUS_DROPPED_MASK | STATUS_CLIPPED);
+	bool activity = (global & STATUS_FRONT_ATTN) || chain;
+	bool intense = fault || attention_preview || (on && activity);
 	int level = 0;
+
 	if (on || intense) {
 		float pwm = intense ? settings.led_intense : settings.led_pwm;
 		level = led_pwm_mapping(pwm);
@@ -134,26 +161,29 @@ _Static_assert(MAX_ROUTED_EFFECTS <= 2 * STATUS_CHAIN_BITS,
 #define STATUS_REPEAT_TICKS 8
 
 //
-// Tell the host what the one LED can only hint at.  See midi.h for what
+// Work out what the pedal is doing, and say so - to the LED and to the
+// host, which are two renderings of the one answer.  See midi.h for what
 // goes in which bit.
+//
+// Both go out from here rather than the LED being driven separately,
+// because the two used to disagree: the LED knew about clipping and lost
+// samples while the effects' own activity went nowhere at all, having
+// been aimed at a second LED that the current board does not have.
 //
 // Clearing 'intense' for every effect rather than just the one being
 // edited is what makes the chain bits mean anything.  The audio core
 // sets them at 48kHz and this is the only thing that ever puts them
 // back, so an effect that has stopped asking for attention would
 // otherwise stay lit for good - which is exactly what boost, compressor
-// and echo have been doing, unnoticed, because nothing read them.
+// and echo had been doing, unnoticed, because nothing read them.
 //
-// Draining 'samples_dropped' here is also why this has to come after
-// set_led(): that reads it, and this is what clears it.
-//
-static void send_status(void)
+static void show_status(void)
 {
 	unsigned int dropped = __atomic_exchange_n(&samples_dropped, 0,
 						   __ATOMIC_RELAXED);
 	uint8_t global = dropped > STATUS_DROPPED_MASK
 		       ? STATUS_DROPPED_MASK : dropped;
-	uint8_t chain[2] = { 0, 0 };
+	unsigned int attn = 0;
 
 	if (output_clipped)
 		global |= STATUS_CLIPPED;
@@ -162,8 +192,14 @@ static void send_status(void)
 
 	for (int i = 0; i < routed_effect_count; i++) {
 		if (effects[effect_chain[i]]->intense)
-			chain[i / STATUS_CHAIN_BITS] |= 1u << (i % STATUS_CHAIN_BITS);
+			attn |= 1u << i;
 	}
+
+	set_led(LED_GPIO, !disable_all, global, attn);
+
+	// A CC value is seven bits, so the chain needs two of them
+	uint8_t chain[2] = { attn & ((1u << STATUS_CHAIN_BITS) - 1),
+			     attn >> STATUS_CHAIN_BITS };
 
 	static uint8_t last_global = 0;
 	static uint8_t last_chain[2] = { 0, 0 };
@@ -217,18 +253,7 @@ static void update_ui(void)
 		effect = effects[idx];
 	}
 
-	//
-	// One LED: lit while the pedal is passing effects, bright when
-	// something wants your attention.  See status.h for why all three
-	// of those share the one brightness.
-	//
-	// 'samples_dropped' is still set at this point - send_status()
-	// below is what drains it, and it reports the count.
-	//
-	set_led(LED_GPIO, !disable_all,
-		output_clipped || samples_dropped || attention_preview);
-
-	send_status();
+	show_status();
 
 	if (attention_preview)
 		attention_preview--;

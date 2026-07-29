@@ -19,12 +19,17 @@ static inline void report_info(const char *msg)
 }
 
 //
-// Three things want the one LED's attention, and they get it.
+// Things that want the one LED's attention, and get it.
 //
 // 'output_clipped' is the output hitting full scale.  'samples_dropped'
 // is the audio core missing the DMA deadline.  'attention_preview' is you turning
 // the attention brightness up in the settings, where the only way to
 // see what you are setting is for the LED to do it.
+//
+// The effects' own 'intense' flags are the fourth, and reach the LED
+// through show_status() rather than from here - see ui.h.  They used to
+// go to a second LED that this board does not have, so a closed gate or
+// a compressor working was invisible by any means.
 //
 // They are deliberately not told apart on the LED, and that is not the
 // compromise it looks like.  The two failures sound completely
