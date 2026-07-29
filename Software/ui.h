@@ -117,11 +117,25 @@ _Static_assert(MAX_ROUTED_EFFECTS <= 2 * STATUS_CHAIN_BITS,
 	"a chain this long needs a third status CC");
 
 //
+// How often to say it again when nothing has changed.
+//
+// On change alone is not enough, for two reasons that have nothing to do
+// with each other.  usb_midi_write() is best-effort and gives up after
+// 20ms, so a report can simply be dropped - and a host that missed the
+// one message would go on believing the old answer forever, because from
+// here nothing has changed since.  And an app that connects while
+// something is already wrong never gets told at all, for the same
+// reason: it wasn't listening when it changed.
+//
+// Repeating every eighth tick is about nine messages a second, which is
+// nothing next to a SysEx state dump, and makes both cases correct
+// themselves within a third of a second.
+//
+#define STATUS_REPEAT_TICKS 8
+
+//
 // Tell the host what the one LED can only hint at.  See midi.h for what
 // goes in which bit.
-//
-// Only on change, which at this rate means a steady state costs nothing
-// and anything new is on screen within 40ms.
 //
 // Clearing 'intense' for every effect rather than just the one being
 // edited is what makes the chain bits mean anything.  The audio core
@@ -153,16 +167,19 @@ static void send_status(void)
 
 	static uint8_t last_global = 0;
 	static uint8_t last_chain[2] = { 0, 0 };
+	static unsigned int tick;
 
-	if (global != last_global) {
+	bool again = (tick++ % STATUS_REPEAT_TICKS) == 0;
+
+	if (again || global != last_global) {
 		send_midi_cc(MIDI_CC_STATUS_GLOBAL, global);
 		last_global = global;
 	}
-	if (chain[0] != last_chain[0]) {
+	if (again || chain[0] != last_chain[0]) {
 		send_midi_cc(MIDI_CC_STATUS_CHAIN_LO, chain[0]);
 		last_chain[0] = chain[0];
 	}
-	if (chain[1] != last_chain[1]) {
+	if (again || chain[1] != last_chain[1]) {
 		send_midi_cc(MIDI_CC_STATUS_CHAIN_HI, chain[1]);
 		last_chain[1] = chain[1];
 	}

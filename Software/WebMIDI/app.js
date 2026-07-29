@@ -295,6 +295,9 @@ function updateMidiState() {
         midiOutput = null;
         appTitleEl.className = "title-disconnected";
         appTitleEl.textContent = "RP2350 Pedal";
+
+        // Nothing is going to tell us it stopped, so stop saying it
+        clearPedalStatus();
     }
 }
 
@@ -480,6 +483,15 @@ function handleMidiMessage(event) {
                 isGlobalEnabled = (val > 0);
                 globalEnableEl.checked = isGlobalEnabled;
             }
+        } else if (cc === STATUS_GLOBAL_CC) {
+            handleGlobalStatus(val);
+        } else if (cc === STATUS_CHAIN_LO_CC) {
+            statusChainBits = (statusChainBits & ~((1 << STATUS_CHAIN_BITS) - 1)) | val;
+            renderAttention();
+        } else if (cc === STATUS_CHAIN_HI_CC) {
+            statusChainBits = (statusChainBits & ((1 << STATUS_CHAIN_BITS) - 1)) |
+                              (val << STATUS_CHAIN_BITS);
+            renderAttention();
         }
     } else if ((status & 0xF0) === 0x90) { // Note On
         const ch = status & 0x0F;
@@ -952,6 +964,131 @@ function cardDragEnd(e) {
 let currentRouting = [];
 
 //
+// What the pedal says it is doing.  See MIDI_CC_MAP.md for the wire
+// format; effects.js has the numbers, taken from the firmware's midi.h.
+//
+// Attention is kept as the raw bits rather than applied as they arrive,
+// because two CCs contribute to one picture: the chain pair covers the
+// routed effects by position, and one bit of the global CC covers the
+// Signal Chain, which is not in the chain to have a position. Re-render
+// from both whenever either moves, or whenever the routing does.
+//
+let statusChainBits = 0;
+let statusFrontAttn = false;
+
+//
+// Faults are shown for as long as the pedal says so - but never for less
+// than this.
+//
+// The floor is on how long it stays up, not on how long we believe it,
+// and the difference is the whole thing.  The pedal reports state, on
+// change and then periodically; a condition that persists is one message
+// and then the same message again.  A timer that expired would hide a
+// clip that is still happening and then wait forever for a change that
+// has no reason to come - which is exactly what it did.
+//
+// The floor exists because the other extreme is just as invisible: one
+// clipped sample sets the bit for a single 40ms tick and clears it again,
+// and nobody sees 40ms.
+//
+const STATUS_MIN_MS = 900;
+
+const clipFault = { id: 'status-clip', on: false, since: 0, timer: null };
+const dropFault = { id: 'status-drop', on: false, since: 0, timer: null };
+
+function paintFaults() {
+    for (const f of [clipFault, dropFault])
+        document.getElementById(f.id).classList.toggle('hidden', !f.on);
+
+    // The wrapper goes with them, so an idle header has nothing in it
+    document.getElementById('pedal-status')
+            .classList.toggle('hidden', !(clipFault.on || dropFault.on));
+}
+
+function setFault(f, on) {
+    if (on) {
+        // Still happening: cancel any pending hide and restart the floor
+        clearTimeout(f.timer);
+        f.timer = null;
+        f.on = true;
+        f.since = Date.now();
+        paintFaults();
+        return;
+    }
+
+    if (!f.on || f.timer)
+        return;
+
+    const left = STATUS_MIN_MS - (Date.now() - f.since);
+    if (left <= 0) {
+        f.on = false;
+        paintFaults();
+    } else {
+        f.timer = setTimeout(() => {
+            f.timer = null;
+            f.on = false;
+            paintFaults();
+        }, left);
+    }
+}
+
+function renderAttention() {
+    const lit = new Set();
+
+    if (statusFrontAttn) {
+        const front = PEDAL_EFFECTS.find(e => e.base === 'signal_chain');
+        if (front) lit.add(front.id);
+    }
+    currentRouting.forEach((effectId, pos) => {
+        if ((statusChainBits >> pos) & 1) lit.add(effectId);
+    });
+
+    // Every card, not just the lit ones - an effect that stops asking,
+    // or that leaves the chain while lit, has to go dark again.
+    PEDAL_EFFECTS.forEach((effect, idx) => {
+        const card = document.getElementById(`effect-${idx}`);
+        if (card) card.classList.toggle('attention', lit.has(effect.id));
+    });
+}
+
+//
+// Forget everything the pedal told us about itself.  A pedal that goes
+// away stops reporting rather than reporting that it is fine, so its last
+// word stays on the screen until somebody clears it.
+//
+function clearPedalStatus() {
+    for (const f of [clipFault, dropFault]) {
+        clearTimeout(f.timer);
+        f.timer = null;
+        f.on = false;
+    }
+    paintFaults();
+
+    statusChainBits = 0;
+    statusFrontAttn = false;
+    renderAttention();
+}
+
+function handleGlobalStatus(val) {
+    const dropped = val & STATUS_DROPPED_MASK;
+
+    statusFrontAttn = (val & STATUS_FRONT_ATTN) !== 0;
+    renderAttention();
+
+    setFault(clipFault, (val & STATUS_CLIPPED) !== 0);
+
+    // Only relabel while there is something to say, so the count doesn't
+    // change under a reading that is still being held up
+    if (dropped) {
+        // Saturated, so say so rather than claiming it was exactly 31
+        document.getElementById(dropFault.id).textContent =
+            dropped === STATUS_DROPPED_MASK ? `DROP ${dropped}+`
+                                            : (dropped > 1 ? `DROP ${dropped}` : 'DROP');
+    }
+    setFault(dropFault, dropped !== 0);
+}
+
+//
 // An effect that isn't routed has no values: it goes back to the
 // defaults from the schema.
 //
@@ -1058,6 +1195,9 @@ function getInitialPotValue(pot) {
 
 function reorderEffectsInDOM(routeIds) {
     currentRouting = routeIds.slice();
+
+    // The chain bits are by position, so what they mean just changed
+    renderAttention();
     const activeRouteIds = new Set(routeIds);
     const cards = Array.from(effectsContainer.children);
     cards.sort((a, b) => {

@@ -14,6 +14,14 @@
     <header class="glass-panel app-header">
       <h1 id="app-title" class="title-disconnected">RP2350 Pedal</h1>
       <div class="header-controls">
+        <!-- Faults only.  This is absent when the pedal is fine, which
+             is nearly always, so it costs no space in the normal case -
+             and it stays off the title, which already carries which copy
+             of the app this is and whether the pedal is answering. -->
+        <div id="pedal-status" class="pedal-status hidden" role="status" aria-live="polite">
+          <span id="status-clip" class="status-clip hidden">CLIP</span>
+          <span id="status-drop" class="status-drop hidden">DROP</span>
+        </div>
         <!-- Which scene you're on is worth seeing without opening
              anything.  Acting on it is not: Save overwrites the eeprom
              and Load throws away what you have, so both sit behind the
