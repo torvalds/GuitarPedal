@@ -791,7 +791,7 @@ function dragInsertionRef(y) {
         // Never let anything land above the anchor effect
         if (el.dataset.effectId !== undefined) {
             const eff = PEDAL_EFFECTS.find(e => e.id === parseInt(el.dataset.effectId));
-            if (eff && eff.name === "Noise Gate")
+            if (eff && eff.base === "signal_chain")
                 continue;
         }
         const r = el.getBoundingClientRect();
@@ -1009,7 +1009,7 @@ function sendUpdatedRouting() {
 
         const id = parseInt(card.dataset.effectId);
         const eff = PEDAL_EFFECTS.find(e => e.id === id);
-        if (eff && eff.name !== 'Settings' && eff.name !== 'Noise Gate') {
+        if (eff && eff.base !== 'settings' && eff.base !== 'signal_chain') {
             routeIds.push(id);
         }
     });
@@ -1069,8 +1069,8 @@ function reorderEffectsInDOM(routeIds) {
             idxA = 998;
         } else {
             const effA = PEDAL_EFFECTS.find(e => e.id === idA);
-            if (effA && effA.name === "Noise Gate") idxA = -2;
-            else if (effA && effA.name === "Settings") idxA = 997;
+            if (effA && effA.base === "signal_chain") idxA = -2;
+            else if (effA && effA.base === "settings") idxA = 997;
             else idxA = routeIds.indexOf(idA) === -1 ? 999 : routeIds.indexOf(idA);
         }
 
@@ -1078,8 +1078,8 @@ function reorderEffectsInDOM(routeIds) {
             idxB = 998;
         } else {
             const effB = PEDAL_EFFECTS.find(e => e.id === idB);
-            if (effB && effB.name === "Noise Gate") idxB = -2;
-            else if (effB && effB.name === "Settings") idxB = 997;
+            if (effB && effB.base === "signal_chain") idxB = -2;
+            else if (effB && effB.base === "settings") idxB = 997;
             else idxB = routeIds.indexOf(idB) === -1 ? 999 : routeIds.indexOf(idB);
         }
 
@@ -1095,7 +1095,7 @@ function reorderEffectsInDOM(routeIds) {
         const id = parseInt(card.dataset.effectId);
         const isRouted = activeRouteIds.has(id);
         const eff = PEDAL_EFFECTS.find(e => e.id === id);
-        const isAlwaysRouted = eff && (eff.name === "Noise Gate" || eff.name === "Settings");
+        const isAlwaysRouted = eff && (eff.base === "signal_chain" || eff.base === "settings");
 
         if (isRouted || isAlwaysRouted) {
             card.classList.remove('unrouted');
@@ -1170,7 +1170,7 @@ function renderUI() {
         title.style.alignItems = 'center';
 
         // Settings effect cannot be reordered or collapsed (maybe collapsed is fine, but no drag)
-        if (effect.name !== "Settings" && effect.name !== "Noise Gate") {
+        if (effect.base !== "settings" && effect.base !== "signal_chain") {
             title.innerHTML = `<span class="drag-handle">≡</span>
                                <span class="collapse-chevron" style="cursor: pointer; margin-right: 8px; font-size: 0.8em; transition: transform 0.2s;">▼</span>
                                <span>${effect.name}</span>`;
@@ -1560,7 +1560,7 @@ function renderUI() {
         }
 
         // Generate Mix slider
-        if (effect.name !== 'Settings' && effect.name !== 'Noise Gate') {
+        if (effect.base !== 'settings' && effect.base !== 'signal_chain') {
             const mixPotDef = { name: 'Mix', curve: 'LINEAR', min: 0, max: 100, unit: '%' };
             const mixDiv = document.createElement('div');
             mixDiv.className = 'pot-control mix-pot-control';

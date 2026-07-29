@@ -1,6 +1,6 @@
 // NAME: Settings [SETTINGS]
 // PRIORITY: 130
-// MIX: CUSTOM		// it isn't an effect, and there is nothing to mix
+// MIX: NONE		// it isn't an effect, and there is nothing to mix
 // POT: "USB L/R Out" ENUM(None Wet Dry Wet/Dry) = Dry
 // POT: "USB L/R In" ENUM(Off Pre-FX Mix) = Off
 // POT: "MIDI Ch" ENUM(Omni Ch1 Ch2 Ch3 Ch4 Ch5 Ch6 Ch7 Ch8 Ch9 Ch10 Ch11 Ch12 Ch13 Ch14 Ch15 Ch16) = Omni
@@ -72,16 +72,15 @@ static void settings_init(unsigned char pot[10])
 //
 // This exists to carry settings, and init() above is the whole of it.
 // It cannot even be routed: ROUTABLE_EFFECTS in blink.c is the bits
-// between the noise gate and this, so neither end can be put in a
+// between the signal chain and this, so neither end can be put in a
 // chain, and this function is unreachable by construction.  Declaring
-// it 'MIX: CUSTOM' says so in the one place a reader will look - the
-// multipliers arrive and are ignored, because a wet/dry blend of a
-// thing that makes no sound has nothing to say.
+// it 'MIX: NONE' says so in the one place a reader will look, and means
+// nothing generates a mixing wrapper for a thing that makes no sound.
 //
 // It also stops init() from having to lie about being enabled to keep
 // itself scheduled.  See make_one_noise().
 //
-static inline sample_t settings_step(sample_t in, float dry, float wet)
+static inline sample_t settings_step(sample_t in)
 {
 	return in;
 }

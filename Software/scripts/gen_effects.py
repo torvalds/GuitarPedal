@@ -78,8 +78,7 @@ def generate(audio_dir, out_h, out_js, out_md):
         # both with a default: how the wet and the dry go together (see
         # 'enum mix_law'), and how much of the signal the effect wants to
         # see - MONO for the left channel only, STEREO for both, or
-        # CUSTOM for an effect that would rather be handed the
-        # multipliers and do the whole thing itself.
+        # NONE for something that is not in the mix at all.
         #
         # Only the uppercase run is taken, so the trailing '// why' that
         # these lines tend to carry stays out of it.
@@ -89,12 +88,12 @@ def generate(audio_dir, out_h, out_js, out_md):
         for word in mix_match.group(1).split() if mix_match else []:
             if word in ('LINEAR', 'POWER'):
                 mix_law = word
-            elif word in ('MONO', 'STEREO', 'CUSTOM'):
+            elif word in ('MONO', 'STEREO', 'NONE'):
                 channels = word
             else:
                 sys.exit(f"gen_effects: {filename}: unknown MIX: option "
                          f"'{word}' (want LINEAR/POWER and "
-                         f"MONO/STEREO/CUSTOM)")
+                         f"MONO/STEREO/NONE)")
 
         pots = []
         # Match: // POT: "Name" CURVE(a b c) = 1.0 Unit
@@ -232,10 +231,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             channels = e_data['channels']
 
             f.write(f"static void __audio_func({base}_init)(unsigned char[10]);\n")
-            if channels == 'CUSTOM':
-                f.write(f"static sample_t __audio_func({base}_step)"
-                        "(sample_t, float, float);\n")
-            elif channels == 'STEREO':
+            if channels in ('STEREO', 'NONE'):
                 f.write(f"static sample_t __audio_func({base}_step)(sample_t);\n")
             else:
                 f.write(f"static float __audio_func({base}_step)(float);\n")
@@ -252,10 +248,11 @@ def generate(audio_dir, out_h, out_js, out_md):
             # This is the only call site of {base}_step(), so it inlines
             # here and the chain is still one indirect call per effect.
             #
-            # CUSTOM gets no wrapper: it asked for the multipliers, so it
-            # is already the shape the chain calls.
-            step = f"{base}_step"
-            if channels != 'CUSTOM':
+            # NONE gets no wrapper and no .step at all - nothing about
+            # the chain's wet and dry describes it, and whoever does call
+            # it calls it by name.
+            step = None
+            if channels != 'NONE':
                 step = f"{base}_mix_step"
                 f.write(f"static sample_t __audio_func({step})"
                         "(sample_t val, float dry, float wet)\n")
@@ -277,9 +274,10 @@ def generate(audio_dir, out_h, out_js, out_md):
             f.write(f"\t.def_mix = {e_data['def_mix']}f,\n")
             f.write(f"\t.mix_law = MIX_{e_data['mix_law']},\n")
             f.write(f"\t.init = {base}_init,\n")
-            f.write(f"\t.step = {step},\n")
-            if channels == 'CUSTOM':
-                f.write("\t.custom_mix = 1,\n")
+            if step:
+                f.write(f"\t.step = {step},\n")
+            else:
+                f.write("\t.no_mix = 1,\n")
             f.write(f"\t.pots = {{\n")
 
             for p_idx, pot in enumerate(e_data['pots']):
@@ -328,6 +326,10 @@ def generate(audio_dir, out_h, out_js, out_md):
         f.write("number that already-flashed firmware knows.\n\n")
 
         f.write("## Control Change, in\n\n")
+        f.write("- **CC 7:** Main volume - the Volume pot of the Signal\n")
+        f.write("  Chain, applied at the end of the chain. 0 is silence;\n")
+        f.write("  above that it is -40dB to +20dB, linear in dB, reaching\n")
+        f.write("  unity two thirds of the way up.\n")
         f.write("- **CC 20:** Global bypass, with three values that mean\n")
         f.write("  something else instead: 68 enters tuner mode, 69 leaves\n")
         f.write("  it, and 126 reboots to the bootloader. 0 bypasses and\n")

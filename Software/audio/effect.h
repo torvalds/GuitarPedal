@@ -73,13 +73,13 @@ struct effect {
 	enum mix_law mix_law;
 
 	//
-	// Set by 'MIX: CUSTOM': this effect was handed the multipliers
-	// and does the combining itself, so the chain's idea of how
-	// much of it you are hearing doesn't describe it.  Which also
-	// means 'not running' doesn't mean anything for it - see
-	// make_one_noise().
+	// Set by 'MIX: NONE': this is not in the wet-and-dry business
+	// at all, and has no 'step' either - whoever runs it calls it
+	// by name.  So the chain's idea of how much of it you are
+	// hearing does not describe it, and neither does its idea of
+	// whether it is running - see make_one_noise().
 	//
-	unsigned char custom_mix;
+	unsigned char no_mix;
 
 	// What the mix law works out to, and where we are on the way
 	// there. Slewed rather than applied straight so that dragging
@@ -227,12 +227,25 @@ static inline void __audio_func(single_sample)(float mix)
 		in.right += usb_in.right;
 	}
 
-	sample_t out = in;
-	out = do_effect_step(effects[0], out); // Gate is always index 0 and runs first
+	//
+	// The signal chain proper: trim and the gate, then whatever is
+	// routed.  Called straight rather than through do_effect_step()
+	// because it is not an effect - see effects/signal_chain.h.
+	//
+	sample_t out = signal_chain_step(in);
 	for (int i = 0; i < routed_effect_count; i++) {
 		out = do_effect_step(effects[effect_chain[i]], out);
 	}
 
+	// ...and the far end of it.  Slewed by signal_chain_step() above.
+	out.left *= signal_chain.volume;
+	out.right *= signal_chain.volume;
+
+	//
+	// Global bypass crossfades to the untouched input, so trim, the
+	// gate and the volume all go away with everything else.  Bypass
+	// means bypass, which does mean it can be a step in level.
+	//
 	out.left = linear(mix, in.left, out.left);
 	out.right = linear(mix, in.right, out.right);
 
@@ -267,15 +280,16 @@ static __attribute__((noinline)) void __audio_func(make_one_noise)(void)
 		// already set by the time an effect is routed back in, so
 		// this picks the change up before it can be heard.
 		//
-		// 'custom_mix' is exempt because "isn't running" is a
+		// 'no_mix' is exempt because "isn't running" is a
 		// statement about the wet/dry fade, and such an effect
-		// isn't part of it.  The settings pseudo-effect is the
-		// case that matters: init() is the entire point of it,
-		// nothing it does is audible, and it used to force
-		// 'target' to a nonzero value from inside init() purely
-		// to keep this test from skipping it next time.
+		// isn't part of it.  Both cases need it: the settings
+		// pseudo-effect is nothing *but* its init(), and used to
+		// force 'target' nonzero from inside init() purely to
+		// keep this test from skipping it next time; and the
+		// signal chain runs unconditionally, so its coefficients
+		// always matter.
 		//
-		if (!effect->custom_mix && !effect->mix && !effect->target)
+		if (!effect->no_mix && !effect->mix && !effect->target)
 			continue;
 
 		effect->last = seq;

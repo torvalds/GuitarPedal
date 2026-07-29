@@ -415,6 +415,24 @@ static uint8_t sysex_buf[32];
 static int sysex_len = 0;
 static bool in_sysex = false;
 
+//
+// Change one pot from core 0.
+//
+// Fill the inactive row and then release the sequence number, so that
+// core 1 either sees the old set or the new one and never a half-written
+// mixture of the two.  See 'pot_values' in audio/effect.h.
+//
+static void set_effect_pot(struct effect *e, unsigned int pot_idx, unsigned char val)
+{
+	unsigned int seq = e->seq;
+	unsigned char *cur_pot = e->pot_values[seq & 1];
+	unsigned char *new_pot = e->pot_values[!(seq & 1)];
+
+	memcpy(new_pot, cur_pot, 10);
+	new_pot[pot_idx] = val;
+	smp_store_release(&e->seq, seq + 1);
+}
+
 static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 {
 	uint8_t cmd = sysex_buf[0];
@@ -433,27 +451,22 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 				set_mix_pot(e, POT_TO_FLOAT(val));
 
 				//
-				// The gate is never in the chain because it
-				// always runs, so it counts as routed.  The
-				// other end - settings - used to be listed
-				// here for the opposite reason: it is never
-				// in the chain and never runs, and saying it
-				// was routed was how it kept itself alive.
-				// It has no wet and no dry, so leave it be.
+				// Being in the chain is the whole of it now.
+				// Both ends of effects[] used to be listed
+				// here as honorary chain members - the signal
+				// chain because it always runs, settings
+				// because forcing 'target' was how it kept
+				// its init() scheduled - and neither has a
+				// wet or a dry for this to be about.
 				//
-				bool routed = e == effects[0];
+				bool routed = false;
 				for (int i = 0; !routed && i < routed_effect_count; i++) {
 					if (effects[effect_chain[i]] == e) routed = true;
 				}
-				if (!e->custom_mix)
+				if (!e->no_mix)
 					e->target = routed ? EFF_ENABLE_STEPS : 0;
 			} else if (pot_idx <= 10) {
-				unsigned int seq = e->seq;
-				unsigned char *cur_pot = e->pot_values[seq & 1];
-				unsigned char *new_pot = e->pot_values[!(seq & 1)];
-				memcpy(new_pot, cur_pot, 10);
-				new_pot[pot_idx - 1] = val;
-				smp_store_release(&e->seq, seq + 1);
+				set_effect_pot(e, pot_idx - 1, val);
 			}
 		}
 	} else if (cmd == 0x04 && sysex_len >= 2) { // Save Scene
@@ -529,8 +542,15 @@ bool handle_midi_packet(const uint8_t packet[4])
 			} else {
 				disable_all = (data2 == 0) ? EFF_ENABLE_STEPS : 0;
 			}
-		} else if (data1 == 7) { // Volume
-			// Not yet wired globally
+		} else if (data1 == 7) { // Main volume
+			//
+			// The far end of the signal chain.  CC data is
+			// 0-127 and a pot is 0-120, so scale rather than
+			// clamp - a controller at full should mean unity,
+			// not seven counts short of it.
+			//
+			set_effect_pot(effects[0], CHAIN_VOLUME,
+				       data2 * 120 / 127);
 		}
 	} else if ((status & 0xF0) == 0xC0) {
 		handled = true;
