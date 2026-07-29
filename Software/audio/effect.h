@@ -209,9 +209,27 @@ static inline void __audio_func(single_sample)(float mix)
 	while (cpu_ptr == i2s_dma_rx_ptr())
 		tight_loop_contents();
 
-	// Check we're safely ahead of TX DMA
-	// Missing the deadline is not clipping, even though the LED
-	// shows both - see status.h.
+	//
+	// Check we're safely ahead of TX DMA.  Missing the deadline is not
+	// clipping, even though the LED shows both - see status.h.
+	//
+	// This comparison is a race and is meant to be one.  One side is a
+	// counter this loop keeps, the other is where a DMA engine has got
+	// to, and nothing synchronises them - nothing can, which is the
+	// point: if the cpu keeps up they stay apart, and if it doesn't
+	// they don't.  So this is a stochastic detector.  Fall behind and
+	// it comes out true *sometimes*, at a rate that says how far
+	// behind, not every sample and not on the same ones twice.
+	//
+	// Which makes 'samples_dropped' a rate estimate rather than a
+	// tally, and is why nothing here tries to make it exact.  The
+	// increment is not atomic against the drain in send_status(), so a
+	// reset can be lost and the count read high for a tick; against a
+	// number that has no exact value to begin with, that is not worth
+	// an ldrex/strex pair.  Rather like the clipping indicator: a
+	// signal is clipping even though it is only over the line some of
+	// the time, because a signal goes up and down.
+	//
 	unsigned int tx_idx = i2s_dma_tx_ptr() - i2s_dma_buf;
 	if (((cpu_idx - tx_idx) & 15) < 2)
 		samples_dropped++;
