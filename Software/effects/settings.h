@@ -25,20 +25,48 @@ struct {
 	int tuning;
 } settings;
 
+//
+// Which pot is which.  These have to stay in step with the POT lines
+// at the top of this file - that is the order gen_effects.py assigns.
+//
+enum settings_pot {
+	SETTINGS_USB_OUT,
+	SETTINGS_USB_IN,
+	SETTINGS_MIDI_CH,
+	SETTINGS_LED,
+	SETTINGS_ATTN,
+	SETTINGS_TUNING,
+};
+
 static void settings_init(unsigned char pot[10])
 {
-	settings.usb_output = pot[0];
-	settings.usb_input = pot[1];
-	settings.midi_channel = pot[2];
+	settings.usb_output = pot[SETTINGS_USB_OUT];
+	settings.usb_input = pot[SETTINGS_USB_IN];
+	settings.midi_channel = pot[SETTINGS_MIDI_CH];
 
-	settings.led_pwm = settings_pot3(pot[3]) / 100;
-	settings.led_intense = settings_pot4(pot[4]) / 100;
+	settings.led_pwm = settings_pot3(pot[SETTINGS_LED]) / 100;
+
+	//
+	// The attention brightness is the one setting whose effect you
+	// cannot see while you are setting it, because the only thing
+	// that can show it is the LED going into that mode.  So ask it
+	// to, for half a second, whenever the setting moves - or for as
+	// long as this is the pot being edited from the pedal itself,
+	// where you are looking at the LED and not at a browser.
+	//
+	// This is also what the second LED used to do, back when there
+	// was one to do it with.
+	//
+	float intense = settings_pot4(pot[SETTINGS_ATTN]) / 100;
+	if (intense != settings.led_intense ||
+	    settings_effect.active_pot == SETTINGS_ATTN)
+		attention_preview = ATTENTION_PREVIEW_TICKS;
+	settings.led_intense = intense;
 
 	// Hacky hacky
 	settings_effect.target = EFF_ENABLE_STEPS;
-	settings_effect.intense = settings_effect.active_pot == 4;
 
-	settings.tuning = pot[5];
+	settings.tuning = pot[SETTINGS_TUNING];
 }
 
 static inline float settings_step(float in)

@@ -14,12 +14,36 @@
     <header class="glass-panel app-header">
       <h1 id="app-title" class="title-disconnected">RP2350 Pedal</h1>
       <div class="header-controls">
+        <!-- Which scene you're on is worth seeing without opening
+             anything.  Acting on it is not: Save overwrites the eeprom
+             and Load throws away what you have, so both sit behind the
+             menu where you can't reach them by accident. -->
+        <div class="header-scenes">
+          <select id="global-scene-select" title="Scene">
+            <!-- Options injected via JS -->
+          </select>
+        </div>
         <button id="tuner-btn" class="action-btn" title="Tuner Mode">🎵</button>
         <label class="switch" title="Global Enable">
           <input type="checkbox" id="global-enable">
           <span class="slider round"></span>
         </label>
-        <button id="burger-btn" class="action-btn" title="Menu">☰</button>
+        <div class="burger-wrap">
+          <button id="burger-btn" class="action-btn" title="Menu"
+                  aria-haspopup="true" aria-expanded="false">☰</button>
+          <div id="global-menu" class="menu-dropdown hidden" role="menu">
+            <!-- The scene labels are filled in from the picker, so it
+                 always says which one it is about to overwrite. -->
+            <button id="global-save-scene-btn" role="menuitem">💾&nbsp;&nbsp;Save Scene</button>
+            <button id="global-load-scene-btn" role="menuitem">📂&nbsp;&nbsp;Load Scene</button>
+            <button id="global-unroute-btn" role="menuitem">⏏&nbsp;&nbsp;Unroute All Effects</button>
+            <hr>
+            <button id="update-app-btn" role="menuitem">⬇️&nbsp;&nbsp;Update App</button>
+            <button id="open-settings-btn" role="menuitem">🔌&nbsp;&nbsp;MIDI Connection…</button>
+            <hr>
+            <button id="global-program-btn" class="danger-item" role="menuitem">⚠️&nbsp;&nbsp;Reboot to Programming Mode</button>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -55,34 +79,40 @@
     <!-- Panel Backdrop -->
     <div id="panel-backdrop" class="hidden"></div>
 
-    <!-- Global Menu Panel -->
-    <div id="global-menu-panel" class="glass-panel bottom-panel hidden">
+    <!-- Reached from the menu. Set once and then left alone, which is
+         why it isn't in the menu itself. -->
+    <div id="settings-panel" class="glass-panel dialog-panel hidden" role="dialog" aria-modal="true">
       <div class="panel-header">
-        <h2>Global Settings</h2>
-        <button id="close-global-menu" class="action-btn" title="Close">✕</button>
+        <h2>MIDI Connection</h2>
+        <button id="close-settings" class="action-btn" title="Close">✕</button>
       </div>
-      <div class="panel-content menu-actions">
-        <div class="midi-selection" style="margin-bottom: 15px; text-align: left; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
-          <label style="display:block; margin-bottom: 5px; color: var(--text-muted); font-size: 0.9em;">MIDI Input Device</label>
-          <select id="midi-input-select" style="width: 100%; margin-bottom: 10px; background: #222; color: #fff; padding: 8px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.2); font-family: inherit; font-size: 1em;"></select>
-          <label style="display:block; margin-bottom: 5px; color: var(--text-muted); font-size: 0.9em;">MIDI Output Device</label>
-          <select id="midi-output-select" style="width: 100%; background: #222; color: #fff; padding: 8px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.2); font-family: inherit; font-size: 1em;"></select>
-        </div>
-        <button id="global-reset-btn" class="menu-btn">↺ Reset All to Defaults</button>
-        <button id="global-unroute-btn" class="menu-btn">⏏ Unroute All Effects</button>
-        <div class="scene-selection" style="margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
-          <label style="display:block; margin-bottom: 5px; color: var(--text-muted); font-size: 0.9em;">Scene Selection</label>
-          <div style="display: flex; gap: 10px; align-items: center;">
-            <select id="global-scene-select" style="flex: 1; background: #222; color: #fff; padding: 8px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.2); font-family: inherit; font-size: 1em;">
-              <!-- Options injected via JS -->
-            </select>
-            <button id="global-save-scene-btn" class="glass-button" style="padding: 8px 15px; font-size: 0.9em;">💾 Save</button>
-            <button id="global-load-scene-btn" class="glass-button" style="padding: 8px 15px; font-size: 0.9em;">Load</button>
-            <button id="global-reset-btn" class="glass-button" style="padding: 8px 15px; font-size: 0.9em; --glass-button-hue: 0; --glass-button-sat: 80%;">Reset</button>
+      <div class="dialog-body">
+        <div class="menu-section">
+          <h3>Devices</h3>
+          <div class="menu-field">
+            <label for="midi-input-select">Input</label>
+            <select id="midi-input-select" class="menu-select"></select>
+          </div>
+          <div class="menu-field">
+            <label for="midi-output-select">Output</label>
+            <select id="midi-output-select" class="menu-select"></select>
           </div>
         </div>
-        <button id="update-app-btn" class="menu-btn">⬇️ Update App</button>
-        <button id="global-program-btn" class="menu-btn danger-btn">⚠️ Reboot to Programming Mode</button>
+        <div class="menu-section">
+          <h3>Channel</h3>
+          <!-- The same value as the Settings card's "MIDI Ch" pot, and
+               the same control underneath - see bindMidiChannel(). It
+               is repeated here because this is where you come looking
+               when Control Change stops working, and the channel is the
+               usual reason. -->
+          <div class="menu-field">
+            <select id="midi-channel-select" class="menu-select"></select>
+          </div>
+          <p class="menu-hint">The pedal filters Control Change and Program
+             Change by this, so bypass, the tuner and scene changes need it to
+             match. Parameter edits are SysEx and work either way — which is
+             how this dialog can still fix it when it is wrong.</p>
+        </div>
       </div>
     </div>
 
@@ -110,9 +140,10 @@
     // in charge of already-controlled clients until they all go away - so
     // a stale app.js can happily survive several reloads and an "Update
     // App" or three.  The PWA only matters for the deployed copy anyway.
-    const swIsLocal = ['localhost', '127.0.0.1', '::1', ''].includes(location.hostname);
+    //
+    // IS_LOCAL_DEV comes from app.js, which is loaded above.
     if ('serviceWorker' in navigator) {
-      if (swIsLocal) {
+      if (IS_LOCAL_DEV) {
         // And clean up after any worker registered here previously
         navigator.serviceWorker.getRegistrations()
           .then(regs => regs.forEach(reg => reg.unregister()));

@@ -23,7 +23,83 @@ const ccToElementMap = new Map();
 let isGlobalEnabled = false;
 let activePotCc = null;
 let activePotDef = null;
+//
+// The pedal filters Control Change and Program Change by
+// settings.midi_channel and lets SysEx through regardless.  Transmit on
+// the wrong one and global bypass, the tuner toggle, scene loads and the
+// reboot all go quietly nowhere, while parameter edits carry on working
+// - which is a confusing thing to debug, so keep this in step with the
+// pedal rather than assuming channel 1 forever.
+//
 let activeTransmitChannel = 0xB0;
+
+// Which pot in the schema is the channel. Found rather than hardcoded,
+// and found by 'base' - the effect header's filename - because that is
+// a steadier handle than the display name (see issue 20).
+let midiChannelRef = null;
+
+function findMidiChannelPot() {
+    const idx = PEDAL_EFFECTS.findIndex(e => e.base === 'settings');
+    if (idx < 0)
+        return null;
+    const eff = PEDAL_EFFECTS[idx];
+    const pot = eff.pots.findIndex(p => p.name === 'MIDI Ch');
+    return pot < 0 ? null : { idx, effId: eff.id, pot };
+}
+
+//
+// Pot value 0 is Omni, 1..16 are Ch1..Ch16.  On Omni the pedal takes
+// whatever arrives, so channel 1 is as good as any.
+//
+function setTransmitChannel(potVal) {
+    activeTransmitChannel = 0xB0 | (potVal > 0 ? (potVal - 1) & 0x0F : 0);
+
+    // Keep the dialog's copy showing the same thing. Assigning .value
+    // fires nothing, so this can't come back round.
+    const sel = document.getElementById('midi-channel-select');
+    if (sel && parseInt(sel.value) !== potVal)
+        sel.value = potVal;
+}
+
+// Called once the schema has been rendered: pick the channel up from the
+// control, and follow it when it is changed here. Changes arriving from
+// the pedal come through the PARAM_UPDATE case instead, because setting
+// .value from script fires no event.
+function bindMidiChannel() {
+    midiChannelRef = findMidiChannelPot();
+    if (!midiChannelRef)
+        return;
+
+    const el = ccToElementMap.get(`eff-${midiChannelRef.idx}-pot-${midiChannelRef.pot}`);
+    if (!el)
+        return;
+
+    //
+    // The dialog gets a second view of this pot, built from the same
+    // schema enum so the names can't drift.  It is a view and not a
+    // second setting: changing it drives the card's control, which is
+    // the one wired to the pedal, so there is still exactly one place
+    // that decides what gets sent.
+    //
+    const sel = document.getElementById('midi-channel-select');
+    if (sel) {
+        const names = PEDAL_EFFECTS[midiChannelRef.idx].pots[midiChannelRef.pot].enum || [];
+        sel.innerHTML = '';
+        names.forEach((name, i) => {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = name;
+            sel.appendChild(opt);
+        });
+        sel.addEventListener('change', () => {
+            el.value = sel.value;
+            el.dispatchEvent(new Event('change'));
+        });
+    }
+
+    el.addEventListener('change', () => setTransmitChannel(parseInt(el.value)));
+    setTransmitChannel(parseInt(el.value));
+}
 
 // Tuner State
 let isTunerMode = false;
@@ -222,6 +298,28 @@ function updateMidiState() {
     }
 }
 
+//
+// Are we the copy served off a laptop, or the deployed one?
+//
+// The two want to behave differently in small ways, and the difference
+// was already being made once - index.html keeps the service worker
+// away from a local page, because a stale worker outliving several
+// reloads is a miserable way to spend an afternoon.  This is that same
+// test, made once and shared, so the two can't drift apart.
+//
+// An empty hostname is a file:// URL.
+//
+const IS_LOCAL_DEV = ['localhost', '127.0.0.1', '::1', ''].includes(location.hostname);
+
+// Colours the title amber rather than green - see style.css. The tooltip
+// is set here rather than in the markup so the deployed copy doesn't
+// carry an explanation of something it doesn't do.
+if (IS_LOCAL_DEV) {
+    document.body.classList.add('local-dev');
+    if (appTitleEl)
+        appTitleEl.title = 'Served locally — confirmations for destructive actions are skipped';
+}
+
 const updateAppBtn = document.getElementById('update-app-btn');
 if (updateAppBtn) {
     updateAppBtn.addEventListener('click', async () => {
@@ -278,6 +376,7 @@ function handleSysex(data) {
                 effectIdMap.clear();
                 PEDAL_EFFECTS.forEach((e, idx) => effectIdMap.set(e.id, idx));
                 renderUI();
+                bindMidiChannel();
                 // Request State and Status
                 sendSysex([SYSEX_CMD.REQ_STATE]);
                 sendSysex([SYSEX_CMD.DIAGNOSTIC]);
@@ -305,6 +404,13 @@ function handleSysex(data) {
             const effId = data[3];
             const potIdx = data[4];
             const val = data[5];
+
+            // The pedal telling us its channel changed - on a scene
+            // load, say. Do this before the element update below, which
+            // sets .value from script and so fires nothing.
+            if (midiChannelRef && effId === midiChannelRef.effId &&
+                potIdx === midiChannelRef.pot + 1)
+                setTransmitChannel(val);
 
             const idx = effectIdMap.get(effId);
             if (idx !== undefined) {
@@ -383,9 +489,6 @@ function handleMidiMessage(event) {
                 globalEnableEl.checked = isGlobalEnabled;
             }
         } else {
-            if (cc === 107) { // MIDI Ch
-                activeTransmitChannel = (val === 0) ? 0xB0 : (0xB0 | ((val - 1) & 0x0F));
-            }
             // It's a pot or an effect enable
             const el = ccToElementMap.get(cc);
             if (el) {
@@ -574,10 +677,6 @@ function sendMidiPc(pc) {
 function sendMidiCc(cc, val) {
     if (!midiOutput) return;
     midiOutput.send([activeTransmitChannel, cc, val]);
-
-    if (cc === 107) {
-        activeTransmitChannel = (val === 0) ? 0xB0 : (0xB0 | ((val - 1) & 0x0F));
-    }
     scheduleDiagnostic();
 }
 
@@ -614,8 +713,27 @@ function wheelZoneAt(el) {
 
 // Capture, so this settles ownership before the zone's own handler runs
 window.addEventListener('wheel', (e) => {
-    if (e.timeStamp - wheelLast > WHEEL_GESTURE_GAP)
+    if (e.timeStamp - wheelLast > WHEEL_GESTURE_GAP) {
         wheelOwner = wheelZoneAt(e.target);
+
+        //
+        // Move the focus to whatever the wheel just took charge of.
+        //
+        // The ring is the only thing on screen saying which slider is
+        // about to move, and it used to follow clicks while the wheel
+        // followed the pointer - so clicking one and then scrolling
+        // over another left it pointing at the wrong control.  One
+        // notion of "the active pot" rather than two, and the arrow
+        // keys now act on whatever the wheel last did.
+        //
+        // preventScroll because the default is to scroll the element
+        // into view, and doing that in the middle of a scroll would
+        // fight the user for the thing they are actually doing.
+        //
+        const input = wheelOwner && wheelZones.get(wheelOwner);
+        if (input && input !== document.activeElement)
+            input.focus({ preventScroll: true });
+    }
     wheelLast = e.timeStamp;
 }, { passive: true, capture: true });
 
@@ -797,14 +915,19 @@ function dragScrollTick() {
     dragScrollRaf = requestAnimationFrame(dragScrollTick);
 }
 
-function cardDragStart(card, handle, e) {
+function cardDragStart(card, grip, e) {
     if (!e.isPrimary || cardDrag)
+        return;
+
+    // The header carries controls of its own. A press that lands on one
+    // of those belongs to it, not to a drag.
+    if (e.target.closest('.collapse-chevron, .action-btn'))
         return;
 
     //
     // Capture stops the browser reinterpreting the gesture - a touch
-    // that wanders off the handle would otherwise become a scroll - but
-    // don't rely on it lasting.  Repositioning the card moves the handle
+    // that wanders off the header would otherwise become a scroll - but
+    // don't rely on it lasting.  Repositioning the card moves the header
     // along with it, and moving the element that holds a capture
     // releases the capture, after which pointerup goes to whatever is
     // under the pointer instead of to us.
@@ -813,12 +936,18 @@ function cardDragStart(card, handle, e) {
     // window for ours.
     //
     try {
-        handle.setPointerCapture(e.pointerId);
+        grip.setPointerCapture(e.pointerId);
     } catch (err) {
         /* not fatal, the window listeners are what matter */
     }
 
-    cardDrag = { card, handle, id: e.pointerId, gap: null,
+    // Suppress selection from the press, not from the drag. Waiting for
+    // the threshold is too late - a phone has put the selection UI up
+    // by then. The header itself is user-select: none in the stylesheet;
+    // this covers everything the pointer travels over afterwards.
+    document.body.style.userSelect = 'none';
+
+    cardDrag = { card, grip, id: e.pointerId, gap: null,
                  startY: e.clientY, x: e.clientX, y: e.clientY, moved: false };
 
     window.addEventListener('pointermove', cardDragMove);
@@ -838,7 +967,6 @@ function cardDragMove(e) {
         if (Math.abs(e.clientY - cardDrag.startY) < DRAG_THRESHOLD)
             return;
         cardDrag.moved = true;
-        document.body.style.userSelect = 'none';
         dragLift();
         if (!dragScrollRaf)
             dragScrollRaf = requestAnimationFrame(dragScrollTick);
@@ -1090,21 +1218,19 @@ function renderUI() {
 
         // Settings effect cannot be reordered or collapsed (maybe collapsed is fine, but no drag)
         if (effect.name !== "Settings" && effect.name !== "Noise Gate") {
-            title.innerHTML = `<span class="drag-handle" style="cursor: grab; margin-right: 12px; font-size: 1.4em; opacity: 0.7;">≡</span>
+            title.innerHTML = `<span class="drag-handle">≡</span>
                                <span class="collapse-chevron" style="cursor: pointer; margin-right: 8px; font-size: 0.8em; transition: transform 0.2s;">▼</span>
                                <span>${effect.name}</span>`;
 
-            // A drag starts on the handle and nowhere else, so there is
+            // A drag starts on the header and nowhere else, so there is
             // never any question of whether you meant the card or the
-            // slider you happen to be over.
-            const dragHandle = title.querySelector('.drag-handle');
-            if (dragHandle) {
-                // Without this the browser claims the gesture for
-                // scrolling and we never see the moves.
-                dragHandle.style.touchAction = 'none';
-                dragHandle.addEventListener('pointerdown',
-                                            (e) => cardDragStart(card, dragHandle, e));
-            }
+            // slider you happen to be over - and the header is big
+            // enough to hit with a thumb, which the handle was not.
+            // The controls that sit in the header keep their own
+            // presses; cardDragStart() steps out of the way for them.
+            header.classList.add('draggable');
+            header.addEventListener('pointerdown',
+                                    (e) => cardDragStart(card, header, e));
         } else {
             title.innerHTML = `<span class="collapse-chevron" style="cursor: pointer; margin-right: 8px; font-size: 0.8em; transition: transform 0.2s;">▼</span>
                                <span>${effect.name}</span>`;
@@ -1688,10 +1814,18 @@ appTitleEl.addEventListener('click', () => {
         });
     }
 
+    function closeMenu() {
+        const menu = document.getElementById('global-menu');
+        const burger = document.getElementById('burger-btn');
+        if (menu) menu.classList.add('hidden');
+        if (burger) burger.setAttribute('aria-expanded', 'false');
+    }
+
     function closeAllPanels() {
         if (document.getElementById('panel-backdrop')) document.getElementById('panel-backdrop').classList.add('hidden');
-        if (document.getElementById('global-menu-panel')) document.getElementById('global-menu-panel').classList.add('hidden');
+        if (document.getElementById('settings-panel')) document.getElementById('settings-panel').classList.add('hidden');
         if (document.getElementById('active-pot-panel')) document.getElementById('active-pot-panel').classList.add('hidden');
+        closeMenu();
         activePotCc = null;
         activePotDef = null;
     }
@@ -1701,47 +1835,78 @@ appTitleEl.addEventListener('click', () => {
         backdrop.addEventListener('click', closeAllPanels);
     }
 
+    // A button whose label depends on something that can change while
+    // the message is up rebuilds it rather than restoring whatever it
+    // happened to say a second and a half ago.
+    function restoreButton(btn, originalText) {
+        if (btn.relabel)
+            btn.relabel();
+        else
+            btn.innerHTML = originalText;
+        btn.classList.remove('success', 'error');
+    }
+
     function showButtonSuccess(btn, successText) {
         const originalText = btn.innerHTML;
         btn.innerHTML = `✓ ${successText}`;
         btn.classList.add('success');
-        setTimeout(() => {
-            btn.innerHTML = originalText;
-            btn.classList.remove('success');
-        }, 1500);
+        setTimeout(() => restoreButton(btn, originalText), 1500);
     }
 
     function showButtonError(btn, errorText) {
         const originalText = btn.innerHTML;
         btn.innerHTML = `⚠️ ${errorText}`;
         btn.classList.add('error');
-        setTimeout(() => {
-            btn.innerHTML = originalText;
-            btn.classList.remove('error');
-        }, 1500);
+        setTimeout(() => restoreButton(btn, originalText), 1500);
     }
 
-    // Global Menu Panel
+    // The burger menu
     const burgerBtn = document.getElementById('burger-btn');
-    const closeGlobalMenuBtn = document.getElementById('close-global-menu');
-    const globalMenuPanel = document.getElementById('global-menu-panel');
+    const globalMenu = document.getElementById('global-menu');
 
-    if (burgerBtn) {
-        burgerBtn.addEventListener('click', () => {
-            if (globalMenuPanel.classList.contains('hidden')) {
-                closeAllPanels();
-                globalMenuPanel.classList.remove('hidden');
-                if (backdrop) backdrop.classList.remove('hidden');
-            } else {
-                closeAllPanels();
+    if (burgerBtn && globalMenu) {
+        burgerBtn.addEventListener('click', (e) => {
+            // Or the document listener below sees this same click and
+            // closes what we just opened.
+            e.stopPropagation();
+            const wasOpen = !globalMenu.classList.contains('hidden');
+            closeAllPanels();
+            if (!wasOpen) {
+                globalMenu.classList.remove('hidden');
+                burgerBtn.setAttribute('aria-expanded', 'true');
             }
         });
+
+        // A menu goes away when you press somewhere else, which the
+        // backdrop used to do for us and a dropdown has no backdrop for.
+        document.addEventListener('click', (e) => {
+            if (!globalMenu.classList.contains('hidden') &&
+                !globalMenu.contains(e.target))
+                closeMenu();
+        });
     }
 
-    if (closeGlobalMenuBtn) {
-        closeGlobalMenuBtn.addEventListener('click', () => {
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape')
             closeAllPanels();
+    });
+
+    // Settings, which is the one menu item that opens something rather
+    // than doing something.
+    const openSettingsBtn = document.getElementById('open-settings-btn');
+    const settingsPanel = document.getElementById('settings-panel');
+    const closeSettingsBtn = document.getElementById('close-settings');
+
+    if (openSettingsBtn && settingsPanel) {
+        openSettingsBtn.addEventListener('click', () => {
+            closeAllPanels();
+            settingsPanel.classList.remove('hidden');
+            if (backdrop) backdrop.classList.remove('hidden');
         });
+    }
+
+    if (closeSettingsBtn) {
+        closeSettingsBtn.addEventListener('click', closeAllPanels);
     }
 
     // Active Pot initialization
@@ -1761,7 +1926,10 @@ appTitleEl.addEventListener('click', () => {
             if (activePotCc === null || !activePotDef) return;
 
             const val = parseInt(e.target.value);
-            document.getElementById('active-pot-value').textContent = formatPotValue(activePotDef, val);
+            const valDisplay = document.getElementById('active-pot-value');
+
+            if (valDisplay)
+                valDisplay.textContent = formatPotValue(activePotDef, val);
 
             // Update original element
             const origInput = ccToElementMap.get(activePotCc);
@@ -1789,35 +1957,25 @@ appTitleEl.addEventListener('click', () => {
     }
 
     function setActivePot(cc, potDef, currentVal, effectName) {
+        const panel = document.getElementById('active-pot-panel');
+        const name = document.getElementById('active-pot-title');
+        const valDisplay = document.getElementById('active-pot-value');
+
+        // No panel, nothing to make active - and in particular don't set
+        // activePotCc, which everything else takes as "the panel is up".
+        if (!panel)
+            return;
+
         closeAllPanels();
         activePotCc = cc;
         activePotDef = potDef;
 
-        document.getElementById('active-pot-name').textContent = `${effectName} - ${potDef.name}`;
-        const valDisplay = document.getElementById('active-pot-value');
+        if (name) name.textContent = `${effectName} - ${potDef.name}`;
         if (valDisplay) valDisplay.textContent = formatPotValue(potDef, currentVal);
-
         if (activePotSlider) activePotSlider.value = currentVal;
 
-        document.getElementById('active-pot-panel').classList.remove('hidden');
+        panel.classList.remove('hidden');
         if (backdrop) backdrop.classList.remove('hidden');
-    }
-
-    const globalResetBtn = document.getElementById('global-reset-btn');
-    if (globalResetBtn) {
-        globalResetBtn.addEventListener('click', () => {
-            if (!midiOutput) {
-                showButtonError(globalResetBtn, 'Not Connected');
-                return;
-            }
-            sendMidiCc(GLOBAL_ENABLE_CC, 64);
-            setTimeout(() => {
-                sendMidiCc(GLOBAL_ENABLE_CC, 127);
-                sendSysex([SYSEX_CMD.REQ_SCHEMA]);
-                sendSysex([SYSEX_CMD.DIAGNOSTIC]); // Check status after reset
-            }, 100);
-            showButtonSuccess(globalResetBtn, 'Reset Complete');
-        });
     }
 
     const globalUnrouteBtn = document.getElementById('global-unroute-btn');
@@ -1849,6 +2007,20 @@ appTitleEl.addEventListener('click', () => {
         }
     }
 
+    //
+    // The picker is in the header and the two things that act on it are
+    // in the menu, so the menu says which scene it means. Otherwise you
+    // are trusting your memory of a control that isn't on screen while
+    // you press the one that overwrites it.
+    //
+    function updateSceneLabels() {
+        const scene = sceneSelect ? sceneSelect.value : '0';
+        const saveBtn = document.getElementById('global-save-scene-btn');
+        const loadBtn = document.getElementById('global-load-scene-btn');
+        if (saveBtn) saveBtn.innerHTML = `💾&nbsp;&nbsp;Save to Scene ${scene}`;
+        if (loadBtn) loadBtn.innerHTML = `📂&nbsp;&nbsp;Load Scene ${scene}`;
+    }
+
     const loadSceneBtn = document.getElementById('global-load-scene-btn');
     if (loadSceneBtn) {
         loadSceneBtn.addEventListener('click', () => {
@@ -1862,7 +2034,7 @@ appTitleEl.addEventListener('click', () => {
                 sendSysex([SYSEX_CMD.REQ_STATE]);
                 sendSysex([SYSEX_CMD.DIAGNOSTIC]); // Check status after load
             }, 100);
-            showButtonSuccess(loadSceneBtn, 'Loaded!');
+            showButtonSuccess(loadSceneBtn, `Loaded ${sceneId}`);
         });
     }
 
@@ -1876,8 +2048,15 @@ appTitleEl.addEventListener('click', () => {
             const sceneId = parseInt(sceneSelect.value);
             sendSysex([SYSEX_CMD.SAVE_SCENE, sceneId]);
             sendSysex([SYSEX_CMD.DIAGNOSTIC]); // Check status after save
-            showButtonSuccess(saveSceneBtn, 'Saved!');
+            showButtonSuccess(saveSceneBtn, `Saved to ${sceneId}`);
         });
+    }
+
+    if (sceneSelect) {
+        sceneSelect.addEventListener('change', updateSceneLabels);
+        if (loadSceneBtn) loadSceneBtn.relabel = updateSceneLabels;
+        if (saveSceneBtn) saveSceneBtn.relabel = updateSceneLabels;
+        updateSceneLabels();
     }
 
     const globalProgramBtn = document.getElementById('global-program-btn');
@@ -1887,10 +2066,14 @@ appTitleEl.addEventListener('click', () => {
                 showButtonError(globalProgramBtn, 'Not Connected');
                 return;
             }
-            if (confirm("Reboot pedal into programming mode?")) {
-                sendMidiCc(GLOBAL_ENABLE_CC, 126);
-                closeAllPanels();
-            }
+            // The confirmation is there because rebooting into the
+            // bootloader in the middle of playing would be a nasty
+            // surprise.  Developing against the thing, you do it over
+            // and over on purpose, and the prompt is pure friction.
+            if (!IS_LOCAL_DEV && !confirm("Reboot pedal into programming mode?"))
+                return;
+            sendMidiCc(GLOBAL_ENABLE_CC, 126);
+            closeAllPanels();
         });
     }
 

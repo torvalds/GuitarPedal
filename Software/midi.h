@@ -14,8 +14,69 @@
 
 extern int current_midi_effect_idx;
 
+//
+// USB-MIDI 1.0 packs everything into four bytes: a cable number in the
+// high nibble of the first byte - always zero here - and a Code Index
+// Number in the low nibble, then up to three bytes of the message
+// itself.  The CIN says what kind of message it is and, with it, how
+// many of those three bytes are real.  0x0 and 0x1 are reserved and
+// mean nothing to a host.
+//
+// Both directions of the hardware MIDI port need this, one to build a
+// CIN and one to take it apart, so keep the two halves next to each
+// other where they can be checked against one another.
+//
+
+// How many of the three data bytes a CIN actually carries
+static inline int midi_cin_length(uint8_t cin)
+{
+	switch (cin) {
+	case 0x5:	// single-byte system common, or SysEx ending on one
+	case 0xF:	// single byte
+		return 1;
+	case 0x2:	// two-byte system common
+	case 0x6:	// SysEx ending on two
+	case 0xC:	// program change
+	case 0xD:	// channel pressure
+		return 2;
+	case 0x3:	// three-byte system common
+	case 0x4:	// SysEx start or continue
+	case 0x7:	// SysEx ending on three
+	case 0x8:	// note off
+	case 0x9:	// note on
+	case 0xA:	// poly key pressure
+	case 0xB:	// control change
+	case 0xE:	// pitch bend
+		return 3;
+	default:	// 0x0 and 0x1 are reserved
+		return 0;
+	}
+}
+
+// The CIN a status byte belongs in.  Not for SysEx, whose CIN depends
+// on where in the stream the packet falls rather than on any one byte.
+static inline uint8_t midi_status_cin(uint8_t status)
+{
+	if (status >= 0xF8)		// real time
+		return 0xF;
+	if (status >= 0xF0) {
+		switch (status) {
+		case 0xF1:		// MIDI time code
+		case 0xF3:		// song select
+			return 0x2;
+		case 0xF2:		// song position
+			return 0x3;
+		default:		// tune request, and friends
+			return 0x5;
+		}
+	}
+	// Channel voice: the CIN is simply the top nibble
+	return status >> 4;
+}
+
 bool handle_midi_packet(const uint8_t packet[4]);
-void usb_midi_write(const uint8_t packet[4]);
+void usb_midi_poll(void);
+bool usb_midi_write(const uint8_t packet[4]);
 void uart_midi_write(const uint8_t packet[4]);
 
 static inline void send_midi_cc(uint8_t cc, uint8_t val)

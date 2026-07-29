@@ -8,6 +8,9 @@
   --accent-hover: #60a5fa;
   --danger: #ef4444;
   --success: #10b981;
+  /* A locally served copy, in place of --success/--text-muted */
+  --dev: #f59e0b;
+  --dev-muted: #8a7040;
 }
 
 * {
@@ -62,6 +65,19 @@ h2 {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  /*
+   * The menu hangs out of the bottom of this, and has to be able to
+   * cover the cards below.  It can't do that on its own z-index:
+   * .glass-panel sets backdrop-filter, which creates a stacking
+   * context, so the menu's z-index only ranks it inside this header.
+   * The cards are .glass-panel too and come later in the document, so
+   * without this they paint over the menu - and being backdrop
+   * filters, they blur it while they're at it.
+   *
+   * Stays well below the backdrop (900) and the panels above it.
+   */
+  position: relative;
+  z-index: 20;
 }
 
 .header-controls {
@@ -74,12 +90,26 @@ h2 {
   transition: color 0.3s;
 }
 
+
+/*
+ * The title is the pedal-state light, and it carries where the page
+ * came from as well: hue says which copy this is, brightness says
+ * whether the pedal is answering.  Two signals, one word, no badge.
+ */
 .title-connected {
   color: var(--success);
 }
 
 .title-disconnected {
   color: var(--text-muted);
+}
+
+body.local-dev .title-connected {
+  color: var(--dev);
+}
+
+body.local-dev .title-disconnected {
+  color: var(--dev-muted);
 }
 
 .control-group label {
@@ -312,7 +342,38 @@ input[type=range]:focus::-moz-range-thumb {
   align-items: center;
   border-bottom: 1px solid var(--panel-border);
   padding-bottom: 10px;
-  cursor: pointer;
+  /*
+   * The header is what you grab to reorder, so none of it may behave
+   * like text.  A long press on text is the browser's select gesture,
+   * which on a phone is what you got instead of a drag, and iOS puts
+   * its callout menu up on top of that.  This has to be here rather
+   * than switched on once a drag is recognised: by then the selection
+   * has already started.
+   */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/*
+ * Dragging grabs the whole header rather than the handle glyph alone,
+ * which makes the target finger-sized by construction rather than by
+ * padding out a ~20px character to the ~44px a thumb wants.  The
+ * handle stays as the affordance that says the header can be grabbed.
+ *
+ * touch-action has to be on whatever the touch lands on: the browser
+ * decides whether a gesture may pan when it begins, from the element
+ * hit and its ancestors.
+ */
+.effect-header.draggable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.drag-handle {
+  margin-right: 12px;
+  font-size: 1.4em;
+  opacity: 0.7;
 }
 
 .effect-title {
@@ -448,56 +509,190 @@ input[type=range].eq-range {
   color: var(--text-main);
 }
 
-.menu-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  padding-bottom: 20px;
+/*
+ * The menu proper: a dropdown hung off the burger, holding actions and
+ * nothing else.  It deliberately does not dim the page behind it - it
+ * isn't modal, and a menu that darkens the whole app to offer four
+ * items reads as heavier than it is.
+ */
+.burger-wrap {
+  position: relative;
 }
 
-.menu-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 1.1rem;
-  padding: 10px 0;
-}
-
-.menu-btn {
-  background: rgba(255, 255, 255, 0.05);
+.menu-dropdown {
+  position: absolute;
+  z-index: 1000;
+  top: calc(100% + 8px);
+  right: 0;
+  /*
+   * Sized to whatever the longest item happens to be, rather than to a
+   * number that was right until someone added a word.  "Reboot to
+   * Programming Mode" wrapped at 260px, and the scene items change
+   * width as you pick different scenes, so nothing here has a length
+   * worth hard-coding.  The floor keeps a short menu from looking
+   * mean; the ceiling keeps a long one on the screen.
+   */
+  width: max-content;
+  min-width: 260px;
+  max-width: calc(100vw - 32px);
+  padding: 6px;
+  background: rgba(20, 23, 29, 0.98);
   border: 1px solid var(--panel-border);
-  color: var(--text-main);
-  padding: 15px;
   border-radius: 12px;
-  font-size: 1.1rem;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.65);
+}
+
+/* The bottom sheet hid itself by sliding off the bottom edge, so there
+   has never been a general .hidden rule to inherit. */
+.menu-dropdown.hidden,
+.dialog-panel.hidden {
+  display: none;
+}
+
+.menu-dropdown button {
+  display: block;
+  width: 100%;
   text-align: left;
+  background: none;
+  border: 0;
+  color: var(--text-main);
+  padding: 11px 14px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s;
+  font: inherit;
+  font-size: 0.98rem;
+  white-space: nowrap;
 }
 
-.menu-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+.menu-dropdown button:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.menu-btn.danger-btn {
+.menu-dropdown button.danger-item {
   color: var(--danger);
-  border-color: rgba(239, 68, 68, 0.3);
 }
 
-.menu-btn.danger-btn:hover {
-  background: rgba(239, 68, 68, 0.1);
+.menu-dropdown button.danger-item:hover {
+  background: rgba(239, 68, 68, 0.12);
 }
 
-.menu-btn.success {
-  background: rgba(16, 185, 129, 0.2);
-  color: var(--success);
-  border-color: var(--success);
+.menu-dropdown hr {
+  border: 0;
+  border-top: 1px solid var(--panel-border);
+  margin: 6px 8px;
 }
 
-.menu-btn.error {
-  background: rgba(239, 68, 68, 0.2);
-  color: var(--danger);
-  border-color: var(--danger);
+/* Which scene you're on, promoted out of the menu into the header.
+   Saving and loading stayed behind the menu - see index.html. */
+.header-scenes {
+  display: flex;
+  align-items: center;
+  margin-right: 4px;
+}
+
+.header-scenes select {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-main);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+/*
+ * Settings, which is a dialog rather than a sheet: it is centred and
+ * sized to its content instead of anchored to the bottom edge, because
+ * nothing about it is phone-shaped any more.
+ */
+.dialog-panel {
+  position: fixed;
+  z-index: 1000;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(460px, calc(100vw - 40px));
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  padding: 0;
+  background: rgba(15, 17, 21, 0.97);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+}
+
+.dialog-panel .panel-header {
+  margin: 0;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--panel-border);
+  position: sticky;
+  top: 0;
+  background: rgba(15, 17, 21, 0.97);
+}
+
+.dialog-body {
+  padding: 6px 22px 22px;
+}
+
+.menu-section {
+  margin-top: 22px;
+}
+
+.menu-section > h3 {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.menu-field {
+  margin-bottom: 10px;
+}
+
+.menu-field > label {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.menu-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+.menu-select {
+  width: 100%;
+  background: #1a1d23;
+  color: var(--text-main);
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+/*
+ * showButtonSuccess()/showButtonError() swap a button's label for a
+ * moment and add one of these.  They aren't tied to a particular kind
+ * of button, because the buttons that report back like this are now
+ * both menu items and header controls - hence !important, which beats
+ * the two-selector rules those live under without having to enumerate
+ * every context a reporting button might turn up in.
+ */
+.success {
+  background: rgba(16, 185, 129, 0.2) !important;
+  color: var(--success) !important;
+  border-color: var(--success) !important;
+}
+
+.error {
+  background: rgba(239, 68, 68, 0.2) !important;
+  color: var(--danger) !important;
+  border-color: var(--danger) !important;
 }
 
 .active-pot-info {

@@ -91,7 +91,6 @@ extern uint8_t effect_chain[MAX_ROUTED_EFFECTS];
 extern uint8_t routed_effect_count;
 #include "effect_map.h"
 
-static unsigned int dropped;
 
 //
 // Work out the two multipliers for a mix setting.
@@ -177,11 +176,11 @@ static inline void __audio_func(single_sample)(float mix)
 		tight_loop_contents();
 
 	// Check we're safely ahead of TX DMA
+	// Missing the deadline is not clipping, even though the LED
+	// shows both - see status.h.
 	unsigned int tx_idx = i2s_dma_tx_ptr() - i2s_dma_buf;
-	if (((cpu_idx - tx_idx) & 15) < 2) {
-		dropped++;
-		clipping = 1;
-	}
+	if (((cpu_idx - tx_idx) & 15) < 2)
+		samples_dropped++;
 
 	// In-place processing
 	raw_sample_t sample = *cpu_ptr;
