@@ -432,11 +432,21 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 			if (pot_idx == 0) {
 				set_mix_pot(e, POT_TO_FLOAT(val));
 
-				bool routed = (e == effects[0] || e == effects[EFFECT_COUNT - 1]);
+				//
+				// The gate is never in the chain because it
+				// always runs, so it counts as routed.  The
+				// other end - settings - used to be listed
+				// here for the opposite reason: it is never
+				// in the chain and never runs, and saying it
+				// was routed was how it kept itself alive.
+				// It has no wet and no dry, so leave it be.
+				//
+				bool routed = e == effects[0];
 				for (int i = 0; !routed && i < routed_effect_count; i++) {
 					if (effects[effect_chain[i]] == e) routed = true;
 				}
-				e->target = routed ? EFF_ENABLE_STEPS : 0;
+				if (!e->custom_mix)
+					e->target = routed ? EFF_ENABLE_STEPS : 0;
 			} else if (pot_idx <= 10) {
 				unsigned int seq = e->seq;
 				unsigned char *cur_pot = e->pot_values[seq & 1];

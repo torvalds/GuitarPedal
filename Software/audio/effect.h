@@ -59,6 +59,15 @@ struct effect {
 	float def_mix;
 	enum mix_law mix_law;
 
+	//
+	// Set by 'MIX: CUSTOM': this effect was handed the multipliers
+	// and does the combining itself, so the chain's idea of how
+	// much of it you are hearing doesn't describe it.  Which also
+	// means 'not running' doesn't mean anything for it - see
+	// make_one_noise().
+	//
+	unsigned char custom_mix;
+
 	// What the mix law works out to, and where we are on the way
 	// there. Slewed rather than applied straight so that dragging
 	// the mix around doesn't click.
@@ -245,7 +254,15 @@ static __attribute__((noinline)) void __audio_func(make_one_noise)(void)
 		// already set by the time an effect is routed back in, so
 		// this picks the change up before it can be heard.
 		//
-		if (!effect->mix && !effect->target)
+		// 'custom_mix' is exempt because "isn't running" is a
+		// statement about the wet/dry fade, and such an effect
+		// isn't part of it.  The settings pseudo-effect is the
+		// case that matters: init() is the entire point of it,
+		// nothing it does is audible, and it used to force
+		// 'target' to a nonzero value from inside init() purely
+		// to keep this test from skipping it next time.
+		//
+		if (!effect->custom_mix && !effect->mix && !effect->target)
 			continue;
 
 		effect->last = seq;

@@ -73,9 +73,28 @@ def generate(audio_dir, out_h, out_js, out_md):
         def_mix_match = re.search(r'//\s*DEFAULT_MIX:\s*(\S+)', content)
         def_mix = float(def_mix_match.group(1)) if def_mix_match else 1.0
 
-        # LINEAR unless the effect says otherwise - see 'enum mix_law'
-        mix_match = re.search(r'//\s*MIX:\s*(LINEAR|POWER)', content)
-        mix_law = mix_match.group(1) if mix_match else 'LINEAR'
+        #
+        # 'MIX:' answers two independent questions, in either order and
+        # both with a default: how the wet and the dry go together (see
+        # 'enum mix_law'), and how much of the signal the effect wants to
+        # see - MONO for the left channel only, STEREO for both, or
+        # CUSTOM for an effect that would rather be handed the
+        # multipliers and do the whole thing itself.
+        #
+        # Only the uppercase run is taken, so the trailing '// why' that
+        # these lines tend to carry stays out of it.
+        #
+        mix_law, channels = 'LINEAR', 'MONO'
+        mix_match = re.search(r'//[ \t]*MIX:[ \t]*([A-Z \t]*)', content)
+        for word in mix_match.group(1).split() if mix_match else []:
+            if word in ('LINEAR', 'POWER'):
+                mix_law = word
+            elif word in ('MONO', 'STEREO', 'CUSTOM'):
+                channels = word
+            else:
+                sys.exit(f"gen_effects: {filename}: unknown MIX: option "
+                         f"'{word}' (want LINEAR/POWER and "
+                         f"MONO/STEREO/CUSTOM)")
 
         pots = []
         # Match: // POT: "Name" CURVE(a b c) = 1.0 Unit
@@ -113,6 +132,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             'priority': priority,
             'def_mix': def_mix,
             'mix_law': mix_law,
+            'channels': channels,
             'pots': pots,
             'header_path': header_path
         })
@@ -209,27 +229,47 @@ def generate(audio_dir, out_h, out_js, out_md):
             # running on the audio core. Gcc carries a section attribute
             # from the declaration to the definition, so the effect headers
             # don't have to know about any of this.
+            channels = e_data['channels']
+
             f.write(f"static void __audio_func({base}_init)(unsigned char[10]);\n")
-            f.write(f"static float __audio_func({base}_step)(float);\n")
+            if channels == 'CUSTOM':
+                f.write(f"static sample_t __audio_func({base}_step)"
+                        "(sample_t, float, float);\n")
+            elif channels == 'STEREO':
+                f.write(f"static sample_t __audio_func({base}_step)(sample_t);\n")
+            else:
+                f.write(f"static float __audio_func({base}_step)(float);\n")
             f.write(f"#include \"../effects/{base}.h\"\n")
 
             # The mixing wrapper, which is what the chain actually calls -
             # see do_effect_step(). A mono effect gets the left channel
             # and its one answer goes to both, which is the behaviour the
-            # caller used to impose on every effect alike. Written out per
-            # effect so that an effect can stop being mono without every
-            # other one having to care.
+            # caller used to impose on every effect alike; a stereo one
+            # gets both and answers for both. Written out per effect so
+            # that one can stop being mono without every other one having
+            # to care.
             #
             # This is the only call site of {base}_step(), so it inlines
             # here and the chain is still one indirect call per effect.
-            f.write(f"static sample_t __audio_func({base}_mix_step)"
-                    "(sample_t val, float dry, float wet)\n")
-            f.write("{\n")
-            f.write(f"\tfloat out = {base}_step(val.left);\n")
-            f.write("\tval.left  = dry * val.left  + wet * out;\n")
-            f.write("\tval.right = dry * val.right + wet * out;\n")
-            f.write("\treturn val;\n")
-            f.write("}\n")
+            #
+            # CUSTOM gets no wrapper: it asked for the multipliers, so it
+            # is already the shape the chain calls.
+            step = f"{base}_step"
+            if channels != 'CUSTOM':
+                step = f"{base}_mix_step"
+                f.write(f"static sample_t __audio_func({step})"
+                        "(sample_t val, float dry, float wet)\n")
+                f.write("{\n")
+                if channels == 'STEREO':
+                    f.write(f"\tsample_t out = {base}_step(val);\n")
+                    f.write("\tval.left  = dry * val.left  + wet * out.left;\n")
+                    f.write("\tval.right = dry * val.right + wet * out.right;\n")
+                else:
+                    f.write(f"\tfloat out = {base}_step(val.left);\n")
+                    f.write("\tval.left  = dry * val.left  + wet * out;\n")
+                    f.write("\tval.right = dry * val.right + wet * out;\n")
+                f.write("\treturn val;\n")
+                f.write("}\n")
 
             f.write(f"static struct effect {struct_name} = {{\n")
             f.write(f"\t.name = \"{e_data['full_name']}\",\n")
@@ -237,7 +277,9 @@ def generate(audio_dir, out_h, out_js, out_md):
             f.write(f"\t.def_mix = {e_data['def_mix']}f,\n")
             f.write(f"\t.mix_law = MIX_{e_data['mix_law']},\n")
             f.write(f"\t.init = {base}_init,\n")
-            f.write(f"\t.step = {base}_mix_step,\n")
+            f.write(f"\t.step = {step},\n")
+            if channels == 'CUSTOM':
+                f.write("\t.custom_mix = 1,\n")
             f.write(f"\t.pots = {{\n")
 
             for p_idx, pot in enumerate(e_data['pots']):
