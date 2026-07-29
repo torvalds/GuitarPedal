@@ -694,10 +694,15 @@ static void init_effects(void)
 		reset_effect(effect);
 	}
 
-	if (!load_scene(0)) {
-		// Default chain if EEPROM is empty
-		routed_effect_count = 0;
-	}
+	//
+	// No fallback for an empty EEPROM, because there is nothing to
+	// fall back to.  Every slot is checksummed independently, so a
+	// blank or corrupt one simply fails to load and the effect keeps
+	// the defaults reset_effect() just gave it - which leaves a new
+	// pedal with every effect at its default and nothing routed.
+	// That is the right answer, and guessing a chain would be worse.
+	//
+	load_scene(0);
 
 	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
 		struct effect *effect = effects[i];

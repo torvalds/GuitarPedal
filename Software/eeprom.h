@@ -200,7 +200,6 @@ static bool load_scene(uint8_t scene_id)
 	if (scene_id >= MAX_SCENES) return false;
 
 	current_scene_id = scene_id;
-	extern struct effect settings_effect;
 
 	load_effect_state_from_slot(0, effects[0]);
 
@@ -254,7 +253,6 @@ static bool save_scene(uint8_t scene_id)
 		state->magic = effect_checksum(e, state);
 	}
 
-	extern struct effect settings_effect;
 	struct effect_state *state15 = &eeprom_cache.state[current_scene_id][SETTINGS_SLOT];
 	int seq15 = settings_effect.seq & 1;
 	if (settings_effect.save)
