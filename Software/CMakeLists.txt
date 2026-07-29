@@ -103,8 +103,13 @@ set(EFFECT_MAP_HEADER "${CMAKE_CURRENT_BINARY_DIR}/effect_map.h")
 set(EFFECT_JS "${CMAKE_CURRENT_SOURCE_DIR}/WebMIDI/effects.js")
 set(EFFECT_MD "${CMAKE_CURRENT_SOURCE_DIR}/MIDI_CC_MAP.md")
 
+# Written alongside effect_map.h rather than named on the command line -
+# the generator puts it next to it - but it is still an output, and the
+# build graph should know that rather than getting away with it.
+set(EFFECT_SCHEMA "${CMAKE_CURRENT_BINARY_DIR}/midi_schema.h")
+
 add_custom_command(
-	OUTPUT "${EFFECT_MAP_HEADER}" "${EFFECT_JS}" "${EFFECT_MD}"
+	OUTPUT "${EFFECT_MAP_HEADER}" "${EFFECT_SCHEMA}" "${EFFECT_JS}" "${EFFECT_MD}"
 	COMMAND "${SCRIPT_DIR}/gen_effects.py"
 		"${CMAKE_CURRENT_SOURCE_DIR}/effects"
 		"${EFFECT_MAP_HEADER}"
