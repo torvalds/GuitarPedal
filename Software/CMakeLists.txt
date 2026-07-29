@@ -29,13 +29,20 @@ pico_sdk_init()
 
 add_executable(blink)
 
-# I should have used different PIO pins for MIDI
-# but they conflict with the second rotary encoder
-set(MIDI_HW OFF CACHE BOOL "Enable MIDI HW (not just MIDI over USB-C) support")
-
-# The eeprom chip has changed from a 2kbit to a 64kbit one,
-# and they aren't sw-compatible
-set(EEPROM_64KBIT OFF CACHE BOOL "Configure for 64kbit eeprom chip")
+#
+# What is actually on the board.
+#
+# Both of these describe hardware rather than taste, so they default to
+# the boards being built now and stay options only so that the older
+# ones can still be built.  Getting one wrong is quiet: a 64kbit eeprom
+# addressed as a 2kbit one takes the write and puts it somewhere else,
+# so the pedal runs perfectly and just forgets everything on reboot.
+#
+# The MIDI pins used to be shared with a second rotary encoder, which is
+# why this was ever off; there is no second rotary any more.
+#
+set(MIDI_HW ON CACHE BOOL "Enable MIDI HW (not just MIDI over USB-C) support")
+set(EEPROM_64KBIT ON CACHE BOOL "Configure for 64kbit eeprom chip")
 
 set(SAMPLES_PER_SEC 48000.0)
 set(SCRIPT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
