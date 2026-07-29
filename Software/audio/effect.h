@@ -1,5 +1,18 @@
 #include "lfo.h"
 
+//
+// How long an effect takes to fade in or out, in samples - a tenth of a
+// second.
+//
+// Enabling or disabling an effect walks 'mix' up to or down from this
+// instead of switching, so that nothing clicks, and it is the unit
+// 'target' is counted in.  Used from here, eeprom.h, ui.h and blink.c;
+// it lived in effects/parametric_eq.h for a while, which worked only
+// because priority 120 happened to be included ahead of everything that
+// needed it.
+//
+#define EFF_ENABLE_STEPS ((int)SAMPLES_PER_SEC/10)
+
 sample_t get_usb_audio_input(void);
 
 typedef float (*pot_convert_fn)(unsigned char);
