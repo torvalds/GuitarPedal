@@ -74,6 +74,127 @@ static inline uint8_t midi_status_cin(uint8_t status)
 	return status >> 4;
 }
 
+//
+// Turn a raw MIDI byte stream into USB-MIDI event packets.
+//
+// The UART sees the wire format, with running status and real-time bytes
+// interspersed anywhere in another message.  USB-MIDI wants self-contained
+// packets instead.  Keep the parser here with the CIN helpers: the mapping
+// is part of parsing a byte stream, and putting it in a host-side test means
+// the MIDI_HW-only path is exercised too.
+//
+struct midi_stream_parser {
+	uint8_t bytes[3];
+	int nr_bytes;
+	int message_len;
+	bool in_sysex;
+};
+
+static inline void midi_stream_reset(struct midi_stream_parser *parser)
+{
+	parser->nr_bytes = 0;
+	parser->message_len = 0;
+	parser->in_sysex = false;
+}
+
+static inline void midi_stream_packet(uint8_t packet[4], uint8_t cin,
+	const uint8_t bytes[3], int nr_bytes)
+{
+	packet[0] = cin;
+	packet[1] = nr_bytes > 0 ? bytes[0] : 0;
+	packet[2] = nr_bytes > 1 ? bytes[1] : 0;
+	packet[3] = nr_bytes > 2 ? bytes[2] : 0;
+}
+
+//
+// Feed one byte of a raw MIDI stream.  Return true when it completes one
+// USB-MIDI packet in 'packet'.  Real-time messages are emitted immediately
+// without disturbing a partly received channel message or SysEx stream.
+// System Reset is the exception: it also clears the parser state.
+//
+static inline bool midi_stream_read(struct midi_stream_parser *parser,
+	uint8_t b, uint8_t packet[4])
+{
+	if (b >= 0xF8) {
+		uint8_t byte[] = { b, 0, 0 };
+		midi_stream_packet(packet, 0x0F, byte, 1);
+		if (b == 0xFF)
+			midi_stream_reset(parser);
+		return true;
+	}
+
+	if (parser->in_sysex) {
+		if (b == 0xF7) {
+			parser->bytes[parser->nr_bytes++] = b;
+			midi_stream_packet(packet,
+				(uint8_t)(0x04 + parser->nr_bytes),
+				parser->bytes, parser->nr_bytes);
+			parser->in_sysex = false;
+			parser->nr_bytes = 0;
+			return true;
+		}
+		if (b < 0x80) {
+			parser->bytes[parser->nr_bytes++] = b;
+			if (parser->nr_bytes != 3)
+				return false;
+			midi_stream_packet(packet, 0x04, parser->bytes, 3);
+			parser->nr_bytes = 0;
+			return true;
+		}
+
+		// A non-real-time status byte abandons an unfinished SysEx.
+		parser->in_sysex = false;
+		parser->nr_bytes = 0;
+	}
+
+	if (b < 0x80) {
+		if (!parser->message_len)
+			return false;
+
+		parser->bytes[parser->nr_bytes++] = b;
+		if (parser->nr_bytes != parser->message_len)
+			return false;
+
+		midi_stream_packet(packet, midi_status_cin(parser->bytes[0]),
+			parser->bytes, parser->nr_bytes);
+
+		// Channel messages keep their status for MIDI running status.
+		if (parser->bytes[0] < 0xF0)
+			parser->nr_bytes = 1;
+		else
+			midi_stream_reset(parser);
+		return true;
+	}
+
+	parser->nr_bytes = 0;
+	parser->message_len = 0;
+	if (b == 0xF0) {
+		parser->bytes[parser->nr_bytes++] = b;
+		parser->in_sysex = true;
+		return false;
+	}
+
+	parser->bytes[parser->nr_bytes++] = b;
+	if (b < 0xF0)
+		parser->message_len = (b & 0xF0) == 0xC0 ||
+			(b & 0xF0) == 0xD0 ? 2 : 3;
+	else if (b == 0xF1 || b == 0xF3)
+		parser->message_len = 2;
+	else if (b == 0xF2)
+		parser->message_len = 3;
+	else if (b >= 0xF4 && b <= 0xF7)
+		parser->message_len = 1;
+	else
+		return false;
+
+	if (parser->message_len != 1)
+		return false;
+
+	midi_stream_packet(packet, midi_status_cin(b), parser->bytes, 1);
+	midi_stream_reset(parser);
+	return true;
+}
+
 bool handle_midi_packet(const uint8_t packet[4]);
 void usb_midi_poll(void);
 bool usb_midi_write(const uint8_t packet[4]);
