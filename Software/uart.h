@@ -13,13 +13,8 @@ static volatile unsigned uart_rx_tail;
 void uart_midi_write(const uint8_t packet[4])
 {
 #if MIDI_HW
-	uint8_t cin = packet[0] & 0x0F;
-	int len = 0;
-	switch (cin) {
-		case 0x8: case 0x9: case 0xB: case 0xE: len = 3; break;
-		case 0xC: case 0xD: len = 2; break;
-		default: len = 0; break;
-	}
+	int len = midi_cin_length(packet[0] & 0x0F);
+
 	for (int i = 0; i < len; i++) {
 		unsigned head = uart_tx_head;
 		unsigned next_head = (head + 1) % UART_TX_BUF_SIZE;
@@ -58,7 +53,10 @@ bool uart_midi_read(uint8_t packet[4])
 		} else if (expected_bytes > 0 && parser_idx > 0) {
 			parser_packet[parser_idx++] = b;
 			if (parser_idx - 2 == expected_bytes) {
-				packet[0] = 0;
+				// CIN 0 is reserved: a host is entitled to
+				// ignore it, and ours was emitting nothing
+				// else on this path.
+				packet[0] = midi_status_cin(parser_packet[1]);
 				packet[1] = parser_packet[1];
 				packet[2] = parser_packet[2];
 				packet[3] = parser_packet[3];
