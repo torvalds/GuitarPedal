@@ -70,7 +70,7 @@ struct effect {
 	void (*init)(unsigned char[10]);
 	void (*load)(struct effect *, unsigned char[10]);
 	void (*save)(struct effect *, unsigned char[10]);
-	float (*step)(float);
+	sample_t (*step)(sample_t, float dry, float wet);
 	const struct pot_descr pots[10];
 };
 
@@ -117,7 +117,23 @@ static void set_mix_pot(struct effect *eff, float m)
 // How fast the multipliers chase their target: ~10ms at 48kHz
 #define MIX_SLEW (1.0f / 512)
 
-// Effects are purely mono... For now
+//
+// Run one effect, and work out how much of it to use.
+//
+// What this does *not* do is combine the wet signal with the dry one.
+// It works out the two multipliers and hands them over, because there
+// is no single right way to put two channels back together: a mono
+// effect has one answer to spread across both, a panner has a different
+// one for each, and a caller that already decided would stop either of
+// them from being written.
+//
+// So the mixing lives in a small per-effect function that gen_effects.py
+// writes out next to the effect itself.  For a mono effect - which is
+// all of them today - that function reads the left channel, runs the
+// effect, and mixes the one result into both, which is exactly what this
+// used to do inline.  The difference is that it is now the effect's own
+// business rather than something imposed on it from here.
+//
 static inline sample_t do_effect_step(struct effect *effect, sample_t val)
 {
 	if (effect->mix != effect->target) {
@@ -138,11 +154,7 @@ static inline sample_t do_effect_step(struct effect *effect, sample_t val)
 	float dry = 1.0f + r * (effect->dry - 1.0f);
 	float wet = r * effect->wet;
 
-	float effect_val = effect->step(val.left);
-	val.left = dry * val.left + wet * effect_val;
-	val.right = dry * val.right + wet * effect_val;
-
-	return val;
+	return effect->step(val, dry, wet);
 }
 
 #include "process.h"

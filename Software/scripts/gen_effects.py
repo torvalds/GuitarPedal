@@ -213,13 +213,31 @@ def generate(audio_dir, out_h, out_js, out_md):
             f.write(f"static float __audio_func({base}_step)(float);\n")
             f.write(f"#include \"../effects/{base}.h\"\n")
 
+            # The mixing wrapper, which is what the chain actually calls -
+            # see do_effect_step(). A mono effect gets the left channel
+            # and its one answer goes to both, which is the behaviour the
+            # caller used to impose on every effect alike. Written out per
+            # effect so that an effect can stop being mono without every
+            # other one having to care.
+            #
+            # This is the only call site of {base}_step(), so it inlines
+            # here and the chain is still one indirect call per effect.
+            f.write(f"static sample_t __audio_func({base}_mix_step)"
+                    "(sample_t val, float dry, float wet)\n")
+            f.write("{\n")
+            f.write(f"\tfloat out = {base}_step(val.left);\n")
+            f.write("\tval.left  = dry * val.left  + wet * out;\n")
+            f.write("\tval.right = dry * val.right + wet * out;\n")
+            f.write("\treturn val;\n")
+            f.write("}\n")
+
             f.write(f"static struct effect {struct_name} = {{\n")
             f.write(f"\t.name = \"{e_data['full_name']}\",\n")
             f.write(f"\t.short_name = \"{e_data['short_name']}\",\n")
             f.write(f"\t.def_mix = {e_data['def_mix']}f,\n")
             f.write(f"\t.mix_law = MIX_{e_data['mix_law']},\n")
             f.write(f"\t.init = {base}_init,\n")
-            f.write(f"\t.step = {base}_step,\n")
+            f.write(f"\t.step = {base}_mix_step,\n")
             f.write(f"\t.pots = {{\n")
 
             for p_idx, pot in enumerate(e_data['pots']):
