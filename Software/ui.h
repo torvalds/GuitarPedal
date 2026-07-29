@@ -113,6 +113,65 @@ static void set_led(int pin, bool on, bool intense)
 	pwm_set_gpio_level(pin, level);
 }
 
+_Static_assert(MAX_ROUTED_EFFECTS <= 2 * STATUS_CHAIN_BITS,
+	"a chain this long needs a third status CC");
+
+//
+// Tell the host what the one LED can only hint at.  See midi.h for what
+// goes in which bit.
+//
+// Only on change, which at this rate means a steady state costs nothing
+// and anything new is on screen within 40ms.
+//
+// Clearing 'intense' for every effect rather than just the one being
+// edited is what makes the chain bits mean anything.  The audio core
+// sets them at 48kHz and this is the only thing that ever puts them
+// back, so an effect that has stopped asking for attention would
+// otherwise stay lit for good - which is exactly what boost, compressor
+// and echo have been doing, unnoticed, because nothing read them.
+//
+// Draining 'samples_dropped' here is also why this has to come after
+// set_led(): that reads it, and this is what clears it.
+//
+static void send_status(void)
+{
+	unsigned int dropped = __atomic_exchange_n(&samples_dropped, 0,
+						   __ATOMIC_RELAXED);
+	uint8_t global = dropped > STATUS_DROPPED_MASK
+		       ? STATUS_DROPPED_MASK : dropped;
+	uint8_t chain[2] = { 0, 0 };
+
+	if (output_clipped)
+		global |= STATUS_CLIPPED;
+	if (effects[0]->intense)
+		global |= STATUS_FRONT_ATTN;
+
+	for (int i = 0; i < routed_effect_count; i++) {
+		if (effects[effect_chain[i]]->intense)
+			chain[i / STATUS_CHAIN_BITS] |= 1u << (i % STATUS_CHAIN_BITS);
+	}
+
+	static uint8_t last_global = 0;
+	static uint8_t last_chain[2] = { 0, 0 };
+
+	if (global != last_global) {
+		send_midi_cc(MIDI_CC_STATUS_GLOBAL, global);
+		last_global = global;
+	}
+	if (chain[0] != last_chain[0]) {
+		send_midi_cc(MIDI_CC_STATUS_CHAIN_LO, chain[0]);
+		last_chain[0] = chain[0];
+	}
+	if (chain[1] != last_chain[1]) {
+		send_midi_cc(MIDI_CC_STATUS_CHAIN_HI, chain[1]);
+		last_chain[1] = chain[1];
+	}
+
+	for (int i = 0; i < ARRAY_SIZE(effects); i++)
+		effects[i]->intense = 0;
+	output_clipped = 0;
+}
+
 // 'update_ui()' is called every few ms to react to user events.
 static void update_ui(void)
 {
@@ -146,25 +205,14 @@ static void update_ui(void)
 	// something wants your attention.  See status.h for why all three
 	// of those share the one brightness.
 	//
-	// 'samples_dropped' is not cleared here - the main loop drains it just
-	// after this, and reports the count over MIDI.
+	// 'samples_dropped' is still set at this point - send_status()
+	// below is what drains it, and it reports the count.
 	//
 	set_led(LED_GPIO, !disable_all,
 		output_clipped || samples_dropped || attention_preview);
 
-	static uint8_t last_clipped = 0;
-	static uint8_t last_intense = 0;
-	if (output_clipped != last_clipped) {
-		send_midi_cc(MIDI_CC_AUDIO_CLIPPING, output_clipped ? 127 : 0);
-		last_clipped = output_clipped;
-	}
-	if (effect->intense != last_intense) {
-		send_midi_cc(MIDI_CC_EFFECT_INTENSE, effect->intense ? 127 : 0);
-		last_intense = effect->intense;
-	}
+	send_status();
 
-	effect->intense = 0;
-	output_clipped = 0;
 	if (attention_preview)
 		attention_preview--;
 

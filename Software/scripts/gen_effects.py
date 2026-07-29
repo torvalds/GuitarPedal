@@ -315,16 +315,44 @@ def generate(audio_dir, out_h, out_js, out_md):
 
     with open(out_md, 'w') as f:
         f.write("# MIDI Implementation\n\n")
-        f.write("## Universal CCs (Global Controls)\n\n")
-        f.write("- **CC 7:** Main Volume\n")
-        f.write("- **CC 11:** Expression\n")
-        f.write("- **CC 20:** Global Bypass\n")
-        f.write("- **CC 64:** Tap Tempo\n")
-        f.write("- **CC 94:** Noise Gate Threshold\n")
-        f.write("- **CC 95:** Master Mix\n\n")
+        #
+        # Hand-written, because these are not derived from the effects -
+        # but kept to what the firmware actually implements.  This file
+        # is generated and published, so anything listed here is a claim
+        # about a protocol somebody may go and speak.
+        #
+        f.write("Anything invented here lives in CC 102-119, which the MIDI\n")
+        f.write("spec leaves undefined. CC 20 is the exception and is frozen\n")
+        f.write("where it is: value 126 on it is how an enclosed pedal gets\n")
+        f.write("into programming mode, so it has to keep answering the\n")
+        f.write("number that already-flashed firmware knows.\n\n")
+
+        f.write("## Control Change, in\n\n")
+        f.write("- **CC 20:** Global bypass, with three values that mean\n")
+        f.write("  something else instead: 68 enters tuner mode, 69 leaves\n")
+        f.write("  it, and 126 reboots to the bootloader. 0 bypasses and\n")
+        f.write("  anything else enables.\n\n")
+
+        f.write("## Control Change, out\n\n")
+        f.write("- **CC 20:** the pedal's own bypass state as 0 or 127, and\n")
+        f.write("  68/69 when a long press moves it in or out of tuner mode.\n")
+        f.write("- **CC 102:** global status, sent when it changes.\n")
+        f.write("  - bits 0-4: samples dropped since the last report,\n")
+        f.write("    saturating at 31. A count and not a flag, because\n")
+        f.write("    dropping one sample and dropping them steadily are\n")
+        f.write("    different problems.\n")
+        f.write("  - bit 5 (32): the output clipped.\n")
+        f.write("  - bit 6 (64): the effect at the front of the chain wants\n")
+        f.write("    attention - the noise gate is closed.\n")
+        f.write("- **CC 103, CC 104:** one bit per routed effect in chain\n")
+        f.write("  order, set while that effect wants attention: the\n")
+        f.write("  compressor is compressing, the boost is clipping, the\n")
+        f.write("  echo is in sound-on-sound. CC 103 is chain positions\n")
+        f.write("  0-6, CC 104 is positions 7-13.\n\n")
 
         f.write("## Program Change (Scenes)\n\n")
-        f.write("- **PC 0-31:** Load Scene 0-31 from EEPROM\n\n")
+        f.write("- **PC 0-31:** Load Scene 0-31 from EEPROM, in. Nothing\n")
+        f.write("  sends Program Change out.\n\n")
 
         f.write("## SysEx Deep Editing\n\n")
         f.write("The pedal uses SysEx messages for deep editing and dynamic feature discovery. Header: `F0 7D`.\n\n")

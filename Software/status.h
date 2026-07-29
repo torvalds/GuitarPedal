@@ -36,8 +36,8 @@ static inline void report_info(const char *msg)
 // which of the two it is, you can hear.
 //
 // They stay separate *here* so that the code and the MIDI reporting
-// still know the difference - MIDI_CC_AUDIO_CLIPPING means clipping
-// and nothing else, and 'samples_dropped' is a count, not a flag.  A smart LED
+// still know the difference - the status CCs carry clipping and the drop
+// count in their own bits, and the count stays a count.  A smart LED
 // will have colours to spend on this and can start telling them apart.
 //
 // The timing is deliberate too, and worth stating because it looks

@@ -769,13 +769,6 @@ int main()
 			}
 
 			update_ui();
-
-			unsigned int current_dropped = __atomic_exchange_n(&samples_dropped, 0, __ATOMIC_RELAXED);
-			if (current_dropped) {
-				int midi_dropped = current_dropped;
-				if (midi_dropped > 127) midi_dropped = 127;
-				send_midi_cc(MIDI_CC_CPU_LATENCY, midi_dropped);
-			}
 		}
 	}
 }

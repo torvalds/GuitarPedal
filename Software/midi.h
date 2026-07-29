@@ -9,11 +9,59 @@
 // nothing here needs to know about parameters.  What is left is
 // performance control coming in and status going out.
 //
+//
+// Global bypass in and out, and - on value 126 - reboot to the
+// bootloader.
+//
+// This number is frozen, and not because it is a good one.  CC 20 is in
+// the MSB half of the 14-bit controller range, so by the rule below it
+// belongs up at 102 with the rest of what we invented.  But 126 on this
+// controller is how you get an enclosed pedal into programming mode, and
+// some enclosures have no exposed BOOTSEL to fall back on.  A pedal
+// answers the number the firmware it is already running was built with,
+// so moving it strands anything flashed before the move: the recovery
+// path has to keep working on the old number, which means the old number
+// is the only number.
+//
 #define MIDI_CC_GLOBAL_ENABLE    20
 
-#define MIDI_CC_EFFECT_INTENSE   30
-#define MIDI_CC_AUDIO_CLIPPING   31
-#define MIDI_CC_CPU_LATENCY      32
+//
+// Status out.
+//
+// Everything we made up lives in CC 102-119, which the spec leaves
+// undefined.  Below 64 is the 14-bit convention, where CC n+32 is the
+// LSB of CC n - so 32 is Bank Select LSB and anything in 0-31 can be
+// read as an MSB waiting for its other half.  Where the standard already
+// means what we mean, use the standard number instead: CC 7 is volume
+// everywhere, and CC 11 is expression when that jack gets wired.
+//
+// The pedal has one LED and it can only say "something wants you".  The
+// host can do better than that, so these say what.  Three CCs, split by
+// what the answer is about rather than by which subsystem noticed:
+//
+// The global one carries what is not per-effect.  A count rather than a
+// flag for the dropped samples, because "once" and "constantly" are
+// different problems and the LED cannot tell you which - see status.h.
+//
+//	bits 0-4	samples dropped since the last report, to 31
+//	bit 5		the output clipped
+//	bit 6		effects[0], the front of the chain, wants attention
+//
+// The chain ones are one bit per routed effect in chain order, so the
+// host can light the effect that is doing something instead of just
+// reporting that something is.  Two of them because a CC value is seven
+// bits and a chain can hold fourteen.
+//
+#define MIDI_CC_STATUS_GLOBAL    102
+#define MIDI_CC_STATUS_CHAIN_LO  103
+#define MIDI_CC_STATUS_CHAIN_HI  104
+
+#define STATUS_DROPPED_MASK      0x1f
+#define STATUS_CLIPPED           (1u << 5)
+#define STATUS_FRONT_ATTN        (1u << 6)
+
+// How many effects fit in one of the chain CCs
+#define STATUS_CHAIN_BITS        7
 
 extern int current_midi_effect_idx;
 
