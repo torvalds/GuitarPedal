@@ -11,6 +11,6 @@ flash:
 prep:
 	git submodule init
 	git submodule update --init --recursive
-	cmake -DPICO_PLATFORM=rp2350 -S . -B build
+	cmake -S . -B build
 
 .PHONY: build

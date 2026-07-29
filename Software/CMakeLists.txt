@@ -1,5 +1,23 @@
 cmake_minimum_required(VERSION 3.13...3.27)
 
+#
+# What we build for, and how we pass floats around.
+#
+# The part is an RP2354B - an RP2350 with the flash on the die.  The
+# default float ABI is softfp, which is a compatibility mode for parts
+# that might not have an FPU.  This one does, and the whole firmware is
+# built around 32-bit floats, so passing them in core registers is pure
+# loss - a 'sample_t' is two floats, and softfp hands it back through
+# memory rather than in s0/s1.
+#
+# The two belong together: asking for hard float only makes sense
+# because of the platform we asked for.  Both are read by the toolchain
+# file, so they have to be set before the SDK picks one - which is also
+# why they are not the usual cache options further down.
+#
+set(PICO_PLATFORM rp2350)
+set(PICO_HARD_FLOAT_ABI 1)
+
 # initialize the SDK based on PICO_SDK_PATH
 # note: this must happen before project()
 include(pico-sdk/pico_sdk_init.cmake)
@@ -166,5 +184,12 @@ add_custom_command(TARGET blink POST_BUILD
 		"$<TARGET_FILE:blink>.map"
 		"$<TARGET_FILE:blink>"
 		"${CMAKE_OBJDUMP}"
+	VERBATIM)
+
+# ...and nothing anywhere is allowed to use a double
+add_custom_command(TARGET blink POST_BUILD
+	COMMAND "${SCRIPT_DIR}/check-float.py"
+		"$<TARGET_FILE:blink>"
+		"${CMAKE_NM}"
 	VERBATIM)
 
