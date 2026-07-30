@@ -519,6 +519,7 @@ input[type=range].eq-range {
   position: relative;
 }
 
+
 .menu-dropdown {
   position: absolute;
   z-index: 1000;
@@ -908,40 +909,75 @@ input[type=range].large-slider::-webkit-slider-runnable-track {
   border-color: var(--accent);
 }
 
-.unrouted-divider {
-    grid-column: 1 / -1;
-    text-align: center;
-    color: var(--text-color);
-    font-weight: bold;
-    margin-top: 2rem;
-    margin-bottom: 1rem;
-    position: relative;
-    opacity: 0.7;
+/*
+ * The pool of effects that are not in the chain.
+ *
+ * These used to be full cards below a divider, greyed out and collapsed,
+ * which is a lot of screen for a list of things the pedal is not running.
+ * A chip carries everything true about an unrouted effect - its name -
+ * and the whole pool now costs about what one card used to.
+ *
+ * No general .hidden rule to inherit, so declare it.
+ */
+.effect-pool {
+    margin-top: 1.5rem;
 }
 
-.unrouted-divider::before,
-.unrouted-divider::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    width: 30%;
-    height: 1px;
-    background-color: var(--text-color);
-    opacity: 0.3;
+.effect-pool.hidden {
+    display: none;
 }
 
-.unrouted-divider::before { left: 5%; }
-.unrouted-divider::after { right: 5%; }
-
-.effect-card.unrouted {
-    opacity: 0.5;
-    filter: grayscale(80%);
-    transition: opacity 0.3s, filter 0.3s;
+.pool-label {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
 }
 
-.effect-card.unrouted:hover {
-    opacity: 0.8;
-    filter: grayscale(40%);
+.pool-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+/*
+ * Finger-sized from the start.  44px is the smallest target worth
+ * offering on a touchscreen, and a chip has no reason to be smaller -
+ * unlike the controls it sits under, which still need that pass.
+ */
+.effect-chip {
+    min-height: 44px;
+    padding: 0 16px;
+    border: 1px solid var(--panel-border);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-main);
+    font-size: 1rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, transform 0.1s;
+}
+
+.effect-chip:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: var(--accent);
+}
+
+.effect-chip:active:not(:disabled) {
+    transform: scale(0.96);
+}
+
+.effect-chip:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+/*
+ * Parked: routed effects are the ones on screen, but the card of an
+ * unrouted one stays in the document because the pot elements inside it
+ * are what the pedal's PARAM_UPDATE messages address.  See applyRouting().
+ */
+.effect-card.parked {
+    display: none;
 }
 
 /*
@@ -1066,3 +1102,4 @@ input[type=range].large-slider::-webkit-slider-runnable-track {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
+
