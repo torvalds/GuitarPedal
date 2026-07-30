@@ -806,22 +806,180 @@ function enableWheelAdjust(input, zone = input) {
     }, { passive: false });
 }
 
-function formatPotValue(pot, val) {
+//
+// The pot curves, once each way round.
+//
+// A pot is a number from 0 to 120 on the wire and something physical to
+// look at - hertz, decibels, milliseconds - and which curve joins the
+// two is declared in the effect's C header and comes through in the
+// schema. gen_effects.py holds the same pair for the firmware's own
+// table; these are the app's copy, and everything in the app goes
+// through them.
+//
+// There were four. These two, and a second pair private to the
+// parametric EQ that knew LINEAR and FREQUENCY and quietly handed back
+// the raw pot value for anything else - so giving that effect a curve
+// of a different kind would have drawn a flat line through 0 to 120 Hz
+// and called it a response.
+//
+function clampPot(val) {
+    return Math.max(0, Math.min(120, isNaN(val) ? 0 : val));
+}
+
+function potToValue(pot, val) {
     const p = val / 120.0;
-    let y = val;
 
-    if (pot.curve === 'RAW') {
-        y = val;
-    } else if (pot.curve === 'LINEAR') {
-        y = pot.min + p * (pot.max - pot.min);
-    } else if (pot.curve === 'FREQUENCY') {
-        y = pot.min + (p * p * p) * (pot.max - pot.min);
-    } else if (pot.curve === 'SQUARED') {
-        y = pot.min + (p * p) * (pot.max - pot.min);
-    } else if (pot.curve === 'EXPONENTIAL') {
-        y = pot.min * Math.pow(pot.max / pot.min, p);
+    switch (pot.curve) {
+    case 'LINEAR':      return pot.min + p * (pot.max - pot.min);
+    case 'FREQUENCY':   return pot.min + p * p * p * (pot.max - pot.min);
+    case 'SQUARED':     return pot.min + p * p * (pot.max - pot.min);
+    case 'EXPONENTIAL': return pot.min * Math.pow(pot.max / pot.min, p);
     }
+    return val;                 // RAW and ENUM are already the value
+}
 
+//
+// And back. Rounding to a whole pot step is part of the answer rather
+// than something for the caller to do afterwards: 121 values is all
+// there is, so anything finer is a number the pedal cannot be told.
+//
+function valueToPot(pot, y) {
+    if (pot.curve === 'RAW' || pot.curve === 'ENUM')
+        return clampPot(Math.round(y));
+
+    const a = pot.min, b = pot.max;
+    let p = 0;
+
+    // A ratio outside the declared range is the caller's business to
+    // clamp; taking a cube root of a negative one here is not, and
+    // neither is a logarithm of it
+    if (b !== a) {
+        const ratio = Math.max(0, (y - a) / (b - a));
+
+        switch (pot.curve) {
+        case 'LINEAR':      p = ratio; break;
+        case 'FREQUENCY':   p = Math.cbrt(ratio); break;
+        case 'SQUARED':     p = Math.sqrt(ratio); break;
+        case 'EXPONENTIAL':
+            p = (a > 0 && y > 0) ? Math.log2(y / a) / Math.log2(b / a) : 0;
+            break;
+        }
+    }
+    return clampPot(Math.round(p * 120));
+}
+
+//
+// How the app behaves, as opposed to what the pedal does.
+//
+// Kept in localStorage because these belong to the person and the
+// screen, not to the pedal: a scene must not be able to change how
+// dragging works, and the pedal has no idea any of this exists. Which
+// is also why they are not pots - there is nothing here to send.
+//
+function uiPref(key, fallback) {
+    try {
+        const val = localStorage.getItem('ui.' + key);
+        return val === null ? fallback : val === 'true';
+    } catch (err) {
+        // Storage can be refused outright, and a preference is not
+        // worth failing over
+        return fallback;
+    }
+}
+
+function setUiPref(key, val) {
+    try {
+        localStorage.setItem('ui.' + key, val ? 'true' : 'false');
+    } catch (err) {
+        /* then it lasts as long as the page does, which will do */
+    }
+}
+
+//
+// Whether the EQ's bands are held in order while you drag them.
+//
+// On by default, and a switch rather than a decision made for you: the
+// unordered curves the old overlapping pot ranges allowed were odd but
+// not wrong, and some of them are interesting. Turning this off gets
+// them back.
+//
+// Nothing happens retroactively. Switching it on does not tidy up bands
+// that are already crossed - it only governs what a drag is allowed to
+// do, so an existing curve is left exactly as it was until you take
+// hold of something.
+//
+let eqKeepOrder = uiPref('eq.keepOrder', true);
+
+//
+// Keeping the EQ's bands in order.
+//
+// The pedal does not care - five biquads in series commute, and every
+// band now has the whole audio range - so this is entirely a question
+// about what a control should do, and it lives here rather than in the
+// firmware.
+//
+// A band may travel as far as its neighbours and no further.  The
+// alternative was to push the neighbours along ahead of it, which reads
+// well until you drag the low shelf up to 10kHz and arrive to find it
+// has taken the other four with it and flattened a curve you spent a
+// while on.  Clamping never touches a band you did not grab, and it
+// costs nothing: every ordered arrangement is still reachable, by
+// moving the band that is in the way first, and unordered ones are what
+// this is for.
+//
+// In pot units rather than hertz.  Pot units are what gets stored and
+// what gets sent, so clamping there is exact - clamp in hertz and the
+// conversion back can round to a step the far side of the neighbour it
+// was just clamped to.
+//
+function clampToNeighbours(vals, idx, want) {
+    const lo = idx > 0 ? vals[idx - 1] : 0;
+    const hi = idx < vals.length - 1 ? vals[idx + 1] : 120;
+
+    return Math.max(lo, Math.min(hi, want));
+}
+
+//
+// Which bands are sitting exactly on top of this one.
+//
+// Clamping produces exact equality rather than near misses - a band
+// stopped by its neighbour is given that neighbour's value - so a pile
+// can be identified by that alone, with no tolerance to tune. Two bands
+// that are merely close are not a pile, and go on being told apart by
+// which one you aimed at.
+//
+function pileAt(vals, idx) {
+    const pile = [];
+
+    for (let i = 0; i < vals.length; i++)
+        if (vals[i] === vals[idx])
+            pile.push(i);
+
+    return pile;
+}
+
+//
+// A frequency, short enough to sit under a control point.
+//
+// Two significant figures, because that is about all the control can
+// select.  The frequency pots step by 5.9%, so a third digit is a claim
+// about precision that does not exist: "1.68kHz" was a reading of a
+// number rather than a description of a setting, and the next position
+// along would have been 1.78.
+//
+function formatFreqShort(freq) {
+    const mag = Math.pow(10, 1 - Math.floor(Math.log10(freq)));
+    const round = Math.round(freq * mag) / mag;
+
+    if (round < 1000)
+        return round.toFixed(0) + 'Hz';
+
+    const k = round / 1000;
+    return (k >= 10 ? k.toFixed(0) : k.toFixed(1)) + 'kHz';
+}
+
+function formatPotValue(pot, val) {
+    const y = potToValue(pot, val);
     let displayStr = "";
     if (pot.curve === 'RAW' || pot.curve === 'ENUM') {
         displayStr = Math.round(y).toString();
@@ -1768,26 +1926,7 @@ function getInitialPotValue(pot) {
     if (pot.defaultPot !== undefined) return pot.defaultPot;
 
     if (pot.default === undefined) return 60;
-    const y = pot.default;
-
-    if (pot.curve === 'RAW' || pot.curve === 'ENUM') return Math.round(y);
-
-    let p = 0;
-    const a = pot.min || 0;
-    const b = pot.max || 1;
-
-    if (pot.curve === 'LINEAR') {
-        p = (b !== a) ? (y - a) / (b - a) : 0;
-    } else if (pot.curve === 'FREQUENCY') {
-        p = (b !== a) ? Math.pow((y - a) / (b - a), 1/3.0) : 0;
-    } else if (pot.curve === 'SQUARED') {
-        p = (b !== a) ? Math.pow((y - a) / (b - a), 0.5) : 0;
-    } else if (pot.curve === 'EXPONENTIAL') {
-        p = (b !== a && a !== 0 && y !== 0) ? Math.log2(y / a) / Math.log2(b / a) : 0;
-    }
-
-    let val = Math.round(p * 120);
-    return Math.max(0, Math.min(120, val));
+    return valueToPot(pot, pot.default);
 }
 
 
@@ -1838,6 +1977,17 @@ function applyRouting(routeIds) {
             return;
         effectsContainer.appendChild(card);
         card.classList.remove('parked');
+
+        //
+        // Anything drawn from the card's own measurements was drawn
+        // blind while it was parked, because a hidden element has no
+        // size to measure.  This is not a corner case: the pedal's state
+        // dump arrives before the routing order that ends it, so every
+        // card is parked for the whole of it.
+        //
+        const effect = PEDAL_EFFECTS[effectIdMap.get(id)];
+        if (effect && effect.redrawCurve)
+            effect.redrawCurve();
 
         // Open it on the way in.  An effect that has just been added is
         // one you are about to set up - but only on the way in, or
@@ -2048,8 +2198,22 @@ function renderUI() {
 
         let slidersContainer = null;
         let eqPotsInputs = [];
+        let eqFooter = null;
 
-        if (effect.name === 'Parametric EQ') {
+        //
+        // The one effect with a hand-built card, because frequency and
+        // gain per band is two-dimensional and a row of one-dimensional
+        // controls cannot say it. Asked six times while building a card,
+        // so ask once.
+        //
+        // By 'base', the header's filename, rather than by the display
+        // name it used to use: renaming an effect in its C comment is a
+        // thing that happens, and it used to silently cost the EQ its
+        // curve and leave ten hidden sliders in its place.
+        //
+        const isEq = effect.base === 'parametric_eq';
+
+        if (isEq) {
 
             controls.className = 'effect-controls eq-container';
 
@@ -2064,6 +2228,15 @@ function renderUI() {
             slidersContainer.className = 'eq-sliders eq-sliders-hidden';
             controls.appendChild(slidersContainer);
 
+            //
+            // The row under the curve.  The Mix control is the only pot
+            // this effect shows - the other ten are the graph - so it
+            // had the whole width to itself and did not need it.
+            //
+            eqFooter = document.createElement('div');
+            eqFooter.className = 'eq-footer';
+            controls.appendChild(eqFooter);
+
             effect.redrawCurve = () => {
                 const canvas = curveWrapper.querySelector(`#eq-canvas-${idx}`);
                 if (!canvas || eqPotsInputs.length < 10) return;
@@ -2071,6 +2244,21 @@ function renderUI() {
                 const W = canvas.width;
                 const H = canvas.height;
                 ctx.clearRect(0, 0, W, H);
+
+                //
+                // How many canvas units there are to a screen pixel, for
+                // the things that should be a fixed size to the eye.
+                //
+                // A parked card has no layout and so no width at all.
+                // Falling back to 1 keeps this finite; applyRouting()
+                // redraws when a card is unparked, which is what makes
+                // the fallback temporary rather than wrong - a card is
+                // parked for the whole of the pedal's state dump, so
+                // this is the ordinary case at startup and not a corner.
+                //
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = rect.width ? W / rect.width : 1;
+                const scaleY = rect.height ? H / rect.height : 1;
 
                 // Math helper for biquad mag sq
                 function fastsincos(f) {
@@ -2129,15 +2317,7 @@ function renderUI() {
                 }
 
                 const pots = eqPotsInputs.map(el => parseInt(el.value));
-                // getFloat maps 0-120 to actual value
-                function getFloat(p_idx) {
-                    const val = pots[p_idx];
-                    const potDef = effect.pots[p_idx];
-                    const p = val / 120.0;
-                    if (potDef.curve === 'LINEAR') return potDef.min + p * (potDef.max - potDef.min);
-                    if (potDef.curve === 'FREQUENCY') return potDef.min + Math.pow(p, 3) * (potDef.max - potDef.min);
-                    return val;
-                }
+                const getFloat = (p_idx) => potToValue(effect.pots[p_idx], pots[p_idx]);
                 function peq_pot_A(db) { return Math.pow(10, db / 40.0); }
 
                 const fs = 48000;
@@ -2179,7 +2359,7 @@ function renderUI() {
                     const db = 20.0 * Math.log10(mag);
 
                     // map dB to Y [0..H]
-                    let y = (H/2) - (db * (H/40)); // +- 20dB range
+                    let y = dbToY(db, H);
 
                     if (x === 0) ctx.moveTo(x, y);
                     else ctx.lineTo(x, y);
@@ -2195,13 +2375,93 @@ function renderUI() {
                     const fx = 13.0 * Math.log2(freq / 20.0);
                     const p = fx / maxFx;
                     const x = margin + p * graphWidth;
-                    const y = (H / 2) - (db * (H / 40));
+                    const y = dbToY(db, H);
 
                     nodes.push({x, y});
 
+                    //
+                    // The node and its labels are drawn in screen px,
+                    // not canvas units.
+                    //
+                    // The canvas is 1000 wide and 300 tall and is drawn
+                    // at whatever width the card is, so the two axes are
+                    // scaled by quite different amounts and a round arc
+                    // is round at exactly one card width.  On a phone
+                    // the dot came out about 2.5px across and 8px tall,
+                    // its outline was three times thinner sideways than
+                    // it was top to bottom, and the labels were squashed
+                    // to a third of their width.
+                    //
+                    // Scaling by exactly what the css then divides by
+                    // leaves the net transform an identity, so anything
+                    // drawn in here lands on the glass the size it says.
+                    // It has to wrap the strokes and the text too: a
+                    // line width is in user units like everything else,
+                    // which is the whole reason the outline was wrong.
+                    //
+                    // The curve itself is deliberately left alone.  It
+                    // is a graph, and a graph is drawn in the units of
+                    // the thing it is plotting.  These are controls
+                    // sitting on top of it, and a control's size is a
+                    // claim about where it can be grabbed - so it wants
+                    // to agree with the hit test, which is also in
+                    // screen px.  See EQ_GRAB_RADIUS.
+                    //
+                    const colour = (typeof activeNodeIdx !== 'undefined'
+                                    && i === activeNodeIdx) ? '#ffffff' : '#4ecca3';
+
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.scale(scaleX, scaleY);
+
+                    //
+                    // Which kind of band this is, said with a tick
+                    // rather than a colour.
+                    //
+                    // A shelf runs flat away from its corner frequency
+                    // and a peak does not, so a tick pointing the way
+                    // the shelf acts - left for the low one, right for
+                    // the high one - is a small picture of what the band
+                    // does, and needs no legend to read.  Colour would
+                    // have needed one, and the fill is already spoken
+                    // for: it says which node you have hold of.
+                    //
+                    // Drawn before the dot so the dot covers its root.
+                    // Bands 0 and 4 are the shelves - the same fixed
+                    // arrangement the coefficients above are built in.
+                    //
+                    const shelf = i === 0 ? -1 : (i === 4 ? 1 : 0);
+                    if (shelf) {
+                        ctx.beginPath();
+                        ctx.moveTo(0, 0);
+                        ctx.lineTo(shelf * EQ_SHELF_TICK, 0);
+                        ctx.lineCap = 'round';
+
+                        //
+                        // Stroked twice, for the dark edge the dot gets
+                        // and for the same reason.  A node is drawn in
+                        // the curve's own colour, which is deliberate -
+                        // the dot survives it by having an outline, and
+                        // a bare tick did not: it lay along a flat
+                        // stretch of curve and disappeared into it,
+                        // which next to a shelf at 0dB is most of the
+                        // time.
+                        //
+                        // Round caps so the far end is edged too, and
+                        // the near end is under the dot either way.
+                        //
+                        ctx.lineWidth = EQ_SHELF_TICK_WIDTH + 2;
+                        ctx.strokeStyle = '#1a1a2e';
+                        ctx.stroke();
+
+                        ctx.lineWidth = EQ_SHELF_TICK_WIDTH;
+                        ctx.strokeStyle = colour;
+                        ctx.stroke();
+                    }
+
                     ctx.beginPath();
-                    ctx.arc(x, y, 8, 0, 2 * Math.PI);
-                    ctx.fillStyle = (typeof activeNodeIdx !== 'undefined' && i === activeNodeIdx) ? '#ffffff' : '#4ecca3';
+                    ctx.arc(0, 0, EQ_NODE_RADIUS, 0, 2 * Math.PI);
+                    ctx.fillStyle = colour;
                     ctx.fill();
                     ctx.lineWidth = 2;
                     ctx.strokeStyle = '#1a1a2e';
@@ -2211,17 +2471,64 @@ function renderUI() {
                     ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
                     ctx.font = '12px "Inter", sans-serif';
                     ctx.textAlign = 'center';
-                    let fStr = freq >= 1000 ? (freq/1000).toFixed(2) + 'k' : freq.toFixed(0);
-                    ctx.fillText(`${fStr}Hz`, x, y - 24);
-                    ctx.fillText(`${db > 0 ? '+' : ''}${db.toFixed(1)}dB`, x, y - 10);
+                    ctx.fillText(formatFreqShort(freq), 0, -24);
+                    ctx.fillText(`${db > 0 ? '+' : ''}${db.toFixed(1)}dB`, 0, -10);
+
+                    ctx.restore();
                 }
             };
 
 
 
             // Interactive EQ logic
+            //
+            // Both in screen px.  The dot is what you see and the radius
+            // is what you can hit, and a target wider than its dot is
+            // the normal arrangement - nothing else on this canvas is
+            // grabbable, so there is nothing for it to steal from, and
+            // the nearest node wins where two overlap.
+            //
+            const EQ_NODE_RADIUS = 7;
+            const EQ_GRAB_RADIUS = 30;
+            const EQ_SHELF_TICK = 14;   // how far a shelf's tick reaches out
+            const EQ_SHELF_TICK_WIDTH = 3;
+
+            //
+            // How much of the gain axis the graph shows, either side of
+            // 0dB.  More than the pots can reach, which is +-20.
+            //
+            // They used to be the same number, so a band at full gain
+            // put its node exactly on the canvas edge - the dot drawn
+            // half outside it and the two labels, which sit above the
+            // node, entirely outside it.  The reading disappeared at
+            // precisely the setting you would want to read.
+            //
+            // Widening the axis rather than making the canvas taller.
+            // Taller costs vertical space on the screen that a phone
+            // does not have, and the picture does not want it: what is
+            // gained is headroom, which is empty by definition. This
+            // way +-20dB is the middle 71% of the height and the rest
+            // is room for the labels to live in.  It also means the
+            // summed curve, which five bands can push well past 20dB,
+            // stays in the picture for longer.
+            //
+            const EQ_DB_SPAN = 28;
+
+            const dbToY = (db, H) => H / 2 - db * (H / (2 * EQ_DB_SPAN));
+            const yToDb = (y, H) => (H / 2 - y) * (2 * EQ_DB_SPAN) / H;
+
+            const EQ_PICK_SLOP = 4;     // px before a drag has a direction
+
             let isDragging = false;
+            let dragPointerId = null;
+            let dragStartX = 0, dragStartY = 0;
+            let dragPile = null;
             let activeNodeIdx = -1;
+
+            // The five band frequencies, as pot values - the app's live
+            // copy of what the pedal has
+            const freqPots = () =>
+                  [0, 1, 2, 3, 4].map((i) => parseInt(eqPotsInputs[i * 2].value));
             let nodes = [];
 
             let lastEqUpdate = 0;
@@ -2232,28 +2539,13 @@ function renderUI() {
                 const fDef = effect.pots[fIdx];
                 const gDef = effect.pots[gIdx];
 
-                // Clamp
-                freq = Math.max(fDef.min, Math.min(fDef.max, freq));
-                db = Math.max(gDef.min, Math.min(gDef.max, db));
+                // Off the end of the graph is off the end of the pot,
+                // which valueToPot() already answers by clamping
+                const gVal = valueToPot(gDef, db);
+                let fVal = valueToPot(fDef, freq);
 
-                // Inverse freq
-                let fVal = 0;
-                if (fDef.curve === 'FREQUENCY') {
-                    const p = Math.pow((freq - fDef.min) / (fDef.max - fDef.min), 1/3);
-                    fVal = Math.round(p * 120.0);
-                } else if (fDef.curve === 'LINEAR') {
-                    const p = (freq - fDef.min) / (fDef.max - fDef.min);
-                    fVal = Math.round(p * 120.0);
-                }
-                if (isNaN(fVal)) fVal = 0;
-                fVal = Math.max(0, Math.min(120, fVal));
-
-                // Inverse gain
-                let gVal = 0;
-                const gp = (db - gDef.min) / (gDef.max - gDef.min);
-                gVal = Math.round(gp * 120.0);
-                if (isNaN(gVal)) gVal = 0;
-                gVal = Math.max(0, Math.min(120, gVal));
+                if (eqKeepOrder)
+                    fVal = clampToNeighbours(freqPots(), nodeIdx, fVal);
 
                 // Update inputs visually
                 eqPotsInputs[fIdx].value = fVal;
@@ -2276,43 +2568,137 @@ function renderUI() {
                 effect.redrawCurve();
             }
 
-            const getMousePos = (e) => {
+            //
+            // Where the pointer is, in canvas coordinates.
+            //
+            // Deliberately not clamped, and deliberately still answered
+            // when the pointer is outside the canvas: a drag that has
+            // left the graph is still a drag, and onMove() clamps what
+            // it does with this rather than refusing to hear it.
+            //
+            const getPointerPos = (e) => {
                 const canvas = curveWrapper.querySelector(`#eq-canvas-${idx}`);
                 const rect = canvas.getBoundingClientRect();
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
                 const scaleX = canvas.width / rect.width;
                 const scaleY = canvas.height / rect.height;
                 return {
-                    x: (clientX - rect.left) * scaleX,
-                    y: (clientY - rect.top) * scaleY
+                    x: (e.clientX - rect.left) * scaleX,
+                    y: (e.clientY - rect.top) * scaleY,
+                    scaleX, scaleY
                 };
             };
 
             const onDown = (e) => {
+                if (!e.isPrimary)
+                    return;
                 e.preventDefault();
-                const pos = getMousePos(e);
-                let minDist = 10000;
+                const pos = getPointerPos(e);
+                let minDist = Infinity;
                 activeNodeIdx = -1;
+
+                //
+                // How close is close enough, measured on the screen
+                // rather than on the canvas.
+                //
+                // The canvas is 1000 units wide and 300 tall, and it is
+                // drawn at whatever width the card is with the height
+                // fixed - so the two axes are scaled by quite different
+                // amounts, and a radius in canvas units is an ellipse on
+                // the glass. On a phone it came out about 12px wide and
+                // 40px tall: tightest on the axis the bands are spread
+                // along, on the device with the least precision, which
+                // is exactly backwards.
+                //
+                // Dividing by the scale asks the question in the units
+                // the finger is actually in, so the target is a circle
+                // and it is the same size everywhere.
+                //
                 nodes.forEach((n, i) => {
-                    const dx = n.x - pos.x;
-                    const dy = n.y - pos.y;
-                    const dist = Math.sqrt(dx*dx + dy*dy);
-                    if (dist < 40 && dist < minDist) {
+                    const dx = (n.x - pos.x) / pos.scaleX;
+                    const dy = (n.y - pos.y) / pos.scaleY;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist < EQ_GRAB_RADIUS && dist < minDist) {
                         minDist = dist;
                         activeNodeIdx = i;
                     }
                 });
                 if (activeNodeIdx !== -1) {
                     isDragging = true;
+                    dragPointerId = e.pointerId;
+                    dragStartX = e.clientX;
+                    dragStartY = e.clientY;
+
+                    //
+                    // If bands are piled on top of each other, which
+                    // one you meant depends on which way you are about
+                    // to go, and that is not known yet.  Remember the
+                    // pile and settle it on the first real movement.
+                    //
+                    // The provisional pick stays highlighted meanwhile
+                    // and it does not matter which of them it is: they
+                    // are drawn in the same place, so the correction is
+                    // invisible.
+                    //
+                    const pile = pileAt(freqPots(), activeNodeIdx);
+                    dragPile = pile.length > 1 ? pile : null;
+                    //
+                    // The rest of the drag is heard on the window, not
+                    // on the canvas.  A node has limits and the pointer
+                    // does not, so the two part company at the edge of
+                    // the graph all the time - and while they are apart,
+                    // every move event would go to whatever the pointer
+                    // is over instead of to us.
+                    //
+                    // That is what used to end the drag: moves stopped
+                    // arriving, and 'mouseleave' called onUp on the way
+                    // out for good measure. The node stopped where it
+                    // was and you had to find it and grab it again,
+                    // which with a finger means finding it underneath
+                    // the finger.
+                    //
+                    window.addEventListener('pointermove', onMove);
+                    window.addEventListener('pointerup', onUp);
+                    window.addEventListener('pointercancel', onUp);
                     effect.redrawCurve();
                 }
             };
 
             const onMove = (e) => {
                 if (!isDragging || activeNodeIdx === -1) return;
+                if (e.pointerId !== dragPointerId) return;
                 e.preventDefault();
-                const pos = getMousePos(e);
+
+                //
+                // Settle which of a pile was meant, once, on the first
+                // movement worth reading - and change nothing at all
+                // until then, so the answer cannot arrive after some
+                // other band has already been edited.
+                //
+                // Going left takes the lowest-numbered and going right
+                // the highest, which sounds like a convention and is
+                // not: under clamping those are the only two that can
+                // move at all.  The rest of the pile is blocked by the
+                // one being picked.  So this is "take the one that is
+                // free to go where you are going", and it peels a pile
+                // apart one band at a time.
+                //
+                // A mostly-vertical first move is a gain edit, where
+                // the order does not come into it, so the provisional
+                // pick stands.
+                //
+                if (dragPile) {
+                    const dx = e.clientX - dragStartX;
+                    const dy = e.clientY - dragStartY;
+
+                    if (Math.abs(dx) < EQ_PICK_SLOP && Math.abs(dy) < EQ_PICK_SLOP)
+                        return;
+                    if (Math.abs(dx) >= Math.abs(dy))
+                        activeNodeIdx = dx < 0 ? dragPile[0]
+                                               : dragPile[dragPile.length - 1];
+                    dragPile = null;
+                }
+
+                const pos = getPointerPos(e);
                 const canvas = curveWrapper.querySelector(`#eq-canvas-${idx}`);
                 const W = canvas.width;
                 const H = canvas.height;
@@ -2327,12 +2713,21 @@ function renderUI() {
                 const p = (posX - margin) / graphWidth;
                 const fx = p * maxFx;
                 const freq = 20.0 * Math.pow(2, fx / 13.0);
-                const db = (H / 2 - posY) / (H / 40);
+                const db = yToDb(posY, H);
 
                 updateEqNode(activeNodeIdx, freq, db);
             };
 
             const onUp = (e) => {
+                if (e.pointerId !== dragPointerId)
+                    return;
+
+                window.removeEventListener('pointermove', onMove);
+                window.removeEventListener('pointerup', onUp);
+                window.removeEventListener('pointercancel', onUp);
+                dragPointerId = null;
+                dragPile = null;
+
                 if (isDragging && activeNodeIdx !== -1) {
                     // Force final sysex flush on release
                     const fIdx = activeNodeIdx * 2;
@@ -2353,13 +2748,9 @@ function renderUI() {
             setTimeout(() => {
                 const canvasEl = curveWrapper.querySelector(`#eq-canvas-${idx}`);
                 if (canvasEl) {
-                    canvasEl.addEventListener('mousedown', onDown);
-                    canvasEl.addEventListener('mousemove', onMove);
-                    canvasEl.addEventListener('mouseup', onUp);
-                    canvasEl.addEventListener('mouseleave', onUp);
-                    canvasEl.addEventListener('touchstart', onDown, {passive: false});
-                    canvasEl.addEventListener('touchmove', onMove, {passive: false});
-                    canvasEl.addEventListener('touchend', onUp);
+                    // Only the grab is on the canvas - see onDown() for
+                    // where the rest of it went and why
+                    canvasEl.addEventListener('pointerdown', onDown);
                 }
             }, 0);
 
@@ -2406,14 +2797,15 @@ function renderUI() {
                 setActivePot(`eff-${idx}-mix`, mixPotDef,
                              parseInt(mixInput.value), effect.name));
 
-            controls.appendChild(mixDiv);
+            // The EQ puts it in a row with its own switches
+            (eqFooter || controls).appendChild(mixDiv);
         }
 
         effect.pots.forEach((pot, pIdx) => {
             const potIdKey = `eff-${idx}-pot-${pIdx}`;
 
             const potDiv = document.createElement('div');
-            potDiv.className = effect.name === 'Parametric EQ' ? 'pot-control eq-pot' : 'pot-control';
+            potDiv.className = isEq ? 'pot-control eq-pot' : 'pot-control';
 
             const label = document.createElement('div');
             label.className = 'pot-label';
@@ -2452,7 +2844,7 @@ function renderUI() {
                 input.value = initialVal;
                 input.potDef = pot; // Attach pot definition for formatting
 
-                if (effect.name === 'Parametric EQ') {
+                if (isEq) {
                     input.className = 'eq-range';
                     input.redrawCurve = effect.redrawCurve;
                     eqPotsInputs.push(input);
@@ -2467,7 +2859,7 @@ function renderUI() {
                     if (input.redrawCurve) input.redrawCurve();
                 });
 
-                if (effect.name === 'Parametric EQ') {
+                if (isEq) {
                     const sliderWrapper = document.createElement('div');
                     sliderWrapper.className = 'eq-slider-wrapper';
                     sliderWrapper.appendChild(input);
@@ -2496,14 +2888,43 @@ function renderUI() {
                     setActivePot(potIdKey, pot, parseInt(input.value), effect.name));
             }
 
-            if (effect.name === 'Parametric EQ') {
+            if (isEq) {
                 slidersContainer.appendChild(potDiv);
             } else {
                 controls.appendChild(potDiv);
             }
         });
 
-        if (effect.name === 'Parametric EQ') {
+        if (isEq) {
+            //
+            // Switches for how the graph behaves.  Not pots, and not
+            // sent anywhere: the pedal has no opinion about any of this
+            // and no way to store it. They sit here rather than in the
+            // app's menu because they are about this one card, and
+            // because a control belongs next to the thing it governs.
+            //
+            const options = document.createElement('div');
+            options.className = 'eq-options';
+
+            const orderLabel = document.createElement('label');
+            orderLabel.className = 'eq-option';
+            orderLabel.title = 'Bands stop at their neighbours instead of ' +
+                               'passing them. Off, the shelves and peaks can ' +
+                               'be in any order, which the pedal is happy with.';
+
+            const orderBox = document.createElement('input');
+            orderBox.type = 'checkbox';
+            orderBox.checked = eqKeepOrder;
+            orderBox.addEventListener('change', () => {
+                eqKeepOrder = orderBox.checked;
+                setUiPref('eq.keepOrder', eqKeepOrder);
+            });
+
+            orderLabel.appendChild(orderBox);
+            orderLabel.appendChild(document.createTextNode('Keep bands in order'));
+            options.appendChild(orderLabel);
+            eqFooter.appendChild(options);
+
             setTimeout(() => effect.redrawCurve(), 0);
         }
         card.appendChild(controls);
