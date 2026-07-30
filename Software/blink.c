@@ -460,18 +460,37 @@ static void sysex_send_status(void)
 	// the wrong way round: silence is exactly what you cannot trust
 	// when you are already asking why something is quiet.
 	//
+	// 'status' stays NULL in that case rather than becoming the empty
+	// string, because the two are not interchangeable below: putting an
+	// empty string back into the mailbox would be a message as far as
+	// report_info() is concerned, and would block every later one.
+	//
 	const char *status = get_status();
-	if (!status)
-		status = "";
 
 	sysex_tx_start();
 	sysex_stream_write(sysex_status_header, sizeof(sysex_status_header));
-	sysex_stream_write((const uint8_t *)status, strlen(status));
+	if (status)
+		sysex_stream_write((const uint8_t *)status, strlen(status));
 	sysex_stream_write(sysex_status_trailer, sizeof(sysex_status_trailer));
 
-	// Not sysex_tx_finish(): reporting a failed status report as a
-	// status report is how you get an endless conversation with
-	// yourself.  The next one will go out or it won't.
+	//
+	// Put it back if it didn't get out.  get_status() took it before
+	// the transmit was attempted, and usb_midi_write() is best-effort
+	// with a 20ms deadline, so a congested link would otherwise destroy
+	// the one message that mattered - at what is a plausible moment for
+	// whatever is being diagnosed to be happening.
+	//
+	// report_info() rather than report_status() is the whole of it: it
+	// restores the message only if nothing newer has arrived, and
+	// something newer is by definition more current.  Not a
+	// self-reference either - this puts the original back rather than
+	// reporting a new message about the failure, which is why
+	// sysex_tx_finish() is still the wrong thing to call here.  That
+	// would report a failed status report as a status report, and start
+	// a conversation with itself.
+	//
+	if (sysex_tx_failed && status)
+		report_info(status);
 }
 
 static void sysex_send_pot_value(int eff, int pot, int value)
