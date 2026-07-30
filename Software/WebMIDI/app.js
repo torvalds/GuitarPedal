@@ -5,7 +5,9 @@ const SYSEX_CMD = {
     SAVE_SCENE: 0x04,
     REQ_STATE: 0x05,
     ROUTING_ORDER: 0x08,
-    DIAGNOSTIC: 0x09
+    DIAGNOSTIC: 0x09,
+    IDENTITY: 0x0a,
+    TELEMETRY: 0x0b
 };
 
 let midiAccess = null;
@@ -241,13 +243,19 @@ function updateMidiState() {
     let foundInput = null;
     let foundOutput = null;
 
-    console.log("[WebMIDI] updating MIDI state. Available inputs:");
+    //
+    // Every device, every time the MIDI state changes.  Useful when a
+    // pedal is not showing up and noise the rest of the time, and it is
+    // by far the most of what lands in the console - so it is debug
+    // output, which browsers hide until asked.
+    //
+    console.debug("[WebMIDI] updating MIDI state. Available inputs:");
     for (let input of midiAccess.inputs.values()) {
-        console.log("  Input:", input.name, input.id);
+        console.debug("  Input:", input.name, input.id);
     }
-    console.log("[WebMIDI] Available outputs:");
+    console.debug("[WebMIDI] Available outputs:");
     for (let output of midiAccess.outputs.values()) {
-        console.log("  Output:", output.name, output.id);
+        console.debug("  Output:", output.name, output.id);
     }
 
     if (selectedInputId && midiAccess.inputs.has(selectedInputId)) {
@@ -287,7 +295,9 @@ function updateMidiState() {
         appTitleEl.className = "title-connected";
         appTitleEl.textContent = `Connected: ${foundInput.name}`;
 
-        // Request initial state dump
+        // Who is this, then what does it have
+        sendSysex([SYSEX_CMD.IDENTITY]);
+        updateTelemetryPolling();
         sendSysex([SYSEX_CMD.REQ_SCHEMA]);
         sendSysex([SYSEX_CMD.DIAGNOSTIC]); // Request diagnostic status
     } else {
@@ -295,6 +305,10 @@ function updateMidiState() {
         midiOutput = null;
         appTitleEl.className = "title-disconnected";
         appTitleEl.textContent = "RP2350 Pedal";
+
+        // Nothing is going to tell us it stopped, so stop saying it
+        clearPedalStatus();
+        updateTelemetryPolling();
     }
 }
 
@@ -352,9 +366,18 @@ function sendSysex(data) {
     if (!midiOutput) return;
     const msg = new Uint8Array([0xF0, 0x7D, ...data, 0xF7]);
     midiOutput.send(msg);
-    if (data[0] !== SYSEX_CMD.DIAGNOSTIC && data[0] !== SYSEX_CMD.REQ_SCHEMA && data[0] !== SYSEX_CMD.REQ_STATE) {
+    //
+    // Having done something, ask whether it went wrong.  Queries are not
+    // doing something, and telemetry especially is not: it is polled
+    // several times a second, and dragging a diagnostic request along with
+    // every frame would double the traffic and drain the pedal's one
+    // status message before anybody could look at it.
+    //
+    const query = [SYSEX_CMD.DIAGNOSTIC, SYSEX_CMD.REQ_SCHEMA,
+                   SYSEX_CMD.REQ_STATE, SYSEX_CMD.IDENTITY,
+                   SYSEX_CMD.TELEMETRY];
+    if (!query.includes(data[0]))
         scheduleDiagnostic();
-    }
 }
 
 let PEDAL_EFFECTS = [];
@@ -385,6 +408,22 @@ function handleSysex(data) {
             }
             break;
         }
+
+        case SYSEX_CMD.IDENTITY: {
+            let jsonStr = '';
+            for (let i = 3; i < data.length - 1; i++)
+                jsonStr += String.fromCharCode(data[i]);
+            try {
+                handleIdentity(JSON.parse(jsonStr));
+            } catch (e) {
+                console.error("Failed to parse identity", e);
+            }
+            break;
+        }
+
+        case SYSEX_CMD.TELEMETRY:
+            handleTelemetry(data);
+            break;
 
         case SYSEX_CMD.DIAGNOSTIC: {
             // Diagnostic Response
@@ -473,60 +512,22 @@ function handleMidiMessage(event) {
         const val = data2;
 
         if (cc === GLOBAL_ENABLE_CC) {
-            if (val === 68) {
-                isTunerMode = true;
+            if (val === 68 || val === 69) {
+                isTunerMode = (val === 68);
                 updateTunerModeUI();
-            } else if (val === 69) {
-                isTunerMode = false;
-                updateTunerModeUI();
-            } else if (val === 64 || val === 65 || val === 66 || val === 67 || val === 126) {
-                if (val === 67) {
-                    isGlobalEnabled = false;
-                    globalEnableEl.checked = false;
-                }
             } else {
                 isGlobalEnabled = (val > 0);
                 globalEnableEl.checked = isGlobalEnabled;
             }
-        } else {
-            // It's a pot or an effect enable
-            const el = ccToElementMap.get(cc);
-            if (el) {
-                if (el.type === 'checkbox') {
-                    el.checked = (val > 0);
-                } else if (el.tagName === 'SELECT') {
-                    el.value = val;
-                } else if (el.type === 'range') {
-                    el.value = val;
-                    // Update display value if any
-                    const valDisplay = el.parentElement.querySelector('.pot-value');
-                    if (valDisplay && el.potDef) {
-                        valDisplay.textContent = formatPotValue(el.potDef, val);
-                    }
-                    // If it has a redraw callback (like EQ), trigger it
-                    if (el.redrawCurve) {
-                        el.redrawCurve();
-                    }
-
-                    // Update active pot panel if it is the currently active one
-                    if (cc === activePotCc && activePotDef) {
-                        const activeSlider = document.getElementById('active-pot-slider');
-                        if (activeSlider) activeSlider.value = val;
-                        const activeValue = document.getElementById('active-pot-value');
-                        if (activeValue) activeValue.textContent = formatPotValue(activePotDef, val);
-                    }
-                }
-            }
-        }
-    } else if ((status & 0xF0) === 0xC0) {
-        // Program Change (Active Effect)
-        // Scroll to the active effect!
-        const effectIdx = data1;
-        if (effectIdx >= 0 && effectIdx < PEDAL_EFFECTS.length) {
-            const effectCard = document.getElementById(`effect-${effectIdx}`);
-            if (effectCard) {
-                effectCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+        } else if (cc === STATUS_GLOBAL_CC) {
+            handleGlobalStatus(val);
+        } else if (cc === STATUS_CHAIN_LO_CC) {
+            statusChainBits = (statusChainBits & ~((1 << STATUS_CHAIN_BITS) - 1)) | val;
+            renderAttention();
+        } else if (cc === STATUS_CHAIN_HI_CC) {
+            statusChainBits = (statusChainBits & ((1 << STATUS_CHAIN_BITS) - 1)) |
+                              (val << STATUS_CHAIN_BITS);
+            renderAttention();
         }
     } else if ((status & 0xF0) === 0x90) { // Note On
         const ch = status & 0x0F;
@@ -838,7 +839,7 @@ function dragInsertionRef(y) {
         // Never let anything land above the anchor effect
         if (el.dataset.effectId !== undefined) {
             const eff = PEDAL_EFFECTS.find(e => e.id === parseInt(el.dataset.effectId));
-            if (eff && eff.name === "Noise Gate")
+            if (eff && eff.base === "signal_chain")
                 continue;
         }
         const r = el.getBoundingClientRect();
@@ -999,6 +1000,317 @@ function cardDragEnd(e) {
 let currentRouting = [];
 
 //
+// What the pedal says it is doing.  See MIDI_CC_MAP.md for the wire
+// format; effects.js has the numbers, taken from the firmware's midi.h.
+//
+// Attention is kept as the raw bits rather than applied as they arrive,
+// because two CCs contribute to one picture: the chain pair covers the
+// routed effects by position, and one bit of the global CC covers the
+// Signal Chain, which is not in the chain to have a position. Re-render
+// from both whenever either moves, or whenever the routing does.
+//
+let statusChainBits = 0;
+let statusFrontAttn = false;
+let pedalIdentity = null;
+
+//
+// Faults are shown for as long as the pedal says so - but never for less
+// than this.
+//
+// The floor is on how long it stays up, not on how long we believe it,
+// and the difference is the whole thing.  The pedal reports state, on
+// change and then periodically; a condition that persists is one message
+// and then the same message again.  A timer that expired would hide a
+// clip that is still happening and then wait forever for a change that
+// has no reason to come - which is exactly what it did.
+//
+// The floor exists because the other extreme is just as invisible: one
+// clipped sample sets the bit for a single 40ms tick and clears it again,
+// and nobody sees 40ms.
+//
+const STATUS_MIN_MS = 900;
+
+const clipFault = { id: 'status-clip', on: false, since: 0, timer: null };
+const dropFault = { id: 'status-drop', on: false, since: 0, timer: null };
+
+// Neither of these is a transient: both come from the identity reply and
+// are never timed out. boardFault means broken; earlyNote means old.
+const boardFault = { id: 'status-board', on: false, since: 0, timer: null };
+const earlyNote = { id: 'status-early', on: false, since: 0, timer: null };
+
+const allFaults = [clipFault, dropFault, boardFault, earlyNote];
+
+function paintFaults() {
+    for (const f of allFaults)
+        document.getElementById(f.id).classList.toggle('hidden', !f.on);
+
+    // The wrapper goes with them, so an idle header has nothing in it
+    document.getElementById('pedal-status')
+            .classList.toggle('hidden', !allFaults.some(f => f.on));
+}
+
+function setFault(f, on) {
+    if (on) {
+        // Still happening: cancel any pending hide and restart the floor
+        clearTimeout(f.timer);
+        f.timer = null;
+        f.on = true;
+        f.since = Date.now();
+        paintFaults();
+        return;
+    }
+
+    if (!f.on || f.timer)
+        return;
+
+    const left = STATUS_MIN_MS - (Date.now() - f.since);
+    if (left <= 0) {
+        f.on = false;
+        paintFaults();
+    } else {
+        f.timer = setTimeout(() => {
+            f.timer = null;
+            f.on = false;
+            paintFaults();
+        }, left);
+    }
+}
+
+function renderAttention() {
+    const lit = new Set();
+
+    if (statusFrontAttn) {
+        const front = PEDAL_EFFECTS.find(e => e.base === 'signal_chain');
+        if (front) lit.add(front.id);
+    }
+    currentRouting.forEach((effectId, pos) => {
+        if ((statusChainBits >> pos) & 1) lit.add(effectId);
+    });
+
+    // Every card, not just the lit ones - an effect that stops asking,
+    // or that leaves the chain while lit, has to go dark again.
+    PEDAL_EFFECTS.forEach((effect, idx) => {
+        const card = document.getElementById(`effect-${idx}`);
+        if (card) card.classList.toggle('attention', lit.has(effect.id));
+    });
+}
+
+//
+// Forget everything the pedal told us about itself.  A pedal that goes
+// away stops reporting rather than reporting that it is fine, so its last
+// word stays on the screen until somebody clears it.
+//
+function clearPedalStatus() {
+    for (const f of allFaults) {
+        clearTimeout(f.timer);
+        f.timer = null;
+        f.on = false;
+    }
+    document.getElementById('identity-info').textContent = 'Not connected.';
+    paintFaults();
+
+    statusChainBits = 0;
+    statusFrontAttn = false;
+    renderAttention();
+}
+
+//
+// The menu says which scene it is about to overwrite, so it has to be
+// refreshed whenever the selection moves - including when the picker is
+// rebuilt from the identity reply, which is why this is not tucked inside
+// the setup that binds it.
+//
+function updateSceneLabels() {
+    const sel = document.getElementById('global-scene-select');
+    const scene = sel ? sel.value : '0';
+    const saveBtn = document.getElementById('global-save-scene-btn');
+    const loadBtn = document.getElementById('global-load-scene-btn');
+    if (saveBtn) saveBtn.innerHTML = `💾&nbsp;&nbsp;Save to Scene ${scene}`;
+    if (loadBtn) loadBtn.innerHTML = `📂&nbsp;&nbsp;Load Scene ${scene}`;
+}
+
+//
+// The scene picker, sized by whatever the pedal reports.
+//
+// Rebuilt rather than adjusted, because reconnecting to a different pedal
+// can change the count, and a stale option would offer a scene that
+// cannot be loaded.
+//
+function populateScenePicker(count) {
+    const sel = document.getElementById('global-scene-select');
+    if (!sel)
+        return;
+
+    const was = sel.value;
+    sel.innerHTML = '';
+    for (let i = 0; i < count; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = `Scene ${i}`;
+        sel.appendChild(opt);
+    }
+    if (was !== '' && Number(was) < count)
+        sel.value = was;
+    updateSceneLabels();
+}
+
+//
+// Telemetry, polled while somebody is watching.
+//
+// The layout is append-only, so read the fields this app knows about and
+// stop.  A frame shorter than expected is firmware from before the tail
+// existed; a longer one is firmware from after this app was written.
+// Neither is an error, and neither means zero - so every field is fetched
+// through a helper that can answer "absent", and an absent field is left
+// out of the readout rather than shown as a dash.
+//
+const TELEMETRY_POLL_MS = 200;
+let telemetryTimer = null;
+
+// 127 is the saturation the pedal sends for silence
+function formatDbfs(byte) {
+    return byte >= 127 ? '\u2212\u221e' : `\u2212${byte}`;
+}
+
+function handleTelemetry(data) {
+    // The whole message: F0 7D 0B <version> <fields...> F7
+    const at = (i) => (3 + i < data.length - 1 ? data[3 + i] : undefined);
+
+    if (at(0) === undefined)
+        return;
+
+    const inPeak = at(1), floor = at(2), out = at(3);
+    const gate = at(4), load = at(5);
+    const bits = [];
+
+    if (inPeak !== undefined) bits.push(`in ${formatDbfs(inPeak)} dB`);
+    if (floor !== undefined) bits.push(`floor ${formatDbfs(floor)} dB`);
+    if (out !== undefined) bits.push(`out ${formatDbfs(out)} dB`);
+
+    //
+    // The gate as how far it is holding the signal down, not as a
+    // percentage of a multiplier: "\u221218 dB" is the number you compare
+    // against Level, which is also in dB.
+    //
+    if (gate !== undefined) {
+        if (gate >= 127)
+            bits.push('gate open');
+        else if (gate === 0)
+            bits.push('gate closed');
+        else
+            bits.push(`gate \u2212${Math.round(-20 * Math.log10(gate / 127))} dB`);
+    }
+    if (load !== undefined)
+        bits.push(`cpu ${Math.round((load / 127) * 100)}%`);
+
+    const el = document.getElementById('signal-chain-meters');
+    if (el) el.textContent = bits.join('  \u00b7  ');
+}
+
+//
+// Only while there is a pedal and somebody is looking at the page.  A
+// backgrounded tab polling five times a second is MIDI traffic spent on
+// meters nobody can see.
+//
+function updateTelemetryPolling() {
+    const want = !!midiOutput && document.visibilityState === 'visible';
+
+    if (want && !telemetryTimer) {
+        telemetryTimer = setInterval(() => sendSysex([SYSEX_CMD.TELEMETRY]),
+                                     TELEMETRY_POLL_MS);
+    } else if (!want && telemetryTimer) {
+        clearInterval(telemetryTimer);
+        telemetryTimer = null;
+        const el = document.getElementById('signal-chain-meters');
+        if (el) el.textContent = 'no readings yet';
+    }
+}
+
+document.addEventListener('visibilitychange', updateTelemetryPolling);
+
+//
+// What the pedal says it is.  Asked once, on connect.
+//
+// The build stamp is the useful part day to day: it answers "is this
+// running what I just built", which is a question that has wasted more
+// than one evening - a schema from stale firmware renders perfectly and
+// is simply about a different pedal.
+//
+// The probe results are the rare-but-serious part.  A TAC5112 or an
+// SH1106 answering means the board predates this firmware by a couple of
+// generations and nothing is going to work properly, so that gets a chip
+// in the header rather than a line in a dialog nobody has open.
+//
+function handleIdentity(id) {
+    pedalIdentity = id;
+
+    const found = id.found || {};
+    const notes = [`Firmware built ${id.build || 'unknown'}.`];
+    const wrong = [];
+    const early = [];
+    const scenes = id.scenes || 1;
+
+    //
+    // How many scenes there are is the pedal's to say, not ours to
+    // assume. A 2kbit eeprom holds one; the 64kbit part holds 32.
+    //
+    populateScenePicker(scenes);
+
+    notes.push(`${scenes} scene${scenes === 1 ? '' : 's'}` +
+               `, hardware MIDI ${id.midi_hw ? 'on' : 'off'}.`);
+
+    //
+    // A fault is something that will not work. A missing eeprom is the
+    // only one of these: nothing persists, and nothing else would say so.
+    //
+    if (!found.eeprom)
+        wrong.push('No eeprom answered, so scenes will not persist.');
+
+    //
+    // An early board is not a fault. Those play: the pedal sets the
+    // TAC5112 up over i2c, and the eeprom geometry is worked out rather
+    // than compiled in, so one scene on a 2kbit part saves and loads.
+    // Mono, because they never routed the second channel. Worth knowing
+    // which board is on the bench, not worth alarming anybody.
+    //
+    if (found.legacy_codec)
+        early.push('A TAC5112 codec answered on i2c, so this is an early ' +
+                   'board: mono only, and the codec is set up over i2c ' +
+                   'rather than strapped.');
+    if (found.legacy_screen)
+        early.push('An SH1106 screen answered on i2c, from a generation ' +
+                   'that had one. Nothing drives it.');
+
+    boardFault.on = wrong.length > 0;
+    earlyNote.on = early.length > 0;
+    document.getElementById('status-board').title = wrong.join(' ');
+    document.getElementById('status-early').title = early.join(' ');
+    paintFaults();
+
+    document.getElementById('identity-info').textContent =
+        notes.concat(wrong, early).join(' ');
+}
+
+function handleGlobalStatus(val) {
+    const dropped = val & STATUS_DROPPED_MASK;
+
+    statusFrontAttn = (val & STATUS_FRONT_ATTN) !== 0;
+    renderAttention();
+
+    setFault(clipFault, (val & STATUS_CLIPPED) !== 0);
+
+    // Only relabel while there is something to say, so the count doesn't
+    // change under a reading that is still being held up
+    if (dropped) {
+        // Saturated, so say so rather than claiming it was exactly 31
+        document.getElementById(dropFault.id).textContent =
+            dropped === STATUS_DROPPED_MASK ? `DROP ${dropped}+`
+                                            : (dropped > 1 ? `DROP ${dropped}` : 'DROP');
+    }
+    setFault(dropFault, dropped !== 0);
+}
+
+//
 // An effect that isn't routed has no values: it goes back to the
 // defaults from the schema.
 //
@@ -1056,7 +1368,7 @@ function sendUpdatedRouting() {
 
         const id = parseInt(card.dataset.effectId);
         const eff = PEDAL_EFFECTS.find(e => e.id === id);
-        if (eff && eff.name !== 'Settings' && eff.name !== 'Noise Gate') {
+        if (eff && eff.base !== 'settings' && eff.base !== 'signal_chain') {
             routeIds.push(id);
         }
     });
@@ -1105,6 +1417,9 @@ function getInitialPotValue(pot) {
 
 function reorderEffectsInDOM(routeIds) {
     currentRouting = routeIds.slice();
+
+    // The chain bits are by position, so what they mean just changed
+    renderAttention();
     const activeRouteIds = new Set(routeIds);
     const cards = Array.from(effectsContainer.children);
     cards.sort((a, b) => {
@@ -1116,8 +1431,8 @@ function reorderEffectsInDOM(routeIds) {
             idxA = 998;
         } else {
             const effA = PEDAL_EFFECTS.find(e => e.id === idA);
-            if (effA && effA.name === "Noise Gate") idxA = -2;
-            else if (effA && effA.name === "Settings") idxA = 997;
+            if (effA && effA.base === "signal_chain") idxA = -2;
+            else if (effA && effA.base === "settings") idxA = 997;
             else idxA = routeIds.indexOf(idA) === -1 ? 999 : routeIds.indexOf(idA);
         }
 
@@ -1125,8 +1440,8 @@ function reorderEffectsInDOM(routeIds) {
             idxB = 998;
         } else {
             const effB = PEDAL_EFFECTS.find(e => e.id === idB);
-            if (effB && effB.name === "Noise Gate") idxB = -2;
-            else if (effB && effB.name === "Settings") idxB = 997;
+            if (effB && effB.base === "signal_chain") idxB = -2;
+            else if (effB && effB.base === "settings") idxB = 997;
             else idxB = routeIds.indexOf(idB) === -1 ? 999 : routeIds.indexOf(idB);
         }
 
@@ -1142,7 +1457,7 @@ function reorderEffectsInDOM(routeIds) {
         const id = parseInt(card.dataset.effectId);
         const isRouted = activeRouteIds.has(id);
         const eff = PEDAL_EFFECTS.find(e => e.id === id);
-        const isAlwaysRouted = eff && (eff.name === "Noise Gate" || eff.name === "Settings");
+        const isAlwaysRouted = eff && (eff.base === "signal_chain" || eff.base === "settings");
 
         if (isRouted || isAlwaysRouted) {
             card.classList.remove('unrouted');
@@ -1217,7 +1532,7 @@ function renderUI() {
         title.style.alignItems = 'center';
 
         // Settings effect cannot be reordered or collapsed (maybe collapsed is fine, but no drag)
-        if (effect.name !== "Settings" && effect.name !== "Noise Gate") {
+        if (effect.base !== "settings" && effect.base !== "signal_chain") {
             title.innerHTML = `<span class="drag-handle">≡</span>
                                <span class="collapse-chevron" style="cursor: pointer; margin-right: 8px; font-size: 0.8em; transition: transform 0.2s;">▼</span>
                                <span>${effect.name}</span>`;
@@ -1607,7 +1922,7 @@ function renderUI() {
         }
 
         // Generate Mix slider
-        if (effect.name !== 'Settings' && effect.name !== 'Noise Gate') {
+        if (effect.base !== 'settings' && effect.base !== 'signal_chain') {
             const mixPotDef = { name: 'Mix', curve: 'LINEAR', min: 0, max: 100, unit: '%' };
             const mixDiv = document.createElement('div');
             mixDiv.className = 'pot-control mix-pot-control';
@@ -1756,6 +2071,21 @@ function renderUI() {
             setTimeout(() => effect.redrawCurve(), 0);
         }
         card.appendChild(controls);
+
+        //
+        // The meters live on the Signal Chain card because that is where
+        // the question gets asked: Level wants to sit above the noise
+        // floor, and until now the only way to find the floor was to move
+        // Level until something happened.
+        //
+        if (effect.base === 'signal_chain') {
+            const meters = document.createElement('div');
+            meters.className = 'meters';
+            meters.id = 'signal-chain-meters';
+            meters.textContent = 'no readings yet';
+            card.appendChild(meters);
+        }
+
         effectsContainer.appendChild(card);
     });
 }
@@ -1846,11 +2176,28 @@ appTitleEl.addEventListener('click', () => {
         btn.classList.remove('success', 'error');
     }
 
+    //
+    // Every one of these is a menu item, so success means the menu has
+    // done its job and should go away.  It used to stay open, which made
+    // sense when a round of testing meant several of these in a row and
+    // reaching for the burger between each was the annoying part.  There
+    // is nothing like that left, so now it just sits there afterwards
+    // looking like it is waiting for something.
+    //
+    // Closing on the same timer that restores the label rather than
+    // immediately: the label *is* the confirmation, and 'Saved to 3' is
+    // worth reading before it goes.  Failures keep the menu open for the
+    // same reason - showButtonError() does not close it, because the
+    // error is the thing you need to see.
+    //
     function showButtonSuccess(btn, successText) {
         const originalText = btn.innerHTML;
         btn.innerHTML = `✓ ${successText}`;
         btn.classList.add('success');
-        setTimeout(() => restoreButton(btn, originalText), 1500);
+        setTimeout(() => {
+            restoreButton(btn, originalText);
+            closeMenu();
+        }, 1500);
     }
 
     function showButtonError(btn, errorText) {
@@ -1997,15 +2344,9 @@ appTitleEl.addEventListener('click', () => {
         });
     }
 
+    // The options are filled in from the identity reply, since only the
+    // pedal knows how many scenes it has - see populateScenePicker().
     const sceneSelect = document.getElementById('global-scene-select');
-    if (sceneSelect) {
-        for (let i = 0; i < 32; i++) {
-            const opt = document.createElement('option');
-            opt.value = i;
-            opt.textContent = `Scene ${i}`;
-            sceneSelect.appendChild(opt);
-        }
-    }
 
     //
     // The picker is in the header and the two things that act on it are
@@ -2013,14 +2354,6 @@ appTitleEl.addEventListener('click', () => {
     // are trusting your memory of a control that isn't on screen while
     // you press the one that overwrites it.
     //
-    function updateSceneLabels() {
-        const scene = sceneSelect ? sceneSelect.value : '0';
-        const saveBtn = document.getElementById('global-save-scene-btn');
-        const loadBtn = document.getElementById('global-load-scene-btn');
-        if (saveBtn) saveBtn.innerHTML = `💾&nbsp;&nbsp;Save to Scene ${scene}`;
-        if (loadBtn) loadBtn.innerHTML = `📂&nbsp;&nbsp;Load Scene ${scene}`;
-    }
-
     const loadSceneBtn = document.getElementById('global-load-scene-btn');
     if (loadSceneBtn) {
         loadSceneBtn.addEventListener('click', () => {

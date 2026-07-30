@@ -54,7 +54,13 @@ void set_lfo_ms(struct lfo_state *lfo, float ms)
 	set_lfo_step(lfo, 1000 * F_STEP / ms);
 }
 
-float lfo_step(struct lfo_state *lfo, enum lfo_type type)
+//
+// Marked, rather than trusting it to inline.  It always had, because
+// every effect called it exactly once - and the first one to call it
+// twice turned it into a real call and a veneer out of the audio
+// sections, which check-audio.py then refused.
+//
+float __audio_func(lfo_step)(struct lfo_state *lfo, enum lfo_type type)
 {
 	u32 now = lfo->idx;
 	u32 next = now + lfo->step;

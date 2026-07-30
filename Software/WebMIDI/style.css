@@ -943,3 +943,126 @@ input[type=range].large-slider::-webkit-slider-runnable-track {
     opacity: 0.8;
     filter: grayscale(40%);
 }
+
+/*
+ * What the pedal is up to.
+ *
+ * Two different things with two different visual languages, because they
+ * are two different kinds of news.  A fault - the output clipping, the
+ * audio core missing its deadline - is a warning and belongs in the
+ * header.  An effect asking for attention is that effect *working*, and
+ * belongs on that effect.
+ *
+ * No general .hidden rule to inherit, so declare it (see above).
+ */
+#pedal-status.hidden,
+#status-clip.hidden,
+#status-drop.hidden {
+  display: none;
+}
+
+.pedal-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.status-clip,
+.status-drop {
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* Clipping is your fault and fixable by playing softer or trimming. */
+.status-clip {
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+/* Missing the deadline is the pedal's, and means the chain is too much. */
+.status-drop {
+  color: var(--dev);
+  border: 1px solid var(--dev);
+}
+
+/*
+ * An effect wants attention: the gate has closed, the compressor is
+ * compressing, the boost is folding.
+ *
+ * The asymmetric transition is the whole trick, and it is the same one
+ * the pedal's LED gets for free from being updated slowly.  Switching on
+ * is instant and switching off takes a moment, so a single event is
+ * visible at all rather than a 40ms flicker nobody catches, while
+ * something happening constantly reads as solid instead of a strobe.
+ */
+.effect-card {
+  transition: box-shadow 400ms ease-out;
+}
+
+.effect-card.attention {
+  box-shadow: 0 0 0 1px var(--accent), 0 0 12px -2px var(--accent);
+  transition: box-shadow 0ms;
+}
+
+/*
+ * The pedal is not the hardware this firmware was built for - an early
+ * board answering on i2c, or the other eeprom.  Filled rather than
+ * outlined like the other two, because it is not a transient to glance
+ * at: it will not clear itself, and the symptoms are quiet ones. Hover
+ * for which, or open MIDI Connection.
+ */
+#status-board.hidden {
+  display: none;
+}
+
+.status-board {
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+  color: var(--bg-color);
+  background: var(--danger);
+}
+
+/*
+ * An early board: information rather than a fault.
+ *
+ * Those still play - the pedal sets the TAC5112 up over i2c, and the
+ * eeprom geometry is worked out rather than compiled in, so a 2kbit part
+ * gets its one scene. Mono, because they never routed the second channel.
+ * Worth knowing which board is on the bench; not worth the red one.
+ */
+#status-early.hidden {
+  display: none;
+}
+
+.status-early {
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+  color: var(--text-muted);
+  border: 1px solid var(--text-muted);
+}
+
+/*
+ * The Signal Chain's meters.
+ *
+ * Deliberately plain text rather than bars. The number is what you act on
+ * - Level is set in dB and the floor is reported in dB, so the useful
+ * gesture is comparing two numbers, and a bar would make that harder
+ * rather than easier.
+ *
+ * Tabular figures so the digits do not shuffle sideways five times a
+ * second while you watch them.
+ */
+.meters {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--panel-border);
+  padding-top: 10px;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}

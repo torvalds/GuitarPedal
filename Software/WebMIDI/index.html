@@ -14,6 +14,20 @@
     <header class="glass-panel app-header">
       <h1 id="app-title" class="title-disconnected">RP2350 Pedal</h1>
       <div class="header-controls">
+        <!-- Faults only.  This is absent when the pedal is fine, which
+             is nearly always, so it costs no space in the normal case -
+             and it stays off the title, which already carries which copy
+             of the app this is and whether the pedal is answering. -->
+        <div id="pedal-status" class="pedal-status hidden" role="status" aria-live="polite">
+          <span id="status-clip" class="status-clip hidden">CLIP</span>
+          <span id="status-drop" class="status-drop hidden">DROP</span>
+          <!-- Not a transient like the other two, but the same channel:
+               something is wrong and you want to know now. -->
+          <span id="status-board" class="status-board hidden" title="">BOARD</span>
+          <!-- Old but working hardware: worth noticing, not worth
+               alarming anybody about, so muted rather than red. -->
+          <span id="status-early" class="status-early hidden" title="">EARLY BOARD</span>
+        </div>
         <!-- Which scene you're on is worth seeing without opening
              anything.  Acting on it is not: Save overwrites the eeprom
              and Load throws away what you have, so both sit behind the
@@ -97,6 +111,14 @@
             <label for="midi-output-select">Output</label>
             <select id="midi-output-select" class="menu-select"></select>
           </div>
+        </div>
+        <!-- What is on the other end.  Here because this is the dialog
+             you open when something is not working, and "the pedal is
+             running firmware from before the change you are looking for"
+             is high on the list of reasons. -->
+        <div class="menu-section">
+          <h3>Pedal</h3>
+          <p class="menu-hint" id="identity-info">Not connected.</p>
         </div>
         <div class="menu-section">
           <h3>Channel</h3>

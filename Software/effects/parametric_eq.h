@@ -11,8 +11,6 @@
 // POT: "HS Freq" FREQUENCY(1000.0 20000.0) = 8000.0 Hz
 // POT: "HS Gain" LINEAR(-20.0 20.0) = 0.0 dB
 
-#define EFF_ENABLE_STEPS ((int)SAMPLES_PER_SEC/10)
-
 struct {
 	struct biquad_coeff coeff[5];
 	struct biquad_state state[5];

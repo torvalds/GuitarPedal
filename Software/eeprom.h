@@ -6,11 +6,12 @@
 #include "status.h"
 #include <string.h>
 
-#if EEPROM_64KBIT
-  #define MAX_SCENES 32
-#else
-  #define MAX_SCENES 1
-#endif
+//
+// Room for the largest eeprom we support.  How many of these scenes
+// actually exist is decided at runtime by eeprom_set_geometry(), because
+// which part is fitted is a property of the board and not of the build.
+//
+#define MAX_SCENES 32
 #define MAX_SCENE_EFFECTS 16
 
 // Some old 24c02 eeprom chips only do 8-byte page sizes,
@@ -47,6 +48,17 @@ static union {
 } eeprom_cache;
 static uint16_t eeprom_dirty_mask[MAX_SCENES] = {0};
 static uint8_t current_scene_id = 0;
+
+//
+// Which part turned out to be fitted.
+//
+// The 64kbit one takes a two-byte address and holds all 32 scenes; the
+// 2kbit one on the early boards takes one byte and holds a single scene.
+// Starts as the larger because that is what the read in
+// eeprom_set_geometry() has to assume in order to ask the question.
+//
+static unsigned int eeprom_addr_bytes = 2;
+static unsigned int nr_scenes = MAX_SCENES;
 
 static inline uint8_t string_checksum(const char *cstr)
 {
@@ -85,15 +97,12 @@ static inline uint8_t effect_checksum(struct effect *effect, struct effect_state
 // need to wait for it to wake up.
 static bool init_eeprom(void)
 {
-	const size_t size = sizeof(eeprom_cache.bytes);
-#if EEPROM_64KBIT
+	const size_t size = nr_scenes * SCENE_SIZE;
 	uint8_t addr[2] = { 0, 0 };
-#else
-	uint8_t addr[1] = { 0 };
-#endif
+	const uint8_t *ap = addr + (2 - eeprom_addr_bytes);
 
 	for (int try = 0; try < 10; try++) {
-		if (i2c_write_blocking(MC24Cxx_I2C, addr, sizeof(addr), true) < 0) {
+		if (i2c_write_blocking(MC24Cxx_I2C, ap, eeprom_addr_bytes, true) < 0) {
 			sleep_ms(5);
 			continue;
 		}
@@ -101,8 +110,103 @@ static bool init_eeprom(void)
 			return true;
 		}
 	}
-	memset(eeprom_cache.bytes, 0, size);
+	memset(eeprom_cache.bytes, 0, sizeof(eeprom_cache.bytes));
 	return false;
+}
+
+//
+// Does this addressing round-trip a page?
+//
+// Only reached on a blank part, so writing is free.  The pattern has to
+// have no short period: addressing a 24C02 with two bytes feeds the low
+// half into its page buffer as data, so what comes back is the pattern
+// shifted, and a pattern that repeated would compare equal to its own
+// shift and call a 2kbit part a 64kbit one.
+//
+static bool eeprom_probe_addressing(unsigned int bytes)
+{
+	uint8_t buf[2 + EEPROM_PAGE_SIZE];
+	uint8_t back[EEPROM_PAGE_SIZE];
+	uint8_t *addr = buf + (2 - bytes);
+	int len = bytes + EEPROM_PAGE_SIZE;
+
+	buf[0] = buf[1] = 0;
+	for (unsigned int i = 0; i < EEPROM_PAGE_SIZE; i++)
+		buf[2 + i] = 0x5a + i * 7;
+
+	if (i2c_write_blocking(MC24Cxx_I2C, addr, len, false) != len)
+		return false;
+
+	sleep_ms(10);			// the write cycle takes up to 5ms
+
+	if (i2c_write_blocking(MC24Cxx_I2C, addr, bytes, true) < 0)
+		return false;
+	if (i2c_read_blocking(MC24Cxx_I2C, back, sizeof(back), false) != sizeof(back))
+		return false;
+
+	return !memcmp(back, buf + 2, sizeof(back));
+}
+
+//
+// Which of the two eeproms is fitted, and how to talk to it.
+//
+// Read it as though it were the 64kbit part.  A 2kbit part answers that
+// by wrapping - its address counter rolls over every 256 bytes, which is
+// documented for the whole family - so what comes back is its 256 bytes
+// repeated thirty-two times.  Nothing else needs asking: the periodicity
+// is the answer, and it does not matter that the extra address byte went
+// into its page buffer as data, because a wrapped read is 256-periodic
+// wherever it started.
+//
+// Examining the whole array rather than a window matters.  An unused
+// scene reads uniform, and a uniform *window* would look blank on a part
+// that has data elsewhere - which would then have been written to by the
+// probe below.  Uniform across all 8K is genuinely blank.
+//
+static void eeprom_set_geometry(void)
+{
+	const unsigned char *b = eeprom_cache.bytes;
+	bool varies = false, repeats = true;
+
+	if (!init_eeprom())
+		return;			// nothing answered; leave the default
+
+	for (size_t i = 0; i < sizeof(eeprom_cache.bytes); i++) {
+		if (b[i] != b[0])
+			varies = true;
+		if (i >= 256 && b[i] != b[i - 256])
+			repeats = false;
+	}
+
+	if (varies) {
+		if (repeats) {
+			// Wrapped, so it is the small part
+			eeprom_addr_bytes = 1;
+			nr_scenes = 1;
+			init_eeprom();
+		}
+		return;
+	}
+
+	//
+	// Every byte the same, so it is blank and there is nothing to lose
+	// by writing to it - which is the only way left to tell.  Write a
+	// page and read it back with each addressing in turn and see which
+	// round-trips.  Insisting on a positive result for whichever is
+	// chosen is much stronger than inferring from a failure.
+	//
+	// Afterwards the array has content, so this is the only boot that
+	// ever needs it: the read above settles it from then on.
+	//
+	if (eeprom_probe_addressing(2))
+		;			// the default is already right
+	else if (eeprom_probe_addressing(1)) {
+		eeprom_addr_bytes = 1;
+		nr_scenes = 1;
+	} else {
+		report_status("Cannot identify the eeprom");
+	}
+	init_eeprom();
 }
 
 // Called together with the UI update, at 25Hz
@@ -111,7 +215,7 @@ static bool init_eeprom(void)
 // a write latency of up to 5ms
 static void eeprom_task(void)
 {
-	for (int scene = 0; scene < MAX_SCENES; scene++) {
+	for (unsigned int scene = 0; scene < nr_scenes; scene++) {
 		uint16_t mask = eeprom_dirty_mask[scene];
 		if (!mask) continue;
 
@@ -131,11 +235,8 @@ static void eeprom_task(void)
 		buf[1] = offset & 0xff;
 		memcpy(buf + 2, &eeprom_cache.state[scene][chunk_idx], EEPROM_PAGE_SIZE);
 
-		uint8_t *p = buf;
-		size_t len = sizeof(buf);
-#if !EEPROM_64KBIT
-		p++; len--;
-#endif
+		uint8_t *p = buf + (2 - eeprom_addr_bytes);
+		size_t len = EEPROM_PAGE_SIZE + eeprom_addr_bytes;
 		if (i2c_write_blocking(MC24Cxx_I2C, p, len, false) != len)
 			report_status("EEPROM write failed");
 		return;
@@ -197,10 +298,9 @@ static bool load_effect_state_from_slot(unsigned int slot, struct effect *effect
 
 static bool load_scene(uint8_t scene_id)
 {
-	if (scene_id >= MAX_SCENES) return false;
+	if (scene_id >= nr_scenes) return false;
 
 	current_scene_id = scene_id;
-	extern struct effect settings_effect;
 
 	load_effect_state_from_slot(0, effects[0]);
 
@@ -227,7 +327,7 @@ static bool load_scene(uint8_t scene_id)
 
 static bool save_scene(uint8_t scene_id)
 {
-	if (scene_id >= MAX_SCENES) return false;
+	if (scene_id >= nr_scenes) return false;
 
 	current_scene_id = scene_id;
 
@@ -254,7 +354,6 @@ static bool save_scene(uint8_t scene_id)
 		state->magic = effect_checksum(e, state);
 	}
 
-	extern struct effect settings_effect;
 	struct effect_state *state15 = &eeprom_cache.state[current_scene_id][SETTINGS_SLOT];
 	int seq15 = settings_effect.seq & 1;
 	if (settings_effect.save)

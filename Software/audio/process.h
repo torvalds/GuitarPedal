@@ -35,6 +35,28 @@ static struct {
 //
 // The intent here is that all our internal audio processing
 // is based on a 1Vrms voltage scale.
+//
+// Which works out as follows, and is worth writing down because
+// every dB the pedal reports is relative to it:
+//
+//	full scale (2^31) x this multiplier	= 1.2198
+//	full scale is 3.45Vpp			= 1.725V peak
+//	so float = volts x 1.2198/1.725	= volts x 0.7071
+//
+// 0.7071 is 1/sqrt(2), so the *peak* of the internal float
+// equals the RMS volts of a sine wave.  A 1Vrms sine peaks at
+// 1.0 internally, which is what "0dBFS = 1Vrms" means, and
+// what level_to_dbfs() in blink.c is reporting against.
+//
+// Checked against a signal generator: 90mVpp at 110Hz is
+// 31.8mVrms, and the pedal reports -30dBFS.  20*log10(0.0318)
+// is -29.95.
+//
+// Checked on two boards, which matters more than it sounds:
+// an early TAC5112 one and a current TAC5242 one both read
+// -30dBFS on that signal, so the analog front ends agree and
+// this multiplier is not secretly a calibration for one of
+// them.  Their noise floors differ by 5dB; their gains do not.
 
 #define SAMPLE_TO_FLOAT_MULTIPLIER (3.45 / 2.82843 / 0x80000000)
 

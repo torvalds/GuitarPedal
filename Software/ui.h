@@ -102,9 +102,36 @@ static int led_pwm_mapping(float pwm)
 	return lrintf(pwm * sqrtf(pwm) * PWM_WRAP);
 }
 
-static void set_led(int pin, bool on, bool intense)
+//
+// Drive the one LED from the same status the host is given.
+//
+// It takes the bits rather than a single 'intense' flag it could have
+// been handed instead, and that is the whole point of the shape.  This
+// LED is a WS2812B on the next board, with colours to spend on telling a
+// closed gate from a dropped sample, and this is the function that will
+// spend them.  Giving it everything now means that change is local to
+// here rather than a new argument list and a new caller.
+//
+// What it can say today is bright or not, so:
+//
+//  - faults always count.  Clipping and a missed deadline are wrong
+//    whatever else is going on.
+//
+//  - effect activity counts only while the pedal is in circuit.  The
+//    chain still runs when bypassed - make_one_noise() keeps stepping it
+//    and crossfades the result away - so the compressor goes on
+//    compressing into an output nobody hears, and that is not news.
+//
+//  - the attention preview counts because it *is* the thing being set;
+//    see status.h.
+//
+static void set_led(int pin, bool on, uint8_t global, unsigned int chain)
 {
+	bool fault = global & (STATUS_DROPPED_MASK | STATUS_CLIPPED);
+	bool activity = (global & STATUS_FRONT_ATTN) || chain;
+	bool intense = fault || attention_preview || (on && activity);
 	int level = 0;
+
 	if (on || intense) {
 		float pwm = intense ? settings.led_intense : settings.led_pwm;
 		level = led_pwm_mapping(pwm);
@@ -113,11 +140,95 @@ static void set_led(int pin, bool on, bool intense)
 	pwm_set_gpio_level(pin, level);
 }
 
+_Static_assert(MAX_ROUTED_EFFECTS <= 2 * STATUS_CHAIN_BITS,
+	"a chain this long needs a third status CC");
+
+//
+// How often to say it again when nothing has changed.
+//
+// On change alone is not enough, for two reasons that have nothing to do
+// with each other.  usb_midi_write() is best-effort and gives up after
+// 20ms, so a report can simply be dropped - and a host that missed the
+// one message would go on believing the old answer forever, because from
+// here nothing has changed since.  And an app that connects while
+// something is already wrong never gets told at all, for the same
+// reason: it wasn't listening when it changed.
+//
+// Repeating every eighth tick is about nine messages a second, which is
+// nothing next to a SysEx state dump, and makes both cases correct
+// themselves within a third of a second.
+//
+#define STATUS_REPEAT_TICKS 8
+
+//
+// Work out what the pedal is doing, and say so - to the LED and to the
+// host, which are two renderings of the one answer.  See midi.h for what
+// goes in which bit.
+//
+// Both go out from here rather than the LED being driven separately,
+// because the two used to disagree: the LED knew about clipping and lost
+// samples while the effects' own activity went nowhere at all, having
+// been aimed at a second LED that the current board does not have.
+//
+// Clearing 'intense' for every effect rather than just the one being
+// edited is what makes the chain bits mean anything.  The audio core
+// sets them at 48kHz and this is the only thing that ever puts them
+// back, so an effect that has stopped asking for attention would
+// otherwise stay lit for good - which is exactly what boost, compressor
+// and echo had been doing, unnoticed, because nothing read them.
+//
+static void show_status(void)
+{
+	unsigned int dropped = __atomic_exchange_n(&samples_dropped, 0,
+						   __ATOMIC_RELAXED);
+	uint8_t global = dropped > STATUS_DROPPED_MASK
+		       ? STATUS_DROPPED_MASK : dropped;
+	unsigned int attn = 0;
+
+	if (output_clipped)
+		global |= STATUS_CLIPPED;
+	if (effects[0]->intense)
+		global |= STATUS_FRONT_ATTN;
+
+	for (int i = 0; i < routed_effect_count; i++) {
+		if (effects[effect_chain[i]]->intense)
+			attn |= 1u << i;
+	}
+
+	set_led(LED_GPIO, !disable_all, global, attn);
+
+	// A CC value is seven bits, so the chain needs two of them
+	uint8_t chain[2] = { attn & ((1u << STATUS_CHAIN_BITS) - 1),
+			     attn >> STATUS_CHAIN_BITS };
+
+	static uint8_t last_global = 0;
+	static uint8_t last_chain[2] = { 0, 0 };
+	static unsigned int tick;
+
+	bool again = (tick++ % STATUS_REPEAT_TICKS) == 0;
+
+	if (again || global != last_global) {
+		send_midi_cc(MIDI_CC_STATUS_GLOBAL, global);
+		last_global = global;
+	}
+	if (again || chain[0] != last_chain[0]) {
+		send_midi_cc(MIDI_CC_STATUS_CHAIN_LO, chain[0]);
+		last_chain[0] = chain[0];
+	}
+	if (again || chain[1] != last_chain[1]) {
+		send_midi_cc(MIDI_CC_STATUS_CHAIN_HI, chain[1]);
+		last_chain[1] = chain[1];
+	}
+
+	for (int i = 0; i < ARRAY_SIZE(effects); i++)
+		effects[i]->intense = 0;
+	output_clipped = 0;
+}
+
 // 'update_ui()' is called every few ms to react to user events.
 static void update_ui(void)
 {
 	static int effect_idx = 0;
-	static int last_active_pot = -1;
 
 	struct effect *effect = effects[effect_idx];
 
@@ -128,42 +239,22 @@ static void update_ui(void)
 		send_midi_cc(MIDI_CC_GLOBAL_ENABLE, disable_all ? 0 : 127);
 	}
 
-	// Which effect is being edited is decided over MIDI now that the
-	// encoder that used to do it is gone.
+	//
+	// Which effect the pedal itself is editing.  Nothing sets this
+	// yet: the encoder that used to pick the effect is gone, and
+	// what replaces it is bound up with making the stomp switch and
+	// the rotary programmable.  So this is the hook for that, and
+	// today it stays on effect 0.
+	//
 	int idx = current_midi_effect_idx;
 
 	if (idx != effect_idx) {
 		effect_idx = idx;
 		effect = effects[idx];
-		last_active_pot = -1; // Force active_pot update on screen switch
-
-		send_midi_pc(effect_idx);
 	}
 
-	//
-	// One LED: lit while the pedal is passing effects, bright when
-	// something wants your attention.  See status.h for why all three
-	// of those share the one brightness.
-	//
-	// 'samples_dropped' is not cleared here - the main loop drains it just
-	// after this, and reports the count over MIDI.
-	//
-	set_led(LED_GPIO, !disable_all,
-		output_clipped || samples_dropped || attention_preview);
+	show_status();
 
-	static uint8_t last_clipped = 0;
-	static uint8_t last_intense = 0;
-	if (output_clipped != last_clipped) {
-		send_midi_cc(MIDI_CC_AUDIO_CLIPPING, output_clipped ? 127 : 0);
-		last_clipped = output_clipped;
-	}
-	if (effect->intense != last_intense) {
-		send_midi_cc(MIDI_CC_EFFECT_INTENSE, effect->intense ? 127 : 0);
-		last_intense = effect->intense;
-	}
-
-	effect->intense = 0;
-	output_clipped = 0;
 	if (attention_preview)
 		attention_preview--;
 
@@ -184,8 +275,4 @@ static void update_ui(void)
 		smp_store_release(&effect->seq, seq + 1);
 	}
 
-	if (effect->active_pot != last_active_pot) {
-		send_midi_cc(MIDI_CC_ACTIVE_POT, effect->active_pot);
-		last_active_pot = effect->active_pot;
-	}
 }

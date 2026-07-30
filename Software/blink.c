@@ -10,6 +10,7 @@
 #include "hardware/pwm.h"
 #include "hardware/clocks.h"
 #include "hardware/dma.h"
+#include "hardware/timer.h"
 
 #include "board.h"
 
@@ -37,6 +38,7 @@
 #include "audio/biquad.h"
 #include "audio/fft.h"
 #include "audio/analyze.h"
+#include "tac5112.h"
 
 #include "midi.h"
 #include "uart.h"
@@ -309,6 +311,209 @@ static void sysex_stream_write(const uint8_t *buffer, size_t len)
 	}
 }
 
+//
+// What this firmware is, and what it found itself running on.
+//
+// The hardware half is probed once at boot.  A fixed build cannot adapt
+// to the board it lands on and this does not try to - it answers a
+// different question, which has cost an evening more than once: is this
+// the board this firmware was built for at all?
+//
+// The early boards carried a TAC5112 codec with its control registers on
+// i2c0, and an SH1106 screen on i2c1.  Neither is supported any more and
+// the code for both is gone, but the parts still answer when addressed.
+// So anything replying there means the firmware is newer than the board,
+// and nothing else in the system is in a position to notice.
+//
+// Which eeprom is fitted is the other question, and getting that wrong is
+// the quietest failure of the lot: the parts differ in how many address
+// bytes they accept, so a mismatched build writes to the wrong place and
+// the pedal runs perfectly and forgets everything on reboot.  That one
+// takes more than a presence probe - see eeprom_repeats_at_256().
+//
+// What gets reported is what was *observed*: something answered, the read
+// repeated, the bytes varied.  "This is the 2kbit part" is an inference
+// from those, and belongs to whoever is reading rather than in the wire
+// format, so that being wrong about it later costs an app change and not
+// a protocol one.
+//
+static struct {
+	bool eeprom;		// the scene store, 0x50
+	bool legacy_codec;	// TAC5112, 0x51 - an early board
+	bool legacy_screen;	// SH1106, 0x3c - ditto
+} hardware;
+
+static bool i2c_probe(i2c_inst_t *i2c, uint8_t addr)
+{
+	uint8_t byte;
+
+	// One byte, harmless to anything that does answer, and a timeout
+	// rather than a hang if the bus is being held down.
+	return i2c_read_timeout_us(i2c, addr, &byte, 1, false, 2000) == 1;
+}
+
+static void probe_hardware(void)
+{
+	hardware.eeprom = i2c_probe(MC24Cxx_I2C);
+	hardware.legacy_codec = i2c_probe(TAC5112_I2C);
+	hardware.legacy_screen = i2c_probe(SH1106_I2C);
+
+	//
+	// Worst first, and only one of these arrives: report_status() is a
+	// plain overwrite and get_status() takes the message away as it
+	// reads it, so a chain of ifs would deliver the last thing tested
+	// rather than the thing worth saying.
+	//
+	// A missing eeprom is the one that matters - nothing persists and
+	// nothing else would mention it.  An early board is merely old:
+	// the TAC5112 wants a little setup, which it gets, and those
+	// boards never routed the second channel, so they are mono.  The
+	// eeprom geometry is worked out rather than compiled in, so a
+	// single scene on a 2kbit part saves and loads like any other.
+	//
+	if (!hardware.eeprom)
+		report_status("No eeprom found - scenes will not persist");
+	else if (hardware.legacy_codec || hardware.legacy_screen)
+		report_status("Early board: mono only, one scene");
+}
+
+static void sysex_write_str(const char *str)
+{
+	sysex_stream_write((const uint8_t *)str, strlen(str));
+}
+
+//
+// Identity, as JSON.
+//
+// Two kinds of thing come back from the pedal and they want opposite
+// encodings.  This one is asked once, when the app connects, so a couple
+// of hundred bytes cost nothing and being self-describing means a field
+// can be added later without either side agreeing a version first - the
+// same bargain the schema already makes.  Anything *polled* is the other
+// case and should be packed bytes instead.
+//
+bool send_identity_tx = false;
+static void sysex_send_identity(void)
+{
+	if (!send_identity_tx)
+		return;
+	send_identity_tx = false;
+
+	static const uint8_t sysex_identity_header[] = { 0xF0, 0x7D, 0x0A };
+	static const uint8_t sysex_identity_trailer[] = { 0xF7 };
+
+	sysex_tx_start();
+	sysex_stream_write(sysex_identity_header, sizeof(sysex_identity_header));
+
+	//
+	// The build stamp is what answers "did I actually reflash?", which
+	// is the question that gets asked in anger.  It only moves when
+	// blink.c is recompiled, which is exactly when the binary changed.
+	//
+	sysex_write_str("{\"build\":\"" __DATE__ " " __TIME__ "\"");
+	sysex_write_str(",\"scenes\":");
+	sysex_write_str(nr_scenes == 1 ? "1" : "32");
+	sysex_write_str(",\"midi_hw\":");
+	sysex_write_str(MIDI_HW ? "true" : "false");
+	sysex_write_str(",\"found\":{\"eeprom\":");
+	sysex_write_str(hardware.eeprom ? "true" : "false");
+	sysex_write_str(",\"legacy_codec\":");
+	sysex_write_str(hardware.legacy_codec ? "true" : "false");
+	sysex_write_str(",\"legacy_screen\":");
+	sysex_write_str(hardware.legacy_screen ? "true" : "false");
+	sysex_write_str("}}");
+
+	sysex_stream_write(sysex_identity_trailer, sizeof(sysex_identity_trailer));
+	sysex_tx_finish("Sent identity");
+}
+
+//
+// Telemetry: what the pedal can see about its own signal.
+//
+// Packed bytes rather than the JSON the identity reply uses, because this
+// is the polled one - asked several times a second while somebody watches
+// a meter, where a couple of hundred bytes of punctuation per frame would
+// be silly.
+//
+// *** The layout is append-only. ***
+//
+// Fields are never reordered, never resized and never repurposed.  A host
+// reads the ones it understands and ignores the rest, and treats a frame
+// shorter than it expected as "that firmware does not know about the tail"
+// rather than as zeroes.  Get that right and every future field is free,
+// which is the whole reason this is not self-describing.  The version byte
+// is belt and braces - the length is what actually does the work.
+//
+// Levels go out as -dBFS, one byte per dB.  Full scale is 0 and it counts
+// downwards, which suits a 7-bit field: 127dB is more range than the
+// converter has, and no sign ever needs sending.
+//
+static uint8_t level_to_dbfs(float level)
+{
+	int db;
+
+	// Silence saturates rather than trying to send minus infinity
+	if (level <= 0.0f)
+		return 127;
+
+	db = -(int)(20.0f * log10f(level));
+	if (db < 0)
+		db = 0;		// above full scale: still 0dBFS
+	if (db > 127)
+		db = 127;
+	return db;
+}
+
+static uint8_t fraction_to_byte(float f)
+{
+	int v = (int)(f * 127.0f + 0.5f);
+
+	if (v < 0)
+		v = 0;
+	if (v > 127)
+		v = 127;
+	return v;
+}
+
+bool send_telemetry_tx = false;
+static void sysex_send_telemetry(void)
+{
+	if (!send_telemetry_tx)
+		return;
+	send_telemetry_tx = false;
+
+	static const uint8_t sysex_telemetry_header[] = { 0xF0, 0x7D, 0x0B };
+	static const uint8_t sysex_telemetry_trailer[] = { 0xF7 };
+
+	//
+	// The gate multiplier only means anything while the gate is on.
+	// Switched off it keeps whatever it last ramped to, which would
+	// read as a gate holding the signal down when it is doing nothing
+	// of the kind.
+	//
+	float gate = signal_chain.active ? signal_chain.mult : 1.0f;
+
+	const uint8_t body[] = {
+		1,				// layout version
+		level_to_dbfs(meter_in),	// input peak, before Trim
+		level_to_dbfs(meter_floor),	// the quiet level under it
+		level_to_dbfs(meter_out),	// output peak, after Volume
+		fraction_to_byte(gate),		// 127 open, 0 fully closed
+		fraction_to_byte(meter_load),	// share of the sample period used
+	};
+
+	sysex_tx_start();
+	sysex_stream_write(sysex_telemetry_header, sizeof(sysex_telemetry_header));
+	sysex_stream_write(body, sizeof(body));
+	sysex_stream_write(sysex_telemetry_trailer, sizeof(sysex_telemetry_trailer));
+
+	//
+	// No sysex_tx_finish().  This is polled, so a frame that does not
+	// make it out is replaced by the next one a fifth of a second later,
+	// and saying so would be noise about something that fixed itself.
+	//
+}
+
 bool send_schema_tx = false;
 static void sysex_send_schema(void)
 {
@@ -336,18 +541,44 @@ static void sysex_send_status(void)
 	static const uint8_t sysex_status_header[] = { 0xF0, 0x7D, 0x09 };
 	static const uint8_t sysex_status_trailer[] = { 0xF7 };
 
+	//
+	// Always answer, even when there is nothing pending.  A request
+	// that gets no reply leaves the host unable to tell "nothing to
+	// report" from "the reply went missing", which for a diagnostic is
+	// the wrong way round: silence is exactly what you cannot trust
+	// when you are already asking why something is quiet.
+	//
+	// 'status' stays NULL in that case rather than becoming the empty
+	// string, because the two are not interchangeable below: putting an
+	// empty string back into the mailbox would be a message as far as
+	// report_info() is concerned, and would block every later one.
+	//
 	const char *status = get_status();
-	if (!status)
-		return;
 
 	sysex_tx_start();
 	sysex_stream_write(sysex_status_header, sizeof(sysex_status_header));
-	sysex_stream_write((const uint8_t *)status, strlen(status));
+	if (status)
+		sysex_stream_write((const uint8_t *)status, strlen(status));
 	sysex_stream_write(sysex_status_trailer, sizeof(sysex_status_trailer));
 
-	// Not sysex_tx_finish(): reporting a failed status report as a
-	// status report is how you get an endless conversation with
-	// yourself.  The next one will go out or it won't.
+	//
+	// Put it back if it didn't get out.  get_status() took it before
+	// the transmit was attempted, and usb_midi_write() is best-effort
+	// with a 20ms deadline, so a congested link would otherwise destroy
+	// the one message that mattered - at what is a plausible moment for
+	// whatever is being diagnosed to be happening.
+	//
+	// report_info() rather than report_status() is the whole of it: it
+	// restores the message only if nothing newer has arrived, and
+	// something newer is by definition more current.  Not a
+	// self-reference either - this puts the original back rather than
+	// reporting a new message about the failure, which is why
+	// sysex_tx_finish() is still the wrong thing to call here.  That
+	// would report a failed status report as a status report, and start
+	// a conversation with itself.
+	//
+	if (sysex_tx_failed && status)
+		report_info(status);
 }
 
 static void sysex_send_pot_value(int eff, int pot, int value)
@@ -415,6 +646,24 @@ static uint8_t sysex_buf[32];
 static int sysex_len = 0;
 static bool in_sysex = false;
 
+//
+// Change one pot from core 0.
+//
+// Fill the inactive row and then release the sequence number, so that
+// core 1 either sees the old set or the new one and never a half-written
+// mixture of the two.  See 'pot_values' in audio/effect.h.
+//
+static void set_effect_pot(struct effect *e, unsigned int pot_idx, unsigned char val)
+{
+	unsigned int seq = e->seq;
+	unsigned char *cur_pot = e->pot_values[seq & 1];
+	unsigned char *new_pot = e->pot_values[!(seq & 1)];
+
+	memcpy(new_pot, cur_pot, 10);
+	new_pot[pot_idx] = val;
+	smp_store_release(&e->seq, seq + 1);
+}
+
 static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 {
 	uint8_t cmd = sysex_buf[0];
@@ -432,18 +681,23 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 			if (pot_idx == 0) {
 				set_mix_pot(e, POT_TO_FLOAT(val));
 
-				bool routed = (e == effects[0] || e == effects[EFFECT_COUNT - 1]);
+				//
+				// Being in the chain is the whole of it now.
+				// Both ends of effects[] used to be listed
+				// here as honorary chain members - the signal
+				// chain because it always runs, settings
+				// because forcing 'target' was how it kept
+				// its init() scheduled - and neither has a
+				// wet or a dry for this to be about.
+				//
+				bool routed = false;
 				for (int i = 0; !routed && i < routed_effect_count; i++) {
 					if (effects[effect_chain[i]] == e) routed = true;
 				}
-				e->target = routed ? EFF_ENABLE_STEPS : 0;
+				if (!e->no_mix)
+					e->target = routed ? EFF_ENABLE_STEPS : 0;
 			} else if (pot_idx <= 10) {
-				unsigned int seq = e->seq;
-				unsigned char *cur_pot = e->pot_values[seq & 1];
-				unsigned char *new_pot = e->pot_values[!(seq & 1)];
-				memcpy(new_pot, cur_pot, 10);
-				new_pot[pot_idx - 1] = val;
-				smp_store_release(&e->seq, seq + 1);
+				set_effect_pot(e, pot_idx - 1, val);
 			}
 		}
 	} else if (cmd == 0x04 && sysex_len >= 2) { // Save Scene
@@ -453,6 +707,14 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 	} else if (cmd == 0x09) { // Diagnostic Request
 
 		send_status_tx = true;
+
+	} else if (cmd == 0x0a) { // Identity Request
+
+		send_identity_tx = true;
+
+	} else if (cmd == 0x0b) { // Telemetry Request
+
+		send_telemetry_tx = true;
 
 	} else if (cmd == 0x05) { // State Dump Request
 
@@ -519,17 +781,20 @@ bool handle_midi_packet(const uint8_t packet[4])
 			} else {
 				disable_all = (data2 == 0) ? EFF_ENABLE_STEPS : 0;
 			}
-		} else if (data1 == 7) { // Volume
-			// Not yet wired globally
-		} else if (data1 == MIDI_CC_ACTIVE_POT) {
-			if (current_midi_effect_idx < ARRAY_SIZE(effects)) {
-				effects[current_midi_effect_idx]->active_pot = data2;
-			}
+		} else if (data1 == 7) { // Main volume
+			//
+			// The far end of the signal chain.  CC data is
+			// 0-127 and a pot is 0-120, so scale rather than
+			// clamp - a controller at full should mean unity,
+			// not seven counts short of it.
+			//
+			set_effect_pot(effects[0], CHAIN_VOLUME,
+				       data2 * 120 / 127);
 		}
 	} else if ((status & 0xF0) == 0xC0) {
 		handled = true;
 		// Program Change -> Load Scene
-		if (data1 < MAX_SCENES) {
+		if (data1 < nr_scenes) {
 			load_scene(data1);
 		}
 	}
@@ -666,6 +931,7 @@ static inline void enable_ftz(void)
 static void __audio_func(audio_processing)(void)
 {
 	enable_ftz();
+	init_meters();
 	for (;;)
 		make_one_noise();
 }
@@ -684,10 +950,15 @@ static void init_effects(void)
 		reset_effect(effect);
 	}
 
-	if (!load_scene(0)) {
-		// Default chain if EEPROM is empty
-		routed_effect_count = 0;
-	}
+	//
+	// No fallback for an empty EEPROM, because there is nothing to
+	// fall back to.  Every slot is checksummed independently, so a
+	// blank or corrupt one simply fails to load and the effect keeps
+	// the defaults reset_effect() just gave it - which leaves a new
+	// pedal with every effect at its default and nothing routed.
+	// That is the right answer, and guessing a chain would be worse.
+	//
+	load_scene(0);
 
 	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
 		struct effect *effect = effects[i];
@@ -716,7 +987,23 @@ int main()
 
 	absolute_time_t next_ui_update = delayed_by_ms(now, 50);
 
-	init_eeprom();
+	eeprom_set_geometry();
+
+	//
+	// After the eeprom, not before.  Reading it retries for fifty
+	// milliseconds because the part may still be waking up, and a probe
+	// without the same patience would call a perfectly good board
+	// missing - which is a confusing thing to be told.
+	//
+	probe_hardware();
+
+	//
+	// Early boards need their codec set up; the current ones strap it
+	// in hardware.  Unconditional because the first thing it does is
+	// ask whether there is a TAC5112 there to talk to, which is the
+	// same question as whether this is one of those boards.
+	//
+	tac5112_init();
 
 	init_effects();
 
@@ -734,6 +1021,8 @@ int main()
 		usb_midi_poll();
 		uart_midi_poll();
 
+		sysex_send_identity();
+		sysex_send_telemetry();
 		sysex_send_schema();
 		sysex_send_state_dump();
 		sysex_send_status();
@@ -758,13 +1047,6 @@ int main()
 			}
 
 			update_ui();
-
-			unsigned int current_dropped = __atomic_exchange_n(&samples_dropped, 0, __ATOMIC_RELAXED);
-			if (current_dropped) {
-				int midi_dropped = current_dropped;
-				if (midi_dropped > 127) midi_dropped = 127;
-				send_midi_cc(MIDI_CC_CPU_LATENCY, midi_dropped);
-			}
 		}
 	}
 }

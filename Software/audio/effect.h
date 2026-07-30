@@ -1,5 +1,18 @@
 #include "lfo.h"
 
+//
+// How long an effect takes to fade in or out, in samples - a tenth of a
+// second.
+//
+// Enabling or disabling an effect walks 'mix' up to or down from this
+// instead of switching, so that nothing clicks, and it is the unit
+// 'target' is counted in.  Used from here, eeprom.h, ui.h and blink.c;
+// it lived in effects/parametric_eq.h for a while, which worked only
+// because priority 120 happened to be included ahead of everything that
+// needed it.
+//
+#define EFF_ENABLE_STEPS ((int)SAMPLES_PER_SEC/10)
+
 sample_t get_usb_audio_input(void);
 
 typedef float (*pot_convert_fn)(unsigned char);
@@ -59,6 +72,15 @@ struct effect {
 	float def_mix;
 	enum mix_law mix_law;
 
+	//
+	// Set by 'MIX: NONE': this is not in the wet-and-dry business
+	// at all, and has no 'step' either - whoever runs it calls it
+	// by name.  So the chain's idea of how much of it you are
+	// hearing does not describe it, and neither does its idea of
+	// whether it is running - see make_one_noise().
+	//
+	unsigned char no_mix;
+
 	// What the mix law works out to, and where we are on the way
 	// there. Slewed rather than applied straight so that dragging
 	// the mix around doesn't click.
@@ -70,7 +92,7 @@ struct effect {
 	void (*init)(unsigned char[10]);
 	void (*load)(struct effect *, unsigned char[10]);
 	void (*save)(struct effect *, unsigned char[10]);
-	float (*step)(float);
+	sample_t (*step)(sample_t, float dry, float wet);
 	const struct pot_descr pots[10];
 };
 
@@ -117,7 +139,23 @@ static void set_mix_pot(struct effect *eff, float m)
 // How fast the multipliers chase their target: ~10ms at 48kHz
 #define MIX_SLEW (1.0f / 512)
 
-// Effects are purely mono... For now
+//
+// Run one effect, and work out how much of it to use.
+//
+// What this does *not* do is combine the wet signal with the dry one.
+// It works out the two multipliers and hands them over, because there
+// is no single right way to put two channels back together: a mono
+// effect has one answer to spread across both, a panner has a different
+// one for each, and a caller that already decided would stop either of
+// them from being written.
+//
+// So the mixing lives in a small per-effect function that gen_effects.py
+// writes out next to the effect itself.  For a mono effect - which is
+// all of them today - that function reads the left channel, runs the
+// effect, and mixes the one result into both, which is exactly what this
+// used to do inline.  The difference is that it is now the effect's own
+// business rather than something imposed on it from here.
+//
 static inline sample_t do_effect_step(struct effect *effect, sample_t val)
 {
 	if (effect->mix != effect->target) {
@@ -138,11 +176,7 @@ static inline sample_t do_effect_step(struct effect *effect, sample_t val)
 	float dry = 1.0f + r * (effect->dry - 1.0f);
 	float wet = r * effect->wet;
 
-	float effect_val = effect->step(val.left);
-	val.left = dry * val.left + wet * effect_val;
-	val.right = dry * val.right + wet * effect_val;
-
-	return val;
+	return effect->step(val, dry, wet);
 }
 
 #include "process.h"
@@ -166,18 +200,112 @@ static inline raw_sample_t *i2s_dma_rx_ptr(void)
 	return (raw_sample_t *) (dma_hw->ch[dma_rx].write_addr & ~7);
 }
 
+//
+// Metering, at the two ends of the chain.
+//
+// A 'struct envelope' with a fast attack and a slow release is a peak
+// meter, so there is nothing to write here beyond picking the times - and
+// the same thing with those reversed is a floor follower, which is what
+// the noise floor estimate is.  Stop playing and the peak falls to the
+// noise in a third of a second while the floor follows it down; start
+// playing and the peak jumps while the floor takes five seconds to
+// notice.
+//
+// The floor is fed the *gate's* envelope and nothing else, and the reason
+// is definitional rather than measured: a floor reading is only useful if
+// it can be compared against 'Level', Level is compared against the
+// gate's envelope, so the floor has to be that same envelope.  Anything
+// else is a different quantity wearing the same units, and would only
+// happen to agree.
+//
+// How far the two *would* diverge is not known.  In theory it depends on
+// the character of the noise rather than its level: the peak meter's
+// 0.1ms attack catches transients that the gate's 1.5ms one averages
+// away, so tonal hum should read the same on both and broadband noise
+// should read higher on the peak meter by something like its crest
+// factor.  That is theory.  Nothing here has measured it, and an earlier
+// version of this comment claimed nine decibels on the strength of two
+// readings that turned out to be from different boards.
+//
+// What has been measured, for scale (see process.h for the reference):
+//
+//	90mVpp at 110Hz reads -30dBFS on both boards, which is also
+//	the arithmetic: 31.8mVrms against 1Vrms is -29.95dB.  So the
+//	analog front ends agree, and dBFS means the same thing on each.
+//
+//	the noise floor reads -61dBFS on a current board and -56dBFS
+//	on an early one.  Boards differ; the meter is measuring that.
+//
+//	on each board the floor now sits within a couple of dB of the
+//	Level at which the gate actually starts closing, which is the
+//	property this is for.
+//
+static struct envelope meter_in_env, meter_floor_env, meter_out_env;
+
+static void init_meters(void)
+{
+	envelope_init(&meter_in_env, 0.1f, 300.0f);
+	envelope_init(&meter_floor_env, 5000.0f, 100.0f);
+	envelope_init(&meter_out_env, 0.1f, 300.0f);
+}
+
 static inline void __audio_func(single_sample)(float mix)
 {
 	raw_sample_t *cpu_ptr = i2s_dma_buf + cpu_idx;
 	cpu_idx = (cpu_idx + 1) & 15;
 
-	// Wait for RX DMA to produce the sample
+	//
+	// Wait for RX DMA to produce the sample.
+	//
+	// This loop is the idle time, by definition: per sample period the
+	// cpu either spins here or works, and the period is known because
+	// the DMA sets it.  So timing the spin measures the load exactly,
+	// with nothing to estimate.
+	//
+	// One sample in sixteen, because two bus reads at 48kHz to measure
+	// a load is about a percent of the thing being measured.  Sampling
+	// it costs a sixteenth of that and the answer is averaged anyway.
+	//
+	static unsigned int meter_phase;
+	bool timed = !(++meter_phase & 15);
+	uint32_t spin_start = timed ? timer_hw->timerawl : 0;
+
 	while (cpu_ptr == i2s_dma_rx_ptr())
 		tight_loop_contents();
 
-	// Check we're safely ahead of TX DMA
-	// Missing the deadline is not clipping, even though the LED
-	// shows both - see status.h.
+	if (timed) {
+		//
+		// 20.83us per sample at 48kHz.  Idle longer than that means
+		// the previous sample finished early and this one had not
+		// arrived yet, which is still idle.
+		//
+		float idle = (timer_hw->timerawl - spin_start) * (SAMPLES_PER_SEC / 1000000.0f);
+		float load = idle < 1.0f ? 1.0f - idle : 0.0f;
+
+		meter_load += (load - meter_load) * (1.0f / 64);
+	}
+
+	//
+	// Check we're safely ahead of TX DMA.  Missing the deadline is not
+	// clipping, even though the LED shows both - see status.h.
+	//
+	// This comparison is a race and is meant to be one.  One side is a
+	// counter this loop keeps, the other is where a DMA engine has got
+	// to, and nothing synchronises them - nothing can, which is the
+	// point: if the cpu keeps up they stay apart, and if it doesn't
+	// they don't.  So this is a stochastic detector.  Fall behind and
+	// it comes out true *sometimes*, at a rate that says how far
+	// behind, not every sample and not on the same ones twice.
+	//
+	// Which makes 'samples_dropped' a rate estimate rather than a
+	// tally, and is why nothing here tries to make it exact.  The
+	// increment is not atomic against the drain in send_status(), so a
+	// reset can be lost and the count read high for a tick; against a
+	// number that has no exact value to begin with, that is not worth
+	// an ldrex/strex pair.  Rather like the clipping indicator: a
+	// signal is clipping even though it is only over the line some of
+	// the time, because a signal goes up and down.
+	//
 	unsigned int tx_idx = i2s_dma_tx_ptr() - i2s_dma_buf;
 	if (((cpu_idx - tx_idx) & 15) < 2)
 		samples_dropped++;
@@ -193,12 +321,40 @@ static inline void __audio_func(single_sample)(float mix)
 		in.right += usb_in.right;
 	}
 
-	sample_t out = in;
-	out = do_effect_step(effects[0], out); // Gate is always index 0 and runs first
+	//
+	// Metered here rather than inside the signal chain, because this is
+	// the pedal's input: what arrived, before Trim has an opinion.
+	//
+	meter_in = envelope_step(&meter_in_env, in.left);
+
+	//
+	// The signal chain proper: trim and the gate, then whatever is
+	// routed.  Called straight rather than through do_effect_step()
+	// because it is not an effect - see effects/signal_chain.h.
+	//
+	sample_t out = signal_chain_step(in);
+
+	//
+	// ...and the floor after it, because it follows the gate's own
+	// envelope rather than the peak meter above.  Same quantity 'Level'
+	// is compared against, so the two numbers can be read against each
+	// other - which is the only reason to show a floor at all.
+	//
+	meter_floor = envelope_step(&meter_floor_env, signal_chain.envelope.value);
+
 	for (int i = 0; i < routed_effect_count; i++) {
 		out = do_effect_step(effects[effect_chain[i]], out);
 	}
 
+	// ...and the far end of it.  Slewed by signal_chain_step() above.
+	out.left *= signal_chain.volume;
+	out.right *= signal_chain.volume;
+
+	//
+	// Global bypass crossfades to the untouched input, so trim, the
+	// gate and the volume all go away with everything else.  Bypass
+	// means bypass, which does mean it can be a step in level.
+	//
 	out.left = linear(mix, in.left, out.left);
 	out.right = linear(mix, in.right, out.right);
 
@@ -206,6 +362,14 @@ static inline void __audio_func(single_sample)(float mix)
 		out.left += usb_in.left;
 		out.right += usb_in.right;
 	}
+
+	//
+	// And the output meter, on what actually leaves - after Volume and
+	// after the bypass crossfade, so a bypassed pedal reads its input.
+	//
+	float peak = fabsf(out.left) > fabsf(out.right)
+		   ? fabsf(out.left) : fabsf(out.right);
+	meter_out = envelope_step(&meter_out_env, peak);
 
 	*cpu_ptr = process_output(out, sample);
 }
@@ -233,7 +397,16 @@ static __attribute__((noinline)) void __audio_func(make_one_noise)(void)
 		// already set by the time an effect is routed back in, so
 		// this picks the change up before it can be heard.
 		//
-		if (!effect->mix && !effect->target)
+		// 'no_mix' is exempt because "isn't running" is a
+		// statement about the wet/dry fade, and such an effect
+		// isn't part of it.  Both cases need it: the settings
+		// pseudo-effect is nothing *but* its init(), and used to
+		// force 'target' nonzero from inside init() purely to
+		// keep this test from skipping it next time; and the
+		// signal chain runs unconditionally, so its coefficients
+		// always matter.
+		//
+		if (!effect->no_mix && !effect->mix && !effect->target)
 			continue;
 
 		effect->last = seq;

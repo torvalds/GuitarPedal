@@ -73,9 +73,27 @@ def generate(audio_dir, out_h, out_js, out_md):
         def_mix_match = re.search(r'//\s*DEFAULT_MIX:\s*(\S+)', content)
         def_mix = float(def_mix_match.group(1)) if def_mix_match else 1.0
 
-        # LINEAR unless the effect says otherwise - see 'enum mix_law'
-        mix_match = re.search(r'//\s*MIX:\s*(LINEAR|POWER)', content)
-        mix_law = mix_match.group(1) if mix_match else 'LINEAR'
+        #
+        # 'MIX:' answers two independent questions, in either order and
+        # both with a default: how the wet and the dry go together (see
+        # 'enum mix_law'), and how much of the signal the effect wants to
+        # see - MONO for the left channel only, STEREO for both, or
+        # NONE for something that is not in the mix at all.
+        #
+        # Only the uppercase run is taken, so the trailing '// why' that
+        # these lines tend to carry stays out of it.
+        #
+        mix_law, channels = 'LINEAR', 'MONO'
+        mix_match = re.search(r'//[ \t]*MIX:[ \t]*([A-Z \t]*)', content)
+        for word in mix_match.group(1).split() if mix_match else []:
+            if word in ('LINEAR', 'POWER'):
+                mix_law = word
+            elif word in ('MONO', 'STEREO', 'NONE'):
+                channels = word
+            else:
+                sys.exit(f"gen_effects: {filename}: unknown MIX: option "
+                         f"'{word}' (want LINEAR/POWER and "
+                         f"MONO/STEREO/NONE)")
 
         pots = []
         # Match: // POT: "Name" CURVE(a b c) = 1.0 Unit
@@ -113,6 +131,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             'priority': priority,
             'def_mix': def_mix,
             'mix_law': mix_law,
+            'channels': channels,
             'pots': pots,
             'header_path': header_path
         })
@@ -209,9 +228,45 @@ def generate(audio_dir, out_h, out_js, out_md):
             # running on the audio core. Gcc carries a section attribute
             # from the declaration to the definition, so the effect headers
             # don't have to know about any of this.
+            channels = e_data['channels']
+
             f.write(f"static void __audio_func({base}_init)(unsigned char[10]);\n")
-            f.write(f"static float __audio_func({base}_step)(float);\n")
+            if channels in ('STEREO', 'NONE'):
+                f.write(f"static sample_t __audio_func({base}_step)(sample_t);\n")
+            else:
+                f.write(f"static float __audio_func({base}_step)(float);\n")
             f.write(f"#include \"../effects/{base}.h\"\n")
+
+            # The mixing wrapper, which is what the chain actually calls -
+            # see do_effect_step(). A mono effect gets the left channel
+            # and its one answer goes to both, which is the behaviour the
+            # caller used to impose on every effect alike; a stereo one
+            # gets both and answers for both. Written out per effect so
+            # that one can stop being mono without every other one having
+            # to care.
+            #
+            # This is the only call site of {base}_step(), so it inlines
+            # here and the chain is still one indirect call per effect.
+            #
+            # NONE gets no wrapper and no .step at all - nothing about
+            # the chain's wet and dry describes it, and whoever does call
+            # it calls it by name.
+            step = None
+            if channels != 'NONE':
+                step = f"{base}_mix_step"
+                f.write(f"static sample_t __audio_func({step})"
+                        "(sample_t val, float dry, float wet)\n")
+                f.write("{\n")
+                if channels == 'STEREO':
+                    f.write(f"\tsample_t out = {base}_step(val);\n")
+                    f.write("\tval.left  = dry * val.left  + wet * out.left;\n")
+                    f.write("\tval.right = dry * val.right + wet * out.right;\n")
+                else:
+                    f.write(f"\tfloat out = {base}_step(val.left);\n")
+                    f.write("\tval.left  = dry * val.left  + wet * out;\n")
+                    f.write("\tval.right = dry * val.right + wet * out;\n")
+                f.write("\treturn val;\n")
+                f.write("}\n")
 
             f.write(f"static struct effect {struct_name} = {{\n")
             f.write(f"\t.name = \"{e_data['full_name']}\",\n")
@@ -219,7 +274,10 @@ def generate(audio_dir, out_h, out_js, out_md):
             f.write(f"\t.def_mix = {e_data['def_mix']}f,\n")
             f.write(f"\t.mix_law = MIX_{e_data['mix_law']},\n")
             f.write(f"\t.init = {base}_init,\n")
-            f.write(f"\t.step = {base}_step,\n")
+            if step:
+                f.write(f"\t.step = {step},\n")
+            else:
+                f.write("\t.no_mix = 1,\n")
             f.write(f"\t.pots = {{\n")
 
             for p_idx, pot in enumerate(e_data['pots']):
@@ -248,23 +306,122 @@ def generate(audio_dir, out_h, out_js, out_md):
         json_str = json_str.replace('"', '\\"')
         f.write(f'static const char *const midi_schema_json = "{json_str}";\n')
 
+    #
+    # The CC numbers and status bits the app needs are read out of
+    # midi.h rather than written down a second time here.  Two copies of
+    # a protocol agree right up until they don't, and this file is how
+    # the web app learns what the firmware speaks.
+    #
+    midi_h = os.path.join(os.path.dirname(os.path.abspath(audio_dir)), "midi.h")
+    with open(midi_h) as f:
+        midi_src = f.read()
+
+    def midi_const(name):
+        m = re.search(r'#define\s+%s\s+(.*)' % name, midi_src)
+        if not m:
+            sys.exit(f"gen_effects: {midi_h}: no #define for {name}")
+        val = m.group(1).split('//')[0].strip()
+        shift = re.fullmatch(r'\(1u << (\d+)\)', val)
+        return (1 << int(shift.group(1))) if shift else int(val, 0)
+
+    js_consts = [
+        ("GLOBAL_ENABLE_CC", "MIDI_CC_GLOBAL_ENABLE"),
+        ("STATUS_GLOBAL_CC", "MIDI_CC_STATUS_GLOBAL"),
+        ("STATUS_CHAIN_LO_CC", "MIDI_CC_STATUS_CHAIN_LO"),
+        ("STATUS_CHAIN_HI_CC", "MIDI_CC_STATUS_CHAIN_HI"),
+        ("STATUS_DROPPED_MASK", "STATUS_DROPPED_MASK"),
+        ("STATUS_CLIPPED", "STATUS_CLIPPED"),
+        ("STATUS_FRONT_ATTN", "STATUS_FRONT_ATTN"),
+        ("STATUS_CHAIN_BITS", "STATUS_CHAIN_BITS"),
+    ]
+
     with open(out_js, 'w') as f:
         f.write("// Auto-generated by gen_effects.py\n")
         # We don't output PEDAL_EFFECTS here anymore, the webapp will fetch it dynamically!
-        f.write("const GLOBAL_ENABLE_CC = 20;\n")
+        f.write(f"// CC numbers and status bits taken from {os.path.basename(midi_h)}\n")
+        for js_name, c_name in js_consts:
+            f.write(f"const {js_name} = {midi_const(c_name)};\n")
 
     with open(out_md, 'w') as f:
         f.write("# MIDI Implementation\n\n")
-        f.write("## Universal CCs (Global Controls)\n\n")
-        f.write("- **CC 7:** Main Volume\n")
-        f.write("- **CC 11:** Expression\n")
-        f.write("- **CC 20:** Global Bypass\n")
-        f.write("- **CC 64:** Tap Tempo\n")
-        f.write("- **CC 94:** Noise Gate Threshold\n")
-        f.write("- **CC 95:** Master Mix\n\n")
+        #
+        # Hand-written, because these are not derived from the effects -
+        # but kept to what the firmware actually implements.  This file
+        # is generated and published, so anything listed here is a claim
+        # about a protocol somebody may go and speak.
+        #
+        f.write("Anything invented here lives in CC 102-119, which the MIDI\n")
+        f.write("spec leaves undefined. CC 20 is the exception and is frozen\n")
+        f.write("where it is: value 126 on it is how an enclosed pedal gets\n")
+        f.write("into programming mode, so it has to keep answering the\n")
+        f.write("number that already-flashed firmware knows.\n\n")
+
+        f.write("## Control Change, in\n\n")
+        f.write("- **CC 7:** Main volume - the Volume pot of the Signal\n")
+        f.write("  Chain, applied at the end of the chain. 0 is silence;\n")
+        f.write("  above that it is -40dB to +20dB, linear in dB, reaching\n")
+        f.write("  unity two thirds of the way up.\n")
+        f.write("- **CC 20:** Global bypass, with three values that mean\n")
+        f.write("  something else instead: 68 enters tuner mode, 69 leaves\n")
+        f.write("  it, and 126 reboots to the bootloader. 0 bypasses and\n")
+        f.write("  anything else enables.\n\n")
+
+        f.write("## Control Change, out\n\n")
+        f.write("- **CC 20:** the pedal's own bypass state as 0 or 127, and\n")
+        f.write("  68/69 when a long press moves it in or out of tuner mode.\n")
+        f.write("- **CC 102:** global status. Sent when it changes, and\n")
+        f.write("  repeated about three times a second regardless, so that\n")
+        f.write("  a dropped message or a host that connected late cannot\n")
+        f.write("  leave anyone believing a stale answer.\n")
+        f.write("  - bits 0-4: samples dropped since the last report,\n")
+        f.write("    saturating at 31. A count and not a flag, because\n")
+        f.write("    dropping one sample and dropping them steadily are\n")
+        f.write("    different problems.\n")
+        f.write("  - bit 5 (32): the output clipped.\n")
+        f.write("  - bit 6 (64): the effect at the front of the chain wants\n")
+        f.write("    attention - the noise gate is closed.\n")
+        f.write("- **CC 103, CC 104:** one bit per routed effect in chain\n")
+        f.write("  order, set while that effect wants attention: the\n")
+        f.write("  compressor is compressing, the boost is clipping, the\n")
+        f.write("  echo is in sound-on-sound. CC 103 is chain positions\n")
+        f.write("  0-6, CC 104 is positions 7-13.\n\n")
+
+        f.write("## SysEx queries\n\n")
+        f.write("Two, and they are encoded differently on purpose.\n\n")
+        f.write("- **0x0a, identity.** Asked once, when a host connects, so\n")
+        f.write("  it replies with JSON like the schema does: self-describing,\n")
+        f.write("  and a new field costs nobody a version negotiation. Carries\n")
+        f.write("  the build timestamp, how many scenes this pedal has, and\n")
+        f.write("  what answered on the i2c bus.\n")
+        f.write("- **0x0b, telemetry.** Polled while somebody is watching a\n")
+        f.write("  meter, so it replies with packed bytes:\n")
+        f.write("  `F0 7D 0B <version> <in> <floor> <out> <gate> <load> F7`.\n")
+        f.write("  Levels are -dBFS, one byte per dB, counting down from\n")
+        f.write("  full scale. **0dBFS is 1Vrms at the input** - the internal\n")
+        f.write("  scale is arranged so that a 1Vrms sine peaks at 1.0, see\n")
+        f.write("  `audio/process.h`.\n")
+        f.write("- `<in>` is the input peak before Trim, and `<floor>` the\n")
+        f.write("  quiet level under it. The floor follows the *gate's* own\n")
+        f.write("  envelope rather than the peak meter, so that it is the\n")
+        f.write("  same quantity the gate's Level setting is compared\n")
+        f.write("  against - measured any other way it would only happen to\n")
+        f.write("  agree. In practice the floor lands within a couple of dB\n")
+        f.write("  of where the gate starts closing.\n")
+        f.write("- `<out>` is the output peak after Volume. `<gate>` is 127\n")
+        f.write("  open and 0 fully closed. `<load>` is the share of each\n")
+        f.write("  sample period spent working, out of 127, measured by\n")
+        f.write("  timing the spin that waits for the next sample. An idle\n")
+        f.write("  pedal reads about 4 rather than 0: the timer is 1us\n")
+        f.write("  against a 20.83us period, so that is quantisation.\n\n")
+        f.write("  **The telemetry layout is append-only.** Fields are never\n")
+        f.write("  reordered, resized or repurposed. Read the ones you know\n")
+        f.write("  and ignore the rest; a shorter frame than you expected\n")
+        f.write("  means that firmware predates the tail, not that the tail\n")
+        f.write("  is zero.\n\n")
 
         f.write("## Program Change (Scenes)\n\n")
-        f.write("- **PC 0-31:** Load Scene 0-31 from EEPROM\n\n")
+        f.write("- **PC 0-31:** Load Scene 0-31 from EEPROM, in. Nothing\n")
+        f.write("  sends Program Change out.\n\n")
 
         f.write("## SysEx Deep Editing\n\n")
         f.write("The pedal uses SysEx messages for deep editing and dynamic feature discovery. Header: `F0 7D`.\n\n")

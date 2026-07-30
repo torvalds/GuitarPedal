@@ -1,5 +1,23 @@
 cmake_minimum_required(VERSION 3.13...3.27)
 
+#
+# What we build for, and how we pass floats around.
+#
+# The part is an RP2354B - an RP2350 with the flash on the die.  The
+# default float ABI is softfp, which is a compatibility mode for parts
+# that might not have an FPU.  This one does, and the whole firmware is
+# built around 32-bit floats, so passing them in core registers is pure
+# loss - a 'sample_t' is two floats, and softfp hands it back through
+# memory rather than in s0/s1.
+#
+# The two belong together: asking for hard float only makes sense
+# because of the platform we asked for.  Both are read by the toolchain
+# file, so they have to be set before the SDK picks one - which is also
+# why they are not the usual cache options further down.
+#
+set(PICO_PLATFORM rp2350)
+set(PICO_HARD_FLOAT_ABI 1)
+
 # initialize the SDK based on PICO_SDK_PATH
 # note: this must happen before project()
 include(pico-sdk/pico_sdk_init.cmake)
@@ -11,13 +29,19 @@ pico_sdk_init()
 
 add_executable(blink)
 
-# I should have used different PIO pins for MIDI
-# but they conflict with the second rotary encoder
-set(MIDI_HW OFF CACHE BOOL "Enable MIDI HW (not just MIDI over USB-C) support")
-
-# The eeprom chip has changed from a 2kbit to a 64kbit one,
-# and they aren't sw-compatible
-set(EEPROM_64KBIT OFF CACHE BOOL "Configure for 64kbit eeprom chip")
+#
+# What is actually on the board.
+#
+# Both of these describe hardware rather than taste, so they default to
+# the boards being built now and stay options only so that the older
+# ones can still be built.  Getting one wrong is quiet: a 64kbit eeprom
+# addressed as a 2kbit one takes the write and puts it somewhere else,
+# so the pedal runs perfectly and just forgets everything on reboot.
+#
+# The MIDI pins used to be shared with a second rotary encoder, which is
+# why this was ever off; there is no second rotary any more.
+#
+set(MIDI_HW ON CACHE BOOL "Enable MIDI HW (not just MIDI over USB-C) support")
 
 set(SAMPLES_PER_SEC 48000.0)
 set(SCRIPT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
@@ -78,8 +102,13 @@ set(EFFECT_MAP_HEADER "${CMAKE_CURRENT_BINARY_DIR}/effect_map.h")
 set(EFFECT_JS "${CMAKE_CURRENT_SOURCE_DIR}/WebMIDI/effects.js")
 set(EFFECT_MD "${CMAKE_CURRENT_SOURCE_DIR}/MIDI_CC_MAP.md")
 
+# Written alongside effect_map.h rather than named on the command line -
+# the generator puts it next to it - but it is still an output, and the
+# build graph should know that rather than getting away with it.
+set(EFFECT_SCHEMA "${CMAKE_CURRENT_BINARY_DIR}/midi_schema.h")
+
 add_custom_command(
-	OUTPUT "${EFFECT_MAP_HEADER}" "${EFFECT_JS}" "${EFFECT_MD}"
+	OUTPUT "${EFFECT_MAP_HEADER}" "${EFFECT_SCHEMA}" "${EFFECT_JS}" "${EFFECT_MD}"
 	COMMAND "${SCRIPT_DIR}/gen_effects.py"
 		"${CMAKE_CURRENT_SOURCE_DIR}/effects"
 		"${EFFECT_MAP_HEADER}"
@@ -103,7 +132,6 @@ target_compile_definitions(blink PRIVATE
 	PLL_SYS_POSTDIV1=5
 	PLL_SYS_POSTDIV2=1
 	MIDI_HW=$<BOOL:${MIDI_HW}>
-	EEPROM_64KBIT=$<BOOL:${EEPROM_64KBIT}>
 	SAMPLES_PER_SEC=${SAMPLES_PER_SEC}f
 	CFG_TUSB_MCU=OPT_MCU_RP2040
 	CFG_TUSB_OS=OPT_OS_PICO
@@ -166,5 +194,12 @@ add_custom_command(TARGET blink POST_BUILD
 		"$<TARGET_FILE:blink>.map"
 		"$<TARGET_FILE:blink>"
 		"${CMAKE_OBJDUMP}"
+	VERBATIM)
+
+# ...and nothing anywhere is allowed to use a double
+add_custom_command(TARGET blink POST_BUILD
+	COMMAND "${SCRIPT_DIR}/check-float.py"
+		"$<TARGET_FILE:blink>"
+		"${CMAKE_NM}"
 	VERBATIM)
 
