@@ -2201,17 +2201,22 @@ function renderUI() {
         let eqFooter = null;
 
         //
-        // The one effect with a hand-built card, because frequency and
-        // gain per band is two-dimensional and a row of one-dimensional
-        // controls cannot say it. Asked six times while building a card,
-        // so ask once.
+        // Some effects are better drawn than listed, because frequency
+        // and gain per band is two-dimensional and a row of
+        // one-dimensional controls cannot say it.
         //
-        // By 'base', the header's filename, rather than by the display
-        // name it used to use: renaming an effect in its C comment is a
-        // thing that happens, and it used to silently cost the EQ its
-        // curve and leave ten hidden sliders in its place.
+        // Which ones is not this code's business any more.  The effect
+        // header declares its band list and the schema carries it, so
+        // the app asks what an effect is rather than which effect it is
+        // - it used to check the display name, and renaming that effect
+        // silently turned its curve into ten sliders.
         //
-        const isEq = effect.base === 'parametric_eq';
+        // Bands take the pots in order, two each: frequency then gain.
+        //
+        const bands = (effect.graph || []).map((type, b) => ({
+            type, freqPot: b * 2, gainPot: b * 2 + 1
+        }));
+        const isEq = bands.length > 0;
 
         if (isEq) {
 
@@ -2322,11 +2327,11 @@ function renderUI() {
 
                 const fs = 48000;
                 const Q = 1.0;
-                const c0 = biquad_loshelf(fastsincos(getFloat(0)/fs), Q, peq_pot_A(getFloat(1)));
-                const c1 = biquad_peaking(fastsincos(getFloat(2)/fs), Q, peq_pot_A(getFloat(3)));
-                const c2 = biquad_peaking(fastsincos(getFloat(4)/fs), Q, peq_pot_A(getFloat(5)));
-                const c3 = biquad_peaking(fastsincos(getFloat(6)/fs), Q, peq_pot_A(getFloat(7)));
-                const c4 = biquad_hishelf(fastsincos(getFloat(8)/fs), Q, peq_pot_A(getFloat(9)));
+                const shape = { LOSHELF: biquad_loshelf, PEAKING: biquad_peaking,
+                                HISHELF: biquad_hishelf };
+                const coeff = bands.map((band) =>
+                      shape[band.type](fastsincos(getFloat(band.freqPot) / fs),
+                                       Q, peq_pot_A(getFloat(band.gainPot))));
 
                 ctx.beginPath();
                 ctx.lineWidth = 4;
@@ -2342,11 +2347,8 @@ function renderUI() {
                     const w2 = fastsincos((2.0 * freq) / fs);
 
                     let mag_sq = 1.0;
-                    mag_sq *= biquad_mag_sq(c0, w0, w2);
-                    mag_sq *= biquad_mag_sq(c1, w0, w2);
-                    mag_sq *= biquad_mag_sq(c2, w0, w2);
-                    mag_sq *= biquad_mag_sq(c3, w0, w2);
-                    mag_sq *= biquad_mag_sq(c4, w0, w2);
+                    for (const c of coeff)
+                        mag_sq *= biquad_mag_sq(c, w0, w2);
 
                     let mag = Math.sqrt(mag_sq);
                     if (mag < 0.0001) mag = 0.0001;
@@ -2362,9 +2364,9 @@ function renderUI() {
 
                 // Draw interactive nodes
                 nodes = [];
-                for (let i = 0; i < 5; i++) {
-                    const freq = getFloat(i * 2);
-                    const db = getFloat(i * 2 + 1);
+                for (let i = 0; i < bands.length; i++) {
+                    const freq = getFloat(bands[i].freqPot);
+                    const db = getFloat(bands[i].gainPot);
 
                     const x = freqToX(freq, W);
                     const y = dbToY(db, H);
@@ -2419,10 +2421,13 @@ function renderUI() {
                     // for: it says which node you have hold of.
                     //
                     // Drawn before the dot so the dot covers its root.
-                    // Bands 0 and 4 are the shelves - the same fixed
-                    // arrangement the coefficients above are built in.
+                    // Which way it points comes from the band's own
+                    // kind, so an effect with a different arrangement of
+                    // sections gets the right ticks without being known
+                    // about here.
                     //
-                    const shelf = i === 0 ? -1 : (i === 4 ? 1 : 0);
+                    const shelf = bands[i].type === 'LOSHELF' ? -1
+                                : bands[i].type === 'HISHELF' ? 1 : 0;
                     if (shelf) {
                         ctx.beginPath();
                         ctx.moveTo(0, 0);
@@ -2520,8 +2525,8 @@ function renderUI() {
             // so they are what it should measure.
             //
             const EQ_MARGIN = 40;
-            const fMin = Math.min(...[0, 1, 2, 3, 4].map((b) => effect.pots[b * 2].min));
-            const fMax = Math.max(...[0, 1, 2, 3, 4].map((b) => effect.pots[b * 2].max));
+            const fMin = Math.min(...bands.map((b) => effect.pots[b.freqPot].min));
+            const fMax = Math.max(...bands.map((b) => effect.pots[b.freqPot].max));
             const fSpan = Math.log2(fMax / fMin);
 
             const freqToX = (f, W) =>
@@ -2540,14 +2545,14 @@ function renderUI() {
             // The five band frequencies, as pot values - the app's live
             // copy of what the pedal has
             const freqPots = () =>
-                  [0, 1, 2, 3, 4].map((i) => parseInt(eqPotsInputs[i * 2].value));
+                  bands.map((b) => parseInt(eqPotsInputs[b.freqPot].value));
             let nodes = [];
 
             let lastEqUpdate = 0;
             // Helper to inverse map freq/db to MIDI val (0-120)
             function updateEqNode(nodeIdx, freq, db) {
-                const fIdx = nodeIdx * 2;
-                const gIdx = nodeIdx * 2 + 1;
+                const fIdx = bands[nodeIdx].freqPot;
+                const gIdx = bands[nodeIdx].gainPot;
                 const fDef = effect.pots[fIdx];
                 const gDef = effect.pots[gIdx];
 
@@ -2736,8 +2741,8 @@ function renderUI() {
 
                 if (isDragging && activeNodeIdx !== -1) {
                     // Force final sysex flush on release
-                    const fIdx = activeNodeIdx * 2;
-                    const gIdx = activeNodeIdx * 2 + 1;
+                    const fIdx = bands[activeNodeIdx].freqPot;
+                    const gIdx = bands[activeNodeIdx].gainPot;
                     const fVal = parseInt(eqPotsInputs[fIdx].value);
                     const gVal = parseInt(eqPotsInputs[gIdx].value);
                     if (!isNaN(fVal)) sendSysex([SYSEX_CMD.PARAM_UPDATE, effect.id, fIdx + 1, fVal]);

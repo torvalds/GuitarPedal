@@ -123,9 +123,40 @@ def generate(audio_dir, out_h, out_js, out_md):
                 'default': default_val
             })
 
+        #
+        # An effect whose controls are better drawn than listed says so
+        # here, and says what the picture is made of.
+        #
+        # 'GRAPH: LOSHELF PEAKING HISHELF' is three filter sections, and
+        # the app draws the response of that cascade with a draggable
+        # node per section.  The pots are taken in order, two per band,
+        # frequency then gain - which is a convention rather than
+        # something declared, because a band that did not have both
+        # would have nothing to be dragged around in.
+        #
+        # It exists because the app used to recognise the one effect
+        # that wanted this by name, which meant renaming that effect
+        # silently turned its curve into ten sliders.  Now the effect
+        # declares what it is and the app draws whatever is declared -
+        # still a special case, but a general one, and open to any
+        # effect that wants a picture.
+        #
+        graph_match = re.search(r'//[ \t]*GRAPH:[ \t]*([A-Z \t]*)', content)
+        graph = graph_match.group(1).split() if graph_match else []
+
+        for band in graph:
+            if band not in ('LOSHELF', 'PEAKING', 'HISHELF'):
+                raise SystemExit(f"{header_path}: GRAPH: unknown band '{band}' "
+                                 f"(want LOSHELF/PEAKING/HISHELF)")
+        if graph and len(graph) * 2 > len(pots):
+            raise SystemExit(f"{header_path}: GRAPH: declares {len(graph)} bands "
+                             f"but there are only {len(pots)} pots to make "
+                             f"{len(graph) * 2} of them from")
+
         effects_data.append({
             'id': effect_id,
             'base': base,
+            'graph': graph,
             'full_name': full_name,
             'short_name': short_name,
             'priority': priority,
@@ -183,6 +214,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             "shortName": e_data['short_name'],
             "defMix": e_data['def_mix'],
             "mixLaw": e_data['mix_law'],
+            "graph": e_data['graph'],
             "pots": ui_pots
         })
 
