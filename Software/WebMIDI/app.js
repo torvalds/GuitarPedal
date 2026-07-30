@@ -2220,6 +2220,13 @@ function renderUI() {
 
 
             // Interactive EQ logic
+            //
+            // Screen px, and generous: nothing else on this canvas is
+            // grabbable, so there is nothing for a wide target to steal
+            // from, and the nearest node wins where two overlap.
+            //
+            const EQ_GRAB_RADIUS = 30;
+
             let isDragging = false;
             let dragPointerId = null;
             let activeNodeIdx = -1;
@@ -2292,7 +2299,8 @@ function renderUI() {
                 const scaleY = canvas.height / rect.height;
                 return {
                     x: (e.clientX - rect.left) * scaleX,
-                    y: (e.clientY - rect.top) * scaleY
+                    y: (e.clientY - rect.top) * scaleY,
+                    scaleX, scaleY
                 };
             };
 
@@ -2301,13 +2309,31 @@ function renderUI() {
                     return;
                 e.preventDefault();
                 const pos = getPointerPos(e);
-                let minDist = 10000;
+                let minDist = Infinity;
                 activeNodeIdx = -1;
+
+                //
+                // How close is close enough, measured on the screen
+                // rather than on the canvas.
+                //
+                // The canvas is 1000 units wide and 300 tall, and it is
+                // drawn at whatever width the card is with the height
+                // fixed - so the two axes are scaled by quite different
+                // amounts, and a radius in canvas units is an ellipse on
+                // the glass. On a phone it came out about 12px wide and
+                // 40px tall: tightest on the axis the bands are spread
+                // along, on the device with the least precision, which
+                // is exactly backwards.
+                //
+                // Dividing by the scale asks the question in the units
+                // the finger is actually in, so the target is a circle
+                // and it is the same size everywhere.
+                //
                 nodes.forEach((n, i) => {
-                    const dx = n.x - pos.x;
-                    const dy = n.y - pos.y;
-                    const dist = Math.sqrt(dx*dx + dy*dy);
-                    if (dist < 40 && dist < minDist) {
+                    const dx = (n.x - pos.x) / pos.scaleX;
+                    const dy = (n.y - pos.y) / pos.scaleY;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist < EQ_GRAB_RADIUS && dist < minDist) {
                         minDist = dist;
                         activeNodeIdx = i;
                     }
