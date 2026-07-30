@@ -992,6 +992,16 @@ function cardDragStart(card, grip, e) {
         return;
 
     //
+    // A finger starts a drag on the handle and nowhere else, so the rest
+    // of the header is still somewhere the page can be scrolled from.
+    // The handle is the only thing in the card with touch-action: none,
+    // and this is the half of that rule that lives in script - see
+    // .drag-handle in the stylesheet for the other half and for why.
+    //
+    if (e.pointerType !== 'mouse' && !e.target.closest('.drag-handle'))
+        return;
+
+    //
     // Capture stops the browser reinterpreting the gesture - a touch
     // that wanders off the header would otherwise become a scroll - but
     // don't rely on it lasting.  Repositioning the card moves the header

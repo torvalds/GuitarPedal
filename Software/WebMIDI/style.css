@@ -399,24 +399,42 @@ input[type=range]:focus::-moz-range-thumb {
 }
 
 /*
- * Dragging grabs the whole header rather than the handle glyph alone,
- * which makes the target finger-sized by construction rather than by
- * padding out a ~20px character to the ~44px a thumb wants.  The
- * handle stays as the affordance that says the header can be grabbed.
+ * A mouse grabs the whole header.  A finger grabs the handle, and only
+ * the handle - see cardDragStart().
  *
- * touch-action has to be on whatever the touch lands on: the browser
- * decides whether a gesture may pan when it begins, from the element
- * hit and its ancestors.
+ * The header used to be the grip for both, on the reasoning that a
+ * header is finger-sized and a ~20px glyph is not.  That is true and it
+ * was still the wrong trade: touch-action has to be on whatever the
+ * touch lands on, so making the whole header the grip made the whole
+ * header a place the page could not be scrolled from - and a card
+ * header is a wide bar that a thumb lands on constantly on the way past.
+ * Reaching for a scroll and picking a card up instead is a worse failure
+ * than a grip that has to be aimed at, because you did not ask for it.
+ *
+ * A mouse has no scroll-by-dragging gesture to be confused with, so it
+ * loses nothing by keeping the big grip.
  */
 .effect-header.draggable {
   cursor: grab;
-  touch-action: none;
 }
 
+/*
+ * The right answer to a 20px glyph was always a 44px target around it,
+ * which is what this is.  touch-action lives here now: this is the one
+ * place in a card that a drag can start, so it is the one place that
+ * does not scroll.
+ */
 .drag-handle {
-  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  margin-right: 4px;
   font-size: 1.4em;
   opacity: 0.7;
+  cursor: grab;
+  touch-action: none;
 }
 
 .effect-title {
