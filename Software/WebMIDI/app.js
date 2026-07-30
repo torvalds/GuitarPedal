@@ -2332,14 +2332,8 @@ function renderUI() {
                 ctx.lineWidth = 4;
                 ctx.strokeStyle = '#4ecca3';
 
-                const margin = 40;
-                const graphWidth = W - 2 * margin;
-                const maxFx = 13.0 * Math.log2(20000.0 / 20.0);
-
                 for (let x = 0; x <= W; x += 2) {
-                    const p = (x - margin) / graphWidth;
-                    const fx = p * maxFx;
-                    let freq = 20 * Math.pow(2, fx / 13.0);
+                    let freq = xToFreq(x, W);
                     // clamp freq for math stability outside margins
                     if (freq < 5) freq = 5;
                     if (freq > 24000) freq = 24000;
@@ -2372,9 +2366,7 @@ function renderUI() {
                     const freq = getFloat(i * 2);
                     const db = getFloat(i * 2 + 1);
 
-                    const fx = 13.0 * Math.log2(freq / 20.0);
-                    const p = fx / maxFx;
-                    const x = margin + p * graphWidth;
+                    const x = freqToX(freq, W);
                     const y = dbToY(db, H);
 
                     nodes.push({x, y});
@@ -2516,6 +2508,26 @@ function renderUI() {
 
             const dbToY = (db, H) => H / 2 - db * (H / (2 * EQ_DB_SPAN));
             const yToDb = (y, H) => (H / 2 - y) * (2 * EQ_DB_SPAN) / H;
+
+            //
+            // The frequency axis, taken from the pots rather than
+            // written down a second time.
+            //
+            // The two have to span the same range or a band at the end
+            // of its travel sits off the end of the picture, and they
+            // were separately hardcoded at 20-20000 with nothing keeping
+            // them that way.  The bands are the reason the graph exists,
+            // so they are what it should measure.
+            //
+            const EQ_MARGIN = 40;
+            const fMin = Math.min(...[0, 1, 2, 3, 4].map((b) => effect.pots[b * 2].min));
+            const fMax = Math.max(...[0, 1, 2, 3, 4].map((b) => effect.pots[b * 2].max));
+            const fSpan = Math.log2(fMax / fMin);
+
+            const freqToX = (f, W) =>
+                  EQ_MARGIN + Math.log2(f / fMin) / fSpan * (W - 2 * EQ_MARGIN);
+            const xToFreq = (x, W) =>
+                  fMin * Math.pow(2, (x - EQ_MARGIN) / (W - 2 * EQ_MARGIN) * fSpan);
 
             const EQ_PICK_SLOP = 4;     // px before a drag has a direction
 
@@ -2706,13 +2718,7 @@ function renderUI() {
                 const posX = Math.max(0, Math.min(W, pos.x));
                 const posY = Math.max(0, Math.min(H, pos.y));
 
-                const margin = 40;
-                const graphWidth = W - 2 * margin;
-                const maxFx = 13.0 * Math.log2(20000.0 / 20.0);
-
-                const p = (posX - margin) / graphWidth;
-                const fx = p * maxFx;
-                const freq = 20.0 * Math.pow(2, fx / 13.0);
+                const freq = xToFreq(posX, W);
                 const db = yToDb(posY, H);
 
                 updateEqNode(activeNodeIdx, freq, db);
