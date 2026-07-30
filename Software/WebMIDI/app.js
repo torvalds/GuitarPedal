@@ -806,22 +806,70 @@ function enableWheelAdjust(input, zone = input) {
     }, { passive: false });
 }
 
-function formatPotValue(pot, val) {
+//
+// The pot curves, once each way round.
+//
+// A pot is a number from 0 to 120 on the wire and something physical to
+// look at - hertz, decibels, milliseconds - and which curve joins the
+// two is declared in the effect's C header and comes through in the
+// schema. gen_effects.py holds the same pair for the firmware's own
+// table; these are the app's copy, and everything in the app goes
+// through them.
+//
+// There were four. These two, and a second pair private to the
+// parametric EQ that knew LINEAR and FREQUENCY and quietly handed back
+// the raw pot value for anything else - so giving that effect a curve
+// of a different kind would have drawn a flat line through 0 to 120 Hz
+// and called it a response.
+//
+function clampPot(val) {
+    return Math.max(0, Math.min(120, isNaN(val) ? 0 : val));
+}
+
+function potToValue(pot, val) {
     const p = val / 120.0;
-    let y = val;
 
-    if (pot.curve === 'RAW') {
-        y = val;
-    } else if (pot.curve === 'LINEAR') {
-        y = pot.min + p * (pot.max - pot.min);
-    } else if (pot.curve === 'FREQUENCY') {
-        y = pot.min + (p * p * p) * (pot.max - pot.min);
-    } else if (pot.curve === 'SQUARED') {
-        y = pot.min + (p * p) * (pot.max - pot.min);
-    } else if (pot.curve === 'EXPONENTIAL') {
-        y = pot.min * Math.pow(pot.max / pot.min, p);
+    switch (pot.curve) {
+    case 'LINEAR':      return pot.min + p * (pot.max - pot.min);
+    case 'FREQUENCY':   return pot.min + p * p * p * (pot.max - pot.min);
+    case 'SQUARED':     return pot.min + p * p * (pot.max - pot.min);
+    case 'EXPONENTIAL': return pot.min * Math.pow(pot.max / pot.min, p);
     }
+    return val;                 // RAW and ENUM are already the value
+}
 
+//
+// And back. Rounding to a whole pot step is part of the answer rather
+// than something for the caller to do afterwards: 121 values is all
+// there is, so anything finer is a number the pedal cannot be told.
+//
+function valueToPot(pot, y) {
+    if (pot.curve === 'RAW' || pot.curve === 'ENUM')
+        return clampPot(Math.round(y));
+
+    const a = pot.min, b = pot.max;
+    let p = 0;
+
+    // A ratio outside the declared range is the caller's business to
+    // clamp; taking a cube root of a negative one here is not, and
+    // neither is a logarithm of it
+    if (b !== a) {
+        const ratio = Math.max(0, (y - a) / (b - a));
+
+        switch (pot.curve) {
+        case 'LINEAR':      p = ratio; break;
+        case 'FREQUENCY':   p = Math.cbrt(ratio); break;
+        case 'SQUARED':     p = Math.sqrt(ratio); break;
+        case 'EXPONENTIAL':
+            p = (a > 0 && y > 0) ? Math.log2(y / a) / Math.log2(b / a) : 0;
+            break;
+        }
+    }
+    return clampPot(Math.round(p * 120));
+}
+
+function formatPotValue(pot, val) {
+    const y = potToValue(pot, val);
     let displayStr = "";
     if (pot.curve === 'RAW' || pot.curve === 'ENUM') {
         displayStr = Math.round(y).toString();
@@ -1768,26 +1816,7 @@ function getInitialPotValue(pot) {
     if (pot.defaultPot !== undefined) return pot.defaultPot;
 
     if (pot.default === undefined) return 60;
-    const y = pot.default;
-
-    if (pot.curve === 'RAW' || pot.curve === 'ENUM') return Math.round(y);
-
-    let p = 0;
-    const a = pot.min || 0;
-    const b = pot.max || 1;
-
-    if (pot.curve === 'LINEAR') {
-        p = (b !== a) ? (y - a) / (b - a) : 0;
-    } else if (pot.curve === 'FREQUENCY') {
-        p = (b !== a) ? Math.pow((y - a) / (b - a), 1/3.0) : 0;
-    } else if (pot.curve === 'SQUARED') {
-        p = (b !== a) ? Math.pow((y - a) / (b - a), 0.5) : 0;
-    } else if (pot.curve === 'EXPONENTIAL') {
-        p = (b !== a && a !== 0 && y !== 0) ? Math.log2(y / a) / Math.log2(b / a) : 0;
-    }
-
-    let val = Math.round(p * 120);
-    return Math.max(0, Math.min(120, val));
+    return valueToPot(pot, pot.default);
 }
 
 
@@ -2168,15 +2197,7 @@ function renderUI() {
                 }
 
                 const pots = eqPotsInputs.map(el => parseInt(el.value));
-                // getFloat maps 0-120 to actual value
-                function getFloat(p_idx) {
-                    const val = pots[p_idx];
-                    const potDef = effect.pots[p_idx];
-                    const p = val / 120.0;
-                    if (potDef.curve === 'LINEAR') return potDef.min + p * (potDef.max - potDef.min);
-                    if (potDef.curve === 'FREQUENCY') return potDef.min + Math.pow(p, 3) * (potDef.max - potDef.min);
-                    return val;
-                }
+                const getFloat = (p_idx) => potToValue(effect.pots[p_idx], pots[p_idx]);
                 function peq_pot_A(db) { return Math.pow(10, db / 40.0); }
 
                 const fs = 48000;
@@ -2316,28 +2337,10 @@ function renderUI() {
                 const fDef = effect.pots[fIdx];
                 const gDef = effect.pots[gIdx];
 
-                // Clamp
-                freq = Math.max(fDef.min, Math.min(fDef.max, freq));
-                db = Math.max(gDef.min, Math.min(gDef.max, db));
-
-                // Inverse freq
-                let fVal = 0;
-                if (fDef.curve === 'FREQUENCY') {
-                    const p = Math.pow((freq - fDef.min) / (fDef.max - fDef.min), 1/3);
-                    fVal = Math.round(p * 120.0);
-                } else if (fDef.curve === 'LINEAR') {
-                    const p = (freq - fDef.min) / (fDef.max - fDef.min);
-                    fVal = Math.round(p * 120.0);
-                }
-                if (isNaN(fVal)) fVal = 0;
-                fVal = Math.max(0, Math.min(120, fVal));
-
-                // Inverse gain
-                let gVal = 0;
-                const gp = (db - gDef.min) / (gDef.max - gDef.min);
-                gVal = Math.round(gp * 120.0);
-                if (isNaN(gVal)) gVal = 0;
-                gVal = Math.max(0, Math.min(120, gVal));
+                // Off the end of the graph is off the end of the pot,
+                // which valueToPot() already answers by clamping
+                const fVal = valueToPot(fDef, freq);
+                const gVal = valueToPot(gDef, db);
 
                 // Update inputs visually
                 eqPotsInputs[fIdx].value = fVal;
