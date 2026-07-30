@@ -1,15 +1,45 @@
 // NAME: Parametric EQ [PEQ]
 // PRIORITY: 120
-// POT: "LS Freq" FREQUENCY(20.0 400.0) = 100.0 Hz
+// POT: "LS Freq" EXPONENTIAL(20.0 20000.0) = 100.0 Hz
 // POT: "LS Gain" LINEAR(-20.0 20.0) = 0.0 dB
-// POT: "P1 Freq" FREQUENCY(50.0 1000.0) = 250.0 Hz
+// POT: "P1 Freq" EXPONENTIAL(20.0 20000.0) = 250.0 Hz
 // POT: "P1 Gain" LINEAR(-20.0 20.0) = 0.0 dB
-// POT: "P2 Freq" FREQUENCY(100.0 4000.0) = 1000.0 Hz
+// POT: "P2 Freq" EXPONENTIAL(20.0 20000.0) = 1000.0 Hz
 // POT: "P2 Gain" LINEAR(-20.0 20.0) = 0.0 dB
-// POT: "P3 Freq" FREQUENCY(400.0 10000.0) = 4000.0 Hz
+// POT: "P3 Freq" EXPONENTIAL(20.0 20000.0) = 4000.0 Hz
 // POT: "P3 Gain" LINEAR(-20.0 20.0) = 0.0 dB
-// POT: "HS Freq" FREQUENCY(1000.0 20000.0) = 8000.0 Hz
+// POT: "HS Freq" EXPONENTIAL(20.0 20000.0) = 8000.0 Hz
 // POT: "HS Gain" LINEAR(-20.0 20.0) = 0.0 dB
+//
+// Every band gets the whole audio range, and the order of the five is
+// not the pedal's business.
+//
+// They used to be five overlapping windows - the low shelf stopped at
+// 400Hz, the first peak started at 50 - which kept them roughly in order
+// by construction, but only roughly: the windows overlap because they
+// have to, so a low shelf at 300Hz above a first peak at 100Hz was
+// always reachable.  So it enforced nothing while still being in the
+// way, and the arithmetic here does not care in the slightest.  Five
+// biquads in series commute; a high shelf below the low shelf is a
+// perfectly good filter, just an oddly described one.
+//
+// Keeping them in a sensible order is the app's business, where it is a
+// question about what a control should do rather than about the maths.
+//
+// EXPONENTIAL rather than FREQUENCY, which is a cubic.  A cubic across
+// three decades puts nearly all its resolution at the top: it would step
+// by 12% at 100Hz, which is two semitones in the register this pedal
+// spends its life in.  A log curve steps by 1000^(1/120) everywhere,
+// which is 5.9% - almost exactly a semitone - and against the fixed Q of
+// 1 below, a band about 1.4 octaves wide, that is a twentieth of its own
+// width.  It also matches the app's log frequency axis, so a pot step is
+// the same distance on screen wherever you are.
+//
+// Note that this changes what a stored scene means: the eeprom holds pot
+// values, not frequencies, and both the range and the curve moved under
+// them.  A saved LS Freq of 60 was 67Hz and is now 632Hz.  There is no
+// version stamp to migrate on and this is a hobby pedal, so the answer
+// is to re-save the scenes.
 
 struct {
 	struct biquad_coeff coeff[5];
