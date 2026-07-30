@@ -1007,3 +1007,42 @@ input[type=range].large-slider::-webkit-slider-runnable-track {
   box-shadow: 0 0 0 1px var(--accent), 0 0 12px -2px var(--accent);
   transition: box-shadow 0ms;
 }
+
+/*
+ * The pedal is not the hardware this firmware was built for - an early
+ * board answering on i2c, or the other eeprom.  Filled rather than
+ * outlined like the other two, because it is not a transient to glance
+ * at: it will not clear itself, and the symptoms are quiet ones. Hover
+ * for which, or open MIDI Connection.
+ */
+#status-board.hidden {
+  display: none;
+}
+
+.status-board {
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+  color: var(--bg-color);
+  background: var(--danger);
+}
+
+/*
+ * An early board: information rather than a fault.
+ *
+ * Those still play - the pedal sets the TAC5112 up over i2c, and the
+ * eeprom geometry is worked out rather than compiled in, so a 2kbit part
+ * gets its one scene. Mono, because they never routed the second channel.
+ * Worth knowing which board is on the bench; not worth the red one.
+ */
+#status-early.hidden {
+  display: none;
+}
+
+.status-early {
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+  color: var(--text-muted);
+  border: 1px solid var(--text-muted);
+}

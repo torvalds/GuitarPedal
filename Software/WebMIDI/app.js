@@ -5,7 +5,8 @@ const SYSEX_CMD = {
     SAVE_SCENE: 0x04,
     REQ_STATE: 0x05,
     ROUTING_ORDER: 0x08,
-    DIAGNOSTIC: 0x09
+    DIAGNOSTIC: 0x09,
+    IDENTITY: 0x0a
 };
 
 let midiAccess = null;
@@ -287,7 +288,8 @@ function updateMidiState() {
         appTitleEl.className = "title-connected";
         appTitleEl.textContent = `Connected: ${foundInput.name}`;
 
-        // Request initial state dump
+        // Who is this, then what does it have
+        sendSysex([SYSEX_CMD.IDENTITY]);
         sendSysex([SYSEX_CMD.REQ_SCHEMA]);
         sendSysex([SYSEX_CMD.DIAGNOSTIC]); // Request diagnostic status
     } else {
@@ -385,6 +387,18 @@ function handleSysex(data) {
                 sendSysex([SYSEX_CMD.DIAGNOSTIC]);
             } catch (e) {
                 console.error("Failed to parse schema", e);
+            }
+            break;
+        }
+
+        case SYSEX_CMD.IDENTITY: {
+            let jsonStr = '';
+            for (let i = 3; i < data.length - 1; i++)
+                jsonStr += String.fromCharCode(data[i]);
+            try {
+                handleIdentity(JSON.parse(jsonStr));
+            } catch (e) {
+                console.error("Failed to parse identity", e);
             }
             break;
         }
@@ -975,6 +989,7 @@ let currentRouting = [];
 //
 let statusChainBits = 0;
 let statusFrontAttn = false;
+let pedalIdentity = null;
 
 //
 // Faults are shown for as long as the pedal says so - but never for less
@@ -996,13 +1011,20 @@ const STATUS_MIN_MS = 900;
 const clipFault = { id: 'status-clip', on: false, since: 0, timer: null };
 const dropFault = { id: 'status-drop', on: false, since: 0, timer: null };
 
+// Neither of these is a transient: both come from the identity reply and
+// are never timed out. boardFault means broken; earlyNote means old.
+const boardFault = { id: 'status-board', on: false, since: 0, timer: null };
+const earlyNote = { id: 'status-early', on: false, since: 0, timer: null };
+
+const allFaults = [clipFault, dropFault, boardFault, earlyNote];
+
 function paintFaults() {
-    for (const f of [clipFault, dropFault])
+    for (const f of allFaults)
         document.getElementById(f.id).classList.toggle('hidden', !f.on);
 
     // The wrapper goes with them, so an idle header has nothing in it
     document.getElementById('pedal-status')
-            .classList.toggle('hidden', !(clipFault.on || dropFault.on));
+            .classList.toggle('hidden', !allFaults.some(f => f.on));
 }
 
 function setFault(f, on) {
@@ -1057,16 +1079,120 @@ function renderAttention() {
 // word stays on the screen until somebody clears it.
 //
 function clearPedalStatus() {
-    for (const f of [clipFault, dropFault]) {
+    for (const f of allFaults) {
         clearTimeout(f.timer);
         f.timer = null;
         f.on = false;
     }
+    document.getElementById('identity-info').textContent = 'Not connected.';
     paintFaults();
 
     statusChainBits = 0;
     statusFrontAttn = false;
     renderAttention();
+}
+
+//
+// The menu says which scene it is about to overwrite, so it has to be
+// refreshed whenever the selection moves - including when the picker is
+// rebuilt from the identity reply, which is why this is not tucked inside
+// the setup that binds it.
+//
+function updateSceneLabels() {
+    const sel = document.getElementById('global-scene-select');
+    const scene = sel ? sel.value : '0';
+    const saveBtn = document.getElementById('global-save-scene-btn');
+    const loadBtn = document.getElementById('global-load-scene-btn');
+    if (saveBtn) saveBtn.innerHTML = `💾&nbsp;&nbsp;Save to Scene ${scene}`;
+    if (loadBtn) loadBtn.innerHTML = `📂&nbsp;&nbsp;Load Scene ${scene}`;
+}
+
+//
+// The scene picker, sized by whatever the pedal reports.
+//
+// Rebuilt rather than adjusted, because reconnecting to a different pedal
+// can change the count, and a stale option would offer a scene that
+// cannot be loaded.
+//
+function populateScenePicker(count) {
+    const sel = document.getElementById('global-scene-select');
+    if (!sel)
+        return;
+
+    const was = sel.value;
+    sel.innerHTML = '';
+    for (let i = 0; i < count; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = `Scene ${i}`;
+        sel.appendChild(opt);
+    }
+    if (was !== '' && Number(was) < count)
+        sel.value = was;
+    updateSceneLabels();
+}
+
+//
+// What the pedal says it is.  Asked once, on connect.
+//
+// The build stamp is the useful part day to day: it answers "is this
+// running what I just built", which is a question that has wasted more
+// than one evening - a schema from stale firmware renders perfectly and
+// is simply about a different pedal.
+//
+// The probe results are the rare-but-serious part.  A TAC5112 or an
+// SH1106 answering means the board predates this firmware by a couple of
+// generations and nothing is going to work properly, so that gets a chip
+// in the header rather than a line in a dialog nobody has open.
+//
+function handleIdentity(id) {
+    pedalIdentity = id;
+
+    const found = id.found || {};
+    const notes = [`Firmware built ${id.build || 'unknown'}.`];
+    const wrong = [];
+    const early = [];
+    const scenes = id.scenes || 1;
+
+    //
+    // How many scenes there are is the pedal's to say, not ours to
+    // assume. A 2kbit eeprom holds one; the 64kbit part holds 32.
+    //
+    populateScenePicker(scenes);
+
+    notes.push(`${scenes} scene${scenes === 1 ? '' : 's'}` +
+               `, hardware MIDI ${id.midi_hw ? 'on' : 'off'}.`);
+
+    //
+    // A fault is something that will not work. A missing eeprom is the
+    // only one of these: nothing persists, and nothing else would say so.
+    //
+    if (!found.eeprom)
+        wrong.push('No eeprom answered, so scenes will not persist.');
+
+    //
+    // An early board is not a fault. Those play: the pedal sets the
+    // TAC5112 up over i2c, and the eeprom geometry is worked out rather
+    // than compiled in, so one scene on a 2kbit part saves and loads.
+    // Mono, because they never routed the second channel. Worth knowing
+    // which board is on the bench, not worth alarming anybody.
+    //
+    if (found.legacy_codec)
+        early.push('A TAC5112 codec answered on i2c, so this is an early ' +
+                   'board: mono only, and the codec is set up over i2c ' +
+                   'rather than strapped.');
+    if (found.legacy_screen)
+        early.push('An SH1106 screen answered on i2c, from a generation ' +
+                   'that had one. Nothing drives it.');
+
+    boardFault.on = wrong.length > 0;
+    earlyNote.on = early.length > 0;
+    document.getElementById('status-board').title = wrong.join(' ');
+    document.getElementById('status-early').title = early.join(' ');
+    paintFaults();
+
+    document.getElementById('identity-info').textContent =
+        notes.concat(wrong, early).join(' ');
 }
 
 function handleGlobalStatus(val) {
@@ -2090,15 +2216,9 @@ appTitleEl.addEventListener('click', () => {
         });
     }
 
+    // The options are filled in from the identity reply, since only the
+    // pedal knows how many scenes it has - see populateScenePicker().
     const sceneSelect = document.getElementById('global-scene-select');
-    if (sceneSelect) {
-        for (let i = 0; i < 32; i++) {
-            const opt = document.createElement('option');
-            opt.value = i;
-            opt.textContent = `Scene ${i}`;
-            sceneSelect.appendChild(opt);
-        }
-    }
 
     //
     // The picker is in the header and the two things that act on it are
@@ -2106,14 +2226,6 @@ appTitleEl.addEventListener('click', () => {
     // are trusting your memory of a control that isn't on screen while
     // you press the one that overwrites it.
     //
-    function updateSceneLabels() {
-        const scene = sceneSelect ? sceneSelect.value : '0';
-        const saveBtn = document.getElementById('global-save-scene-btn');
-        const loadBtn = document.getElementById('global-load-scene-btn');
-        if (saveBtn) saveBtn.innerHTML = `💾&nbsp;&nbsp;Save to Scene ${scene}`;
-        if (loadBtn) loadBtn.innerHTML = `📂&nbsp;&nbsp;Load Scene ${scene}`;
-    }
-
     const loadSceneBtn = document.getElementById('global-load-scene-btn');
     if (loadSceneBtn) {
         loadSceneBtn.addEventListener('click', () => {

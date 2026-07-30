@@ -239,62 +239,6 @@ static void switch_irq(void)
 	user_interaction = 1;
 }
 
-//
-// What this is running on.
-//
-// A fixed build cannot adapt to the board it lands on, and mostly does
-// not need to - but it can find out, and one thing it finds does need
-// acting on.
-//
-// The early boards carried a TAC5112 codec with its control registers on
-// i2c0 and an SH1106 screen on i2c1.  The screen is not driven any more.
-// The codec is: it needs a little setting up, which the current boards
-// strap in hardware instead, and without it those boards are silent.
-//
-// So probing is not idle curiosity here.  It is also the only way anyone
-// would ever know which board is on the bench, the symptoms otherwise
-// being quiet ones.
-//
-static struct {
-	bool eeprom;		// the scene store, 0x50
-	bool legacy_codec;	// TAC5112, 0x51 - an early board
-	bool legacy_screen;	// SH1106, 0x3c - ditto
-} hardware;
-
-static bool i2c_probe(i2c_inst_t *i2c, uint8_t addr)
-{
-	uint8_t byte;
-
-	// One byte, harmless to anything that does answer, and a timeout
-	// rather than a hang if the bus is being held down.
-	return i2c_read_timeout_us(i2c, addr, &byte, 1, false, 2000) == 1;
-}
-
-static void probe_hardware(void)
-{
-	hardware.eeprom = i2c_probe(MC24Cxx_I2C);
-	hardware.legacy_codec = i2c_probe(TAC5112_I2C);
-	hardware.legacy_screen = i2c_probe(SH1106_I2C);
-
-	//
-	// Worst first, and only one of these arrives: report_status() is a
-	// plain overwrite and get_status() takes the message away as it
-	// reads it, so a chain of ifs would deliver the last thing tested
-	// rather than the thing worth saying.
-	//
-	// A missing eeprom is the one that matters - nothing persists and
-	// nothing else would mention it.  An early board is merely old:
-	// the TAC5112 wants a little setup, which it gets, and those
-	// boards never routed the second channel, so they are mono.  The
-	// eeprom geometry is worked out rather than compiled in, so a
-	// single scene on a 2kbit part saves and loads like any other.
-	//
-	if (!hardware.eeprom)
-		report_status("No eeprom found - scenes will not persist");
-	else if (hardware.legacy_codec || hardware.legacy_screen)
-		report_status("Early board: mono only, one scene");
-}
-
 int current_midi_effect_idx = 0;
 
 #include "midi_schema.h"
@@ -364,6 +308,122 @@ static void sysex_stream_write(const uint8_t *buffer, size_t len)
 			}
 		}
 	}
+}
+
+//
+// What this firmware is, and what it found itself running on.
+//
+// The hardware half is probed once at boot.  A fixed build cannot adapt
+// to the board it lands on and this does not try to - it answers a
+// different question, which has cost an evening more than once: is this
+// the board this firmware was built for at all?
+//
+// The early boards carried a TAC5112 codec with its control registers on
+// i2c0, and an SH1106 screen on i2c1.  Neither is supported any more and
+// the code for both is gone, but the parts still answer when addressed.
+// So anything replying there means the firmware is newer than the board,
+// and nothing else in the system is in a position to notice.
+//
+// Which eeprom is fitted is the other question, and getting that wrong is
+// the quietest failure of the lot: the parts differ in how many address
+// bytes they accept, so a mismatched build writes to the wrong place and
+// the pedal runs perfectly and forgets everything on reboot.  That one
+// takes more than a presence probe - see eeprom_repeats_at_256().
+//
+// What gets reported is what was *observed*: something answered, the read
+// repeated, the bytes varied.  "This is the 2kbit part" is an inference
+// from those, and belongs to whoever is reading rather than in the wire
+// format, so that being wrong about it later costs an app change and not
+// a protocol one.
+//
+static struct {
+	bool eeprom;		// the scene store, 0x50
+	bool legacy_codec;	// TAC5112, 0x51 - an early board
+	bool legacy_screen;	// SH1106, 0x3c - ditto
+} hardware;
+
+static bool i2c_probe(i2c_inst_t *i2c, uint8_t addr)
+{
+	uint8_t byte;
+
+	// One byte, harmless to anything that does answer, and a timeout
+	// rather than a hang if the bus is being held down.
+	return i2c_read_timeout_us(i2c, addr, &byte, 1, false, 2000) == 1;
+}
+
+static void probe_hardware(void)
+{
+	hardware.eeprom = i2c_probe(MC24Cxx_I2C);
+	hardware.legacy_codec = i2c_probe(TAC5112_I2C);
+	hardware.legacy_screen = i2c_probe(SH1106_I2C);
+
+	//
+	// Worst first, and only one of these arrives: report_status() is a
+	// plain overwrite and get_status() takes the message away as it
+	// reads it, so a chain of ifs would deliver the last thing tested
+	// rather than the thing worth saying.
+	//
+	// A missing eeprom is the one that matters - nothing persists and
+	// nothing else would mention it.  An early board is merely old:
+	// the TAC5112 wants a little setup, which it gets, and those
+	// boards never routed the second channel, so they are mono.  The
+	// eeprom geometry is worked out rather than compiled in, so a
+	// single scene on a 2kbit part saves and loads like any other.
+	//
+	if (!hardware.eeprom)
+		report_status("No eeprom found - scenes will not persist");
+	else if (hardware.legacy_codec || hardware.legacy_screen)
+		report_status("Early board: mono only, one scene");
+}
+
+static void sysex_write_str(const char *str)
+{
+	sysex_stream_write((const uint8_t *)str, strlen(str));
+}
+
+//
+// Identity, as JSON.
+//
+// Two kinds of thing come back from the pedal and they want opposite
+// encodings.  This one is asked once, when the app connects, so a couple
+// of hundred bytes cost nothing and being self-describing means a field
+// can be added later without either side agreeing a version first - the
+// same bargain the schema already makes.  Anything *polled* is the other
+// case and should be packed bytes instead.
+//
+bool send_identity_tx = false;
+static void sysex_send_identity(void)
+{
+	if (!send_identity_tx)
+		return;
+	send_identity_tx = false;
+
+	static const uint8_t sysex_identity_header[] = { 0xF0, 0x7D, 0x0A };
+	static const uint8_t sysex_identity_trailer[] = { 0xF7 };
+
+	sysex_tx_start();
+	sysex_stream_write(sysex_identity_header, sizeof(sysex_identity_header));
+
+	//
+	// The build stamp is what answers "did I actually reflash?", which
+	// is the question that gets asked in anger.  It only moves when
+	// blink.c is recompiled, which is exactly when the binary changed.
+	//
+	sysex_write_str("{\"build\":\"" __DATE__ " " __TIME__ "\"");
+	sysex_write_str(",\"scenes\":");
+	sysex_write_str(nr_scenes == 1 ? "1" : "32");
+	sysex_write_str(",\"midi_hw\":");
+	sysex_write_str(MIDI_HW ? "true" : "false");
+	sysex_write_str(",\"found\":{\"eeprom\":");
+	sysex_write_str(hardware.eeprom ? "true" : "false");
+	sysex_write_str(",\"legacy_codec\":");
+	sysex_write_str(hardware.legacy_codec ? "true" : "false");
+	sysex_write_str(",\"legacy_screen\":");
+	sysex_write_str(hardware.legacy_screen ? "true" : "false");
+	sysex_write_str("}}");
+
+	sysex_stream_write(sysex_identity_trailer, sizeof(sysex_identity_trailer));
+	sysex_tx_finish("Sent identity");
 }
 
 bool send_schema_tx = false;
@@ -533,6 +593,10 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 	} else if (cmd == 0x09) { // Diagnostic Request
 
 		send_status_tx = true;
+
+	} else if (cmd == 0x0a) { // Identity Request
+
+		send_identity_tx = true;
 
 	} else if (cmd == 0x05) { // State Dump Request
 
@@ -838,6 +902,7 @@ int main()
 		usb_midi_poll();
 		uart_midi_poll();
 
+		sysex_send_identity();
 		sysex_send_schema();
 		sysex_send_state_dump();
 		sysex_send_status();
