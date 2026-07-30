@@ -243,13 +243,19 @@ function updateMidiState() {
     let foundInput = null;
     let foundOutput = null;
 
-    console.log("[WebMIDI] updating MIDI state. Available inputs:");
+    //
+    // Every device, every time the MIDI state changes.  Useful when a
+    // pedal is not showing up and noise the rest of the time, and it is
+    // by far the most of what lands in the console - so it is debug
+    // output, which browsers hide until asked.
+    //
+    console.debug("[WebMIDI] updating MIDI state. Available inputs:");
     for (let input of midiAccess.inputs.values()) {
-        console.log("  Input:", input.name, input.id);
+        console.debug("  Input:", input.name, input.id);
     }
-    console.log("[WebMIDI] Available outputs:");
+    console.debug("[WebMIDI] Available outputs:");
     for (let output of midiAccess.outputs.values()) {
-        console.log("  Output:", output.name, output.id);
+        console.debug("  Output:", output.name, output.id);
     }
 
     if (selectedInputId && midiAccess.inputs.has(selectedInputId)) {
@@ -2170,11 +2176,28 @@ appTitleEl.addEventListener('click', () => {
         btn.classList.remove('success', 'error');
     }
 
+    //
+    // Every one of these is a menu item, so success means the menu has
+    // done its job and should go away.  It used to stay open, which made
+    // sense when a round of testing meant several of these in a row and
+    // reaching for the burger between each was the annoying part.  There
+    // is nothing like that left, so now it just sits there afterwards
+    // looking like it is waiting for something.
+    //
+    // Closing on the same timer that restores the label rather than
+    // immediately: the label *is* the confirmation, and 'Saved to 3' is
+    // worth reading before it goes.  Failures keep the menu open for the
+    // same reason - showButtonError() does not close it, because the
+    // error is the thing you need to see.
+    //
     function showButtonSuccess(btn, successText) {
         const originalText = btn.innerHTML;
         btn.innerHTML = `✓ ${successText}`;
         btn.classList.add('success');
-        setTimeout(() => restoreButton(btn, originalText), 1500);
+        setTimeout(() => {
+            restoreButton(btn, originalText);
+            closeMenu();
+        }, 1500);
     }
 
     function showButtonError(btn, errorText) {
