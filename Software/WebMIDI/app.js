@@ -189,9 +189,23 @@ function stopAllNotes() {
 async function initMidi() {
     try {
         console.log("[WebMIDI] Requesting MIDI access...");
+        //
+        // Missing entirely, which is not the same as refused, and there
+        // are two quite different reasons for it.
+        //
+        // Web MIDI is only exposed on a secure origin, and http:// to a
+        // LAN address is not one - which is exactly how this gets tested
+        // from a phone.  That doesn't fail the call, it removes the API,
+        // so the SecurityError branch below never sees it and the honest
+        // "HTTPS Required" was unreachable.  Blaming the browser sends
+        // you off checking the one thing that isn't wrong.
+        //
         if (!navigator.requestMIDIAccess) {
-            appTitleEl.textContent = "Browser Not Supported";
-            console.error("Web MIDI API is not supported in this browser.");
+            const insecure = !window.isSecureContext;
+            appTitleEl.textContent = insecure ? "HTTPS Required" : "Browser Not Supported";
+            console.error(insecure
+                ? "Web MIDI needs a secure origin: https, localhost, or this origin allowed in chrome://flags/#unsafely-treat-insecure-origin-as-secure"
+                : "Web MIDI API is not supported in this browser.");
             return;
         }
         midiAccess = await navigator.requestMIDIAccess({ sysex: true });
@@ -323,7 +337,24 @@ function updateMidiState() {
 //
 // An empty hostname is a file:// URL.
 //
-const IS_LOCAL_DEV = ['localhost', '127.0.0.1', '::1', ''].includes(location.hostname);
+// A private address counts as local too, because testing on a phone
+// means serving to 192.168.x.x and the page is no less "the copy I am
+// editing" for having crossed the room to get there.  That matters more
+// than it looks: getting Web MIDI to work over http at all takes
+// whitelisting the origin in Chrome's
+// #unsafely-treat-insecure-origin-as-secure, and an origin secure
+// enough for Web MIDI is secure enough to register a service worker.
+// So without this the phone - the machine hardest to clear a stale
+// worker out of - would be the one caching the dev server.
+//
+// The bracket is not optional: location.hostname keeps them on an IPv6
+// literal, so requiring one is what stops this matching a real name that
+// happens to start "fd".
+//
+const PRIVATE_HOST = /^(10\.|127\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|\[(::1|fe80|f[cd]))|\.local$/i;
+
+const IS_LOCAL_DEV = ['localhost', '127.0.0.1', '::1', ''].includes(location.hostname) ||
+    PRIVATE_HOST.test(location.hostname);
 
 // Colours the title amber rather than green - see style.css. The tooltip
 // is set here rather than in the markup so the deployed copy doesn't
@@ -487,7 +518,7 @@ function handleSysex(data) {
             for (let i = 3; i < data.length - 1; i++) {
                 routeIds.push(data[i]);
             }
-            reorderEffectsInDOM(routeIds);
+            applyRouting(routeIds);
 
             // A state dump always concludes with the routing order.
             // Fetch status now to pick up any "Sent state dump" or similar info.
@@ -820,7 +851,14 @@ function formatPotValue(pot, val) {
 //
 // The card is moved in the list as you go, rather than dragging a
 // floating copy about: it is less code, and the list ends up in exactly
-// the state that sendUpdatedRouting() then reads back out of the dom.
+// the state that routingFromDOM() then reads back out of the dom.
+//
+// Dragging reorders the chain and does nothing else.  It used to also be
+// how an effect was routed and unrouted - drag it across a divider - and
+// that was one gesture too many for it: on a phone it meant a long drag
+// past every card you were not interested in, and it made card position
+// the routing model.  Routing is buttons now, and this is left doing the
+// one thing a drag is genuinely good at.
 //
 const DRAG_THRESHOLD = 4;       // px before a press counts as a drag
 const DRAG_EDGE = 80;           // px from the edge where we start scrolling
@@ -829,24 +867,52 @@ const DRAG_SCROLL_MAX = 18;     // px per frame at the very edge
 let cardDrag = null;
 let dragScrollRaf = 0;
 
-// Which element should the gap sit in front of? null means last.
+// Is this element a card that is currently in the chain?
+function isRoutedCard(el) {
+    if (!el.dataset || el.dataset.effectId === undefined)
+        return false;
+    return currentRouting.includes(parseInt(el.dataset.effectId));
+}
+
+//
+// Which element should the gap sit in front of?
+//
+// Only chain cards are landmarks.  Everything else in the container -
+// the anchor at the front, the settings card, the parked cards and the
+// pool - is somewhere a dragged card may not go, so the search walks
+// past them and the chain's own extent is what bounds the drag.  There
+// is nothing to clamp and no divider to be on the wrong side of.
+//
 function dragInsertionRef(y) {
+    let seenRouted = false;
+    let end = null;
+
     for (const el of effectsContainer.children) {
         // The dragged card is out of flow and the gap is what we're
         // placing, so neither is a landmark
         if (el === cardDrag.card || el === cardDrag.gap)
             continue;
-        // Never let anything land above the anchor effect
-        if (el.dataset.effectId !== undefined) {
-            const eff = PEDAL_EFFECTS.find(e => e.id === parseInt(el.dataset.effectId));
-            if (eff && eff.base === "signal_chain")
-                continue;
+
+        if (!isRoutedCard(el)) {
+            // The first thing past the chain is where a card dragged
+            // below the last one lands
+            if (seenRouted && end === null)
+                end = el;
+            continue;
         }
+        seenRouted = true;
+
         const r = el.getBoundingClientRect();
         if (y < r.top + r.height / 2)
             return el;
     }
-    return null;
+
+    // The only effect in the chain has nowhere to go, so leave the gap
+    // where it already is rather than sending it to the bottom
+    if (!seenRouted)
+        return cardDrag.gap.nextSibling;
+
+    return end;
 }
 
 // Take the card out of the flow and leave a gap the same size behind it,
@@ -926,6 +992,16 @@ function cardDragStart(card, grip, e) {
         return;
 
     //
+    // A finger starts a drag on the handle and nowhere else, so the rest
+    // of the header is still somewhere the page can be scrolled from.
+    // The handle is the only thing in the card with touch-action: none,
+    // and this is the half of that rule that lives in script - see
+    // .drag-handle in the stylesheet for the other half and for why.
+    //
+    if (e.pointerType !== 'mouse' && !e.target.closest('.drag-handle'))
+        return;
+
+    //
     // Capture stops the browser reinterpreting the gesture - a touch
     // that wanders off the header would otherwise become a scroll - but
     // don't rely on it lasting.  Repositioning the card moves the header
@@ -991,13 +1067,265 @@ function cardDragEnd(e) {
     document.body.style.userSelect = '';
 
     if (moved)
-        sendUpdatedRouting();
+        setRouting(routingFromDOM());
 }
 
-// What the pedal is currently routing, as far as we know. Kept up to
-// date by reorderEffectsInDOM(), which is the one place routing becomes
-// known - whether we decided it or the pedal told us.
+//
+// Flicking a card out of the chain.
+//
+// The eject button does this too, and did it first.  This exists because
+// a card that can be dragged around looks like a thing you can move, and
+// throwing something you are holding off to one side to be rid of it is
+// what a hand reaches for before it reaches for a button.
+//
+// It only had room to exist once a finger stopped starting drags from
+// the whole header.  Vertical there scrolls the page and sideways is
+// ours, which is what 'touch-action: pan-y' on the header says, and the
+// page has nowhere to go sideways so claiming it costs nothing.
+//
+// Touch only.  A mouse still grabs the header to reorder, and the same
+// gesture cannot also mean discard.
+//
+const SWIPE_ARM = 12;           // px sideways before this is a swipe at all
+const SWIPE_COMMIT = 70;        // px, or a quarter of the card, to let go
+const SWIPE_RETURN_MS = 180;    // spring-back, and .swipe-return in the css
+
+let cardSwipe = null;
+
+// How far it has to go before letting go means it. A quarter of the card
+// on a wide screen, and a thumb's worth on a narrow one.
+function swipeCommit(card) {
+    return Math.max(SWIPE_COMMIT, card.offsetWidth / 4);
+}
+
+function cardSwipeStart(card, e) {
+    if (!e.isPrimary || cardSwipe || cardDrag)
+        return;
+
+    // Reordering is the mouse's gesture on this header - see cardDragStart()
+    if (e.pointerType === 'mouse')
+        return;
+
+    // The handle reorders, and the header's own controls keep their presses
+    if (e.target.closest('.drag-handle, .collapse-chevron, .action-btn'))
+        return;
+
+    cardSwipe = { card, id: e.pointerId,
+                  x: e.clientX, y: e.clientY, armed: false };
+
+    window.addEventListener('pointermove', cardSwipeMove);
+    window.addEventListener('pointerup', cardSwipeEnd);
+    window.addEventListener('pointercancel', cardSwipeRelease);
+}
+
+function cardSwipeMove(e) {
+    if (!cardSwipe || e.pointerId !== cardSwipe.id)
+        return;
+
+    const dx = e.clientX - cardSwipe.x;
+    const dy = e.clientY - cardSwipe.y;
+
+    if (!cardSwipe.armed) {
+        //
+        // Sideways, and more sideways than not.  The second half is what
+        // keeps a scroll that starts with a wobble from arming this: the
+        // browser is about to take the gesture for panning, and it says
+        // so with a pointercancel, but it is worth not having moved the
+        // card in the meantime.
+        //
+        if (Math.abs(dx) < SWIPE_ARM || Math.abs(dx) < Math.abs(dy))
+            return;
+
+        cardSwipe.armed = true;
+        cardSwipe.card.classList.remove('swipe-return');
+    }
+
+    //
+    // Fades as it goes, so how far is left to go is visible without
+    // anything having to be drawn behind it.
+    //
+    const gone = Math.min(1, Math.abs(dx) / swipeCommit(cardSwipe.card));
+    cardSwipe.card.style.transform = `translateX(${dx}px)`;
+    cardSwipe.card.style.opacity = 1 - 0.6 * gone;
+}
+
+//
+// Put the card back where it belongs, whatever happens next.
+//
+// Cards are reused rather than rebuilt, so one let go halfway would
+// otherwise still be sitting at that offset when it is routed again.
+//
+function cardSwipeRelease() {
+    const swipe = cardSwipe;
+
+    cardSwipe = null;
+    window.removeEventListener('pointermove', cardSwipeMove);
+    window.removeEventListener('pointerup', cardSwipeEnd);
+    window.removeEventListener('pointercancel', cardSwipeRelease);
+
+    if (!swipe || !swipe.armed)
+        return swipe;
+
+    //
+    // Taken off again once it has landed.  The class names a transition,
+    // and .effect-card already has one it cares about - the attention
+    // glow, which is deliberately instant in one direction - so this is
+    // not something to leave sitting on a card afterwards.
+    //
+    swipe.card.classList.add('swipe-return');
+    swipe.card.style.transform = '';
+    swipe.card.style.opacity = '';
+    setTimeout(() => swipe.card.classList.remove('swipe-return'),
+               SWIPE_RETURN_MS);
+    return swipe;
+}
+
+function cardSwipeEnd(e) {
+    const swipe = cardSwipeRelease();
+
+    if (!swipe || e.pointerId !== swipe.id || !swipe.armed)
+        return;
+
+    // Not far enough: it has already sprung back
+    if (Math.abs(e.clientX - swipe.x) < swipeCommit(swipe.card))
+        return;
+
+    //
+    // Unrouting parks the card, so the spring-back the line above set
+    // going never gets a frame to be seen in - the card is gone before
+    // it can travel. Which is the intent: it went the way it was thrown.
+    //
+    unrouteEffect(parseInt(swipe.card.dataset.effectId));
+}
+
+//
+// A tap, as opposed to a touch.
+//
+// These are two different things and the difference is the whole bug:
+// this used to open the panel from 'touchstart', which is the moment a
+// finger lands and before anybody - the browser included - knows what
+// the gesture is going to be.  So scrolling the page with a finger that
+// happened to start on a pot threw a modal up over what you were
+// scrolling towards, every time.
+//
+// A tap is a press that never goes anywhere.  That can only be known at
+// the end, so the decision is made on pointerup, and a gesture the
+// browser takes over for scrolling comes back as pointercancel, which is
+// exactly the answer we want: not a tap.
+//
+// "Never went anywhere" has to be remembered rather than measured at the
+// end.  Comparing where the finger landed against where it left is not
+// the same question, and gets the interesting case backwards: drag a
+// slider up and back down and you release within a few px of where you
+// started, having very much moved.  That is not a hypothetical - it is
+// the ordinary way to use a slider, and it put the panel up on top of
+// the value you had just finished setting.
+//
+// So the flag is sticky, exactly like cardDrag.moved next door: once
+// this gesture has moved, it is not a tap again.
+//
+const TAP_SLOP = 10;    // px of travel a tap is allowed
+
+let potTap = null;
+
+function releasePotTap() {
+    potTap = null;
+    window.removeEventListener('pointermove', movePotTap);
+    window.removeEventListener('pointerup', endPotTap);
+    window.removeEventListener('pointercancel', releasePotTap);
+}
+
+function movePotTap(e) {
+    if (!potTap || e.pointerId !== potTap.id)
+        return;
+
+    if (Math.abs(e.clientX - potTap.x) > TAP_SLOP ||
+        Math.abs(e.clientY - potTap.y) > TAP_SLOP)
+        potTap.moved = true;
+}
+
+function endPotTap(e) {
+    const tap = potTap;
+
+    releasePotTap();
+    if (!tap || e.pointerId !== tap.id)
+        return;
+
+    // It travelled: a scroll, or a drag of the control itself
+    if (tap.moved)
+        return;
+
+    tap.open();
+}
+
+//
+// Open something when this element is tapped, without stealing a scroll
+// that happens to begin on it.
+//
+// 'grab' is the part of it that a mouse can already operate directly -
+// the inline slider - and a mouse press there is a drag of it rather
+// than a request to open anything.  A mouse has no scroll gesture to be
+// confused with, so it does not wait for the release: anywhere else on
+// the control opens immediately, which is how it always behaved.
+//
+function openOnTap(el, grab, open) {
+    el.addEventListener('pointerdown', (e) => {
+        if (!e.isPrimary)
+            return;
+
+        if (e.pointerType === 'mouse') {
+            if (e.target !== grab)
+                open();
+            return;
+        }
+
+        releasePotTap();
+        potTap = { id: e.pointerId, x: e.clientX, y: e.clientY,
+                   moved: false, open };
+        window.addEventListener('pointermove', movePotTap);
+        window.addEventListener('pointerup', endPotTap);
+        window.addEventListener('pointercancel', releasePotTap);
+    });
+}
+
+//
+// The chain, as an ordered list of effect ids.  Kept up to date by
+// applyRouting(), which is the one place routing becomes known - whether
+// we decided it or the pedal told us.
+//
+// This is the model, and the cards are drawn from it.  It used to be the
+// other way around: routing was read back out of the dom by walking the
+// cards and stopping at a divider, which made card position the truth and
+// left routing, unrouting and reordering as three meanings for one
+// gesture.  That is what made the pool a long sortable list of things you
+// were not doing anything with, and it is why the two anchor effects had
+// to be recognised by name everywhere the list was walked.
+//
 let currentRouting = [];
+
+// The firmware routes at most this many; the rest are silently dropped
+const MAX_ROUTED = 14;
+
+// Effect id -> its card, filled in by renderUI()
+const effectCards = new Map();
+
+// The unrouted pool, which renderUI() creates and applyRouting() fills
+let effectPool = null;
+
+//
+// The two effects that are not in the routing order at all: the signal
+// chain at the front, and the settings pseudo-effect at the back.
+//
+// Positional, because that is the firmware's own test - ROUTABLE_EFFECTS
+// is the bits *between* the first entry and the last - and because
+// anything else is a string that has to keep agreeing across two
+// languages.  A pedal older than a rename now puts its anchors in the
+// right place and merely shows a stale label, which is honest: a stale
+// label is what is running.
+//
+function isAnchorEffect(idx) {
+    return idx === 0 || idx === PEDAL_EFFECTS.length - 1;
+}
 
 //
 // What the pedal says it is doing.  See MIDI_CC_MAP.md for the wire
@@ -1354,33 +1682,81 @@ function resetUnroutedEffects(newRouted) {
     });
 }
 
-function sendUpdatedRouting() {
-    const cards = Array.from(effectsContainer.children);
-    const routeIds = [];
-    let isUnrouted = false;
+//
+// A routing change: tell the pedal, then draw what we asked for.
+//
+// Everything that changes the chain goes through here, so there is one
+// place that sends ROUTING_ORDER and one place that decides what the
+// cards look like afterwards.
+//
+function setRouting(ids) {
+    // Cap before the list is used for anything.  Drawing the uncapped
+    // list would show effects in the chain that the pedal never heard
+    // about, since it drops the overflow without comment.
+    const routed = ids.slice(0, MAX_ROUTED);
 
-    cards.forEach(card => {
-        if (card.classList.contains('unrouted-divider')) {
-            isUnrouted = true;
-            return;
-        }
-        if (isUnrouted) return;
-
-        const id = parseInt(card.dataset.effectId);
-        const eff = PEDAL_EFFECTS.find(e => e.id === id);
-        if (eff && eff.base !== 'settings' && eff.base !== 'signal_chain') {
-            routeIds.push(id);
-        }
-    });
-
-    // The firmware routes at most 14 effects and silently drops the rest,
-    // so cap the list before it is used for anything. Redrawing from the
-    // uncapped list would show effects sitting in the routed section that
-    // the pedal never heard about.
-    const routed = routeIds.slice(0, 14);
     sendSysex([SYSEX_CMD.ROUTING_ORDER, ...routed]);
+    // Before applyRouting(), which is what moves currentRouting on
     resetUnroutedEffects(routed);
-    reorderEffectsInDOM(routed);
+    applyRouting(routed);
+}
+
+//
+// Onto the end of the chain, which is where a new effect goes - and then
+// go and look at it, because the end of the chain is somewhere else.
+//
+// Tapping a chip is asking for that effect, and what you get back is a
+// card you cannot see: the pool is below the whole chain, the card lands
+// at the far end of it, and everything shifts as the pool shrinks.  So
+// the one thing you asked for is the one thing not on the screen.
+//
+// Centred rather than just scrolled into view, because "just far enough"
+// puts it hard against an edge with its controls half off - and the
+// movement is worth having in its own right. It is what says where the
+// effect went, which is a thing about the chain worth knowing.
+//
+function routeEffect(id) {
+    if (currentRouting.includes(id) || currentRouting.length >= MAX_ROUTED)
+        return;
+
+    setRouting([...currentRouting, id]);
+    showEffectCard(id);
+}
+
+function showEffectCard(id) {
+    const card = effectCards.get(id);
+    if (!card)
+        return;
+
+    // Somebody who has asked not to be moved about gets put there
+    // directly instead
+    const still = window.matchMedia &&
+                  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    card.scrollIntoView({ block: 'center',
+                          behavior: still ? 'auto' : 'smooth' });
+}
+
+function unrouteEffect(id) {
+    if (!currentRouting.includes(id))
+        return;
+    setRouting(currentRouting.filter(other => other !== id));
+}
+
+//
+// After a drag, the cards are the order.
+//
+// The one place the dom is read rather than written, and it only reads
+// the order of what is already in the chain: whether an effect is routed
+// at all is decided by the buttons, never by where a card came to rest.
+//
+function routingFromDOM() {
+    const ids = [];
+    for (const el of effectsContainer.children) {
+        if (isRoutedCard(el))
+            ids.push(parseInt(el.dataset.effectId));
+    }
+    return ids;
 }
 
 
@@ -1415,66 +1791,125 @@ function getInitialPotValue(pot) {
 }
 
 
-function reorderEffectsInDOM(routeIds) {
+//
+// Collapsing a card.
+//
+// Expanding clears the inline display rather than setting one, so the
+// stylesheet decides what the pot layout is.  Naming a value here meant
+// that a card which had been collapsed once came back as a flex row
+// instead of the grid it started as.
+//
+function setCardCollapsed(card, collapsed) {
+    const controls = card.querySelector('.effect-controls');
+    const chevron = card.querySelector('.collapse-chevron');
+
+    if (controls) controls.style.display = collapsed ? 'none' : '';
+    if (chevron) chevron.style.transform = collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+}
+
+//
+// Draw the list from the routing.
+//
+// Cards for unrouted effects are parked rather than removed: the pedal
+// still addresses their pots by id, ccToElementMap points straight at the
+// inputs inside them, and rebuilding one on every routing change would
+// invalidate both. They are hidden, and the pool speaks for them.
+//
+function applyRouting(routeIds) {
+    const wasRouted = new Set(currentRouting);
     currentRouting = routeIds.slice();
 
     // The chain bits are by position, so what they mean just changed
     renderAttention();
-    const activeRouteIds = new Set(routeIds);
-    const cards = Array.from(effectsContainer.children);
-    cards.sort((a, b) => {
-        const idA = a.classList.contains('unrouted-divider') ? 'div' : parseInt(a.dataset.effectId);
-        const idB = b.classList.contains('unrouted-divider') ? 'div' : parseInt(b.dataset.effectId);
 
-        let idxA, idxB;
-        if (idA === 'div') {
-            idxA = 998;
-        } else {
-            const effA = PEDAL_EFFECTS.find(e => e.id === idA);
-            if (effA && effA.base === "signal_chain") idxA = -2;
-            else if (effA && effA.base === "settings") idxA = 997;
-            else idxA = routeIds.indexOf(idA) === -1 ? 999 : routeIds.indexOf(idA);
-        }
+    // Front anchor, then the chain in order, then the back anchor
+    const order = [];
+    if (PEDAL_EFFECTS.length)
+        order.push(PEDAL_EFFECTS[0].id);
+    routeIds.forEach(id => order.push(id));
+    if (PEDAL_EFFECTS.length > 1)
+        order.push(PEDAL_EFFECTS[PEDAL_EFFECTS.length - 1].id);
 
-        if (idB === 'div') {
-            idxB = 998;
-        } else {
-            const effB = PEDAL_EFFECTS.find(e => e.id === idB);
-            if (effB && effB.base === "signal_chain") idxB = -2;
-            else if (effB && effB.base === "settings") idxB = 997;
-            else idxB = routeIds.indexOf(idB) === -1 ? 999 : routeIds.indexOf(idB);
-        }
+    const placed = new Set(order);
 
-        if (idxA !== idxB) return idxA - idxB;
-        if (idA === 'div' || idB === 'div') return 0;
-        return idA - idB;
-    });
-
-    cards.forEach(card => {
+    order.forEach(id => {
+        const card = effectCards.get(id);
+        if (!card)
+            return;
         effectsContainer.appendChild(card);
-        if (card.classList.contains('unrouted-divider')) return;
+        card.classList.remove('parked');
 
-        const id = parseInt(card.dataset.effectId);
-        const isRouted = activeRouteIds.has(id);
-        const eff = PEDAL_EFFECTS.find(e => e.id === id);
-        const isAlwaysRouted = eff && (eff.base === "signal_chain" || eff.base === "settings");
-
-        if (isRouted || isAlwaysRouted) {
-            card.classList.remove('unrouted');
-            // Auto expand when routed
-            const controls = card.querySelector('.effect-controls');
-            const chevron = card.querySelector('.collapse-chevron');
-            if (controls) controls.style.display = '';
-            if (chevron) chevron.style.transform = 'rotate(0deg)';
-        } else {
-            card.classList.add('unrouted');
-            // Auto collapse unrouted effects
-            const controls = card.querySelector('.effect-controls');
-            const chevron = card.querySelector('.collapse-chevron');
-            if (controls) controls.style.display = 'none';
-            if (chevron) chevron.style.transform = 'rotate(-90deg)';
-        }
+        // Open it on the way in.  An effect that has just been added is
+        // one you are about to set up - but only on the way in, or
+        // reordering the chain would keep reopening a card you closed.
+        if (!wasRouted.has(id) && !isAnchorEffect(effectIdMap.get(id)))
+            setCardCollapsed(card, false);
     });
+
+    PEDAL_EFFECTS.forEach(effect => {
+        const card = effectCards.get(effect.id);
+        if (!card || placed.has(effect.id))
+            return;
+        effectsContainer.appendChild(card);
+        card.classList.add('parked');
+    });
+
+    if (effectPool) {
+        effectsContainer.appendChild(effectPool);
+        renderPool();
+    }
+}
+
+//
+// The pool: everything routable that is not in the chain.
+//
+// A set, not a list.  The firmware resets an effect the moment it leaves
+// the chain, so an unrouted effect has no values and no position - there
+// is nothing here to order and nothing to edit. Full cards said otherwise
+// on both counts, offering a drag that was discarded on release and
+// sliders whose values were thrown away by the next routing change.
+//
+// Chips are rebuilt from scratch each time because they hold nothing: a
+// name and an id, both of which came from the schema.
+//
+function renderPool() {
+    if (!effectPool)
+        return;
+
+    effectPool.innerHTML = '';
+
+    const full = currentRouting.length >= MAX_ROUTED;
+    const chips = [];
+
+    PEDAL_EFFECTS.forEach((effect, idx) => {
+        if (isAnchorEffect(idx) || currentRouting.includes(effect.id))
+            return;
+
+        const chip = document.createElement('button');
+        chip.className = 'effect-chip';
+        chip.textContent = effect.name;
+        chip.dataset.effectId = effect.id;
+        chip.disabled = full;
+        chip.addEventListener('click', () => routeEffect(effect.id));
+        chips.push(chip);
+    });
+
+    // Nothing left out of the chain, so nothing to say
+    effectPool.classList.toggle('hidden', chips.length === 0);
+    if (!chips.length)
+        return;
+
+    const label = document.createElement('div');
+    label.className = 'pool-label';
+    label.textContent = full
+        ? `Chain is full at ${MAX_ROUTED} — remove one to add another`
+        : 'Not in the chain — tap to add';
+    effectPool.appendChild(label);
+
+    const grid = document.createElement('div');
+    grid.className = 'pool-chips';
+    chips.forEach(chip => grid.appendChild(chip));
+    effectPool.appendChild(grid);
 }
 
 
@@ -1487,10 +1922,6 @@ style.textContent = `
         margin: 0;
         pointer-events: none;
         cursor: grabbing;
-        /* a lifted card should look lifted, not disabled - override
-           whatever .unrouted was doing to it */
-        opacity: 1;
-        filter: none;
         box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
     }
     .drag-placeholder {
@@ -1504,16 +1935,11 @@ document.head.appendChild(style);
 
 function renderUI() {
     effectsContainer.innerHTML = '';
+    effectCards.clear();
 
-    // Add unrouted divider
-    const divider = document.createElement('div');
-    divider.className = 'unrouted-divider';
-    divider.textContent = '--- Unrouted Effects ---';
-
-    // The divider is just a marker in the list now - dragInsertionRef()
-    // treats it like any other element you can drop above or below, and
-    // which side of it you end up on is what decides routed or not.
-    effectsContainer.appendChild(divider);
+    effectPool = document.createElement('div');
+    effectPool.className = 'effect-pool';
+    effectPool.id = 'effect-pool';
 
     PEDAL_EFFECTS.forEach((effect, idx) => {
         const card = document.createElement('section');
@@ -1531,8 +1957,9 @@ function renderUI() {
         title.style.display = 'flex';
         title.style.alignItems = 'center';
 
-        // Settings effect cannot be reordered or collapsed (maybe collapsed is fine, but no drag)
-        if (effect.base !== "settings" && effect.base !== "signal_chain") {
+        // The two anchors are not in the chain, so there is nothing to
+        // reorder them relative to and no handle on them
+        if (!isAnchorEffect(idx)) {
             title.innerHTML = `<span class="drag-handle">≡</span>
                                <span class="collapse-chevron" style="cursor: pointer; margin-right: 8px; font-size: 0.8em; transition: transform 0.2s;">▼</span>
                                <span>${effect.name}</span>`;
@@ -1546,6 +1973,11 @@ function renderUI() {
             header.classList.add('draggable');
             header.addEventListener('pointerdown',
                                     (e) => cardDragStart(card, header, e));
+            // The other half of the header's job, and the two never
+            // both engage: one is the handle and a mouse, the other is
+            // a finger anywhere else
+            header.addEventListener('pointerdown',
+                                    (e) => cardSwipeStart(card, e));
         } else {
             title.innerHTML = `<span class="collapse-chevron" style="cursor: pointer; margin-right: 8px; font-size: 0.8em; transition: transform 0.2s;">▼</span>
                                <span>${effect.name}</span>`;
@@ -1557,6 +1989,26 @@ function renderUI() {
             <button class="action-btn effect-reset-btn" title="Reset to Defaults">↺</button>
         `;
 
+        //
+        // Out of the chain, and back to being a chip.  The counterpart of
+        // tapping the chip, and the reason neither direction needs a drag
+        // any more.
+        //
+        // cardDragStart() steps aside for anything with .action-btn on
+        // it, so this does not have to fight the header's drag.
+        //
+        if (!isAnchorEffect(idx)) {
+            const unrouteBtn = document.createElement('button');
+            unrouteBtn.className = 'action-btn effect-unroute-btn';
+            unrouteBtn.title = 'Remove from the chain';
+            unrouteBtn.textContent = '⏏';
+            unrouteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                unrouteEffect(effect.id);
+            });
+            enableGroup.appendChild(unrouteBtn);
+        }
+
         header.appendChild(title);
         header.appendChild(enableGroup);
         card.appendChild(header);
@@ -1567,13 +2019,7 @@ function renderUI() {
             chevron.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const controls = card.querySelector('.effect-controls');
-                if (controls.style.display === 'none') {
-                    controls.style.display = 'flex';
-                    chevron.style.transform = 'rotate(0deg)';
-                } else {
-                    controls.style.display = 'none';
-                    chevron.style.transform = 'rotate(-90deg)';
-                }
+                setCardCollapsed(card, controls.style.display !== 'none');
             });
         }
 
@@ -1921,8 +2367,8 @@ function renderUI() {
             controls.className = 'effect-controls';
         }
 
-        // Generate Mix slider
-        if (effect.base !== 'settings' && effect.base !== 'signal_chain') {
+        // Generate Mix slider - the anchors have no wet and no dry
+        if (!isAnchorEffect(idx)) {
             const mixPotDef = { name: 'Mix', curve: 'LINEAR', min: 0, max: 100, unit: '%' };
             const mixDiv = document.createElement('div');
             mixDiv.className = 'pot-control mix-pot-control';
@@ -1956,14 +2402,9 @@ function renderUI() {
             mixDiv.appendChild(mixValDisplay);
             mixDiv.appendChild(mixInput);
 
-            // Add active pot triggers
-            const activateMixPot = (e) => {
-                if (e.type === 'mousedown' && e.target === mixInput)
-                    return;
-                setActivePot(`eff-${idx}-mix`, mixPotDef, parseInt(mixInput.value), effect.name);
-            };
-            mixDiv.addEventListener('mousedown', activateMixPot);
-            mixDiv.addEventListener('touchstart', activateMixPot, { passive: true });
+            openOnTap(mixDiv, mixInput, () =>
+                setActivePot(`eff-${idx}-mix`, mixPotDef,
+                             parseInt(mixInput.value), effect.name));
 
             controls.appendChild(mixDiv);
         }
@@ -2046,18 +2487,13 @@ function renderUI() {
                 // someone dragging it, and having the panel and its
                 // backdrop appear on top mid-drag is no help to anybody.
                 //
-                // Touch still opens it either way: the inline slider is
-                // too small to use with a thumb, which is what the panel
-                // is there for.
+                // A tap with a finger opens it wherever it lands, the
+                // inline slider included: that slider is about 100px wide
+                // for 121 values, which is not something a thumb can
+                // aim at, and the panel is what it has instead.
                 //
-                const activatePot = (e) => {
-                    if (e.type === 'mousedown' && e.target === input)
-                        return;
-                    setActivePot(potIdKey, pot, parseInt(input.value), effect.name);
-                };
-
-                potDiv.addEventListener('mousedown', activatePot);
-                potDiv.addEventListener('touchstart', activatePot, { passive: true });
+                openOnTap(potDiv, input, () =>
+                    setActivePot(potIdKey, pot, parseInt(input.value), effect.name));
             }
 
             if (effect.name === 'Parametric EQ') {
@@ -2086,8 +2522,17 @@ function renderUI() {
             card.appendChild(meters);
         }
 
+        effectCards.set(effect.id, card);
         effectsContainer.appendChild(card);
     });
+
+    //
+    // Nothing is in the chain until the pedal says so, and the reply that
+    // says so is still in flight.  Draw that rather than every card at
+    // once: an effect the pedal is not running has no business looking
+    // like one that is, even for a moment.
+    //
+    applyRouting([]);
 }
 
 appTitleEl.addEventListener('click', () => {
@@ -2190,6 +2635,13 @@ appTitleEl.addEventListener('click', () => {
     // same reason - showButtonError() does not close it, because the
     // error is the thing you need to see.
     //
+    // A second, and not the second and a half it was.  Long enough to
+    // read four words, and short enough that it never reads as the menu
+    // having decided to stay open - which is what it looked like, having
+    // spent so long doing exactly that.
+    //
+    const BUTTON_FEEDBACK_MS = 1000;
+
     function showButtonSuccess(btn, successText) {
         const originalText = btn.innerHTML;
         btn.innerHTML = `✓ ${successText}`;
@@ -2197,14 +2649,14 @@ appTitleEl.addEventListener('click', () => {
         setTimeout(() => {
             restoreButton(btn, originalText);
             closeMenu();
-        }, 1500);
+        }, BUTTON_FEEDBACK_MS);
     }
 
     function showButtonError(btn, errorText) {
         const originalText = btn.innerHTML;
         btn.innerHTML = `⚠️ ${errorText}`;
         btn.classList.add('error');
-        setTimeout(() => restoreButton(btn, originalText), 1500);
+        setTimeout(() => restoreButton(btn, originalText), BUTTON_FEEDBACK_MS);
     }
 
     // The burger menu
@@ -2334,12 +2786,9 @@ appTitleEl.addEventListener('click', () => {
             }
 
             // A routing order with nothing in it unroutes everything. The
-            // noise gate is the anchor effect and is never part of the
-            // routing order to begin with - it always runs first - and the
-            // same goes for the settings pseudo-effect.
-            sendSysex([SYSEX_CMD.ROUTING_ORDER]);
-            resetUnroutedEffects([]);
-            reorderEffectsInDOM([]);
+            // two anchors are never part of the routing order to begin
+            // with - one always runs first, the other is not an effect.
+            setRouting([]);
             showButtonSuccess(globalUnrouteBtn, 'All Unrouted');
         });
     }

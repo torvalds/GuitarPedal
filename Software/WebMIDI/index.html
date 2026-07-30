@@ -12,12 +12,13 @@
 <body>
   <div class="app-container">
     <header class="glass-panel app-header">
-      <h1 id="app-title" class="title-disconnected">RP2350 Pedal</h1>
-      <div class="header-controls">
-        <!-- Faults only.  This is absent when the pedal is fine, which
-             is nearly always, so it costs no space in the normal case -
-             and it stays off the title, which already carries which copy
-             of the app this is and whether the pedal is answering. -->
+      <!-- Everything the header says, as opposed to everything it does.
+           None of it is worth a line of its own: the title is a device
+           name you already know, and the faults are absent nearly
+           always. Together they are one small line under the controls,
+           and the colour is what you actually read in the moment. -->
+      <div class="header-status">
+        <h1 id="app-title" class="title-disconnected">RP2350 Pedal</h1>
         <div id="pedal-status" class="pedal-status hidden" role="status" aria-live="polite">
           <span id="status-clip" class="status-clip hidden">CLIP</span>
           <span id="status-drop" class="status-drop hidden">DROP</span>
@@ -28,20 +29,8 @@
                alarming anybody about, so muted rather than red. -->
           <span id="status-early" class="status-early hidden" title="">EARLY BOARD</span>
         </div>
-        <!-- Which scene you're on is worth seeing without opening
-             anything.  Acting on it is not: Save overwrites the eeprom
-             and Load throws away what you have, so both sit behind the
-             menu where you can't reach them by accident. -->
-        <div class="header-scenes">
-          <select id="global-scene-select" title="Scene">
-            <!-- Options injected via JS -->
-          </select>
-        </div>
-        <button id="tuner-btn" class="action-btn" title="Tuner Mode">🎵</button>
-        <label class="switch" title="Global Enable">
-          <input type="checkbox" id="global-enable">
-          <span class="slider round"></span>
-        </label>
+      </div>
+      <div class="header-controls">
         <div class="burger-wrap">
           <button id="burger-btn" class="action-btn" title="Menu"
                   aria-haspopup="true" aria-expanded="false">☰</button>
@@ -58,6 +47,20 @@
             <button id="global-program-btn" class="danger-item" role="menuitem">⚠️&nbsp;&nbsp;Reboot to Programming Mode</button>
           </div>
         </div>
+        <!-- Which scene you're on is worth seeing without opening
+             anything.  Acting on it is not: Save overwrites the eeprom
+             and Load throws away what you have, so both sit behind the
+             menu where you can't reach them by accident. -->
+        <div class="header-scenes">
+          <select id="global-scene-select" title="Scene">
+            <!-- Options injected via JS -->
+          </select>
+        </div>
+        <button id="tuner-btn" class="action-btn" title="Tuner Mode">🎵</button>
+        <label class="switch" title="Global Enable">
+          <input type="checkbox" id="global-enable">
+          <span class="slider round"></span>
+        </label>
       </div>
     </header>
 

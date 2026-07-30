@@ -61,10 +61,26 @@ h2 {
   color: var(--text-muted);
 }
 
+/*
+ * Two rows: what the header does, then what it says.
+ *
+ * It was one row, and it did not fit on a phone - the title alone was
+ * most of a 360px screen, and the controls did not fit in what was left
+ * even without it.  Widening the page to hold it all is the one outcome
+ * worth ruling out, since it costs you every card below as well.
+ *
+ * So the controls get the row, at the size a thumb needs, and the title
+ * and the fault chips go underneath in small text.  Nothing was lost:
+ * the title is a device name that does not change while you look at it,
+ * the chips are absent nearly always, and what you actually read in the
+ * moment is the colour - which a small word carries exactly as well as
+ * a large one.
+ */
 .app-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
   /*
    * The menu hangs out of the bottom of this, and has to be able to
    * cover the cards below.  It can't do that on its own z-index:
@@ -80,13 +96,40 @@ h2 {
   z-index: 20;
 }
 
+/*
+ * The heading stays first in the document and second on the screen.
+ * Ordering it here rather than in the markup keeps the page's one <h1>
+ * ahead of a row of buttons for anything reading the document instead
+ * of looking at it.
+ */
 .header-controls {
+  order: 1;
   display: flex;
   align-items: center;
   gap: 15px;
 }
 
+
+.header-status {
+  order: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/*
+ * The name gives way and the faults do not.  A truncated device name is
+ * still the same colour and still says what it needs to; a truncated
+ * CLIP is a fault you were not told about.
+ */
 #app-title {
+  font-size: 0.8rem;
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   transition: color 0.3s;
 }
 
@@ -356,24 +399,54 @@ input[type=range]:focus::-moz-range-thumb {
 }
 
 /*
- * Dragging grabs the whole header rather than the handle glyph alone,
- * which makes the target finger-sized by construction rather than by
- * padding out a ~20px character to the ~44px a thumb wants.  The
- * handle stays as the affordance that says the header can be grabbed.
+ * A mouse grabs the whole header.  A finger grabs the handle, and only
+ * the handle - see cardDragStart().
  *
- * touch-action has to be on whatever the touch lands on: the browser
- * decides whether a gesture may pan when it begins, from the element
- * hit and its ancestors.
+ * The header used to be the grip for both, on the reasoning that a
+ * header is finger-sized and a ~20px glyph is not.  That is true and it
+ * was still the wrong trade: touch-action has to be on whatever the
+ * touch lands on, so making the whole header the grip made the whole
+ * header a place the page could not be scrolled from - and a card
+ * header is a wide bar that a thumb lands on constantly on the way past.
+ * Reaching for a scroll and picking a card up instead is a worse failure
+ * than a grip that has to be aimed at, because you did not ask for it.
+ *
+ * A mouse has no scroll-by-dragging gesture to be confused with, so it
+ * loses nothing by keeping the big grip.
+ */
+/*
+ * pan-y, not none: the page still scrolls vertically from a card header,
+ * which is the point of narrowing the grip.  Sideways is ours, and the
+ * page has nowhere to go sideways, so claiming it costs nothing - that
+ * is the room the flick-to-unroute gesture lives in. See cardSwipeStart().
  */
 .effect-header.draggable {
   cursor: grab;
-  touch-action: none;
+  touch-action: pan-y;
 }
 
+/* Only while it springs back - a card following a finger must not lag */
+.effect-card.swipe-return {
+  transition: transform 180ms ease-out, opacity 180ms ease-out;
+}
+
+/*
+ * The right answer to a 20px glyph was always a 44px target around it,
+ * which is what this is.  touch-action lives here now: this is the one
+ * place in a card that a drag can start, so it is the one place that
+ * does not scroll.
+ */
 .drag-handle {
-  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  margin-right: 4px;
   font-size: 1.4em;
   opacity: 0.7;
+  cursor: grab;
+  touch-action: none;
 }
 
 .effect-title {
@@ -519,11 +592,18 @@ input[type=range].eq-range {
   position: relative;
 }
 
+
 .menu-dropdown {
   position: absolute;
   z-index: 1000;
   top: calc(100% + 8px);
-  right: 0;
+  /*
+   * Anchored to the left edge of the button, because that is the edge
+   * the button is now against.  Anchored right, a menu wider than the
+   * burger grows leftwards - which was correct while it sat in the top
+   * right corner, and walks straight off the screen from the top left.
+   */
+  left: 0;
   /*
    * Sized to whatever the longest item happens to be, rather than to a
    * number that was right until someone added a word.  "Reboot to
@@ -584,10 +664,19 @@ input[type=range].eq-range {
 
 /* Which scene you're on, promoted out of the menu into the header.
    Saving and loading stayed behind the menu - see index.html. */
+/*
+ * The gap in the row, and so what splits it in two: the menu and the
+ * scene on the left, because those are about editing, and the tuner and
+ * the bypass on the right, because those are what the pedal is doing
+ * right now.
+ *
+ * One auto margin rather than space-between, which would have spread all
+ * four evenly across a desktop's worth of empty header.
+ */
 .header-scenes {
   display: flex;
   align-items: center;
-  margin-right: 4px;
+  margin-right: auto;
 }
 
 .header-scenes select {
@@ -908,40 +997,75 @@ input[type=range].large-slider::-webkit-slider-runnable-track {
   border-color: var(--accent);
 }
 
-.unrouted-divider {
-    grid-column: 1 / -1;
-    text-align: center;
-    color: var(--text-color);
-    font-weight: bold;
-    margin-top: 2rem;
-    margin-bottom: 1rem;
-    position: relative;
-    opacity: 0.7;
+/*
+ * The pool of effects that are not in the chain.
+ *
+ * These used to be full cards below a divider, greyed out and collapsed,
+ * which is a lot of screen for a list of things the pedal is not running.
+ * A chip carries everything true about an unrouted effect - its name -
+ * and the whole pool now costs about what one card used to.
+ *
+ * No general .hidden rule to inherit, so declare it.
+ */
+.effect-pool {
+    margin-top: 1.5rem;
 }
 
-.unrouted-divider::before,
-.unrouted-divider::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    width: 30%;
-    height: 1px;
-    background-color: var(--text-color);
-    opacity: 0.3;
+.effect-pool.hidden {
+    display: none;
 }
 
-.unrouted-divider::before { left: 5%; }
-.unrouted-divider::after { right: 5%; }
-
-.effect-card.unrouted {
-    opacity: 0.5;
-    filter: grayscale(80%);
-    transition: opacity 0.3s, filter 0.3s;
+.pool-label {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
 }
 
-.effect-card.unrouted:hover {
-    opacity: 0.8;
-    filter: grayscale(40%);
+.pool-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+/*
+ * Finger-sized from the start.  44px is the smallest target worth
+ * offering on a touchscreen, and a chip has no reason to be smaller -
+ * unlike the controls it sits under, which still need that pass.
+ */
+.effect-chip {
+    min-height: 44px;
+    padding: 0 16px;
+    border: 1px solid var(--panel-border);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-main);
+    font-size: 1rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, transform 0.1s;
+}
+
+.effect-chip:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: var(--accent);
+}
+
+.effect-chip:active:not(:disabled) {
+    transform: scale(0.96);
+}
+
+.effect-chip:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+/*
+ * Parked: routed effects are the ones on screen, but the card of an
+ * unrouted one stays in the document because the pot elements inside it
+ * are what the pedal's PARAM_UPDATE messages address.  See applyRouting().
+ */
+.effect-card.parked {
+    display: none;
 }
 
 /*
@@ -968,6 +1092,8 @@ input[type=range].large-slider::-webkit-slider-runnable-track {
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.06em;
+  /* The title next to this is what shrinks - see #app-title */
+  flex-shrink: 0;
 }
 
 .status-clip,
@@ -1065,4 +1191,32 @@ input[type=range].large-slider::-webkit-slider-runnable-track {
   padding-top: 10px;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
+}
+
+/*
+ * A phone, or something near enough.
+ *
+ * Last in the file deliberately: a media query adds no specificity, so
+ * anything it overrides has to have been declared already or the plain
+ * rule wins and this looks like it does nothing.
+ *
+ * 20px of body padding either side of 20px of panel padding is 80px of
+ * nothing, which is a fifth of a 360px screen and reads as generous only
+ * on a desktop.  This gives the content back the width it was spending
+ * on margins.  It deliberately does not shrink any control: that is the
+ * direction the rest of this work is trying to go the other way.
+ */
+@media (max-width: 600px) {
+  body {
+    padding: 10px;
+  }
+
+  .glass-panel {
+    padding: 14px;
+  }
+
+  /* Horizontal only - the height of a select is its tap target */
+  select {
+    padding: 10px 12px;
+  }
 }

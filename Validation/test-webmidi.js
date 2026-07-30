@@ -49,6 +49,7 @@ function element(id) {
     const classes = new Set();
     const el = {
         children: [],
+        parentElement: null,
         style: {},
         dataset: {},
         textContent: '',
@@ -68,8 +69,12 @@ function element(id) {
         set id(v) { this._id = v; byId.set(v, this); },
         get innerHTML() { return ''; },
         set innerHTML(v) { if (v === '') el.children.length = 0; },
-        appendChild(c) { el.children.push(c); return c; },
-        insertBefore(c) { el.children.push(c); return c; },
+        // Parentage is tracked because the app walks upwards as well as
+        // down - a pot's value display is found from the input via its
+        // parent, so an element that does not know its parent makes
+        // resetUnroutedEffects() throw rather than do nothing.
+        appendChild(c) { el.children.push(c); c.parentElement = el; return c; },
+        insertBefore(c) { el.children.push(c); c.parentElement = el; return c; },
         removeChild(c) { return c; },
         remove() {},
         addEventListener() {},
@@ -137,11 +142,19 @@ global.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 //
 const WANT = ['handleIdentity', 'populateScenePicker', 'updateSceneLabels',
               'boardFault', 'earlyNote', 'clipFault', 'dropFault',
-              'renderAttention', 'handleTelemetry', 'handleSysex'];
+              'renderAttention', 'handleTelemetry', 'handleSysex',
+              'routeEffect', 'unrouteEffect'];
 
+//
+// The chain is a list held in a variable rather than anything the dom
+// can be asked about, so reading it takes an accessor evaluated in the
+// app's own scope.  A snapshot would not do: currentRouting is replaced
+// on every routing change, not mutated.
+//
 const src = fs.readFileSync(effectsJs, 'utf8') + '\n'
           + fs.readFileSync(path.join(WEB, 'app.js'), 'utf8') + '\n'
-          + `;globalThis.__app = { ${WANT.join(', ')} };`;
+          + `;globalThis.__app = { ${WANT.join(', ')} };`
+          + `;globalThis.__app.routing = () => currentRouting;`;
 
 //
 // The app logs as it goes, including from promises that settle after this
@@ -234,6 +247,73 @@ const asSysex = (cmd, text) => [0xF0, 0x7D, cmd,
 app.handleSysex(asSysex(0x02, schemaJson));
 check('the real schema builds the cards',
       document.getElementById('signal-chain-meters') !== null);
+
+//
+// Routing.  The chain is an ordered list of ids and everything else is a
+// chip in the pool, so the two questions worth asking are whether the
+// pool is exactly the complement of the chain, and whether the two anchor
+// effects stay out of both - they are the ends of the chain and cannot be
+// routed, unrouted or reordered.
+//
+const schema = JSON.parse(schemaJson);
+const routable = schema.slice(1, -1);
+const pool = document.getElementById('effect-pool');
+
+// [label, chip grid], or hidden with nothing in it at all
+const chipNames = () => (pool.classes.has('hidden') ? []
+                         : pool.children[pool.children.length - 1]
+                               .children.map((c) => c.textContent));
+
+const cardOf = (effect) =>
+      document.getElementById(`effect-${schema.indexOf(effect)}`);
+
+check('nothing is routed until the pedal says so',
+      chipNames().join() === routable.map((e) => e.name).join(),
+      chipNames().join());
+check('and the cards for those are parked',
+      routable.every((e) => cardOf(e).classes.has('parked')));
+check('while the anchors are not chips and not parked',
+      !chipNames().includes(schema[0].name)
+      && !cardOf(schema[0]).classes.has('parked')
+      && !cardOf(schema[schema.length - 1]).classes.has('parked'));
+
+// Two of them routed, in an order that is not the schema's
+const routed = [routable[2], routable[0]];
+app.handleSysex([0xF0, 0x7D, 0x08, ...routed.map((e) => e.id), 0xF7]);
+
+check('a routed effect leaves the pool',
+      chipNames().join() ===
+      routable.filter((e) => !routed.includes(e)).map((e) => e.name).join(),
+      chipNames().join());
+check('and its card comes back',
+      routed.every((e) => !cardOf(e).classes.has('parked')));
+
+// And back out again, which is the same path the eject button takes
+app.handleSysex([0xF0, 0x7D, 0x08, 0xF7]);
+check('an empty routing order empties the chain',
+      chipNames().join() === routable.map((e) => e.name).join(),
+      chipNames().join());
+check('and parks the cards again',
+      routable.every((e) => cardOf(e).classes.has('parked')));
+
+//
+// Tapping a chip adds to the end, and that is the contract the pool
+// makes: order is yours to set by dragging afterwards, so nothing may
+// quietly sort the chain back into schema order.
+//
+app.routeEffect(routable[5].id);
+app.routeEffect(routable[1].id);
+check('chips route to the end, in the order they were tapped',
+      app.routing().join() === [routable[5].id, routable[1].id].join(),
+      app.routing().join());
+
+// Which is what the eject button and the flick both come down to
+app.unrouteEffect(routable[5].id);
+check('unrouting one leaves the others alone',
+      app.routing().join() === String(routable[1].id), app.routing().join());
+check('and puts just that one back in the pool',
+      chipNames().includes(routable[5].name)
+      && !chipNames().includes(routable[1].name));
 
 //
 // Telemetry.  The layout is append-only, so the interesting cases are the
