@@ -1071,6 +1071,134 @@ function cardDragEnd(e) {
 }
 
 //
+// Flicking a card out of the chain.
+//
+// The eject button does this too, and did it first.  This exists because
+// a card that can be dragged around looks like a thing you can move, and
+// throwing something you are holding off to one side to be rid of it is
+// what a hand reaches for before it reaches for a button.
+//
+// It only had room to exist once a finger stopped starting drags from
+// the whole header.  Vertical there scrolls the page and sideways is
+// ours, which is what 'touch-action: pan-y' on the header says, and the
+// page has nowhere to go sideways so claiming it costs nothing.
+//
+// Touch only.  A mouse still grabs the header to reorder, and the same
+// gesture cannot also mean discard.
+//
+const SWIPE_ARM = 12;           // px sideways before this is a swipe at all
+const SWIPE_COMMIT = 70;        // px, or a quarter of the card, to let go
+const SWIPE_RETURN_MS = 180;    // spring-back, and .swipe-return in the css
+
+let cardSwipe = null;
+
+// How far it has to go before letting go means it. A quarter of the card
+// on a wide screen, and a thumb's worth on a narrow one.
+function swipeCommit(card) {
+    return Math.max(SWIPE_COMMIT, card.offsetWidth / 4);
+}
+
+function cardSwipeStart(card, e) {
+    if (!e.isPrimary || cardSwipe || cardDrag)
+        return;
+
+    // Reordering is the mouse's gesture on this header - see cardDragStart()
+    if (e.pointerType === 'mouse')
+        return;
+
+    // The handle reorders, and the header's own controls keep their presses
+    if (e.target.closest('.drag-handle, .collapse-chevron, .action-btn'))
+        return;
+
+    cardSwipe = { card, id: e.pointerId,
+                  x: e.clientX, y: e.clientY, armed: false };
+
+    window.addEventListener('pointermove', cardSwipeMove);
+    window.addEventListener('pointerup', cardSwipeEnd);
+    window.addEventListener('pointercancel', cardSwipeRelease);
+}
+
+function cardSwipeMove(e) {
+    if (!cardSwipe || e.pointerId !== cardSwipe.id)
+        return;
+
+    const dx = e.clientX - cardSwipe.x;
+    const dy = e.clientY - cardSwipe.y;
+
+    if (!cardSwipe.armed) {
+        //
+        // Sideways, and more sideways than not.  The second half is what
+        // keeps a scroll that starts with a wobble from arming this: the
+        // browser is about to take the gesture for panning, and it says
+        // so with a pointercancel, but it is worth not having moved the
+        // card in the meantime.
+        //
+        if (Math.abs(dx) < SWIPE_ARM || Math.abs(dx) < Math.abs(dy))
+            return;
+
+        cardSwipe.armed = true;
+        cardSwipe.card.classList.remove('swipe-return');
+    }
+
+    //
+    // Fades as it goes, so how far is left to go is visible without
+    // anything having to be drawn behind it.
+    //
+    const gone = Math.min(1, Math.abs(dx) / swipeCommit(cardSwipe.card));
+    cardSwipe.card.style.transform = `translateX(${dx}px)`;
+    cardSwipe.card.style.opacity = 1 - 0.6 * gone;
+}
+
+//
+// Put the card back where it belongs, whatever happens next.
+//
+// Cards are reused rather than rebuilt, so one let go halfway would
+// otherwise still be sitting at that offset when it is routed again.
+//
+function cardSwipeRelease() {
+    const swipe = cardSwipe;
+
+    cardSwipe = null;
+    window.removeEventListener('pointermove', cardSwipeMove);
+    window.removeEventListener('pointerup', cardSwipeEnd);
+    window.removeEventListener('pointercancel', cardSwipeRelease);
+
+    if (!swipe || !swipe.armed)
+        return swipe;
+
+    //
+    // Taken off again once it has landed.  The class names a transition,
+    // and .effect-card already has one it cares about - the attention
+    // glow, which is deliberately instant in one direction - so this is
+    // not something to leave sitting on a card afterwards.
+    //
+    swipe.card.classList.add('swipe-return');
+    swipe.card.style.transform = '';
+    swipe.card.style.opacity = '';
+    setTimeout(() => swipe.card.classList.remove('swipe-return'),
+               SWIPE_RETURN_MS);
+    return swipe;
+}
+
+function cardSwipeEnd(e) {
+    const swipe = cardSwipeRelease();
+
+    if (!swipe || e.pointerId !== swipe.id || !swipe.armed)
+        return;
+
+    // Not far enough: it has already sprung back
+    if (Math.abs(e.clientX - swipe.x) < swipeCommit(swipe.card))
+        return;
+
+    //
+    // Unrouting parks the card, so the spring-back the line above set
+    // going never gets a frame to be seen in - the card is gone before
+    // it can travel. Which is the intent: it went the way it was thrown.
+    //
+    unrouteEffect(parseInt(swipe.card.dataset.effectId));
+}
+
+//
 // A tap, as opposed to a touch.
 //
 // These are two different things and the difference is the whole bug:
@@ -1845,6 +1973,11 @@ function renderUI() {
             header.classList.add('draggable');
             header.addEventListener('pointerdown',
                                     (e) => cardDragStart(card, header, e));
+            // The other half of the header's job, and the two never
+            // both engage: one is the handle and a mouse, the other is
+            // a finger anywhere else
+            header.addEventListener('pointerdown',
+                                    (e) => cardSwipeStart(card, e));
         } else {
             title.innerHTML = `<span class="collapse-chevron" style="cursor: pointer; margin-right: 8px; font-size: 0.8em; transition: transform 0.2s;">▼</span>
                                <span>${effect.name}</span>`;

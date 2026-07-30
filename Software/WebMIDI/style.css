@@ -414,8 +414,20 @@ input[type=range]:focus::-moz-range-thumb {
  * A mouse has no scroll-by-dragging gesture to be confused with, so it
  * loses nothing by keeping the big grip.
  */
+/*
+ * pan-y, not none: the page still scrolls vertically from a card header,
+ * which is the point of narrowing the grip.  Sideways is ours, and the
+ * page has nowhere to go sideways, so claiming it costs nothing - that
+ * is the room the flick-to-unroute gesture lives in. See cardSwipeStart().
+ */
 .effect-header.draggable {
   cursor: grab;
+  touch-action: pan-y;
+}
+
+/* Only while it springs back - a card following a finger must not lag */
+.effect-card.swipe-return {
+  transition: transform 180ms ease-out, opacity 180ms ease-out;
 }
 
 /*
