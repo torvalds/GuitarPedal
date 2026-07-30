@@ -868,6 +868,26 @@ function valueToPot(pot, y) {
     return clampPot(Math.round(p * 120));
 }
 
+//
+// A frequency, short enough to sit under a control point.
+//
+// Two significant figures, because that is about all the control can
+// select.  The frequency pots step by 5.9%, so a third digit is a claim
+// about precision that does not exist: "1.68kHz" was a reading of a
+// number rather than a description of a setting, and the next position
+// along would have been 1.78.
+//
+function formatFreqShort(freq) {
+    const mag = Math.pow(10, 1 - Math.floor(Math.log10(freq)));
+    const round = Math.round(freq * mag) / mag;
+
+    if (round < 1000)
+        return round.toFixed(0) + 'Hz';
+
+    const k = round / 1000;
+    return (k >= 10 ? k.toFixed(0) : k.toFixed(1)) + 'kHz';
+}
+
 function formatPotValue(pot, val) {
     const y = potToValue(pot, val);
     let displayStr = "";
@@ -2287,13 +2307,61 @@ function renderUI() {
                     // to agree with the hit test, which is also in
                     // screen px.  See EQ_GRAB_RADIUS.
                     //
+                    const colour = (typeof activeNodeIdx !== 'undefined'
+                                    && i === activeNodeIdx) ? '#ffffff' : '#4ecca3';
+
                     ctx.save();
                     ctx.translate(x, y);
                     ctx.scale(scaleX, scaleY);
 
+                    //
+                    // Which kind of band this is, said with a tick
+                    // rather than a colour.
+                    //
+                    // A shelf runs flat away from its corner frequency
+                    // and a peak does not, so a tick pointing the way
+                    // the shelf acts - left for the low one, right for
+                    // the high one - is a small picture of what the band
+                    // does, and needs no legend to read.  Colour would
+                    // have needed one, and the fill is already spoken
+                    // for: it says which node you have hold of.
+                    //
+                    // Drawn before the dot so the dot covers its root.
+                    // Bands 0 and 4 are the shelves - the same fixed
+                    // arrangement the coefficients above are built in.
+                    //
+                    const shelf = i === 0 ? -1 : (i === 4 ? 1 : 0);
+                    if (shelf) {
+                        ctx.beginPath();
+                        ctx.moveTo(0, 0);
+                        ctx.lineTo(shelf * EQ_SHELF_TICK, 0);
+                        ctx.lineCap = 'round';
+
+                        //
+                        // Stroked twice, for the dark edge the dot gets
+                        // and for the same reason.  A node is drawn in
+                        // the curve's own colour, which is deliberate -
+                        // the dot survives it by having an outline, and
+                        // a bare tick did not: it lay along a flat
+                        // stretch of curve and disappeared into it,
+                        // which next to a shelf at 0dB is most of the
+                        // time.
+                        //
+                        // Round caps so the far end is edged too, and
+                        // the near end is under the dot either way.
+                        //
+                        ctx.lineWidth = EQ_SHELF_TICK_WIDTH + 2;
+                        ctx.strokeStyle = '#1a1a2e';
+                        ctx.stroke();
+
+                        ctx.lineWidth = EQ_SHELF_TICK_WIDTH;
+                        ctx.strokeStyle = colour;
+                        ctx.stroke();
+                    }
+
                     ctx.beginPath();
                     ctx.arc(0, 0, EQ_NODE_RADIUS, 0, 2 * Math.PI);
-                    ctx.fillStyle = (typeof activeNodeIdx !== 'undefined' && i === activeNodeIdx) ? '#ffffff' : '#4ecca3';
+                    ctx.fillStyle = colour;
                     ctx.fill();
                     ctx.lineWidth = 2;
                     ctx.strokeStyle = '#1a1a2e';
@@ -2303,8 +2371,7 @@ function renderUI() {
                     ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
                     ctx.font = '12px "Inter", sans-serif';
                     ctx.textAlign = 'center';
-                    let fStr = freq >= 1000 ? (freq/1000).toFixed(2) + 'k' : freq.toFixed(0);
-                    ctx.fillText(`${fStr}Hz`, 0, -24);
+                    ctx.fillText(formatFreqShort(freq), 0, -24);
                     ctx.fillText(`${db > 0 ? '+' : ''}${db.toFixed(1)}dB`, 0, -10);
 
                     ctx.restore();
@@ -2323,6 +2390,8 @@ function renderUI() {
             //
             const EQ_NODE_RADIUS = 7;
             const EQ_GRAB_RADIUS = 30;
+            const EQ_SHELF_TICK = 14;   // how far a shelf's tick reaches out
+            const EQ_SHELF_TICK_WIDTH = 3;
 
             let isDragging = false;
             let dragPointerId = null;
