@@ -189,9 +189,23 @@ function stopAllNotes() {
 async function initMidi() {
     try {
         console.log("[WebMIDI] Requesting MIDI access...");
+        //
+        // Missing entirely, which is not the same as refused, and there
+        // are two quite different reasons for it.
+        //
+        // Web MIDI is only exposed on a secure origin, and http:// to a
+        // LAN address is not one - which is exactly how this gets tested
+        // from a phone.  That doesn't fail the call, it removes the API,
+        // so the SecurityError branch below never sees it and the honest
+        // "HTTPS Required" was unreachable.  Blaming the browser sends
+        // you off checking the one thing that isn't wrong.
+        //
         if (!navigator.requestMIDIAccess) {
-            appTitleEl.textContent = "Browser Not Supported";
-            console.error("Web MIDI API is not supported in this browser.");
+            const insecure = !window.isSecureContext;
+            appTitleEl.textContent = insecure ? "HTTPS Required" : "Browser Not Supported";
+            console.error(insecure
+                ? "Web MIDI needs a secure origin: https, localhost, or this origin allowed in chrome://flags/#unsafely-treat-insecure-origin-as-secure"
+                : "Web MIDI API is not supported in this browser.");
             return;
         }
         midiAccess = await navigator.requestMIDIAccess({ sysex: true });
