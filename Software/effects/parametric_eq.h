@@ -1,14 +1,14 @@
 // NAME: Parametric EQ [PEQ]
 // PRIORITY: 120
-// POT: "LS Freq" EXPONENTIAL(20.0 20000.0) = 100.0 Hz
+// POT: "LS Freq" EXPONENTIAL(20.0 20480.0) = 100.0 Hz
 // POT: "LS Gain" LINEAR(-20.0 20.0) = 0.0 dB
-// POT: "P1 Freq" EXPONENTIAL(20.0 20000.0) = 250.0 Hz
+// POT: "P1 Freq" EXPONENTIAL(20.0 20480.0) = 250.0 Hz
 // POT: "P1 Gain" LINEAR(-20.0 20.0) = 0.0 dB
-// POT: "P2 Freq" EXPONENTIAL(20.0 20000.0) = 1000.0 Hz
+// POT: "P2 Freq" EXPONENTIAL(20.0 20480.0) = 1000.0 Hz
 // POT: "P2 Gain" LINEAR(-20.0 20.0) = 0.0 dB
-// POT: "P3 Freq" EXPONENTIAL(20.0 20000.0) = 4000.0 Hz
+// POT: "P3 Freq" EXPONENTIAL(20.0 20480.0) = 4000.0 Hz
 // POT: "P3 Gain" LINEAR(-20.0 20.0) = 0.0 dB
-// POT: "HS Freq" EXPONENTIAL(20.0 20000.0) = 8000.0 Hz
+// POT: "HS Freq" EXPONENTIAL(20.0 20480.0) = 8000.0 Hz
 // POT: "HS Gain" LINEAR(-20.0 20.0) = 0.0 dB
 //
 // Every band gets the whole audio range, and the order of the five is
@@ -29,11 +29,20 @@
 // EXPONENTIAL rather than FREQUENCY, which is a cubic.  A cubic across
 // three decades puts nearly all its resolution at the top: it would step
 // by 12% at 100Hz, which is two semitones in the register this pedal
-// spends its life in.  A log curve steps by 1000^(1/120) everywhere,
-// which is 5.9% - almost exactly a semitone - and against the fixed Q of
-// 1 below, a band about 1.4 octaves wide, that is a twentieth of its own
-// width.  It also matches the app's log frequency axis, so a pot step is
-// the same distance on screen wherever you are.
+// spends its life in.  A log curve steps by the same ratio everywhere,
+// and against the fixed Q of 1 below - a band about 1.4 octaves wide -
+// that step is a twentieth of the band's own width.  It also matches the
+// app's log frequency axis, so a pot step is the same distance on screen
+// wherever you are.
+//
+// 20480 rather than 20000, which is the same number to look at and a
+// better one to divide.  20480 is 20 << 10, so the range is exactly ten
+// octaves, and 120 pot steps across ten octaves is exactly twelve steps
+// to the octave: one step is one semitone, exactly, everywhere.  That
+// costs nothing - two significant figures renders both as "20kHz", and
+// the top of the range is inaudible either way - and it means a reading
+// in note names would be honest rather than drifting by a third of a
+// semitone across the range, if one is ever wanted.
 //
 // Note that this changes what a stored scene means: the eeprom holds pot
 // values, not frequencies, and both the range and the curve moved under
