@@ -1061,6 +1061,96 @@ function cardDragEnd(e) {
 }
 
 //
+// A tap, as opposed to a touch.
+//
+// These are two different things and the difference is the whole bug:
+// this used to open the panel from 'touchstart', which is the moment a
+// finger lands and before anybody - the browser included - knows what
+// the gesture is going to be.  So scrolling the page with a finger that
+// happened to start on a pot threw a modal up over what you were
+// scrolling towards, every time.
+//
+// A tap is a press that never goes anywhere.  That can only be known at
+// the end, so the decision is made on pointerup, and a gesture the
+// browser takes over for scrolling comes back as pointercancel, which is
+// exactly the answer we want: not a tap.
+//
+// "Never went anywhere" has to be remembered rather than measured at the
+// end.  Comparing where the finger landed against where it left is not
+// the same question, and gets the interesting case backwards: drag a
+// slider up and back down and you release within a few px of where you
+// started, having very much moved.  That is not a hypothetical - it is
+// the ordinary way to use a slider, and it put the panel up on top of
+// the value you had just finished setting.
+//
+// So the flag is sticky, exactly like cardDrag.moved next door: once
+// this gesture has moved, it is not a tap again.
+//
+const TAP_SLOP = 10;    // px of travel a tap is allowed
+
+let potTap = null;
+
+function releasePotTap() {
+    potTap = null;
+    window.removeEventListener('pointermove', movePotTap);
+    window.removeEventListener('pointerup', endPotTap);
+    window.removeEventListener('pointercancel', releasePotTap);
+}
+
+function movePotTap(e) {
+    if (!potTap || e.pointerId !== potTap.id)
+        return;
+
+    if (Math.abs(e.clientX - potTap.x) > TAP_SLOP ||
+        Math.abs(e.clientY - potTap.y) > TAP_SLOP)
+        potTap.moved = true;
+}
+
+function endPotTap(e) {
+    const tap = potTap;
+
+    releasePotTap();
+    if (!tap || e.pointerId !== tap.id)
+        return;
+
+    // It travelled: a scroll, or a drag of the control itself
+    if (tap.moved)
+        return;
+
+    tap.open();
+}
+
+//
+// Open something when this element is tapped, without stealing a scroll
+// that happens to begin on it.
+//
+// 'grab' is the part of it that a mouse can already operate directly -
+// the inline slider - and a mouse press there is a drag of it rather
+// than a request to open anything.  A mouse has no scroll gesture to be
+// confused with, so it does not wait for the release: anywhere else on
+// the control opens immediately, which is how it always behaved.
+//
+function openOnTap(el, grab, open) {
+    el.addEventListener('pointerdown', (e) => {
+        if (!e.isPrimary)
+            return;
+
+        if (e.pointerType === 'mouse') {
+            if (e.target !== grab)
+                open();
+            return;
+        }
+
+        releasePotTap();
+        potTap = { id: e.pointerId, x: e.clientX, y: e.clientY,
+                   moved: false, open };
+        window.addEventListener('pointermove', movePotTap);
+        window.addEventListener('pointerup', endPotTap);
+        window.addEventListener('pointercancel', releasePotTap);
+    });
+}
+
+//
 // The chain, as an ordered list of effect ids.  Kept up to date by
 // applyRouting(), which is the one place routing becomes known - whether
 // we decided it or the pedal told us.
@@ -2169,14 +2259,9 @@ function renderUI() {
             mixDiv.appendChild(mixValDisplay);
             mixDiv.appendChild(mixInput);
 
-            // Add active pot triggers
-            const activateMixPot = (e) => {
-                if (e.type === 'mousedown' && e.target === mixInput)
-                    return;
-                setActivePot(`eff-${idx}-mix`, mixPotDef, parseInt(mixInput.value), effect.name);
-            };
-            mixDiv.addEventListener('mousedown', activateMixPot);
-            mixDiv.addEventListener('touchstart', activateMixPot, { passive: true });
+            openOnTap(mixDiv, mixInput, () =>
+                setActivePot(`eff-${idx}-mix`, mixPotDef,
+                             parseInt(mixInput.value), effect.name));
 
             controls.appendChild(mixDiv);
         }
@@ -2259,18 +2344,13 @@ function renderUI() {
                 // someone dragging it, and having the panel and its
                 // backdrop appear on top mid-drag is no help to anybody.
                 //
-                // Touch still opens it either way: the inline slider is
-                // too small to use with a thumb, which is what the panel
-                // is there for.
+                // A tap with a finger opens it wherever it lands, the
+                // inline slider included: that slider is about 100px wide
+                // for 121 values, which is not something a thumb can
+                // aim at, and the panel is what it has instead.
                 //
-                const activatePot = (e) => {
-                    if (e.type === 'mousedown' && e.target === input)
-                        return;
-                    setActivePot(potIdKey, pot, parseInt(input.value), effect.name);
-                };
-
-                potDiv.addEventListener('mousedown', activatePot);
-                potDiv.addEventListener('touchstart', activatePot, { passive: true });
+                openOnTap(potDiv, input, () =>
+                    setActivePot(potIdKey, pot, parseInt(input.value), effect.name));
             }
 
             if (effect.name === 'Parametric EQ') {
