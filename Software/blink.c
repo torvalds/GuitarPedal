@@ -37,6 +37,7 @@
 #include "audio/biquad.h"
 #include "audio/fft.h"
 #include "audio/analyze.h"
+#include "tac5112.h"
 
 #include "midi.h"
 #include "uart.h"
@@ -236,6 +237,62 @@ static void switch_irq(void)
 	}
 
 	user_interaction = 1;
+}
+
+//
+// What this is running on.
+//
+// A fixed build cannot adapt to the board it lands on, and mostly does
+// not need to - but it can find out, and one thing it finds does need
+// acting on.
+//
+// The early boards carried a TAC5112 codec with its control registers on
+// i2c0 and an SH1106 screen on i2c1.  The screen is not driven any more.
+// The codec is: it needs a little setting up, which the current boards
+// strap in hardware instead, and without it those boards are silent.
+//
+// So probing is not idle curiosity here.  It is also the only way anyone
+// would ever know which board is on the bench, the symptoms otherwise
+// being quiet ones.
+//
+static struct {
+	bool eeprom;		// the scene store, 0x50
+	bool legacy_codec;	// TAC5112, 0x51 - an early board
+	bool legacy_screen;	// SH1106, 0x3c - ditto
+} hardware;
+
+static bool i2c_probe(i2c_inst_t *i2c, uint8_t addr)
+{
+	uint8_t byte;
+
+	// One byte, harmless to anything that does answer, and a timeout
+	// rather than a hang if the bus is being held down.
+	return i2c_read_timeout_us(i2c, addr, &byte, 1, false, 2000) == 1;
+}
+
+static void probe_hardware(void)
+{
+	hardware.eeprom = i2c_probe(MC24Cxx_I2C);
+	hardware.legacy_codec = i2c_probe(TAC5112_I2C);
+	hardware.legacy_screen = i2c_probe(SH1106_I2C);
+
+	//
+	// Worst first, and only one of these arrives: report_status() is a
+	// plain overwrite and get_status() takes the message away as it
+	// reads it, so a chain of ifs would deliver the last thing tested
+	// rather than the thing worth saying.
+	//
+	// A missing eeprom is the one that matters - nothing persists and
+	// nothing else would mention it.  An early board is merely old:
+	// the TAC5112 wants a little setup, which it gets, and those
+	// boards never routed the second channel, so they are mono.  The
+	// eeprom geometry is worked out rather than compiled in, so a
+	// single scene on a 2kbit part saves and loads like any other.
+	//
+	if (!hardware.eeprom)
+		report_status("No eeprom found - scenes will not persist");
+	else if (hardware.legacy_codec || hardware.legacy_screen)
+		report_status("Early board: mono only, one scene");
 }
 
 int current_midi_effect_idx = 0;
@@ -748,6 +805,22 @@ int main()
 	absolute_time_t next_ui_update = delayed_by_ms(now, 50);
 
 	eeprom_set_geometry();
+
+	//
+	// After the eeprom, not before.  Reading it retries for fifty
+	// milliseconds because the part may still be waking up, and a probe
+	// without the same patience would call a perfectly good board
+	// missing - which is a confusing thing to be told.
+	//
+	probe_hardware();
+
+	//
+	// Early boards need their codec set up; the current ones strap it
+	// in hardware.  Unconditional because the first thing it does is
+	// ask whether there is a TAC5112 there to talk to, which is the
+	// same question as whether this is one of those boards.
+	//
+	tac5112_init();
 
 	init_effects();
 
