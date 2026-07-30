@@ -1,16 +1,64 @@
 #ifndef STATUS_H
 #define STATUS_H
 
+//
+// One pending message, and the whole thing is one word.
+//
+// This is deliberately about as simple as a diagnostic channel can be,
+// and the simplicity is the feature rather than a shortcut taken on the
+// way to something better.
+//
+// It exists for the day something goes wrong in a way that cannot be
+// reasoned about, and the answer is to sprinkle "got here" markers around
+// and see which ones come back - the equivalent of a printf, without a
+// printf.  Nothing uses it that way today and hopefully nothing ever
+// will.  Which is exactly why it has to stay this small: an unused
+// mechanism that is one store stays correct indefinitely, and an unused
+// mechanism with rules rots quietly and is discovered to be broken on the
+// one day it was needed.
+//
+// So it has to work from cpu1, the audio core, without locking of any
+// kind - and it does, today, without anything being added: a store and a
+// compare-exchange, both of which armv8-m does inline, so check-audio.py
+// has nothing to object to.  There is no queue, no formatting and no
+// second word.  If two things happen, one of them is lost.
+//
+// **The message must point at static storage** - a string literal, or
+// something else that was already there and is not going to change.
+// That is the contract, and it is what makes RELAXED the right ordering:
+// there is nothing to publish but the pointer, because the bytes it
+// points at were visible to both cores before either of them started.
+// Formatting into a buffer and reporting that would need release/acquire
+// to be correct, and is not supported - on the audio core it is not even
+// possible, since check-audio.py refuses the call it would take.
+//
+// If it ever does need to be cleverer than this - a ring, a value
+// alongside the string, per-cpu slots - then this comment is the thing to
+// laugh at on the way past.
+//
 static const char *current_status = "Booting";
 
+//
+// Something happened, and it matters more than whatever was pending.
+//
+// Atomic only to keep the model honest: mixing a plain store with the
+// compare-exchange below and the exchange in get_status() is a data race
+// however obviously fine the codegen is.  RELAXED compiles to the same
+// single 'str' a plain assignment does.
+//
 static inline void report_status(const char *msg)
 {
-	current_status = msg;
+	__atomic_store_n(&current_status, msg, __ATOMIC_RELAXED);
 }
 
-// The difference between "report status" and "report info" is that
-// informational messages will not overwrite existing pending
-// messages. So they update the current status only if it was NULL.
+//
+// Something happened, but do not talk over anybody.
+//
+// The difference from report_status() is that this will not overwrite a
+// pending message - it speaks only into silence.  So a routine "did the
+// thing" note cannot bury the interesting failure that was waiting to be
+// read, and the caller decides which of the two it is making.
+//
 static inline void report_info(const char *msg)
 {
 	const char *no_message = NULL;

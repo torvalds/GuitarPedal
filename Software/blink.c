@@ -453,9 +453,16 @@ static void sysex_send_status(void)
 	static const uint8_t sysex_status_header[] = { 0xF0, 0x7D, 0x09 };
 	static const uint8_t sysex_status_trailer[] = { 0xF7 };
 
+	//
+	// Always answer, even when there is nothing pending.  A request
+	// that gets no reply leaves the host unable to tell "nothing to
+	// report" from "the reply went missing", which for a diagnostic is
+	// the wrong way round: silence is exactly what you cannot trust
+	// when you are already asking why something is quiet.
+	//
 	const char *status = get_status();
 	if (!status)
-		return;
+		status = "";
 
 	sysex_tx_start();
 	sysex_stream_write(sysex_status_header, sizeof(sysex_status_header));
