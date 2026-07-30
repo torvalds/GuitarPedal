@@ -2411,6 +2411,14 @@ appTitleEl.addEventListener('click', () => {
     // worth reading before it goes.  Failures keep the menu open for the
     // same reason - showButtonError() does not close it, because the
     // error is the thing you need to see.
+    //
+    // A second, and not the second and a half it was.  Long enough to
+    // read four words, and short enough that it never reads as the menu
+    // having decided to stay open - which is what it looked like, having
+    // spent so long doing exactly that.
+    //
+    const BUTTON_FEEDBACK_MS = 1000;
+
     function showButtonSuccess(btn, successText) {
         const originalText = btn.innerHTML;
         btn.innerHTML = `✓ ${successText}`;
@@ -2418,14 +2426,14 @@ appTitleEl.addEventListener('click', () => {
         setTimeout(() => {
             restoreButton(btn, originalText);
             closeMenu();
-        }, 1500);
+        }, BUTTON_FEEDBACK_MS);
     }
 
     function showButtonError(btn, errorText) {
         const originalText = btn.innerHTML;
         btn.innerHTML = `⚠️ ${errorText}`;
         btn.classList.add('error');
-        setTimeout(() => restoreButton(btn, originalText), 1500);
+        setTimeout(() => restoreButton(btn, originalText), BUTTON_FEEDBACK_MS);
     }
 
     // The burger menu
