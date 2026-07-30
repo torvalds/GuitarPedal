@@ -869,6 +869,48 @@ function valueToPot(pot, y) {
 }
 
 //
+// How the app behaves, as opposed to what the pedal does.
+//
+// Kept in localStorage because these belong to the person and the
+// screen, not to the pedal: a scene must not be able to change how
+// dragging works, and the pedal has no idea any of this exists. Which
+// is also why they are not pots - there is nothing here to send.
+//
+function uiPref(key, fallback) {
+    try {
+        const val = localStorage.getItem('ui.' + key);
+        return val === null ? fallback : val === 'true';
+    } catch (err) {
+        // Storage can be refused outright, and a preference is not
+        // worth failing over
+        return fallback;
+    }
+}
+
+function setUiPref(key, val) {
+    try {
+        localStorage.setItem('ui.' + key, val ? 'true' : 'false');
+    } catch (err) {
+        /* then it lasts as long as the page does, which will do */
+    }
+}
+
+//
+// Whether the EQ's bands are held in order while you drag them.
+//
+// On by default, and a switch rather than a decision made for you: the
+// unordered curves the old overlapping pot ranges allowed were odd but
+// not wrong, and some of them are interesting. Turning this off gets
+// them back.
+//
+// Nothing happens retroactively. Switching it on does not tidy up bands
+// that are already crossed - it only governs what a drag is allowed to
+// do, so an existing curve is left exactly as it was until you take
+// hold of something.
+//
+let eqKeepOrder = uiPref('eq.keepOrder', true);
+
+//
 // Keeping the EQ's bands in order.
 //
 // The pedal does not care - five biquads in series commute, and every
@@ -2156,6 +2198,7 @@ function renderUI() {
 
         let slidersContainer = null;
         let eqPotsInputs = [];
+        let eqFooter = null;
 
         //
         // The one effect with a hand-built card, because frequency and
@@ -2184,6 +2227,15 @@ function renderUI() {
             slidersContainer = document.createElement('div');
             slidersContainer.className = 'eq-sliders eq-sliders-hidden';
             controls.appendChild(slidersContainer);
+
+            //
+            // The row under the curve.  The Mix control is the only pot
+            // this effect shows - the other ten are the graph - so it
+            // had the whole width to itself and did not need it.
+            //
+            eqFooter = document.createElement('div');
+            eqFooter.className = 'eq-footer';
+            controls.appendChild(eqFooter);
 
             effect.redrawCurve = () => {
                 const canvas = curveWrapper.querySelector(`#eq-canvas-${idx}`);
@@ -2490,8 +2542,10 @@ function renderUI() {
                 // Off the end of the graph is off the end of the pot,
                 // which valueToPot() already answers by clamping
                 const gVal = valueToPot(gDef, db);
-                const fVal = clampToNeighbours(freqPots(), nodeIdx,
-                                               valueToPot(fDef, freq));
+                let fVal = valueToPot(fDef, freq);
+
+                if (eqKeepOrder)
+                    fVal = clampToNeighbours(freqPots(), nodeIdx, fVal);
 
                 // Update inputs visually
                 eqPotsInputs[fIdx].value = fVal;
@@ -2743,7 +2797,8 @@ function renderUI() {
                 setActivePot(`eff-${idx}-mix`, mixPotDef,
                              parseInt(mixInput.value), effect.name));
 
-            controls.appendChild(mixDiv);
+            // The EQ puts it in a row with its own switches
+            (eqFooter || controls).appendChild(mixDiv);
         }
 
         effect.pots.forEach((pot, pIdx) => {
@@ -2841,6 +2896,35 @@ function renderUI() {
         });
 
         if (isEq) {
+            //
+            // Switches for how the graph behaves.  Not pots, and not
+            // sent anywhere: the pedal has no opinion about any of this
+            // and no way to store it. They sit here rather than in the
+            // app's menu because they are about this one card, and
+            // because a control belongs next to the thing it governs.
+            //
+            const options = document.createElement('div');
+            options.className = 'eq-options';
+
+            const orderLabel = document.createElement('label');
+            orderLabel.className = 'eq-option';
+            orderLabel.title = 'Bands stop at their neighbours instead of ' +
+                               'passing them. Off, the shelves and peaks can ' +
+                               'be in any order, which the pedal is happy with.';
+
+            const orderBox = document.createElement('input');
+            orderBox.type = 'checkbox';
+            orderBox.checked = eqKeepOrder;
+            orderBox.addEventListener('change', () => {
+                eqKeepOrder = orderBox.checked;
+                setUiPref('eq.keepOrder', eqKeepOrder);
+            });
+
+            orderLabel.appendChild(orderBox);
+            orderLabel.appendChild(document.createTextNode('Keep bands in order'));
+            options.appendChild(orderLabel);
+            eqFooter.appendChild(options);
+
             setTimeout(() => effect.redrawCurve(), 0);
         }
         card.appendChild(controls);

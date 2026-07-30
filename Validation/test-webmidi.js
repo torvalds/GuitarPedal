@@ -107,6 +107,8 @@ for (const m of fs.readFileSync(path.join(WEB, 'index.html'), 'utf8')
 global.document = {
     getElementById: (id) => byId.get(id) || null,
     createElement: () => element(undefined),
+    // Enough of a node to be appended and to carry its text
+    createTextNode: (text) => ({ textContent: text, parentElement: null }),
     querySelector: () => element('?'),
     querySelectorAll: () => [],
     addEventListener() {},
@@ -150,7 +152,8 @@ const WANT = ['handleIdentity', 'populateScenePicker', 'updateSceneLabels',
               'boardFault', 'earlyNote', 'clipFault', 'dropFault',
               'renderAttention', 'handleTelemetry', 'handleSysex',
               'routeEffect', 'unrouteEffect',
-              'potToValue', 'valueToPot', 'clampToNeighbours', 'pileAt'];
+              'potToValue', 'valueToPot', 'clampToNeighbours', 'pileAt',
+              'uiPref', 'setUiPref'];
 
 //
 // The chain is a list held in a variable rather than anything the dom
@@ -440,6 +443,35 @@ check('going left takes the lowest, which is the one free to move',
       app.pileAt(order, 2)[0] === 1);
 check('going right takes the highest',
       app.pileAt(order, 1).slice(-1)[0] === 2);
+
+//
+// UI preferences.  The interesting case is storage that refuses to work
+// at all, which is a real browser configuration and must not take the
+// app down with it - these are preferences, and the cost of losing one
+// is that it goes back to its default.
+//
+check('an unset preference is its default',
+      app.uiPref('nothing.here', true) === true
+      && app.uiPref('nothing.here', false) === false);
+
+const store = new Map();
+global.localStorage = {
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => store.set(k, v),
+};
+app.setUiPref('eq.keepOrder', false);
+check('a preference survives a write and a read',
+      app.uiPref('eq.keepOrder', true) === false);
+app.setUiPref('eq.keepOrder', true);
+check('and back again', app.uiPref('eq.keepOrder', false) === true);
+
+global.localStorage = {
+    getItem() { throw new Error('denied'); },
+    setItem() { throw new Error('denied'); },
+};
+check('storage that refuses to read still yields the default',
+      app.uiPref('eq.keepOrder', true) === true);
+app.setUiPref('eq.keepOrder', false);   // and refusing to write is not fatal
 
 if (failures) {
     say(`test-webmidi: ${failures} failure(s)`);

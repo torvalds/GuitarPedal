@@ -512,6 +512,56 @@ input[type=range]:focus::-moz-range-thumb {
   vector-effect: non-scaling-stroke;
 }
 
+/*
+ * The row under the curve: the Mix control, and the switches for how
+ * the graph behaves.
+ *
+ * Mix takes the width it needs and the switches go to the far end, so
+ * that the two are read as the different things they are - one is a
+ * parameter the pedal stores, the others are how this screen behaves
+ * and go no further than this browser.
+ *
+ * It wraps, because on a narrow screen a row of both is neither.
+ */
+.eq-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  margin-top: 10px;
+}
+
+.eq-footer .pot-control {
+  flex: 1 1 180px;
+}
+
+.eq-options {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+}
+
+/* The label is part of the target, which is what gets it to 44px */
+.eq-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.eq-option input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 .eq-sliders {
   display: flex;
   justify-content: space-between;
