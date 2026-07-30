@@ -555,7 +555,7 @@ bool handle_midi_packet(const uint8_t packet[4])
 	} else if ((status & 0xF0) == 0xC0) {
 		handled = true;
 		// Program Change -> Load Scene
-		if (data1 < MAX_SCENES) {
+		if (data1 < nr_scenes) {
 			load_scene(data1);
 		}
 	}
@@ -747,7 +747,7 @@ int main()
 
 	absolute_time_t next_ui_update = delayed_by_ms(now, 50);
 
-	init_eeprom();
+	eeprom_set_geometry();
 
 	init_effects();
 

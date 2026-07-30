@@ -42,7 +42,6 @@ add_executable(blink)
 # why this was ever off; there is no second rotary any more.
 #
 set(MIDI_HW ON CACHE BOOL "Enable MIDI HW (not just MIDI over USB-C) support")
-set(EEPROM_64KBIT ON CACHE BOOL "Configure for 64kbit eeprom chip")
 
 set(SAMPLES_PER_SEC 48000.0)
 set(SCRIPT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
@@ -133,7 +132,6 @@ target_compile_definitions(blink PRIVATE
 	PLL_SYS_POSTDIV1=5
 	PLL_SYS_POSTDIV2=1
 	MIDI_HW=$<BOOL:${MIDI_HW}>
-	EEPROM_64KBIT=$<BOOL:${EEPROM_64KBIT}>
 	SAMPLES_PER_SEC=${SAMPLES_PER_SEC}f
 	CFG_TUSB_MCU=OPT_MCU_RP2040
 	CFG_TUSB_OS=OPT_OS_PICO
