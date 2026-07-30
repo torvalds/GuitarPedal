@@ -200,14 +200,90 @@ static inline raw_sample_t *i2s_dma_rx_ptr(void)
 	return (raw_sample_t *) (dma_hw->ch[dma_rx].write_addr & ~7);
 }
 
+//
+// Metering, at the two ends of the chain.
+//
+// A 'struct envelope' with a fast attack and a slow release is a peak
+// meter, so there is nothing to write here beyond picking the times - and
+// the same thing with those reversed is a floor follower, which is what
+// the noise floor estimate is.  Stop playing and the peak falls to the
+// noise in a third of a second while the floor follows it down; start
+// playing and the peak jumps while the floor takes five seconds to
+// notice.
+//
+// The floor is fed the *gate's* envelope and nothing else, and the reason
+// is definitional rather than measured: a floor reading is only useful if
+// it can be compared against 'Level', Level is compared against the
+// gate's envelope, so the floor has to be that same envelope.  Anything
+// else is a different quantity wearing the same units, and would only
+// happen to agree.
+//
+// How far the two *would* diverge is not known.  In theory it depends on
+// the character of the noise rather than its level: the peak meter's
+// 0.1ms attack catches transients that the gate's 1.5ms one averages
+// away, so tonal hum should read the same on both and broadband noise
+// should read higher on the peak meter by something like its crest
+// factor.  That is theory.  Nothing here has measured it, and an earlier
+// version of this comment claimed nine decibels on the strength of two
+// readings that turned out to be from different boards.
+//
+// What has been measured, for scale (see process.h for the reference):
+//
+//	90mVpp at 110Hz reads -30dBFS on both boards, which is also
+//	the arithmetic: 31.8mVrms against 1Vrms is -29.95dB.  So the
+//	analog front ends agree, and dBFS means the same thing on each.
+//
+//	the noise floor reads -61dBFS on a current board and -56dBFS
+//	on an early one.  Boards differ; the meter is measuring that.
+//
+//	on each board the floor now sits within a couple of dB of the
+//	Level at which the gate actually starts closing, which is the
+//	property this is for.
+//
+static struct envelope meter_in_env, meter_floor_env, meter_out_env;
+
+static void init_meters(void)
+{
+	envelope_init(&meter_in_env, 0.1f, 300.0f);
+	envelope_init(&meter_floor_env, 5000.0f, 100.0f);
+	envelope_init(&meter_out_env, 0.1f, 300.0f);
+}
+
 static inline void __audio_func(single_sample)(float mix)
 {
 	raw_sample_t *cpu_ptr = i2s_dma_buf + cpu_idx;
 	cpu_idx = (cpu_idx + 1) & 15;
 
-	// Wait for RX DMA to produce the sample
+	//
+	// Wait for RX DMA to produce the sample.
+	//
+	// This loop is the idle time, by definition: per sample period the
+	// cpu either spins here or works, and the period is known because
+	// the DMA sets it.  So timing the spin measures the load exactly,
+	// with nothing to estimate.
+	//
+	// One sample in sixteen, because two bus reads at 48kHz to measure
+	// a load is about a percent of the thing being measured.  Sampling
+	// it costs a sixteenth of that and the answer is averaged anyway.
+	//
+	static unsigned int meter_phase;
+	bool timed = !(++meter_phase & 15);
+	uint32_t spin_start = timed ? timer_hw->timerawl : 0;
+
 	while (cpu_ptr == i2s_dma_rx_ptr())
 		tight_loop_contents();
+
+	if (timed) {
+		//
+		// 20.83us per sample at 48kHz.  Idle longer than that means
+		// the previous sample finished early and this one had not
+		// arrived yet, which is still idle.
+		//
+		float idle = (timer_hw->timerawl - spin_start) * (SAMPLES_PER_SEC / 1000000.0f);
+		float load = idle < 1.0f ? 1.0f - idle : 0.0f;
+
+		meter_load += (load - meter_load) * (1.0f / 64);
+	}
 
 	//
 	// Check we're safely ahead of TX DMA.  Missing the deadline is not
@@ -246,11 +322,26 @@ static inline void __audio_func(single_sample)(float mix)
 	}
 
 	//
+	// Metered here rather than inside the signal chain, because this is
+	// the pedal's input: what arrived, before Trim has an opinion.
+	//
+	meter_in = envelope_step(&meter_in_env, in.left);
+
+	//
 	// The signal chain proper: trim and the gate, then whatever is
 	// routed.  Called straight rather than through do_effect_step()
 	// because it is not an effect - see effects/signal_chain.h.
 	//
 	sample_t out = signal_chain_step(in);
+
+	//
+	// ...and the floor after it, because it follows the gate's own
+	// envelope rather than the peak meter above.  Same quantity 'Level'
+	// is compared against, so the two numbers can be read against each
+	// other - which is the only reason to show a floor at all.
+	//
+	meter_floor = envelope_step(&meter_floor_env, signal_chain.envelope.value);
+
 	for (int i = 0; i < routed_effect_count; i++) {
 		out = do_effect_step(effects[effect_chain[i]], out);
 	}
@@ -271,6 +362,14 @@ static inline void __audio_func(single_sample)(float mix)
 		out.left += usb_in.left;
 		out.right += usb_in.right;
 	}
+
+	//
+	// And the output meter, on what actually leaves - after Volume and
+	// after the bypass crossfade, so a bypassed pedal reads its input.
+	//
+	float peak = fabsf(out.left) > fabsf(out.right)
+		   ? fabsf(out.left) : fabsf(out.right);
+	meter_out = envelope_step(&meter_out_env, peak);
 
 	*cpu_ptr = process_output(out, sample);
 }

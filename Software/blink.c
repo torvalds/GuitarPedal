@@ -10,6 +10,7 @@
 #include "hardware/pwm.h"
 #include "hardware/clocks.h"
 #include "hardware/dma.h"
+#include "hardware/timer.h"
 
 #include "board.h"
 
@@ -426,6 +427,93 @@ static void sysex_send_identity(void)
 	sysex_tx_finish("Sent identity");
 }
 
+//
+// Telemetry: what the pedal can see about its own signal.
+//
+// Packed bytes rather than the JSON the identity reply uses, because this
+// is the polled one - asked several times a second while somebody watches
+// a meter, where a couple of hundred bytes of punctuation per frame would
+// be silly.
+//
+// *** The layout is append-only. ***
+//
+// Fields are never reordered, never resized and never repurposed.  A host
+// reads the ones it understands and ignores the rest, and treats a frame
+// shorter than it expected as "that firmware does not know about the tail"
+// rather than as zeroes.  Get that right and every future field is free,
+// which is the whole reason this is not self-describing.  The version byte
+// is belt and braces - the length is what actually does the work.
+//
+// Levels go out as -dBFS, one byte per dB.  Full scale is 0 and it counts
+// downwards, which suits a 7-bit field: 127dB is more range than the
+// converter has, and no sign ever needs sending.
+//
+static uint8_t level_to_dbfs(float level)
+{
+	int db;
+
+	// Silence saturates rather than trying to send minus infinity
+	if (level <= 0.0f)
+		return 127;
+
+	db = -(int)(20.0f * log10f(level));
+	if (db < 0)
+		db = 0;		// above full scale: still 0dBFS
+	if (db > 127)
+		db = 127;
+	return db;
+}
+
+static uint8_t fraction_to_byte(float f)
+{
+	int v = (int)(f * 127.0f + 0.5f);
+
+	if (v < 0)
+		v = 0;
+	if (v > 127)
+		v = 127;
+	return v;
+}
+
+bool send_telemetry_tx = false;
+static void sysex_send_telemetry(void)
+{
+	if (!send_telemetry_tx)
+		return;
+	send_telemetry_tx = false;
+
+	static const uint8_t sysex_telemetry_header[] = { 0xF0, 0x7D, 0x0B };
+	static const uint8_t sysex_telemetry_trailer[] = { 0xF7 };
+
+	//
+	// The gate multiplier only means anything while the gate is on.
+	// Switched off it keeps whatever it last ramped to, which would
+	// read as a gate holding the signal down when it is doing nothing
+	// of the kind.
+	//
+	float gate = signal_chain.active ? signal_chain.mult : 1.0f;
+
+	const uint8_t body[] = {
+		1,				// layout version
+		level_to_dbfs(meter_in),	// input peak, before Trim
+		level_to_dbfs(meter_floor),	// the quiet level under it
+		level_to_dbfs(meter_out),	// output peak, after Volume
+		fraction_to_byte(gate),		// 127 open, 0 fully closed
+		fraction_to_byte(meter_load),	// share of the sample period used
+	};
+
+	sysex_tx_start();
+	sysex_stream_write(sysex_telemetry_header, sizeof(sysex_telemetry_header));
+	sysex_stream_write(body, sizeof(body));
+	sysex_stream_write(sysex_telemetry_trailer, sizeof(sysex_telemetry_trailer));
+
+	//
+	// No sysex_tx_finish().  This is polled, so a frame that does not
+	// make it out is replaced by the next one a fifth of a second later,
+	// and saying so would be noise about something that fixed itself.
+	//
+}
+
 bool send_schema_tx = false;
 static void sysex_send_schema(void)
 {
@@ -623,6 +711,10 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 	} else if (cmd == 0x0a) { // Identity Request
 
 		send_identity_tx = true;
+
+	} else if (cmd == 0x0b) { // Telemetry Request
+
+		send_telemetry_tx = true;
 
 	} else if (cmd == 0x05) { // State Dump Request
 
@@ -839,6 +931,7 @@ static inline void enable_ftz(void)
 static void __audio_func(audio_processing)(void)
 {
 	enable_ftz();
+	init_meters();
 	for (;;)
 		make_one_noise();
 }
@@ -929,6 +1022,7 @@ int main()
 		uart_midi_poll();
 
 		sysex_send_identity();
+		sysex_send_telemetry();
 		sysex_send_schema();
 		sysex_send_state_dump();
 		sysex_send_status();

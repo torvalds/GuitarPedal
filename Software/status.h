@@ -120,6 +120,30 @@ static unsigned int attention_preview;
 // How long the LED holds the preview, in update_ui() ticks of ~40ms
 #define ATTENTION_PREVIEW_TICKS 12
 
+//
+// Meters.  What the pedal can see about its own signal, which is more
+// than it has ever been willing to say.
+//
+// Kept as levels rather than as anything already scaled for the wire,
+// because the wire format is the reporting code's business and these are
+// maintained at 48kHz by code that should not have to know about it.
+//
+// All of them decay on their own, so there is no reset handshake with
+// cpu0 at all: the audio core keeps them current and whoever asks samples
+// whatever is there.  That is also what a meter should do.  A peak that
+// never falls tells you what happened once, which is no use at all while
+// turning a knob and watching.
+//
+// Read across cores with no atomics, deliberately.  These are aligned
+// 32-bit words, so a read cannot tear, and the worst available outcome is
+// a meter reading forty milliseconds out of date.  Same bargain as
+// 'samples_dropped' above, for the same reason.
+//
+static float meter_in;		// input peak, before Trim
+static float meter_floor;	// and the quiet level underneath it
+static float meter_out;		// output peak, after Volume
+static float meter_load;	// of the sample period, the fraction spent working
+
 static const char *get_status(void)
 {
 	return __atomic_exchange_n(&current_status, NULL, __ATOMIC_RELAXED);

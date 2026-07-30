@@ -144,10 +144,20 @@ static inline sample_t signal_chain_step(sample_t in)
 
 	float gain = signal_chain.trim;
 
+	//
+	// The envelope follows the left channel - the guitar - but the gate
+	// closes on both, so a stereo signal survives it.
+	//
+	// Run unconditionally, and only *use* it when the gate is on.  It
+	// costs one multiply-add, and the alternative is that the reported
+	// noise floor freezes at whatever it was when the gate was switched
+	// off - the floor meter is derived from this and from nothing else,
+	// deliberately, so that the number on screen is the same quantity
+	// 'Level' gets compared against.  See single_sample().
+	//
+	float env = envelope_step(&signal_chain.envelope, in.left);
+
 	if (signal_chain.active) {
-		// The envelope follows the left channel - the guitar - but
-		// the gate closes on both, so a stereo signal survives it.
-		float env = envelope_step(&signal_chain.envelope, in.left);
 		float mult = signal_chain.mult;
 
 		// Ramp up fairly quickly, ramp down slowly
