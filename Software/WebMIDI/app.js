@@ -337,7 +337,24 @@ function updateMidiState() {
 //
 // An empty hostname is a file:// URL.
 //
-const IS_LOCAL_DEV = ['localhost', '127.0.0.1', '::1', ''].includes(location.hostname);
+// A private address counts as local too, because testing on a phone
+// means serving to 192.168.x.x and the page is no less "the copy I am
+// editing" for having crossed the room to get there.  That matters more
+// than it looks: getting Web MIDI to work over http at all takes
+// whitelisting the origin in Chrome's
+// #unsafely-treat-insecure-origin-as-secure, and an origin secure
+// enough for Web MIDI is secure enough to register a service worker.
+// So without this the phone - the machine hardest to clear a stale
+// worker out of - would be the one caching the dev server.
+//
+// The bracket is not optional: location.hostname keeps them on an IPv6
+// literal, so requiring one is what stops this matching a real name that
+// happens to start "fd".
+//
+const PRIVATE_HOST = /^(10\.|127\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|\[(::1|fe80|f[cd]))|\.local$/i;
+
+const IS_LOCAL_DEV = ['localhost', '127.0.0.1', '::1', ''].includes(location.hostname) ||
+    PRIVATE_HOST.test(location.hostname);
 
 // Colours the title amber rather than green - see style.css. The tooltip
 // is set here rather than in the markup so the deployed copy doesn't
