@@ -2049,7 +2049,20 @@ function renderUI() {
         let slidersContainer = null;
         let eqPotsInputs = [];
 
-        if (effect.name === 'Parametric EQ') {
+        //
+        // The one effect with a hand-built card, because frequency and
+        // gain per band is two-dimensional and a row of one-dimensional
+        // controls cannot say it. Asked six times while building a card,
+        // so ask once.
+        //
+        // By 'base', the header's filename, rather than by the display
+        // name it used to use: renaming an effect in its C comment is a
+        // thing that happens, and it used to silently cost the EQ its
+        // curve and leave ten hidden sliders in its place.
+        //
+        const isEq = effect.base === 'parametric_eq';
+
+        if (isEq) {
 
             controls.className = 'effect-controls eq-container';
 
@@ -2472,7 +2485,7 @@ function renderUI() {
             const potIdKey = `eff-${idx}-pot-${pIdx}`;
 
             const potDiv = document.createElement('div');
-            potDiv.className = effect.name === 'Parametric EQ' ? 'pot-control eq-pot' : 'pot-control';
+            potDiv.className = isEq ? 'pot-control eq-pot' : 'pot-control';
 
             const label = document.createElement('div');
             label.className = 'pot-label';
@@ -2511,7 +2524,7 @@ function renderUI() {
                 input.value = initialVal;
                 input.potDef = pot; // Attach pot definition for formatting
 
-                if (effect.name === 'Parametric EQ') {
+                if (isEq) {
                     input.className = 'eq-range';
                     input.redrawCurve = effect.redrawCurve;
                     eqPotsInputs.push(input);
@@ -2526,7 +2539,7 @@ function renderUI() {
                     if (input.redrawCurve) input.redrawCurve();
                 });
 
-                if (effect.name === 'Parametric EQ') {
+                if (isEq) {
                     const sliderWrapper = document.createElement('div');
                     sliderWrapper.className = 'eq-slider-wrapper';
                     sliderWrapper.appendChild(input);
@@ -2555,14 +2568,14 @@ function renderUI() {
                     setActivePot(potIdKey, pot, parseInt(input.value), effect.name));
             }
 
-            if (effect.name === 'Parametric EQ') {
+            if (isEq) {
                 slidersContainer.appendChild(potDiv);
             } else {
                 controls.appendChild(potDiv);
             }
         });
 
-        if (effect.name === 'Parametric EQ') {
+        if (isEq) {
             setTimeout(() => effect.redrawCurve(), 0);
         }
         card.appendChild(controls);
