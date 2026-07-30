@@ -2221,6 +2221,7 @@ function renderUI() {
 
             // Interactive EQ logic
             let isDragging = false;
+            let dragPointerId = null;
             let activeNodeIdx = -1;
             let nodes = [];
 
@@ -2276,22 +2277,30 @@ function renderUI() {
                 effect.redrawCurve();
             }
 
-            const getMousePos = (e) => {
+            //
+            // Where the pointer is, in canvas coordinates.
+            //
+            // Deliberately not clamped, and deliberately still answered
+            // when the pointer is outside the canvas: a drag that has
+            // left the graph is still a drag, and onMove() clamps what
+            // it does with this rather than refusing to hear it.
+            //
+            const getPointerPos = (e) => {
                 const canvas = curveWrapper.querySelector(`#eq-canvas-${idx}`);
                 const rect = canvas.getBoundingClientRect();
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
                 const scaleX = canvas.width / rect.width;
                 const scaleY = canvas.height / rect.height;
                 return {
-                    x: (clientX - rect.left) * scaleX,
-                    y: (clientY - rect.top) * scaleY
+                    x: (e.clientX - rect.left) * scaleX,
+                    y: (e.clientY - rect.top) * scaleY
                 };
             };
 
             const onDown = (e) => {
+                if (!e.isPrimary)
+                    return;
                 e.preventDefault();
-                const pos = getMousePos(e);
+                const pos = getPointerPos(e);
                 let minDist = 10000;
                 activeNodeIdx = -1;
                 nodes.forEach((n, i) => {
@@ -2305,14 +2314,34 @@ function renderUI() {
                 });
                 if (activeNodeIdx !== -1) {
                     isDragging = true;
+                    dragPointerId = e.pointerId;
+                    //
+                    // The rest of the drag is heard on the window, not
+                    // on the canvas.  A node has limits and the pointer
+                    // does not, so the two part company at the edge of
+                    // the graph all the time - and while they are apart,
+                    // every move event would go to whatever the pointer
+                    // is over instead of to us.
+                    //
+                    // That is what used to end the drag: moves stopped
+                    // arriving, and 'mouseleave' called onUp on the way
+                    // out for good measure. The node stopped where it
+                    // was and you had to find it and grab it again,
+                    // which with a finger means finding it underneath
+                    // the finger.
+                    //
+                    window.addEventListener('pointermove', onMove);
+                    window.addEventListener('pointerup', onUp);
+                    window.addEventListener('pointercancel', onUp);
                     effect.redrawCurve();
                 }
             };
 
             const onMove = (e) => {
                 if (!isDragging || activeNodeIdx === -1) return;
+                if (e.pointerId !== dragPointerId) return;
                 e.preventDefault();
-                const pos = getMousePos(e);
+                const pos = getPointerPos(e);
                 const canvas = curveWrapper.querySelector(`#eq-canvas-${idx}`);
                 const W = canvas.width;
                 const H = canvas.height;
@@ -2333,6 +2362,14 @@ function renderUI() {
             };
 
             const onUp = (e) => {
+                if (e.pointerId !== dragPointerId)
+                    return;
+
+                window.removeEventListener('pointermove', onMove);
+                window.removeEventListener('pointerup', onUp);
+                window.removeEventListener('pointercancel', onUp);
+                dragPointerId = null;
+
                 if (isDragging && activeNodeIdx !== -1) {
                     // Force final sysex flush on release
                     const fIdx = activeNodeIdx * 2;
@@ -2353,13 +2390,9 @@ function renderUI() {
             setTimeout(() => {
                 const canvasEl = curveWrapper.querySelector(`#eq-canvas-${idx}`);
                 if (canvasEl) {
-                    canvasEl.addEventListener('mousedown', onDown);
-                    canvasEl.addEventListener('mousemove', onMove);
-                    canvasEl.addEventListener('mouseup', onUp);
-                    canvasEl.addEventListener('mouseleave', onUp);
-                    canvasEl.addEventListener('touchstart', onDown, {passive: false});
-                    canvasEl.addEventListener('touchmove', onMove, {passive: false});
-                    canvasEl.addEventListener('touchend', onUp);
+                    // Only the grab is on the canvas - see onDown() for
+                    // where the rest of it went and why
+                    canvasEl.addEventListener('pointerdown', onDown);
                 }
             }, 0);
 

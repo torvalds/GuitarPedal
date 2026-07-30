@@ -482,10 +482,21 @@ input[type=range]:focus::-moz-range-thumb {
   display: none !important;
 }
 
+/*
+ * The canvas is a drag surface in both directions - a node carries a
+ * frequency sideways and a gain vertically - so there is no axis left to
+ * give the browser, and it gets none.
+ *
+ * This is not new behaviour. The old touchstart handler called
+ * preventDefault() unconditionally, which claimed the gesture the same
+ * way; saying it in touch-action is what pointer events need instead,
+ * and it says it where it can be seen.
+ */
 .eq-canvas {
   width: 100%;
   height: 100%;
   display: block;
+  touch-action: none;
 }
 
 .eq-curve-svg {
