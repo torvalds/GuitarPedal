@@ -149,7 +149,8 @@ global.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 const WANT = ['handleIdentity', 'populateScenePicker', 'updateSceneLabels',
               'boardFault', 'earlyNote', 'clipFault', 'dropFault',
               'renderAttention', 'handleTelemetry', 'handleSysex',
-              'routeEffect', 'unrouteEffect'];
+              'routeEffect', 'unrouteEffect',
+              'potToValue', 'valueToPot', 'clampToNeighbours', 'pileAt'];
 
 //
 // The chain is a list held in a variable rather than anything the dom
@@ -365,6 +366,80 @@ check('a long frame is read as far as we understand it',
 
 // A frame with nothing in it at all must not throw or print rubbish
 app.handleTelemetry(frame());
+
+//
+// Pot curves.  Every curve has to survive the round trip, because the
+// EQ converts both ways constantly - screen position to pot value on the
+// way in, pot value to a frequency to draw on the way out - and a curve
+// that does not come back to where it started makes a node creep every
+// time it is touched.
+//
+for (const pot of [{ curve: 'LINEAR', min: -20, max: 20 },
+                   { curve: 'LINEAR', min: -40, max: 0 },
+                   { curve: 'FREQUENCY', min: 20, max: 400 },
+                   { curve: 'SQUARED', min: 0, max: 100 },
+                   { curve: 'EXPONENTIAL', min: 20, max: 20000 }]) {
+    let bad = 0;
+    for (let v = 0; v <= 120; v++)
+        if (app.valueToPot(pot, app.potToValue(pot, v)) !== v)
+            bad++;
+    check(`${pot.curve}(${pot.min} ${pot.max}) round-trips`, bad === 0,
+          `${bad} of 121 values`);
+}
+
+// And the app has to agree with the generator about where a default sits
+let defaultsDiffer = 0;
+for (const eff of schema)
+    for (const pot of eff.pots)
+        if (pot.defaultPot !== undefined
+            && app.valueToPot(pot, pot.default) !== pot.defaultPot)
+            defaultsDiffer++;
+check('defaults agree with gen_effects.py', defaultsDiffer === 0,
+      `${defaultsDiffer} pots disagree`);
+
+//
+// The EQ's ordering rules.  A band may reach its neighbours and no
+// further, and the ends of the chain are bounded by the pot instead.
+//
+const order = [10, 30, 30, 60, 100];
+
+check('a band stops at the neighbour above',
+      app.clampToNeighbours(order, 0, 90) === 30);
+check('and at the neighbour below',
+      app.clampToNeighbours(order, 3, 5) === 30);
+check('an unobstructed band moves where it was asked',
+      app.clampToNeighbours(order, 3, 45) === 45);
+check('the first band is bounded by the bottom of the pot',
+      app.clampToNeighbours(order, 0, -5) === 0);
+check('the last by the top of it',
+      app.clampToNeighbours(order, 4, 999) === 120);
+
+// Whatever it is asked for, the result never crosses a neighbour
+let crossed = 0;
+for (let idx = 0; idx < 5; idx++)
+    for (let want = -20; want <= 140; want++) {
+        const got = app.clampToNeighbours(order, idx, want);
+        const next = order.slice();
+        next[idx] = got;
+        for (let i = 1; i < next.length; i++)
+            if (next[i] < next[i - 1]) crossed++;
+    }
+check('no request of any size can put the bands out of order', crossed === 0,
+      `${crossed} orderings broken`);
+
+//
+// Which of a pile you get.  Equality is what makes a pile, so bands
+// that merely sit close are not one.
+//
+check('a band on its own is a pile of one',
+      app.pileAt(order, 0).join() === '0');
+check('bands at the same value are a pile',
+      app.pileAt(order, 1).join() === '1,2'
+      && app.pileAt(order, 2).join() === '1,2');
+check('going left takes the lowest, which is the one free to move',
+      app.pileAt(order, 2)[0] === 1);
+check('going right takes the highest',
+      app.pileAt(order, 1).slice(-1)[0] === 2);
 
 if (failures) {
     say(`test-webmidi: ${failures} failure(s)`);

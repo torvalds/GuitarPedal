@@ -869,6 +869,54 @@ function valueToPot(pot, y) {
 }
 
 //
+// Keeping the EQ's bands in order.
+//
+// The pedal does not care - five biquads in series commute, and every
+// band now has the whole audio range - so this is entirely a question
+// about what a control should do, and it lives here rather than in the
+// firmware.
+//
+// A band may travel as far as its neighbours and no further.  The
+// alternative was to push the neighbours along ahead of it, which reads
+// well until you drag the low shelf up to 10kHz and arrive to find it
+// has taken the other four with it and flattened a curve you spent a
+// while on.  Clamping never touches a band you did not grab, and it
+// costs nothing: every ordered arrangement is still reachable, by
+// moving the band that is in the way first, and unordered ones are what
+// this is for.
+//
+// In pot units rather than hertz.  Pot units are what gets stored and
+// what gets sent, so clamping there is exact - clamp in hertz and the
+// conversion back can round to a step the far side of the neighbour it
+// was just clamped to.
+//
+function clampToNeighbours(vals, idx, want) {
+    const lo = idx > 0 ? vals[idx - 1] : 0;
+    const hi = idx < vals.length - 1 ? vals[idx + 1] : 120;
+
+    return Math.max(lo, Math.min(hi, want));
+}
+
+//
+// Which bands are sitting exactly on top of this one.
+//
+// Clamping produces exact equality rather than near misses - a band
+// stopped by its neighbour is given that neighbour's value - so a pile
+// can be identified by that alone, with no tolerance to tune. Two bands
+// that are merely close are not a pile, and go on being told apart by
+// which one you aimed at.
+//
+function pileAt(vals, idx) {
+    const pile = [];
+
+    for (let i = 0; i < vals.length; i++)
+        if (vals[i] === vals[idx])
+            pile.push(i);
+
+    return pile;
+}
+
+//
 // A frequency, short enough to sit under a control point.
 //
 // Two significant figures, because that is about all the control can
@@ -2417,9 +2465,18 @@ function renderUI() {
             const dbToY = (db, H) => H / 2 - db * (H / (2 * EQ_DB_SPAN));
             const yToDb = (y, H) => (H / 2 - y) * (2 * EQ_DB_SPAN) / H;
 
+            const EQ_PICK_SLOP = 4;     // px before a drag has a direction
+
             let isDragging = false;
             let dragPointerId = null;
+            let dragStartX = 0, dragStartY = 0;
+            let dragPile = null;
             let activeNodeIdx = -1;
+
+            // The five band frequencies, as pot values - the app's live
+            // copy of what the pedal has
+            const freqPots = () =>
+                  [0, 1, 2, 3, 4].map((i) => parseInt(eqPotsInputs[i * 2].value));
             let nodes = [];
 
             let lastEqUpdate = 0;
@@ -2432,8 +2489,9 @@ function renderUI() {
 
                 // Off the end of the graph is off the end of the pot,
                 // which valueToPot() already answers by clamping
-                const fVal = valueToPot(fDef, freq);
                 const gVal = valueToPot(gDef, db);
+                const fVal = clampToNeighbours(freqPots(), nodeIdx,
+                                               valueToPot(fDef, freq));
 
                 // Update inputs visually
                 eqPotsInputs[fIdx].value = fVal;
@@ -2513,6 +2571,22 @@ function renderUI() {
                 if (activeNodeIdx !== -1) {
                     isDragging = true;
                     dragPointerId = e.pointerId;
+                    dragStartX = e.clientX;
+                    dragStartY = e.clientY;
+
+                    //
+                    // If bands are piled on top of each other, which
+                    // one you meant depends on which way you are about
+                    // to go, and that is not known yet.  Remember the
+                    // pile and settle it on the first real movement.
+                    //
+                    // The provisional pick stays highlighted meanwhile
+                    // and it does not matter which of them it is: they
+                    // are drawn in the same place, so the correction is
+                    // invisible.
+                    //
+                    const pile = pileAt(freqPots(), activeNodeIdx);
+                    dragPile = pile.length > 1 ? pile : null;
                     //
                     // The rest of the drag is heard on the window, not
                     // on the canvas.  A node has limits and the pointer
@@ -2539,6 +2613,37 @@ function renderUI() {
                 if (!isDragging || activeNodeIdx === -1) return;
                 if (e.pointerId !== dragPointerId) return;
                 e.preventDefault();
+
+                //
+                // Settle which of a pile was meant, once, on the first
+                // movement worth reading - and change nothing at all
+                // until then, so the answer cannot arrive after some
+                // other band has already been edited.
+                //
+                // Going left takes the lowest-numbered and going right
+                // the highest, which sounds like a convention and is
+                // not: under clamping those are the only two that can
+                // move at all.  The rest of the pile is blocked by the
+                // one being picked.  So this is "take the one that is
+                // free to go where you are going", and it peels a pile
+                // apart one band at a time.
+                //
+                // A mostly-vertical first move is a gain edit, where
+                // the order does not come into it, so the provisional
+                // pick stands.
+                //
+                if (dragPile) {
+                    const dx = e.clientX - dragStartX;
+                    const dy = e.clientY - dragStartY;
+
+                    if (Math.abs(dx) < EQ_PICK_SLOP && Math.abs(dy) < EQ_PICK_SLOP)
+                        return;
+                    if (Math.abs(dx) >= Math.abs(dy))
+                        activeNodeIdx = dx < 0 ? dragPile[0]
+                                               : dragPile[dragPile.length - 1];
+                    dragPile = null;
+                }
+
                 const pos = getPointerPos(e);
                 const canvas = curveWrapper.querySelector(`#eq-canvas-${idx}`);
                 const W = canvas.width;
@@ -2567,6 +2672,7 @@ function renderUI() {
                 window.removeEventListener('pointerup', onUp);
                 window.removeEventListener('pointercancel', onUp);
                 dragPointerId = null;
+                dragPile = null;
 
                 if (isDragging && activeNodeIdx !== -1) {
                     // Force final sysex flush on release
