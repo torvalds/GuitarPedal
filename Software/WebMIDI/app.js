@@ -1839,6 +1839,17 @@ function applyRouting(routeIds) {
         effectsContainer.appendChild(card);
         card.classList.remove('parked');
 
+        //
+        // Anything drawn from the card's own measurements was drawn
+        // blind while it was parked, because a hidden element has no
+        // size to measure.  This is not a corner case: the pedal's state
+        // dump arrives before the routing order that ends it, so every
+        // card is parked for the whole of it.
+        //
+        const effect = PEDAL_EFFECTS[effectIdMap.get(id)];
+        if (effect && effect.redrawCurve)
+            effect.redrawCurve();
+
         // Open it on the way in.  An effect that has just been added is
         // one you are about to set up - but only on the way in, or
         // reordering the chain would keep reopening a card you closed.
@@ -2085,6 +2096,21 @@ function renderUI() {
                 const H = canvas.height;
                 ctx.clearRect(0, 0, W, H);
 
+                //
+                // How many canvas units there are to a screen pixel, for
+                // the things that should be a fixed size to the eye.
+                //
+                // A parked card has no layout and so no width at all.
+                // Falling back to 1 keeps this finite; applyRouting()
+                // redraws when a card is unparked, which is what makes
+                // the fallback temporary rather than wrong - a card is
+                // parked for the whole of the pedal's state dump, so
+                // this is the ordinary case at startup and not a corner.
+                //
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = rect.width ? W / rect.width : 1;
+                const scaleY = rect.height ? H / rect.height : 1;
+
                 // Math helper for biquad mag sq
                 function fastsincos(f) {
                     const rad = f * 2 * Math.PI;
@@ -2212,8 +2238,40 @@ function renderUI() {
 
                     nodes.push({x, y});
 
+                    //
+                    // The node and its labels are drawn in screen px,
+                    // not canvas units.
+                    //
+                    // The canvas is 1000 wide and 300 tall and is drawn
+                    // at whatever width the card is, so the two axes are
+                    // scaled by quite different amounts and a round arc
+                    // is round at exactly one card width.  On a phone
+                    // the dot came out about 2.5px across and 8px tall,
+                    // its outline was three times thinner sideways than
+                    // it was top to bottom, and the labels were squashed
+                    // to a third of their width.
+                    //
+                    // Scaling by exactly what the css then divides by
+                    // leaves the net transform an identity, so anything
+                    // drawn in here lands on the glass the size it says.
+                    // It has to wrap the strokes and the text too: a
+                    // line width is in user units like everything else,
+                    // which is the whole reason the outline was wrong.
+                    //
+                    // The curve itself is deliberately left alone.  It
+                    // is a graph, and a graph is drawn in the units of
+                    // the thing it is plotting.  These are controls
+                    // sitting on top of it, and a control's size is a
+                    // claim about where it can be grabbed - so it wants
+                    // to agree with the hit test, which is also in
+                    // screen px.  See EQ_GRAB_RADIUS.
+                    //
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.scale(scaleX, scaleY);
+
                     ctx.beginPath();
-                    ctx.arc(x, y, 8, 0, 2 * Math.PI);
+                    ctx.arc(0, 0, EQ_NODE_RADIUS, 0, 2 * Math.PI);
                     ctx.fillStyle = (typeof activeNodeIdx !== 'undefined' && i === activeNodeIdx) ? '#ffffff' : '#4ecca3';
                     ctx.fill();
                     ctx.lineWidth = 2;
@@ -2225,8 +2283,10 @@ function renderUI() {
                     ctx.font = '12px "Inter", sans-serif';
                     ctx.textAlign = 'center';
                     let fStr = freq >= 1000 ? (freq/1000).toFixed(2) + 'k' : freq.toFixed(0);
-                    ctx.fillText(`${fStr}Hz`, x, y - 24);
-                    ctx.fillText(`${db > 0 ? '+' : ''}${db.toFixed(1)}dB`, x, y - 10);
+                    ctx.fillText(`${fStr}Hz`, 0, -24);
+                    ctx.fillText(`${db > 0 ? '+' : ''}${db.toFixed(1)}dB`, 0, -10);
+
+                    ctx.restore();
                 }
             };
 
@@ -2234,10 +2294,13 @@ function renderUI() {
 
             // Interactive EQ logic
             //
-            // Screen px, and generous: nothing else on this canvas is
-            // grabbable, so there is nothing for a wide target to steal
-            // from, and the nearest node wins where two overlap.
+            // Both in screen px.  The dot is what you see and the radius
+            // is what you can hit, and a target wider than its dot is
+            // the normal arrangement - nothing else on this canvas is
+            // grabbable, so there is nothing for it to steal from, and
+            // the nearest node wins where two overlap.
             //
+            const EQ_NODE_RADIUS = 7;
             const EQ_GRAB_RADIUS = 30;
 
             let isDragging = false;

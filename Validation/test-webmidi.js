@@ -85,6 +85,12 @@ function element(id) {
         querySelector() { return element('?'); },
         querySelectorAll() { return []; },
         closest() { return null; },
+        // Nothing here is laid out, so everything has no size - which is
+        // also what a real parked card reports, and is the case the
+        // drawing code has a fallback for.
+        getBoundingClientRect() {
+            return { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 };
+        },
         scrollIntoView() {},
         focus() {},
         getContext() { return new Proxy({}, { get: () => () => {} }); },
