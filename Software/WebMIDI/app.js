@@ -2259,7 +2259,7 @@ function renderUI() {
                     const db = 20.0 * Math.log10(mag);
 
                     // map dB to Y [0..H]
-                    let y = (H/2) - (db * (H/40)); // +- 20dB range
+                    let y = dbToY(db, H);
 
                     if (x === 0) ctx.moveTo(x, y);
                     else ctx.lineTo(x, y);
@@ -2275,7 +2275,7 @@ function renderUI() {
                     const fx = 13.0 * Math.log2(freq / 20.0);
                     const p = fx / maxFx;
                     const x = margin + p * graphWidth;
-                    const y = (H / 2) - (db * (H / 40));
+                    const y = dbToY(db, H);
 
                     nodes.push({x, y});
 
@@ -2392,6 +2392,30 @@ function renderUI() {
             const EQ_GRAB_RADIUS = 30;
             const EQ_SHELF_TICK = 14;   // how far a shelf's tick reaches out
             const EQ_SHELF_TICK_WIDTH = 3;
+
+            //
+            // How much of the gain axis the graph shows, either side of
+            // 0dB.  More than the pots can reach, which is +-20.
+            //
+            // They used to be the same number, so a band at full gain
+            // put its node exactly on the canvas edge - the dot drawn
+            // half outside it and the two labels, which sit above the
+            // node, entirely outside it.  The reading disappeared at
+            // precisely the setting you would want to read.
+            //
+            // Widening the axis rather than making the canvas taller.
+            // Taller costs vertical space on the screen that a phone
+            // does not have, and the picture does not want it: what is
+            // gained is headroom, which is empty by definition. This
+            // way +-20dB is the middle 71% of the height and the rest
+            // is room for the labels to live in.  It also means the
+            // summed curve, which five bands can push well past 20dB,
+            // stays in the picture for longer.
+            //
+            const EQ_DB_SPAN = 28;
+
+            const dbToY = (db, H) => H / 2 - db * (H / (2 * EQ_DB_SPAN));
+            const yToDb = (y, H) => (H / 2 - y) * (2 * EQ_DB_SPAN) / H;
 
             let isDragging = false;
             let dragPointerId = null;
@@ -2530,7 +2554,7 @@ function renderUI() {
                 const p = (posX - margin) / graphWidth;
                 const fx = p * maxFx;
                 const freq = 20.0 * Math.pow(2, fx / 13.0);
-                const db = (H / 2 - posY) / (H / 40);
+                const db = yToDb(posY, H);
 
                 updateEqNode(activeNodeIdx, freq, db);
             };
