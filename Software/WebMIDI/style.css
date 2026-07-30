@@ -1046,3 +1046,23 @@ input[type=range].large-slider::-webkit-slider-runnable-track {
   color: var(--text-muted);
   border: 1px solid var(--text-muted);
 }
+
+/*
+ * The Signal Chain's meters.
+ *
+ * Deliberately plain text rather than bars. The number is what you act on
+ * - Level is set in dB and the floor is reported in dB, so the useful
+ * gesture is comparing two numbers, and a bar would make that harder
+ * rather than easier.
+ *
+ * Tabular figures so the digits do not shuffle sideways five times a
+ * second while you watch them.
+ */
+.meters {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--panel-border);
+  padding-top: 10px;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}

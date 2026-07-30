@@ -6,7 +6,8 @@ const SYSEX_CMD = {
     REQ_STATE: 0x05,
     ROUTING_ORDER: 0x08,
     DIAGNOSTIC: 0x09,
-    IDENTITY: 0x0a
+    IDENTITY: 0x0a,
+    TELEMETRY: 0x0b
 };
 
 let midiAccess = null;
@@ -290,6 +291,7 @@ function updateMidiState() {
 
         // Who is this, then what does it have
         sendSysex([SYSEX_CMD.IDENTITY]);
+        updateTelemetryPolling();
         sendSysex([SYSEX_CMD.REQ_SCHEMA]);
         sendSysex([SYSEX_CMD.DIAGNOSTIC]); // Request diagnostic status
     } else {
@@ -300,6 +302,7 @@ function updateMidiState() {
 
         // Nothing is going to tell us it stopped, so stop saying it
         clearPedalStatus();
+        updateTelemetryPolling();
     }
 }
 
@@ -357,9 +360,18 @@ function sendSysex(data) {
     if (!midiOutput) return;
     const msg = new Uint8Array([0xF0, 0x7D, ...data, 0xF7]);
     midiOutput.send(msg);
-    if (data[0] !== SYSEX_CMD.DIAGNOSTIC && data[0] !== SYSEX_CMD.REQ_SCHEMA && data[0] !== SYSEX_CMD.REQ_STATE) {
+    //
+    // Having done something, ask whether it went wrong.  Queries are not
+    // doing something, and telemetry especially is not: it is polled
+    // several times a second, and dragging a diagnostic request along with
+    // every frame would double the traffic and drain the pedal's one
+    // status message before anybody could look at it.
+    //
+    const query = [SYSEX_CMD.DIAGNOSTIC, SYSEX_CMD.REQ_SCHEMA,
+                   SYSEX_CMD.REQ_STATE, SYSEX_CMD.IDENTITY,
+                   SYSEX_CMD.TELEMETRY];
+    if (!query.includes(data[0]))
         scheduleDiagnostic();
-    }
 }
 
 let PEDAL_EFFECTS = [];
@@ -402,6 +414,10 @@ function handleSysex(data) {
             }
             break;
         }
+
+        case SYSEX_CMD.TELEMETRY:
+            handleTelemetry(data);
+            break;
 
         case SYSEX_CMD.DIAGNOSTIC: {
             // Diagnostic Response
@@ -1131,6 +1147,80 @@ function populateScenePicker(count) {
         sel.value = was;
     updateSceneLabels();
 }
+
+//
+// Telemetry, polled while somebody is watching.
+//
+// The layout is append-only, so read the fields this app knows about and
+// stop.  A frame shorter than expected is firmware from before the tail
+// existed; a longer one is firmware from after this app was written.
+// Neither is an error, and neither means zero - so every field is fetched
+// through a helper that can answer "absent", and an absent field is left
+// out of the readout rather than shown as a dash.
+//
+const TELEMETRY_POLL_MS = 200;
+let telemetryTimer = null;
+
+// 127 is the saturation the pedal sends for silence
+function formatDbfs(byte) {
+    return byte >= 127 ? '\u2212\u221e' : `\u2212${byte}`;
+}
+
+function handleTelemetry(data) {
+    // The whole message: F0 7D 0B <version> <fields...> F7
+    const at = (i) => (3 + i < data.length - 1 ? data[3 + i] : undefined);
+
+    if (at(0) === undefined)
+        return;
+
+    const inPeak = at(1), floor = at(2), out = at(3);
+    const gate = at(4), load = at(5);
+    const bits = [];
+
+    if (inPeak !== undefined) bits.push(`in ${formatDbfs(inPeak)} dB`);
+    if (floor !== undefined) bits.push(`floor ${formatDbfs(floor)} dB`);
+    if (out !== undefined) bits.push(`out ${formatDbfs(out)} dB`);
+
+    //
+    // The gate as how far it is holding the signal down, not as a
+    // percentage of a multiplier: "\u221218 dB" is the number you compare
+    // against Level, which is also in dB.
+    //
+    if (gate !== undefined) {
+        if (gate >= 127)
+            bits.push('gate open');
+        else if (gate === 0)
+            bits.push('gate closed');
+        else
+            bits.push(`gate \u2212${Math.round(-20 * Math.log10(gate / 127))} dB`);
+    }
+    if (load !== undefined)
+        bits.push(`cpu ${Math.round((load / 127) * 100)}%`);
+
+    const el = document.getElementById('signal-chain-meters');
+    if (el) el.textContent = bits.join('  \u00b7  ');
+}
+
+//
+// Only while there is a pedal and somebody is looking at the page.  A
+// backgrounded tab polling five times a second is MIDI traffic spent on
+// meters nobody can see.
+//
+function updateTelemetryPolling() {
+    const want = !!midiOutput && document.visibilityState === 'visible';
+
+    if (want && !telemetryTimer) {
+        telemetryTimer = setInterval(() => sendSysex([SYSEX_CMD.TELEMETRY]),
+                                     TELEMETRY_POLL_MS);
+    } else if (!want && telemetryTimer) {
+        clearInterval(telemetryTimer);
+        telemetryTimer = null;
+        const el = document.getElementById('signal-chain-meters');
+        if (el) el.textContent = 'no readings yet';
+    }
+}
+
+document.addEventListener('visibilitychange', updateTelemetryPolling);
 
 //
 // What the pedal says it is.  Asked once, on connect.
@@ -1975,6 +2065,21 @@ function renderUI() {
             setTimeout(() => effect.redrawCurve(), 0);
         }
         card.appendChild(controls);
+
+        //
+        // The meters live on the Signal Chain card because that is where
+        // the question gets asked: Level wants to sit above the noise
+        // floor, and until now the only way to find the floor was to move
+        // Level until something happened.
+        //
+        if (effect.base === 'signal_chain') {
+            const meters = document.createElement('div');
+            meters.className = 'meters';
+            meters.id = 'signal-chain-meters';
+            meters.textContent = 'no readings yet';
+            card.appendChild(meters);
+        }
+
         effectsContainer.appendChild(card);
     });
 }

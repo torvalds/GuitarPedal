@@ -137,7 +137,7 @@ global.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 //
 const WANT = ['handleIdentity', 'populateScenePicker', 'updateSceneLabels',
               'boardFault', 'earlyNote', 'clipFault', 'dropFault',
-              'renderAttention'];
+              'renderAttention', 'handleTelemetry', 'handleSysex'];
 
 const src = fs.readFileSync(effectsJs, 'utf8') + '\n'
           + fs.readFileSync(path.join(WEB, 'app.js'), 'utf8') + '\n'
@@ -210,8 +210,78 @@ check('and the identity reply drives it', picker.children.length === 1,
 // Nothing routed and nothing asking: this must not throw on a fresh page
 app.renderAttention();
 
+//
+// Feed it the pedal's actual schema, which is the only way to get the
+// effect cards built - and building them is worth exercising, since it is
+// where most of the app's DOM work happens.  midi_schema.h is generated
+// next to effects.js, so it is wherever that was found.
+//
+const schemaPath = path.join(path.dirname(path.resolve(effectsJs)), 'midi_schema.h');
+const fallback = path.join(__dirname, '..', 'Software', 'build', 'midi_schema.h');
+const schemaFile = fs.existsSync(schemaPath) ? schemaPath
+                 : (fs.existsSync(fallback) ? fallback : null);
+
+if (!schemaFile) {
+    say('  FAIL: no midi_schema.h found, so no cards can be built');
+    process.exit(1);
+}
+
+const literal = fs.readFileSync(schemaFile, 'utf8').match(/"((?:[^"\\]|\\.)*)"/);
+const schemaJson = literal[1].replace(/\\"/g, '"');
+const asSysex = (cmd, text) => [0xF0, 0x7D, cmd,
+                                ...[...text].map((c) => c.charCodeAt(0)), 0xF7];
+
+app.handleSysex(asSysex(0x02, schemaJson));
+check('the real schema builds the cards',
+      document.getElementById('signal-chain-meters') !== null);
+
+//
+// Telemetry.  The layout is append-only, so the interesting cases are the
+// short frame from older firmware and the long one from newer - neither is
+// an error, and a missing field is absent rather than zero.
+//
+const meters = document.getElementById('signal-chain-meters');
+const frame = (...body) => [0xF0, 0x7D, 0x0B, ...body, 0xF7];
+
+app.handleTelemetry(frame(1, 38, 61, 18, 127, 42));
+check('a full frame reads out', /in −38 dB/.test(meters.textContent)
+      && /floor −61 dB/.test(meters.textContent)
+      && /out −18 dB/.test(meters.textContent), meters.textContent);
+check('an open gate says so', /gate open/.test(meters.textContent),
+      meters.textContent);
+check('cpu is a percentage', /cpu 33%/.test(meters.textContent),
+      meters.textContent);
+
+app.handleTelemetry(frame(1, 0, 127, 0, 0, 127));
+check('silence is not a number', /floor −∞ dB/.test(meters.textContent),
+      meters.textContent);
+check('a closed gate says so', /gate closed/.test(meters.textContent),
+      meters.textContent);
+check('full scale reads zero', /in −0 dB/.test(meters.textContent),
+      meters.textContent);
+
+app.handleTelemetry(frame(1, 30, 55, 20, 32, 10));
+check('a gating gate reads in dB', /gate −12 dB/.test(meters.textContent),
+      meters.textContent);
+
+// Older firmware: fields this app knows about are simply not there
+app.handleTelemetry(frame(1, 40, 60));
+check('a short frame keeps what it has', /in −40 dB/.test(meters.textContent)
+      && /floor −60 dB/.test(meters.textContent), meters.textContent);
+check('and does not invent the rest', !/out/.test(meters.textContent)
+      && !/cpu/.test(meters.textContent), meters.textContent);
+
+// Newer firmware: extra fields at the end, which must simply be ignored
+app.handleTelemetry(frame(1, 12, 34, 56, 127, 64, 99, 98, 97));
+check('a long frame is read as far as we understand it',
+      /in −12 dB/.test(meters.textContent) && /cpu 50%/.test(meters.textContent),
+      meters.textContent);
+
+// A frame with nothing in it at all must not throw or print rubbish
+app.handleTelemetry(frame());
+
 if (failures) {
     say(`test-webmidi: ${failures} failure(s)`);
     process.exit(1);
 }
-say('test-webmidi: app loads, identity and scene handling behave');
+say('test-webmidi: app loads; identity, scenes and telemetry behave');
