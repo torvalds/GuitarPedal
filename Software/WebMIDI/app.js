@@ -2213,8 +2213,9 @@ function renderUI() {
         //
         // Bands take the pots in order, two each: frequency then gain.
         //
-        const bands = (effect.graph || []).map((type, b) => ({
-            type, freqPot: b * 2, gainPot: b * 2 + 1
+        const bands = (effect.graph || []).map((band, b) => ({
+            type: band.type, q: band.q, qPot: band.qPot,
+            freqPot: b * 2, gainPot: b * 2 + 1
         }));
         const isEq = bands.length > 0;
 
@@ -2325,13 +2326,24 @@ function renderUI() {
                 const getFloat = (p_idx) => potToValue(effect.pots[p_idx], pots[p_idx]);
                 function peq_pot_A(db) { return Math.pow(10, db / 40.0); }
 
+                //
+                // Q comes from the band, not from here.  It was 1.0 for
+                // everything the app drew while each effect ran whatever
+                // its own header said, so the curve was not the filter
+                // for anything that disagreed.
+                //
+                // A band's Q is a fixed number, or a pot it can be
+                // dragged from while playing.
+                //
                 const fs = 48000;
-                const Q = 1.0;
                 const shape = { LOSHELF: biquad_loshelf, PEAKING: biquad_peaking,
                                 HISHELF: biquad_hishelf };
+                const bandQ = (band) =>
+                      band.qPot === undefined ? band.q : getFloat(band.qPot);
+
                 const coeff = bands.map((band) =>
                       shape[band.type](fastsincos(getFloat(band.freqPot) / fs),
-                                       Q, peq_pot_A(getFloat(band.gainPot))));
+                                       bandQ(band), peq_pot_A(getFloat(band.gainPot))));
 
                 ctx.beginPath();
                 ctx.lineWidth = 4;

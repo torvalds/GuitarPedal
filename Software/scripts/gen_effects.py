@@ -141,13 +141,36 @@ def generate(audio_dir, out_h, out_js, out_md):
         # still a special case, but a general one, and open to any
         # effect that wants a picture.
         #
-        graph_match = re.search(r'//[ \t]*GRAPH:[ \t]*([A-Z \t]*)', content)
-        graph = graph_match.group(1).split() if graph_match else []
+        # A band may carry its Q as 'PEAKING:0.707', or take it from a
+        # pot as 'PEAKING:POT6' so it can be moved while playing.
+        # Unstated is 1.0, which is what the only graphed effect used
+        # before there was anywhere to say otherwise.
+        graph_match = re.search(r'//[ \t]*GRAPH:[ \t]*([A-Z0-9.: \t]*)', content)
+        graph = []
 
-        for band in graph:
-            if band not in ('LOSHELF', 'PEAKING', 'HISHELF'):
-                raise SystemExit(f"{header_path}: GRAPH: unknown band '{band}' "
+        for word in graph_match.group(1).split() if graph_match else []:
+            kind, _, q = word.partition(':')
+            if kind not in ('LOSHELF', 'PEAKING', 'HISHELF'):
+                raise SystemExit(f"{header_path}: GRAPH: unknown band '{kind}' "
                                  f"(want LOSHELF/PEAKING/HISHELF)")
+            if q.startswith('POT'):
+                try:
+                    q_pot = int(q[3:])
+                except ValueError:
+                    raise SystemExit(f"{header_path}: GRAPH: '{word}' is not a pot")
+                if not 0 <= q_pot < len(pots):
+                    raise SystemExit(f"{header_path}: GRAPH: '{word}' names pot "
+                                     f"{q_pot}, and there are {len(pots)}")
+                graph.append({'type': kind, 'q_pot': q_pot})
+                continue
+            try:
+                q = float(q) if q else 1.0
+            except ValueError:
+                raise SystemExit(f"{header_path}: GRAPH: '{word}' has no readable Q")
+            if q <= 0.0:
+                raise SystemExit(f"{header_path}: GRAPH: Q must be positive, got {q}")
+            graph.append({'type': kind, 'q': q})
+
         if graph and len(graph) * 2 > len(pots):
             raise SystemExit(f"{header_path}: GRAPH: declares {len(graph)} bands "
                              f"but there are only {len(pots)} pots to make "
@@ -214,7 +237,10 @@ def generate(audio_dir, out_h, out_js, out_md):
             "shortName": e_data['short_name'],
             "defMix": e_data['def_mix'],
             "mixLaw": e_data['mix_law'],
-            "graph": e_data['graph'],
+            # The schema is camelCase, the python is not
+            "graph": [{"type": b['type'], "q": b['q']} if 'q' in b
+                      else {"type": b['type'], "qPot": b['q_pot']}
+                      for b in e_data['graph']],
             "pots": ui_pots
         })
 
@@ -267,6 +293,27 @@ def generate(audio_dir, out_h, out_js, out_md):
                 f.write(f"static sample_t __audio_func({base}_step)(sample_t);\n")
             else:
                 f.write(f"static float __audio_func({base}_step)(float);\n")
+            #
+            # The Q of each graphed band, from the same declaration the
+            # app draws from.  It used to be a constant in the effect
+            # header and a different constant in the app, which is two
+            # places for one number - and they had already diverged.
+            #
+            # Written into an array at init rather than read where it is
+            # used, so there is one call site whatever the bands turn out
+            # to be: a helper with several would risk becoming a real
+            # call, and this runs on the audio core.
+            #
+            if e_data['graph']:
+                f.write(f"static inline void {base}_graph_q("
+                        f"float *q, const unsigned char pot[10])\n{{\n")
+                for n, b in enumerate(e_data['graph']):
+                    if 'q_pot' in b:
+                        f.write(f"\tq[{n}] = {base}_pot{b['q_pot']}"
+                                f"(pot[{b['q_pot']}]);\n")
+                    else:
+                        f.write(f"\tq[{n}] = {b['q']}f;\n")
+                f.write("}\n")
             f.write(f"#include \"../effects/{base}.h\"\n")
 
             # The mixing wrapper, which is what the chain actually calls -

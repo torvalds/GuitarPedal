@@ -56,18 +56,23 @@ struct {
 	struct biquad_state state[5];
 } peq;
 
-// Fixed Q for the 5-band EQ
-static const float PEQ_Q = 1.0f;
-
+// Q comes from the GRAPH: line above, so the app draws the same shape
+// this builds.  Unstated there means 1.0, which is what these five have
+// always used - all ten pots are spent on frequencies and gains, so
+// there is nothing left to make it adjustable with.  See tone.h, which
+// has the room.
 static void parametric_eq_init(unsigned char pot[10])
 {
 	struct biquad_coeff *c = peq.coeff;
+	float q[5];
 
-	_biquad_loshelf(c+0, fastsincos(parametric_eq_pot0(pot[0]) / SAMPLES_PER_SEC), PEQ_Q, db_to_level(parametric_eq_pot1(pot[1])));
-	_biquad_peaking(c+1, fastsincos(parametric_eq_pot2(pot[2]) / SAMPLES_PER_SEC), PEQ_Q, db_to_level(parametric_eq_pot3(pot[3])));
-	_biquad_peaking(c+2, fastsincos(parametric_eq_pot4(pot[4]) / SAMPLES_PER_SEC), PEQ_Q, db_to_level(parametric_eq_pot5(pot[5])));
-	_biquad_peaking(c+3, fastsincos(parametric_eq_pot6(pot[6]) / SAMPLES_PER_SEC), PEQ_Q, db_to_level(parametric_eq_pot7(pot[7])));
-	_biquad_hishelf(c+4, fastsincos(parametric_eq_pot8(pot[8]) / SAMPLES_PER_SEC), PEQ_Q, db_to_level(parametric_eq_pot9(pot[9])));
+	parametric_eq_graph_q(q, pot);
+
+	_biquad_loshelf(c+0, fastsincos(parametric_eq_pot0(pot[0]) / SAMPLES_PER_SEC), q[0], db_to_level(parametric_eq_pot1(pot[1])));
+	_biquad_peaking(c+1, fastsincos(parametric_eq_pot2(pot[2]) / SAMPLES_PER_SEC), q[1], db_to_level(parametric_eq_pot3(pot[3])));
+	_biquad_peaking(c+2, fastsincos(parametric_eq_pot4(pot[4]) / SAMPLES_PER_SEC), q[2], db_to_level(parametric_eq_pot5(pot[5])));
+	_biquad_peaking(c+3, fastsincos(parametric_eq_pot6(pot[6]) / SAMPLES_PER_SEC), q[3], db_to_level(parametric_eq_pot7(pot[7])));
+	_biquad_hishelf(c+4, fastsincos(parametric_eq_pot8(pot[8]) / SAMPLES_PER_SEC), q[4], db_to_level(parametric_eq_pot9(pot[9])));
 }
 
 static float parametric_eq_step(float in)
