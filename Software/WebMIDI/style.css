@@ -478,9 +478,6 @@ input[type=range]:focus::-moz-range-thumb {
   cursor: crosshair;
 }
 
-.eq-sliders-hidden {
-  display: none !important;
-}
 
 /*
  * The canvas is a drag surface in both directions - a node carries a
@@ -497,6 +494,17 @@ input[type=range]:focus::-moz-range-thumb {
   height: 100%;
   display: block;
   touch-action: none;
+}
+
+/*
+ * The sliders behind the curve.
+ *
+ * Every graphed pot still has one, because the slider is what holds the
+ * value and what the pedal's updates arrive on - the node just moves it.
+ * None of them are ever seen, so this is the whole of their styling.
+ */
+.eq-sliders {
+  display: none;
 }
 
 .eq-curve-svg {
@@ -562,38 +570,9 @@ input[type=range]:focus::-moz-range-thumb {
   cursor: pointer;
 }
 
-.eq-sliders {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: relative;
-  z-index: 1;
-  margin-top: 10px;
-}
 
-.eq-pot {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
-  height: 260px; /* enough space for val, slider, label */
-  width: 10%;
-}
 
-.eq-slider-wrapper {
-  width: 20px;
-  height: 180px;
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
 
-input[type=range].eq-range {
-  transform: rotate(-90deg);
-  width: 180px; /* this becomes the visual height */
-  margin: 0;
-}
 
 /* Bottom Panels (Generic) */
 /* Panel Backdrop */

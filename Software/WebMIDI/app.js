@@ -2231,7 +2231,7 @@ function renderUI() {
             controls.appendChild(curveWrapper);
 
             slidersContainer = document.createElement('div');
-            slidersContainer.className = 'eq-sliders eq-sliders-hidden';
+            slidersContainer.className = 'eq-sliders';
             controls.appendChild(slidersContainer);
 
             //
@@ -2245,7 +2245,12 @@ function renderUI() {
 
             effect.redrawCurve = () => {
                 const canvas = curveWrapper.querySelector(`#eq-canvas-${idx}`);
-                if (!canvas || eqPotsInputs.length < 10) return;
+                //
+                // The pots are collected as the card is built, so an
+                // early redraw can arrive before they are all there.
+                // Two per band is how many it takes to draw one.
+                //
+                if (!canvas || eqPotsInputs.length < bands.length * 2) return;
                 const ctx = canvas.getContext('2d');
                 const W = canvas.width;
                 const H = canvas.height;
@@ -2327,17 +2332,16 @@ function renderUI() {
                 function peq_pot_A(db) { return Math.pow(10, db / 40.0); }
 
                 //
-                // Q comes from the band, not from here.  It was 1.0 for
-                // everything the app drew while each effect ran whatever
-                // its own header said, so the curve was not the filter
-                // for anything that disagreed.
-                //
-                // A band's Q is a fixed number, or a pot it can be
-                // dragged from while playing.
+                // Q comes from the band, not from here.  It used to be
+                // 1.0 for everything the app drew while the effect ran
+                // whatever its own header said, so the curve was not the
+                // filter for anything that disagreed.
                 //
                 const fs = 48000;
                 const shape = { LOSHELF: biquad_loshelf, PEAKING: biquad_peaking,
                                 HISHELF: biquad_hishelf };
+                // A band's Q is a fixed number, or a pot it can be
+                // dragged from while playing
                 const bandQ = (band) =>
                       band.qPot === undefined ? band.q : getFloat(band.qPot);
 
@@ -2521,7 +2525,10 @@ function renderUI() {
             // summed curve, which five bands can push well past 20dB,
             // stays in the picture for longer.
             //
-            const EQ_DB_SPAN = 28;
+            const EQ_DB_HEADROOM = 8;
+            const EQ_DB_SPAN = EQ_DB_HEADROOM +
+                  Math.max(...bands.map((b) => Math.max(Math.abs(effect.pots[b.gainPot].min),
+                                                        Math.abs(effect.pots[b.gainPot].max))));
 
             const dbToY = (db, H) => H / 2 - db * (H / (2 * EQ_DB_SPAN));
             const yToDb = (y, H) => (H / 2 - y) * (2 * EQ_DB_SPAN) / H;
@@ -2827,8 +2834,12 @@ function renderUI() {
         effect.pots.forEach((pot, pIdx) => {
             const potIdKey = `eff-${idx}-pot-${pIdx}`;
 
+            // Whether the graph draws a node for this one, which
+            // decides where it goes rather than how it looks
+            const banded = isEq && pIdx < bands.length * 2;
+
             const potDiv = document.createElement('div');
-            potDiv.className = isEq ? 'pot-control eq-pot' : 'pot-control';
+            potDiv.className = 'pot-control';
 
             const label = document.createElement('div');
             label.className = 'pot-label';
@@ -2867,8 +2878,9 @@ function renderUI() {
                 input.value = initialVal;
                 input.potDef = pot; // Attach pot definition for formatting
 
+                // Every pot of a graphed effect feeds the curve, node
+                // or no node - see bandQ() - so every one redraws it
                 if (isEq) {
-                    input.className = 'eq-range';
                     input.redrawCurve = effect.redrawCurve;
                     eqPotsInputs.push(input);
                 }
@@ -2882,19 +2894,9 @@ function renderUI() {
                     if (input.redrawCurve) input.redrawCurve();
                 });
 
-                if (isEq) {
-                    const sliderWrapper = document.createElement('div');
-                    sliderWrapper.className = 'eq-slider-wrapper';
-                    sliderWrapper.appendChild(input);
-
-                    potDiv.appendChild(valDisplay);
-                    potDiv.appendChild(sliderWrapper);
-                    potDiv.appendChild(label);
-                } else {
-                    potDiv.appendChild(label);
-                    potDiv.appendChild(valDisplay);
-                    potDiv.appendChild(input);
-                }
+                potDiv.appendChild(label);
+                potDiv.appendChild(valDisplay);
+                potDiv.appendChild(input);
 
                 //
                 // Tapping the pot opens the big slider panel - except for
@@ -2911,10 +2913,23 @@ function renderUI() {
                     setActivePot(potIdKey, pot, parseInt(input.value), effect.name));
             }
 
-            if (isEq) {
+            if (!isEq) {
+                controls.appendChild(potDiv);
+            } else if (pIdx < bands.length * 2) {
+                //
+                // Part of the picture.  The slider still exists and is
+                // still what carries the value - the graph moves it -
+                // but it is hidden, because the node is the control.
+                //
                 slidersContainer.appendChild(potDiv);
             } else {
-                controls.appendChild(potDiv);
+                //
+                // A pot the graph has no node for, so it needs somewhere
+                // real to live: the row under the curve, beside Mix.
+                // Hiding it with the others would have made it a control
+                // that exists and cannot be reached.
+                //
+                eqFooter.appendChild(potDiv);
             }
         });
 
