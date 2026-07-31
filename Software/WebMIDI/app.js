@@ -2329,6 +2329,20 @@ function renderUI() {
 
                 const pots = eqPotsInputs.map(el => parseInt(el.value));
                 const getFloat = (p_idx) => potToValue(effect.pots[p_idx], pots[p_idx]);
+                //
+                // A, not the gain: 10^(dB/40) is the square root of the
+                // linear gain, which is what the cookbook formulas above
+                // want and what they are handed here.
+                //
+                // The firmware's _biquad_peaking() takes the *gain* in
+                // that argument and square-roots it itself, so it is
+                // handed db_to_level(), which is 10^(dB/20).  Same name,
+                // same shape, fourth argument in different units - the
+                // two agree, and they agree by arriving from opposite
+                // directions.  Making them "consistent" without checking
+                // which one is which would double or halve every dB in
+                // the picture.
+                //
                 function peq_pot_A(db) { return Math.pow(10, db / 40.0); }
 
                 //
