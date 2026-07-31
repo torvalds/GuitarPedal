@@ -926,6 +926,18 @@ function setUiPref(key, val) {
 let eqKeepOrder = uiPref('eq.keepOrder', true);
 
 //
+// Whether the phase response is drawn behind the magnitude.
+//
+// Dark grey on black, so it is there if you look for it and not
+// otherwise.  Phase is worth being able to see - five sections in
+// series is a lot of it, and the arrangements that look strange on the
+// magnitude plot are where it is least obvious - but it is reference
+// rather than the thing being edited, and the nodes and the curve stay
+// the subject.
+//
+let eqShowPhase = uiPref('eq.showPhase', true);
+
+//
 // Keeping the EQ's bands in order.
 //
 // The pedal does not care - five biquads in series commute, and every
@@ -2378,6 +2390,64 @@ function renderUI() {
                       shape[band.type](fastsincos(getFloat(band.freqPot) / fs),
                                        bandQ(band), peq_pot_A(getFloat(band.gainPot))));
 
+                //
+                // The phase, behind everything, if anybody wants it.
+                //
+                // biquad_mag_sq() builds the same two complex numbers
+                // and throws their angles away, so this costs an atan2
+                // apiece and nothing else.  The sign matters here where
+                // it did not there: z is exp(-jw), so the imaginary
+                // parts are negative, and a magnitude does not care.
+                //
+                // Wrapped to +-180 rather than unwrapped.  Five sections
+                // can run through several turns and an unwrapped plot
+                // would rescale itself as you drag, which is exactly the
+                // sort of thing that pulls the eye away from the curve
+                // that matters.  The cost is a jump at each wrap, so the
+                // path is broken there instead of drawn through.
+                //
+                function biquad_phase(c, w0, w2) {
+                    const num = Math.atan2(-(c.b1 * w0.sin + c.b2 * w2.sin),
+                                           c.b0 + c.b1 * w0.cos + c.b2 * w2.cos);
+                    const den = Math.atan2(-(c.a1 * w0.sin + c.a2 * w2.sin),
+                                           1 + c.a1 * w0.cos + c.a2 * w2.cos);
+                    return num - den;
+                }
+
+                if (eqShowPhase) {
+                    const phaseToY = (deg) => H / 2 * (1 - deg / 180);
+                    let last = null;
+
+                    ctx.beginPath();
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
+
+                    for (let x = 0; x <= W; x += 2) {
+                        let freq = xToFreq(x, W);
+                        if (freq < 5) freq = 5;
+                        if (freq > 24000) freq = 24000;
+
+                        const w0 = fastsincos(freq / fs);
+                        const w2 = fastsincos((2.0 * freq) / fs);
+
+                        let rad = 0;
+                        for (const c of coeff)
+                            rad += biquad_phase(c, w0, w2);
+
+                        const deg = ((rad * 180 / Math.PI + 180) % 360 + 360) % 360 - 180;
+                        const y = phaseToY(deg);
+
+                        // A wrap is a jump of half the plot or more, and
+                        // is not a line the filter ever draws
+                        if (last === null || Math.abs(deg - last) > 180)
+                            ctx.moveTo(x, y);
+                        else
+                            ctx.lineTo(x, y);
+                        last = deg;
+                    }
+                    ctx.stroke();
+                }
+
                 ctx.beginPath();
                 ctx.lineWidth = 4;
                 ctx.strokeStyle = '#4ecca3';
@@ -2990,6 +3060,24 @@ function renderUI() {
             orderLabel.appendChild(orderBox);
             orderLabel.appendChild(document.createTextNode('Keep bands in order'));
             options.appendChild(orderLabel);
+
+            const phaseLabel = document.createElement('label');
+            phaseLabel.className = 'eq-option';
+            phaseLabel.title = 'Draw the phase response behind the curve, ' +
+                               'wrapped to +-180 degrees across the same height.';
+
+            const phaseBox = document.createElement('input');
+            phaseBox.type = 'checkbox';
+            phaseBox.checked = eqShowPhase;
+            phaseBox.addEventListener('change', () => {
+                eqShowPhase = phaseBox.checked;
+                setUiPref('eq.showPhase', eqShowPhase);
+                effect.redrawCurve();
+            });
+
+            phaseLabel.appendChild(phaseBox);
+            phaseLabel.appendChild(document.createTextNode('Phase'));
+            options.appendChild(phaseLabel);
             eqFooter.appendChild(options);
 
             setTimeout(() => effect.redrawCurve(), 0);
