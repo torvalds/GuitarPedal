@@ -1,14 +1,15 @@
 // NAME: Parametric EQ [PEQ]
 // PRIORITY: 120
-// POT: "LS Freq" EXPONENTIAL(20.0 20000.0) = 100.0 Hz
+// GRAPH: LOSHELF PEAKING PEAKING PEAKING HISHELF
+// POT: "LS Freq" EXPONENTIAL(20.0 20480.0) = 100.0 Hz
 // POT: "LS Gain" LINEAR(-20.0 20.0) = 0.0 dB
-// POT: "P1 Freq" EXPONENTIAL(20.0 20000.0) = 250.0 Hz
+// POT: "P1 Freq" EXPONENTIAL(20.0 20480.0) = 250.0 Hz
 // POT: "P1 Gain" LINEAR(-20.0 20.0) = 0.0 dB
-// POT: "P2 Freq" EXPONENTIAL(20.0 20000.0) = 1000.0 Hz
+// POT: "P2 Freq" EXPONENTIAL(20.0 20480.0) = 1000.0 Hz
 // POT: "P2 Gain" LINEAR(-20.0 20.0) = 0.0 dB
-// POT: "P3 Freq" EXPONENTIAL(20.0 20000.0) = 4000.0 Hz
+// POT: "P3 Freq" EXPONENTIAL(20.0 20480.0) = 4000.0 Hz
 // POT: "P3 Gain" LINEAR(-20.0 20.0) = 0.0 dB
-// POT: "HS Freq" EXPONENTIAL(20.0 20000.0) = 8000.0 Hz
+// POT: "HS Freq" EXPONENTIAL(20.0 20480.0) = 8000.0 Hz
 // POT: "HS Gain" LINEAR(-20.0 20.0) = 0.0 dB
 //
 // Every band gets the whole audio range, and the order of the five is
@@ -29,11 +30,20 @@
 // EXPONENTIAL rather than FREQUENCY, which is a cubic.  A cubic across
 // three decades puts nearly all its resolution at the top: it would step
 // by 12% at 100Hz, which is two semitones in the register this pedal
-// spends its life in.  A log curve steps by 1000^(1/120) everywhere,
-// which is 5.9% - almost exactly a semitone - and against the fixed Q of
-// 1 below, a band about 1.4 octaves wide, that is a twentieth of its own
-// width.  It also matches the app's log frequency axis, so a pot step is
-// the same distance on screen wherever you are.
+// spends its life in.  A log curve steps by the same ratio everywhere,
+// and against the fixed Q of 1 below - a band about 1.4 octaves wide -
+// that step is a twentieth of the band's own width.  It also matches the
+// app's log frequency axis, so a pot step is the same distance on screen
+// wherever you are.
+//
+// 20480 rather than 20000, which is the same number to look at and a
+// better one to divide.  20480 is 20 << 10, so the range is exactly ten
+// octaves, and 120 pot steps across ten octaves is exactly twelve steps
+// to the octave: one step is one semitone, exactly, everywhere.  That
+// costs nothing - two significant figures renders both as "20kHz", and
+// the top of the range is inaudible either way - and it means a reading
+// in note names would be honest rather than drifting by a third of a
+// semitone across the range, if one is ever wanted.
 //
 // Note that this changes what a stored scene means: the eeprom holds pot
 // values, not frequencies, and both the range and the curve moved under
@@ -46,18 +56,23 @@ struct {
 	struct biquad_state state[5];
 } peq;
 
-// Fixed Q for the 5-band EQ
-static const float PEQ_Q = 1.0f;
-
+// Q comes from the GRAPH: line above, so the app draws the same shape
+// this builds.  Unstated there means 1.0, which is what these five have
+// always used - all ten pots are spent on frequencies and gains, so
+// there is nothing left to make it adjustable with.  See tone.h, which
+// has the room.
 static void parametric_eq_init(unsigned char pot[10])
 {
 	struct biquad_coeff *c = peq.coeff;
+	float q[5];
 
-	_biquad_loshelf(c+0, fastsincos(parametric_eq_pot0(pot[0]) / SAMPLES_PER_SEC), PEQ_Q, db_to_level(parametric_eq_pot1(pot[1])));
-	_biquad_peaking(c+1, fastsincos(parametric_eq_pot2(pot[2]) / SAMPLES_PER_SEC), PEQ_Q, db_to_level(parametric_eq_pot3(pot[3])));
-	_biquad_peaking(c+2, fastsincos(parametric_eq_pot4(pot[4]) / SAMPLES_PER_SEC), PEQ_Q, db_to_level(parametric_eq_pot5(pot[5])));
-	_biquad_peaking(c+3, fastsincos(parametric_eq_pot6(pot[6]) / SAMPLES_PER_SEC), PEQ_Q, db_to_level(parametric_eq_pot7(pot[7])));
-	_biquad_hishelf(c+4, fastsincos(parametric_eq_pot8(pot[8]) / SAMPLES_PER_SEC), PEQ_Q, db_to_level(parametric_eq_pot9(pot[9])));
+	parametric_eq_graph_q(q, pot);
+
+	_biquad_loshelf(c+0, fastsincos(parametric_eq_pot0(pot[0]) / SAMPLES_PER_SEC), q[0], db_to_A(parametric_eq_pot1(pot[1])));
+	_biquad_peaking(c+1, fastsincos(parametric_eq_pot2(pot[2]) / SAMPLES_PER_SEC), q[1], db_to_A(parametric_eq_pot3(pot[3])));
+	_biquad_peaking(c+2, fastsincos(parametric_eq_pot4(pot[4]) / SAMPLES_PER_SEC), q[2], db_to_A(parametric_eq_pot5(pot[5])));
+	_biquad_peaking(c+3, fastsincos(parametric_eq_pot6(pot[6]) / SAMPLES_PER_SEC), q[3], db_to_A(parametric_eq_pot7(pot[7])));
+	_biquad_hishelf(c+4, fastsincos(parametric_eq_pot8(pot[8]) / SAMPLES_PER_SEC), q[4], db_to_A(parametric_eq_pot9(pot[9])));
 }
 
 static float parametric_eq_step(float in)

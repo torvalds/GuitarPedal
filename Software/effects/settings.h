@@ -8,6 +8,14 @@
 // POT: "  ATTN" LINEAR(0 100) = 50 %
 // POT: "Tuning" ENUM(EADGBE DADGAD BEADGC EADG) = EADGBE
 //
+// Which pot the app has to be able to find rather than merely show.  It
+// filters Control Change and Program Change by this, so the app has to
+// transmit on the same one or bypass, the tuner and scene changes stop
+// arriving - and it used to find the pot by matching the label above,
+// which made renaming that label a silent way to break it.
+//
+// ROLE: CHANNEL:POT2
+//
 // Settings "effect" - dummy effect to save various settings
 //
 enum usb_output {

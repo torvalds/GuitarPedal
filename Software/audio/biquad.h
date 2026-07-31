@@ -118,9 +118,18 @@ static inline void _biquad_allpass_filter(struct biquad_coeff *res, const struct
 	res->a2 = res->b0;
 }
 
-static inline void _biquad_peaking(struct biquad_coeff *res, const struct sincos w0, float Q, float gain)
+//
+// 'A' is the cookbook's A: the square root of the linear gain, so a
+// peaking section boosts by A*A and a shelf reaches A*A.  db_to_A() is
+// where one comes from.
+//
+// These took the gain itself and square-rooted it here, which reads more
+// naturally and was a mistake.  The units of the argument were invisible
+// - the app's copy of these same formulas takes A - and two call sites
+// had grown fudge factors from guessing which, in opposite directions.
+//
+static inline void _biquad_peaking(struct biquad_coeff *res, const struct sincos w0, float Q, float A)
 {
-	float A = sqrtf(gain);
 	float alpha = w0.sin/(2*Q);
 	float a0_inv = 1 / (1 + alpha/A);
 
@@ -131,9 +140,8 @@ static inline void _biquad_peaking(struct biquad_coeff *res, const struct sincos
 	res->a2 = (1 - alpha/A)		* a0_inv;
 }
 
-static inline void _biquad_loshelf(struct biquad_coeff *res, const struct sincos w0, float Q, float gain)
+static inline void _biquad_loshelf(struct biquad_coeff *res, const struct sincos w0, float Q, float A)
 {
-	float A = sqrtf(gain);
 	float alpha = w0.sin/(2*Q);
 
 	float ap1 = A + 1;
@@ -148,9 +156,8 @@ static inline void _biquad_loshelf(struct biquad_coeff *res, const struct sincos
 	res->a2 =      (ap1 + am1*w0.cos - sqAmin2)	* a0_inv;
 }
 
-static inline void _biquad_hishelf(struct biquad_coeff *res, const struct sincos w0, float Q, float gain)
+static inline void _biquad_hishelf(struct biquad_coeff *res, const struct sincos w0, float Q, float A)
 {
-	float A = sqrtf(gain);
 	float alpha = w0.sin/(2*Q);
 
 	float ap1 = A + 1;
@@ -176,6 +183,6 @@ static inline float biquad_step(struct biquad *bq, float x0)
 #define biquad_bpf_peak(bq,f,Q) _biquad_bpf_peak(&(bq)->coeff,_w0(f),Q)
 #define biquad_bpf(bq,f,Q) _biquad_bpf(&(bq)->coeff,_w0(f),Q)
 #define biquad_allpass_filter(bq,f,Q) _biquad_allpass_filter(&(bq)->coeff,_w0(f),Q)
-#define biquad_peaking(bq,f,Q,g) _biquad_peaking(&(bq)->coeff,_w0(f),Q,g)
-#define biquad_lowshelf(bq,f,Q,g) _biquad_loshelf(&(bq)->coeff,_w0(f),Q,g)
-#define biquad_highshelf(bq,f,Q,g) _biquad_hishelf(&(bq)->coeff,_w0(f),Q,g)
+#define biquad_peaking(bq,f,Q,A) _biquad_peaking(&(bq)->coeff,_w0(f),Q,A)
+#define biquad_lowshelf(bq,f,Q,A) _biquad_loshelf(&(bq)->coeff,_w0(f),Q,A)
+#define biquad_highshelf(bq,f,Q,A) _biquad_hishelf(&(bq)->coeff,_w0(f),Q,A)

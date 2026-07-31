@@ -40,13 +40,28 @@ let activeTransmitChannel = 0xB0;
 // a steadier handle than the display name (see issue 20).
 let midiChannelRef = null;
 
+//
+// Which pot the pedal filters its incoming MIDI by, so the app can
+// transmit on the same channel.
+//
+// The pedal says so - 'ROLE: CHANNEL:POT2' in the effect header, carried
+// through in the schema.  This used to look for an effect whose filename
+// was 'settings' and then a pot whose label read "MIDI Ch", so renaming
+// either quietly stopped the app tracking the channel, and quietly is
+// the word: the fallback is transmitting on channel 1, which works
+// perfectly until somebody sets a channel.
+//
+// A pedal older than the role tag has no answer here, and gets the same
+// channel 1 it would have got before. Nothing looks for the label any
+// more, which is the point.
+//
 function findMidiChannelPot() {
-    const idx = PEDAL_EFFECTS.findIndex(e => e.base === 'settings');
-    if (idx < 0)
-        return null;
-    const eff = PEDAL_EFFECTS[idx];
-    const pot = eff.pots.findIndex(p => p.name === 'MIDI Ch');
-    return pot < 0 ? null : { idx, effId: eff.id, pot };
+    const idx = PEDAL_EFFECTS.findIndex(
+        (e) => e.roles && e.roles.CHANNEL !== undefined);
+
+    return idx < 0 ? null
+         : { idx, effId: PEDAL_EFFECTS[idx].id,
+             pot: PEDAL_EFFECTS[idx].roles.CHANNEL };
 }
 
 //
@@ -909,6 +924,18 @@ function setUiPref(key, val) {
 // hold of something.
 //
 let eqKeepOrder = uiPref('eq.keepOrder', true);
+
+//
+// Whether the phase response is drawn behind the magnitude.
+//
+// Dark grey on black, so it is there if you look for it and not
+// otherwise.  Phase is worth being able to see - five sections in
+// series is a lot of it, and the arrangements that look strange on the
+// magnitude plot are where it is least obvious - but it is reference
+// rather than the thing being edited, and the nodes and the curve stay
+// the subject.
+//
+let eqShowPhase = uiPref('eq.showPhase', true);
 
 //
 // Keeping the EQ's bands in order.
@@ -2201,17 +2228,23 @@ function renderUI() {
         let eqFooter = null;
 
         //
-        // The one effect with a hand-built card, because frequency and
-        // gain per band is two-dimensional and a row of one-dimensional
-        // controls cannot say it. Asked six times while building a card,
-        // so ask once.
+        // Some effects are better drawn than listed, because frequency
+        // and gain per band is two-dimensional and a row of
+        // one-dimensional controls cannot say it.
         //
-        // By 'base', the header's filename, rather than by the display
-        // name it used to use: renaming an effect in its C comment is a
-        // thing that happens, and it used to silently cost the EQ its
-        // curve and leave ten hidden sliders in its place.
+        // Which ones is not this code's business any more.  The effect
+        // header declares its band list and the schema carries it, so
+        // the app asks what an effect is rather than which effect it is
+        // - it used to check the display name, and renaming that effect
+        // silently turned its curve into ten sliders.
         //
-        const isEq = effect.base === 'parametric_eq';
+        // Bands take the pots in order, two each: frequency then gain.
+        //
+        const bands = (effect.graph || []).map((band, b) => ({
+            type: band.type, q: band.q, qPot: band.qPot,
+            freqPot: b * 2, gainPot: b * 2 + 1
+        }));
+        const isEq = bands.length > 0;
 
         if (isEq) {
 
@@ -2225,7 +2258,7 @@ function renderUI() {
             controls.appendChild(curveWrapper);
 
             slidersContainer = document.createElement('div');
-            slidersContainer.className = 'eq-sliders eq-sliders-hidden';
+            slidersContainer.className = 'eq-sliders';
             controls.appendChild(slidersContainer);
 
             //
@@ -2239,7 +2272,12 @@ function renderUI() {
 
             effect.redrawCurve = () => {
                 const canvas = curveWrapper.querySelector(`#eq-canvas-${idx}`);
-                if (!canvas || eqPotsInputs.length < 10) return;
+                //
+                // The pots are collected as the card is built, so an
+                // early redraw can arrive before they are all there.
+                // Two per band is how many it takes to draw one.
+                //
+                if (!canvas || eqPotsInputs.length < bands.length * 2) return;
                 const ctx = canvas.getContext('2d');
                 const W = canvas.width;
                 const H = canvas.height;
@@ -2318,28 +2356,104 @@ function renderUI() {
 
                 const pots = eqPotsInputs.map(el => parseInt(el.value));
                 const getFloat = (p_idx) => potToValue(effect.pots[p_idx], pots[p_idx]);
+                //
+                // A, not the gain: 10^(dB/40) is the square root of the
+                // linear gain, which is what the cookbook formulas above
+                // want and what they are handed here.
+                //
+                // The firmware's _biquad_peaking() takes the *gain* in
+                // that argument and square-roots it itself, so it is
+                // handed db_to_level(), which is 10^(dB/20).  Same name,
+                // same shape, fourth argument in different units - the
+                // two agree, and they agree by arriving from opposite
+                // directions.  Making them "consistent" without checking
+                // which one is which would double or halve every dB in
+                // the picture.
+                //
                 function peq_pot_A(db) { return Math.pow(10, db / 40.0); }
 
+                //
+                // Q comes from the band, not from here.  It used to be
+                // 1.0 for everything the app drew while the effect ran
+                // whatever its own header said, so the curve was not the
+                // filter for anything that disagreed.
+                //
                 const fs = 48000;
-                const Q = 1.0;
-                const c0 = biquad_loshelf(fastsincos(getFloat(0)/fs), Q, peq_pot_A(getFloat(1)));
-                const c1 = biquad_peaking(fastsincos(getFloat(2)/fs), Q, peq_pot_A(getFloat(3)));
-                const c2 = biquad_peaking(fastsincos(getFloat(4)/fs), Q, peq_pot_A(getFloat(5)));
-                const c3 = biquad_peaking(fastsincos(getFloat(6)/fs), Q, peq_pot_A(getFloat(7)));
-                const c4 = biquad_hishelf(fastsincos(getFloat(8)/fs), Q, peq_pot_A(getFloat(9)));
+                const shape = { LOSHELF: biquad_loshelf, PEAKING: biquad_peaking,
+                                HISHELF: biquad_hishelf };
+                // A band's Q is a fixed number, or a pot it can be
+                // dragged from while playing
+                const bandQ = (band) =>
+                      band.qPot === undefined ? band.q : getFloat(band.qPot);
+
+                const coeff = bands.map((band) =>
+                      shape[band.type](fastsincos(getFloat(band.freqPot) / fs),
+                                       bandQ(band), peq_pot_A(getFloat(band.gainPot))));
+
+                //
+                // The phase, behind everything, if anybody wants it.
+                //
+                // biquad_mag_sq() builds the same two complex numbers
+                // and throws their angles away, so this costs an atan2
+                // apiece and nothing else.  The sign matters here where
+                // it did not there: z is exp(-jw), so the imaginary
+                // parts are negative, and a magnitude does not care.
+                //
+                // Wrapped to +-180 rather than unwrapped.  Five sections
+                // can run through several turns and an unwrapped plot
+                // would rescale itself as you drag, which is exactly the
+                // sort of thing that pulls the eye away from the curve
+                // that matters.  The cost is a jump at each wrap, so the
+                // path is broken there instead of drawn through.
+                //
+                function biquad_phase(c, w0, w2) {
+                    const num = Math.atan2(-(c.b1 * w0.sin + c.b2 * w2.sin),
+                                           c.b0 + c.b1 * w0.cos + c.b2 * w2.cos);
+                    const den = Math.atan2(-(c.a1 * w0.sin + c.a2 * w2.sin),
+                                           1 + c.a1 * w0.cos + c.a2 * w2.cos);
+                    return num - den;
+                }
+
+                if (eqShowPhase) {
+                    const phaseToY = (deg) => H / 2 * (1 - deg / 180);
+                    let last = null;
+
+                    ctx.beginPath();
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
+
+                    for (let x = 0; x <= W; x += 2) {
+                        let freq = xToFreq(x, W);
+                        if (freq < 5) freq = 5;
+                        if (freq > 24000) freq = 24000;
+
+                        const w0 = fastsincos(freq / fs);
+                        const w2 = fastsincos((2.0 * freq) / fs);
+
+                        let rad = 0;
+                        for (const c of coeff)
+                            rad += biquad_phase(c, w0, w2);
+
+                        const deg = ((rad * 180 / Math.PI + 180) % 360 + 360) % 360 - 180;
+                        const y = phaseToY(deg);
+
+                        // A wrap is a jump of half the plot or more, and
+                        // is not a line the filter ever draws
+                        if (last === null || Math.abs(deg - last) > 180)
+                            ctx.moveTo(x, y);
+                        else
+                            ctx.lineTo(x, y);
+                        last = deg;
+                    }
+                    ctx.stroke();
+                }
 
                 ctx.beginPath();
                 ctx.lineWidth = 4;
                 ctx.strokeStyle = '#4ecca3';
 
-                const margin = 40;
-                const graphWidth = W - 2 * margin;
-                const maxFx = 13.0 * Math.log2(20000.0 / 20.0);
-
                 for (let x = 0; x <= W; x += 2) {
-                    const p = (x - margin) / graphWidth;
-                    const fx = p * maxFx;
-                    let freq = 20 * Math.pow(2, fx / 13.0);
+                    let freq = xToFreq(x, W);
                     // clamp freq for math stability outside margins
                     if (freq < 5) freq = 5;
                     if (freq > 24000) freq = 24000;
@@ -2348,11 +2462,8 @@ function renderUI() {
                     const w2 = fastsincos((2.0 * freq) / fs);
 
                     let mag_sq = 1.0;
-                    mag_sq *= biquad_mag_sq(c0, w0, w2);
-                    mag_sq *= biquad_mag_sq(c1, w0, w2);
-                    mag_sq *= biquad_mag_sq(c2, w0, w2);
-                    mag_sq *= biquad_mag_sq(c3, w0, w2);
-                    mag_sq *= biquad_mag_sq(c4, w0, w2);
+                    for (const c of coeff)
+                        mag_sq *= biquad_mag_sq(c, w0, w2);
 
                     let mag = Math.sqrt(mag_sq);
                     if (mag < 0.0001) mag = 0.0001;
@@ -2368,13 +2479,11 @@ function renderUI() {
 
                 // Draw interactive nodes
                 nodes = [];
-                for (let i = 0; i < 5; i++) {
-                    const freq = getFloat(i * 2);
-                    const db = getFloat(i * 2 + 1);
+                for (let i = 0; i < bands.length; i++) {
+                    const freq = getFloat(bands[i].freqPot);
+                    const db = getFloat(bands[i].gainPot);
 
-                    const fx = 13.0 * Math.log2(freq / 20.0);
-                    const p = fx / maxFx;
-                    const x = margin + p * graphWidth;
+                    const x = freqToX(freq, W);
                     const y = dbToY(db, H);
 
                     nodes.push({x, y});
@@ -2427,10 +2536,13 @@ function renderUI() {
                     // for: it says which node you have hold of.
                     //
                     // Drawn before the dot so the dot covers its root.
-                    // Bands 0 and 4 are the shelves - the same fixed
-                    // arrangement the coefficients above are built in.
+                    // Which way it points comes from the band's own
+                    // kind, so an effect with a different arrangement of
+                    // sections gets the right ticks without being known
+                    // about here.
                     //
-                    const shelf = i === 0 ? -1 : (i === 4 ? 1 : 0);
+                    const shelf = bands[i].type === 'LOSHELF' ? -1
+                                : bands[i].type === 'HISHELF' ? 1 : 0;
                     if (shelf) {
                         ctx.beginPath();
                         ctx.moveTo(0, 0);
@@ -2512,10 +2624,33 @@ function renderUI() {
             // summed curve, which five bands can push well past 20dB,
             // stays in the picture for longer.
             //
-            const EQ_DB_SPAN = 28;
+            const EQ_DB_HEADROOM = 8;
+            const EQ_DB_SPAN = EQ_DB_HEADROOM +
+                  Math.max(...bands.map((b) => Math.max(Math.abs(effect.pots[b.gainPot].min),
+                                                        Math.abs(effect.pots[b.gainPot].max))));
 
             const dbToY = (db, H) => H / 2 - db * (H / (2 * EQ_DB_SPAN));
             const yToDb = (y, H) => (H / 2 - y) * (2 * EQ_DB_SPAN) / H;
+
+            //
+            // The frequency axis, taken from the pots rather than
+            // written down a second time.
+            //
+            // The two have to span the same range or a band at the end
+            // of its travel sits off the end of the picture, and they
+            // were separately hardcoded at 20-20000 with nothing keeping
+            // them that way.  The bands are the reason the graph exists,
+            // so they are what it should measure.
+            //
+            const EQ_MARGIN = 40;
+            const fMin = Math.min(...bands.map((b) => effect.pots[b.freqPot].min));
+            const fMax = Math.max(...bands.map((b) => effect.pots[b.freqPot].max));
+            const fSpan = Math.log2(fMax / fMin);
+
+            const freqToX = (f, W) =>
+                  EQ_MARGIN + Math.log2(f / fMin) / fSpan * (W - 2 * EQ_MARGIN);
+            const xToFreq = (x, W) =>
+                  fMin * Math.pow(2, (x - EQ_MARGIN) / (W - 2 * EQ_MARGIN) * fSpan);
 
             const EQ_PICK_SLOP = 4;     // px before a drag has a direction
 
@@ -2528,14 +2663,14 @@ function renderUI() {
             // The five band frequencies, as pot values - the app's live
             // copy of what the pedal has
             const freqPots = () =>
-                  [0, 1, 2, 3, 4].map((i) => parseInt(eqPotsInputs[i * 2].value));
+                  bands.map((b) => parseInt(eqPotsInputs[b.freqPot].value));
             let nodes = [];
 
             let lastEqUpdate = 0;
             // Helper to inverse map freq/db to MIDI val (0-120)
             function updateEqNode(nodeIdx, freq, db) {
-                const fIdx = nodeIdx * 2;
-                const gIdx = nodeIdx * 2 + 1;
+                const fIdx = bands[nodeIdx].freqPot;
+                const gIdx = bands[nodeIdx].gainPot;
                 const fDef = effect.pots[fIdx];
                 const gDef = effect.pots[gIdx];
 
@@ -2706,13 +2841,7 @@ function renderUI() {
                 const posX = Math.max(0, Math.min(W, pos.x));
                 const posY = Math.max(0, Math.min(H, pos.y));
 
-                const margin = 40;
-                const graphWidth = W - 2 * margin;
-                const maxFx = 13.0 * Math.log2(20000.0 / 20.0);
-
-                const p = (posX - margin) / graphWidth;
-                const fx = p * maxFx;
-                const freq = 20.0 * Math.pow(2, fx / 13.0);
+                const freq = xToFreq(posX, W);
                 const db = yToDb(posY, H);
 
                 updateEqNode(activeNodeIdx, freq, db);
@@ -2730,8 +2859,8 @@ function renderUI() {
 
                 if (isDragging && activeNodeIdx !== -1) {
                     // Force final sysex flush on release
-                    const fIdx = activeNodeIdx * 2;
-                    const gIdx = activeNodeIdx * 2 + 1;
+                    const fIdx = bands[activeNodeIdx].freqPot;
+                    const gIdx = bands[activeNodeIdx].gainPot;
                     const fVal = parseInt(eqPotsInputs[fIdx].value);
                     const gVal = parseInt(eqPotsInputs[gIdx].value);
                     if (!isNaN(fVal)) sendSysex([SYSEX_CMD.PARAM_UPDATE, effect.id, fIdx + 1, fVal]);
@@ -2804,8 +2933,12 @@ function renderUI() {
         effect.pots.forEach((pot, pIdx) => {
             const potIdKey = `eff-${idx}-pot-${pIdx}`;
 
+            // Whether the graph draws a node for this one, which
+            // decides where it goes rather than how it looks
+            const banded = isEq && pIdx < bands.length * 2;
+
             const potDiv = document.createElement('div');
-            potDiv.className = isEq ? 'pot-control eq-pot' : 'pot-control';
+            potDiv.className = 'pot-control';
 
             const label = document.createElement('div');
             label.className = 'pot-label';
@@ -2844,8 +2977,9 @@ function renderUI() {
                 input.value = initialVal;
                 input.potDef = pot; // Attach pot definition for formatting
 
+                // Every pot of a graphed effect feeds the curve, node
+                // or no node - see bandQ() - so every one redraws it
                 if (isEq) {
-                    input.className = 'eq-range';
                     input.redrawCurve = effect.redrawCurve;
                     eqPotsInputs.push(input);
                 }
@@ -2859,19 +2993,9 @@ function renderUI() {
                     if (input.redrawCurve) input.redrawCurve();
                 });
 
-                if (isEq) {
-                    const sliderWrapper = document.createElement('div');
-                    sliderWrapper.className = 'eq-slider-wrapper';
-                    sliderWrapper.appendChild(input);
-
-                    potDiv.appendChild(valDisplay);
-                    potDiv.appendChild(sliderWrapper);
-                    potDiv.appendChild(label);
-                } else {
-                    potDiv.appendChild(label);
-                    potDiv.appendChild(valDisplay);
-                    potDiv.appendChild(input);
-                }
+                potDiv.appendChild(label);
+                potDiv.appendChild(valDisplay);
+                potDiv.appendChild(input);
 
                 //
                 // Tapping the pot opens the big slider panel - except for
@@ -2888,10 +3012,23 @@ function renderUI() {
                     setActivePot(potIdKey, pot, parseInt(input.value), effect.name));
             }
 
-            if (isEq) {
+            if (!isEq) {
+                controls.appendChild(potDiv);
+            } else if (pIdx < bands.length * 2) {
+                //
+                // Part of the picture.  The slider still exists and is
+                // still what carries the value - the graph moves it -
+                // but it is hidden, because the node is the control.
+                //
                 slidersContainer.appendChild(potDiv);
             } else {
-                controls.appendChild(potDiv);
+                //
+                // A pot the graph has no node for, so it needs somewhere
+                // real to live: the row under the curve, beside Mix.
+                // Hiding it with the others would have made it a control
+                // that exists and cannot be reached.
+                //
+                eqFooter.appendChild(potDiv);
             }
         });
 
@@ -2923,6 +3060,24 @@ function renderUI() {
             orderLabel.appendChild(orderBox);
             orderLabel.appendChild(document.createTextNode('Keep bands in order'));
             options.appendChild(orderLabel);
+
+            const phaseLabel = document.createElement('label');
+            phaseLabel.className = 'eq-option';
+            phaseLabel.title = 'Draw the phase response behind the curve, ' +
+                               'wrapped to +-180 degrees across the same height.';
+
+            const phaseBox = document.createElement('input');
+            phaseBox.type = 'checkbox';
+            phaseBox.checked = eqShowPhase;
+            phaseBox.addEventListener('change', () => {
+                eqShowPhase = phaseBox.checked;
+                setUiPref('eq.showPhase', eqShowPhase);
+                effect.redrawCurve();
+            });
+
+            phaseLabel.appendChild(phaseBox);
+            phaseLabel.appendChild(document.createTextNode('Phase'));
+            options.appendChild(phaseLabel);
             eqFooter.appendChild(options);
 
             setTimeout(() => effect.redrawCurve(), 0);

@@ -82,7 +82,14 @@ function element(id) {
         dispatchEvent() { return true; },
         setAttribute() {},
         getAttribute() { return null; },
-        querySelector() { return element('?'); },
+        // The same selector has to come back as the same node, or a
+        // canvas fetched twice is two different canvases and nothing
+        // drawn on it can be observed.
+        querySelector(sel) {
+            if (!el._q) el._q = new Map();
+            if (!el._q.has(sel)) el._q.set(sel, element('?'));
+            return el._q.get(sel);
+        },
         querySelectorAll() { return []; },
         closest() { return null; },
         // Nothing here is laid out, so everything has no size - which is
@@ -93,7 +100,18 @@ function element(id) {
         },
         scrollIntoView() {},
         focus() {},
-        getContext() { return new Proxy({}, { get: () => () => {} }); },
+        // A canvas context that remembers what it was asked to do,
+        // so a test can tell "drew the wrong thing" from "drew nothing"
+        getContext() {
+            if (!el._ctx) {
+                const calls = [];
+                el._ctx = new Proxy({}, {
+                    get: (t, k) => (k === 'calls' ? calls : () => calls.push(k)),
+                    set: () => true,
+                });
+            }
+            return el._ctx;
+        },
     };
     el._id = id;
     return el;
@@ -443,6 +461,98 @@ check('going left takes the lowest, which is the one free to move',
       app.pileAt(order, 2)[0] === 1);
 check('going right takes the highest',
       app.pileAt(order, 1).slice(-1)[0] === 2);
+
+//
+// Every effect that declares a graph has to actually draw one.
+//
+// This is the check that was missing when the curve code carried a
+// hardcoded band count: the five-band EQ went on working and a two-band
+// effect drew nothing at all, silently, because the guard that waits for
+// the pots to arrive was written as "fewer than ten".
+//
+const canvasOf = (idx) => {
+    const card = document.getElementById(`effect-${idx}`);
+    const controls = card.children.find(
+        (c) => (c.className || '').includes('eq-container'));
+    const wrapper = controls.children.find(
+        (c) => (c.className || '').includes('eq-curve-wrapper'));
+    return wrapper.querySelector(`#eq-canvas-${idx}`);
+};
+
+let graphed = 0;
+schema.forEach((eff, idx) => {
+    if (!eff.graph || !eff.graph.length)
+        return;
+    graphed++;
+
+    const ctx = canvasOf(idx).getContext('2d');
+    const before = ctx.calls.length;
+
+    // Any parameter update redraws the curve
+    app.handleSysex([0xF0, 0x7D, 0x03, eff.id, 1, 60, 0xF7]);
+    const drew = ctx.calls.slice(before);
+
+    check(`${eff.name} draws its response`, drew.includes('stroke'),
+          `${drew.length} drawing calls`);
+    check(`${eff.name} draws one node per band`,
+          drew.filter((c) => c === 'arc').length === eff.graph.length,
+          `${drew.filter((c) => c === 'arc').length} of ${eff.graph.length}`);
+});
+check('the schema has graphed effects to check', graphed > 0);
+
+// Q has to come from the declaration, or the picture is not the filter
+let badQ = 0;
+for (const eff of schema)
+    for (const band of eff.graph || [])
+        if (!(band.q > 0) && band.qPot === undefined) badQ++;
+check('every graphed band declares a usable Q', badQ === 0, `${badQ} without one`);
+
+//
+// The pedal filters incoming MIDI by one pot, and the app has to
+// transmit on the same channel or bypass, the tuner and scene changes
+// stop arriving.  Which pot that is comes from the schema now, so the
+// schema has to actually say.
+//
+const channels = schema.filter((e) => e.roles && e.roles.CHANNEL !== undefined);
+check('exactly one effect owns the MIDI channel', channels.length === 1,
+      `${channels.length} claim it`);
+if (channels.length === 1) {
+    const eff = channels[0];
+    check('and it points at a pot that exists',
+          eff.pots[eff.roles.CHANNEL] !== undefined);
+    check('with the sixteen channels and omni to choose from',
+          (eff.pots[eff.roles.CHANNEL].enum || []).length === 17,
+          `${(eff.pots[eff.roles.CHANNEL].enum || []).length} options`);
+}
+
+//
+// A pot with no node on the graph has to be reachable.  Graphed effects
+// hide their sliders because the nodes are the controls, and a pot
+// outside the band pairs would otherwise be hidden along with them -
+// present, working, and impossible to touch.
+//
+schema.forEach((eff, idx) => {
+    const spare = eff.pots.length - (eff.graph || []).length * 2;
+    if (!eff.graph || !eff.graph.length || spare <= 0)
+        return;
+
+    const card = document.getElementById(`effect-${idx}`);
+    const controls = card.children.find(
+        (c) => (c.className || '').includes('eq-container'));
+    const hidden = controls.children.find(
+        (c) => (c.className || '').includes('eq-sliders'));
+    const footer = controls.children.find(
+        (c) => (c.className || '').includes('eq-footer'));
+
+    check(`${eff.name} hides only the pots the graph draws`,
+          hidden.children.length === eff.graph.length * 2,
+          `${hidden.children.length} hidden, ${eff.graph.length * 2} banded`);
+    check(`${eff.name} puts its ${spare} spare pot(s) where they can be used`,
+          footer.children.filter(
+              (c) => (c.className || '').includes('pot-control')).length
+          === spare + 1,      // and the Mix control
+          `${footer.children.length} in the footer`);
+});
 
 //
 // UI preferences.  The interesting case is storage that refuses to work

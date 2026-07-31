@@ -4,6 +4,7 @@ import os
 import re
 import json
 import math
+from collections import Counter
 
 def default_pot_value(pot):
     """Turn a pot default in engineering units into the raw 0..120 value.
@@ -123,9 +124,96 @@ def generate(audio_dir, out_h, out_js, out_md):
                 'default': default_val
             })
 
+        #
+        # An effect whose controls are better drawn than listed says so
+        # here, and says what the picture is made of.
+        #
+        # 'GRAPH: LOSHELF PEAKING HISHELF' is three filter sections, and
+        # the app draws the response of that cascade with a draggable
+        # node per section.  The pots are taken in order, two per band,
+        # frequency then gain - which is a convention rather than
+        # something declared, because a band that did not have both
+        # would have nothing to be dragged around in.
+        #
+        # It exists because the app used to recognise the one effect
+        # that wanted this by name, which meant renaming that effect
+        # silently turned its curve into ten sliders.  Now the effect
+        # declares what it is and the app draws whatever is declared -
+        # still a special case, but a general one, and open to any
+        # effect that wants a picture.
+        #
+        # A band may carry its Q as 'PEAKING:0.707'.  Default 1.0, which
+        # is what the only graphed effect used before there was anywhere
+        # to say otherwise.
+        graph_match = re.search(r'//[ \t]*GRAPH:[ \t]*([A-Z0-9.: \t]*)', content)
+        graph = []
+
+        for word in graph_match.group(1).split() if graph_match else []:
+            kind, _, q = word.partition(':')
+            if kind not in ('LOSHELF', 'PEAKING', 'HISHELF'):
+                raise SystemExit(f"{header_path}: GRAPH: unknown band '{kind}' "
+                                 f"(want LOSHELF/PEAKING/HISHELF)")
+            # 'PEAKING:POT6' takes its Q from a pot, so it can be moved
+            # while playing.  Anything else is a fixed number.
+            if q.startswith('POT'):
+                try:
+                    q_pot = int(q[3:])
+                except ValueError:
+                    raise SystemExit(f"{header_path}: GRAPH: '{word}' is not a pot")
+                if not 0 <= q_pot < len(pots):
+                    raise SystemExit(f"{header_path}: GRAPH: '{word}' names pot "
+                                     f"{q_pot}, and there are {len(pots)}")
+                graph.append({'type': kind, 'q_pot': q_pot})
+                continue
+            try:
+                q = float(q) if q else 1.0
+            except ValueError:
+                raise SystemExit(f"{header_path}: GRAPH: '{word}' has no readable Q")
+            if q <= 0.0:
+                raise SystemExit(f"{header_path}: GRAPH: Q must be positive, got {q}")
+            graph.append({'type': kind, 'q': q})
+        if graph and len(graph) * 2 > len(pots):
+            raise SystemExit(f"{header_path}: GRAPH: declares {len(graph)} bands "
+                             f"but there are only {len(pots)} pots to make "
+                             f"{len(graph) * 2} of them from")
+
+        #
+        # What a pot is *for*, where the app needs to know.
+        #
+        # 'ROLE: CHANNEL:POT2' says that pot 2 is the MIDI channel, in
+        # the same shape GRAPH: names a pot for a band's Q.  The app used
+        # to find it by matching the label "MIDI Ch", so renaming that
+        # label quietly stopped the app tracking the channel - quietly,
+        # because the fallback is the old behaviour of transmitting on
+        # channel 1, which works fine until somebody sets a channel.
+        #
+        # Nothing here knows what a role means; that is the app's
+        # business.  This only carries the fact that a pot has one.
+        #
+        roles = {}
+        role_match = re.search(r'//[ \t]*ROLE:[ \t]*([A-Z0-9_: \t]*)', content)
+
+        for word in role_match.group(1).split() if role_match else []:
+            role, _, which = word.partition(':')
+            if not which.startswith('POT'):
+                raise SystemExit(f"{header_path}: ROLE: '{word}' does not name "
+                                 f"a pot (want ROLE:POTn)")
+            try:
+                n = int(which[3:])
+            except ValueError:
+                raise SystemExit(f"{header_path}: ROLE: '{word}' is not a pot")
+            if not 0 <= n < len(pots):
+                raise SystemExit(f"{header_path}: ROLE: '{word}' names pot {n}, "
+                                 f"and there are {len(pots)}")
+            if role in roles:
+                raise SystemExit(f"{header_path}: ROLE: '{role}' named twice")
+            roles[role] = n
+
         effects_data.append({
             'id': effect_id,
             'base': base,
+            'graph': graph,
+            'roles': roles,
             'full_name': full_name,
             'short_name': short_name,
             'priority': priority,
@@ -146,6 +234,24 @@ def generate(audio_dir, out_h, out_js, out_md):
     # the wire.  Filenames are unique in a directory, so this key is a
     # total order and the result is the same everywhere.
     effects_data.sort(key=lambda x: (x['priority'], x['base']))
+
+    #
+    # A file included twice brings its display name twice with it, and
+    # two chips both reading "Tone" are two chips nobody can tell apart.
+    # They are genuinely interchangeable, so numbering them is honest as
+    # well as sufficient: it says "these are the same thing, and this is
+    # the second one".
+    #
+    # After the sort, so which one is 1 comes from the same deterministic
+    # order the ids do rather than from the order the directory was read
+    # in.
+    #
+    name_counts = Counter(e['full_name'] for e in effects_data)
+    seen = Counter()
+    for e in effects_data:
+        if name_counts[e['full_name']] > 1:
+            seen[e['full_name']] += 1
+            e['full_name'] = f"{e['full_name']} {seen[e['full_name']]}"
 
     # Auto-assign index as ID
     for i, e in enumerate(effects_data):
@@ -183,12 +289,25 @@ def generate(audio_dir, out_h, out_js, out_md):
             "shortName": e_data['short_name'],
             "defMix": e_data['def_mix'],
             "mixLaw": e_data['mix_law'],
+            # The schema is camelCase, the python is not
+            "roles": e_data['roles'],
+            "graph": [{"type": b['type'], "q": b['q']} if 'q' in b
+                      else {"type": b['type'], "qPot": b['q_pot']}
+                      for b in e_data['graph']],
             "pots": ui_pots
         })
 
     # Generate effect_map.h
     with open(out_h, 'w') as f:
         f.write("// Auto-generated by gen_effects.py\n")
+        #
+        # How an effect header names things without knowing its own
+        # name.  Two levels because the argument has to be expanded
+        # before it is pasted, which is the usual preprocessor tax.
+        #
+        f.write("#define _EFFECT_PASTE(a, b) a##b\n")
+        f.write("#define _EFFECT_EXPAND(a, b) _EFFECT_PASTE(a, b)\n")
+        f.write("#define SELF(suffix) _EFFECT_EXPAND(EFFECT_SELF, suffix)\n\n")
 
         for e_data in effects_data:
             base = e_data['base']
@@ -235,7 +354,40 @@ def generate(audio_dir, out_h, out_js, out_md):
                 f.write(f"static sample_t __audio_func({base}_step)(sample_t);\n")
             else:
                 f.write(f"static float __audio_func({base}_step)(float);\n")
+            #
+            # An effect header may refer to itself as SELF(_thing)
+            # instead of writing its own name out.  Then the same file
+            # can be included as two effects - see effects/tone.h and
+            # the symlink beside it - and the two cannot drift apart,
+            # because there is only one of them.
+            #
+            #
+            # The Q of each graphed band, from the same declaration the
+            # app draws from.  It used to be a constant in the effect
+            # header and a different constant in the app, which is two
+            # places for one number and they had already diverged: the
+            # app drew every band at 1.0 while the tone control ran at
+            # 0.707, so the picture was not the filter.
+            #
+            #
+            # Written into an array at init rather than read where it is
+            # used, so there is exactly one call site whatever the bands
+            # turn out to be - a helper with several would risk becoming
+            # a real call, and this runs on the audio core.
+            #
+            if e_data['graph']:
+                f.write(f"static inline void {base}_graph_q("
+                        f"float *q, const unsigned char pot[10])\n{{\n")
+                for n, b in enumerate(e_data['graph']):
+                    if 'q_pot' in b:
+                        f.write(f"\tq[{n}] = {base}_pot{b['q_pot']}"
+                                f"(pot[{b['q_pot']}]);\n")
+                    else:
+                        f.write(f"\tq[{n}] = {b['q']}f;\n")
+                f.write("}\n")
+            f.write(f"#define EFFECT_SELF {base}\n")
             f.write(f"#include \"../effects/{base}.h\"\n")
+            f.write("#undef EFFECT_SELF\n")
 
             # The mixing wrapper, which is what the chain actually calls -
             # see do_effect_step(). A mono effect gets the left channel
