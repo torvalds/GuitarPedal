@@ -177,10 +177,43 @@ def generate(audio_dir, out_h, out_js, out_md):
                              f"but there are only {len(pots)} pots to make "
                              f"{len(graph) * 2} of them from")
 
+        #
+        # What a pot is *for*, where the app needs to know.
+        #
+        # 'ROLE: CHANNEL:POT2' says that pot 2 is the MIDI channel, in
+        # the same shape GRAPH: names a pot for a band's Q.  The app used
+        # to find it by matching the label "MIDI Ch", so renaming that
+        # label quietly stopped the app tracking the channel - quietly,
+        # because the fallback is the old behaviour of transmitting on
+        # channel 1, which works fine until somebody sets a channel.
+        #
+        # Nothing here knows what a role means; that is the app's
+        # business.  This only carries the fact that a pot has one.
+        #
+        roles = {}
+        role_match = re.search(r'//[ \t]*ROLE:[ \t]*([A-Z0-9_: \t]*)', content)
+
+        for word in role_match.group(1).split() if role_match else []:
+            role, _, which = word.partition(':')
+            if not which.startswith('POT'):
+                raise SystemExit(f"{header_path}: ROLE: '{word}' does not name "
+                                 f"a pot (want ROLE:POTn)")
+            try:
+                n = int(which[3:])
+            except ValueError:
+                raise SystemExit(f"{header_path}: ROLE: '{word}' is not a pot")
+            if not 0 <= n < len(pots):
+                raise SystemExit(f"{header_path}: ROLE: '{word}' names pot {n}, "
+                                 f"and there are {len(pots)}")
+            if role in roles:
+                raise SystemExit(f"{header_path}: ROLE: '{role}' named twice")
+            roles[role] = n
+
         effects_data.append({
             'id': effect_id,
             'base': base,
             'graph': graph,
+            'roles': roles,
             'full_name': full_name,
             'short_name': short_name,
             'priority': priority,
@@ -257,6 +290,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             "defMix": e_data['def_mix'],
             "mixLaw": e_data['mix_law'],
             # The schema is camelCase, the python is not
+            "roles": e_data['roles'],
             "graph": [{"type": b['type'], "q": b['q']} if 'q' in b
                       else {"type": b['type'], "qPot": b['q_pot']}
                       for b in e_data['graph']],

@@ -508,6 +508,24 @@ for (const eff of schema)
 check('every graphed band declares a usable Q', badQ === 0, `${badQ} without one`);
 
 //
+// The pedal filters incoming MIDI by one pot, and the app has to
+// transmit on the same channel or bypass, the tuner and scene changes
+// stop arriving.  Which pot that is comes from the schema now, so the
+// schema has to actually say.
+//
+const channels = schema.filter((e) => e.roles && e.roles.CHANNEL !== undefined);
+check('exactly one effect owns the MIDI channel', channels.length === 1,
+      `${channels.length} claim it`);
+if (channels.length === 1) {
+    const eff = channels[0];
+    check('and it points at a pot that exists',
+          eff.pots[eff.roles.CHANNEL] !== undefined);
+    check('with the sixteen channels and omni to choose from',
+          (eff.pots[eff.roles.CHANNEL].enum || []).length === 17,
+          `${(eff.pots[eff.roles.CHANNEL].enum || []).length} options`);
+}
+
+//
 // A pot with no node on the graph has to be reachable.  Graphed effects
 // hide their sliders because the nodes are the controls, and a pot
 // outside the band pairs would otherwise be hidden along with them -

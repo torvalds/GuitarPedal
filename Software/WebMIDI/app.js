@@ -40,13 +40,28 @@ let activeTransmitChannel = 0xB0;
 // a steadier handle than the display name (see issue 20).
 let midiChannelRef = null;
 
+//
+// Which pot the pedal filters its incoming MIDI by, so the app can
+// transmit on the same channel.
+//
+// The pedal says so - 'ROLE: CHANNEL:POT2' in the effect header, carried
+// through in the schema.  This used to look for an effect whose filename
+// was 'settings' and then a pot whose label read "MIDI Ch", so renaming
+// either quietly stopped the app tracking the channel, and quietly is
+// the word: the fallback is transmitting on channel 1, which works
+// perfectly until somebody sets a channel.
+//
+// A pedal older than the role tag has no answer here, and gets the same
+// channel 1 it would have got before. Nothing looks for the label any
+// more, which is the point.
+//
 function findMidiChannelPot() {
-    const idx = PEDAL_EFFECTS.findIndex(e => e.base === 'settings');
-    if (idx < 0)
-        return null;
-    const eff = PEDAL_EFFECTS[idx];
-    const pot = eff.pots.findIndex(p => p.name === 'MIDI Ch');
-    return pot < 0 ? null : { idx, effId: eff.id, pot };
+    const idx = PEDAL_EFFECTS.findIndex(
+        (e) => e.roles && e.roles.CHANNEL !== undefined);
+
+    return idx < 0 ? null
+         : { idx, effId: PEDAL_EFFECTS[idx].id,
+             pot: PEDAL_EFFECTS[idx].roles.CHANNEL };
 }
 
 //
