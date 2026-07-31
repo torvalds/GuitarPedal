@@ -79,11 +79,11 @@ static void SELF(_init)(unsigned char pot[10])
 
 	SELF(_graph_q)(q, pot);
 	biquad_lowshelf(&SELF(_state).bass, SELF(_pot0)(pot[0]), q[0],
-			db_to_level(SELF(_pot1)(pot[1])));
+			db_to_A(SELF(_pot1)(pot[1])));
 	biquad_peaking(&SELF(_state).mid, SELF(_pot2)(pot[2]), q[1],
-		       db_to_level(SELF(_pot3)(pot[3])));
+		       db_to_A(SELF(_pot3)(pot[3])));
 	biquad_highshelf(&SELF(_state).treble, SELF(_pot4)(pot[4]), q[2],
-			 db_to_level(SELF(_pot5)(pot[5])));
+			 db_to_A(SELF(_pot5)(pot[5])));
 }
 
 static float SELF(_step)(float in)

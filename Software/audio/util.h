@@ -222,6 +222,17 @@ static inline float db_to_level(float db)
 	return pow2(LOG2_10 / 20.0f * db);
 }
 
+//
+// The same, for a biquad's 'A', which is the square root of the level -
+// see biquad.h.  Half the constant rather than a sqrtf() of the answer,
+// so asking for it costs exactly what db_to_level() costs, and the
+// square root the biquads used to take goes away entirely.
+//
+static inline float db_to_A(float db)
+{
+	return pow2(LOG2_10 / 40.0f * db);
+}
+
 // [𝟓/4]-Padé approximant for tanh
 static inline float tanhf(float x)
 {

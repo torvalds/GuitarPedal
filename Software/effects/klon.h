@@ -59,8 +59,8 @@ void klon_init(unsigned char pot[10])
 	// Single-pole RC filters for coupling and bandwidth
 	// initialized implicitly to 0 by static allocation, no init needed here
 
-	biquad_highshelf(&klon.tone_hs, 2000.0, 0.7, db_to_level(hs_db));
-	biquad_peaking(&klon.pres_pk, 1700.0, 1.5, db_to_level(peaking_db));
+	biquad_highshelf(&klon.tone_hs, 2000.0, 0.7, db_to_A(hs_db));
+	biquad_peaking(&klon.pres_pk, 1700.0, 1.5, db_to_A(peaking_db));
 }
 
 float klon_step(float in)

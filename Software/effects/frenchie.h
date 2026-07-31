@@ -284,7 +284,7 @@ static inline void frenchie_power_amp_init(struct frenchie_power_amp *pa)
 	// specified decibel boost because it passed `A = 10^(db/20)` into the
 	// equations instead of the standard `A = 10^(db/40)`.
 	// To match the original code's exact response curve, we double the db value here.
-	biquad_peaking(&pa->xfmr_res, 3500.0f, 2.0f, db_to_level(2.5f * 2.0f));
+	biquad_peaking(&pa->xfmr_res, 3500.0f, 2.0f, db_to_A(2.5f * 2.0f));
 
 	biquad_lpf(&pa->alias_lp, 10000.0f, 0.4f);
 }
