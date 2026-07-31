@@ -67,11 +67,10 @@ static inline void cabsim_init(unsigned char pot[10])
 	biquad_bpf(&cabsim.thump_bp, 110.0f, 1.5f);
 
 	// 3. Natural paper cone mid scoop (~400Hz, fixed -3dB)
-	biquad_peaking(&cabsim.scoop, 400.0f, 1.0f, db_to_A(-1.5f));
+	biquad_peaking(&cabsim.scoop, 400.0f, 1.0f, db_to_A(-3.0f));
 
-	// 4. Upper-mid bite (~2500Hz)
-	// (0 to +6dB max) - passing half db due to biquad_peaking math
-	biquad_peaking(&cabsim.presence, 2500.0f, 1.5f, db_to_A(pres_pot * 3.0f));
+	// 4. Upper-mid bite (~2500Hz), 0 to +6dB
+	biquad_peaking(&cabsim.presence, 2500.0f, 1.5f, db_to_A(pres_pot * 6.0f));
 
 	// 5. Steep 24dB/octave high-end roll-off (two cascaded 12dB/oct LPFs)
 	// A simple Q=0.7 on both gives a decent 4th-order slope.
