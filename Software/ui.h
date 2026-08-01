@@ -3,17 +3,17 @@
 //
 #include "eeprom.h"
 
-static void move_pot(struct effect *effect, int dir)
+//
+// Step to the next pot that exists, wrapping.
+//
+// Only ever forwards.  Going backwards was what "hold the shaft down
+// and turn" did, and that gesture is gone - see read_pots().
+//
+static void next_pot(struct effect *effect)
 {
-	if (!dir)
-		return;
-
 	int new_active = effect->active_pot;
 	do {
-		new_active += dir;
-		if (new_active < 0)
-			new_active = 9;
-		else if (new_active > 9)
+		if (++new_active > 9)
 			new_active = 0;
 		if (new_active == effect->active_pot)
 			return;
@@ -37,9 +37,6 @@ static const struct pot_range get_pot_range(const struct pot_descr *pot)
 
 // Note that the "__atomic" part isn't actually about SMP, just the
 // interrupts
-//
-// Also note how the 'select' rotary low bits are ignored but allowed
-// to accumulate - but cleared if something else happens.
 static bool read_pots(struct effect *effect, unsigned char *pots)
 {
 	const struct pot_descr *pot = effect->pots + effect->active_pot;
@@ -55,26 +52,22 @@ static bool read_pots(struct effect *effect, unsigned char *pots)
 	val >>= ignore_low_bits;
 
 	if (!val) {
-		// Ignore low two bits of rotary select
-		int select = __atomic_fetch_and(&rotary_select, 3, __ATOMIC_RELAXED);
-		select &= ~3;
-
-		if (select) {
-			int dir = (select < 0) ? -1 : 1;
-
-			move_pot(effect, dir);
-			return true;
-		}
-
-		// No rotary changes. Shaft pressed?
 		//
-		// Clear and ignore the long press, it's the result
-		// of "hold and rotate"
+		// No turn.  Shaft pressed?
+		//
+		// The long press is cleared along with the short one
+		// because nothing is bound to it, not because it is
+		// noise.  It used to be noise: holding the shaft down
+		// in order to turn it manufactured a long press every
+		// time, which is why the two gestures could not coexist
+		// and why hold-and-turn had to go before this bit could
+		// ever mean anything.
+		//
 		unsigned int both = (1u << ROTARY_SWITCH) | (1u << LONGPRESS(ROTARY_SWITCH));
 		unsigned int sw = __atomic_fetch_and(&switch_val, ~both, __ATOMIC_RELAXED);
 		if (!(sw & (1u << ROTARY_SWITCH)))
 			return false;
-		move_pot(effect, 1);
+		next_pot(effect);
 		return true;
 	}
 

@@ -848,18 +848,14 @@ static void init_i2c_bus(i2c_inst_t *i2c, int kbps, int sda, int scl)
 }
 
 //
-// The one rotary encoder.  Which of these a click lands in depends on
-// whether the shaft is held down at the time:
-//
-//	turn		change the selected pot's value
-//	press and turn	select a different pot
+// The one rotary encoder.  Turning it changes the selected pot's value,
+// and that is all a turn has ever meant to anything but the old EQ.
 //
 // Accumulated by the interrupt, drained by update_ui().  There used to
 // be a second encoder for picking the effect; it is gone, and picking
 // the effect is done over MIDI.
 //
 static volatile int rotary_value;
-static volatile int rotary_select;
 
 static void rotary_irq(void)
 {
@@ -882,12 +878,7 @@ static void rotary_irq(void)
 		if (!val)
 			continue;
 
-		// Held down while turning means "pick a pot" rather
-		// than "change this one".  Pull-up, so low is pressed.
-		if (gpio_get(ROTARY_SW_GPIO))
-			rotary_value += val;
-		else
-			rotary_select += val;
+		rotary_value += val;
 	}
 	user_interaction = 1;
 }
