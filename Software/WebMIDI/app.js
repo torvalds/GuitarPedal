@@ -460,7 +460,16 @@ function handleSysex(data) {
             for (let i = 3; i < data.length - 1; i++)
                 jsonStr += String.fromCharCode(data[i]);
             try {
-                handleIdentity(JSON.parse(jsonStr));
+                const id = JSON.parse(jsonStr);
+                //
+                // Log the whole thing rather than the fields we happen
+                // to render. It is a handful of bytes once per connect,
+                // and it means a field added to answer a question on the
+                // bench is visible without the app having to learn it
+                // first.
+                //
+                console.log('[Pedal Identity]', id);
+                handleIdentity(id);
             } catch (e) {
                 console.error("Failed to parse identity", e);
             }
@@ -524,6 +533,19 @@ function handleSysex(data) {
                     }
                 }
             }
+            break;
+        }
+
+        // Raw eeprom cache, 64 bytes as ASCII hex. Ask for it with
+        // dumpEeprom(n) from the console; n counts 64-byte blocks.
+        case 0x0f: {
+            let hex = '';
+            for (let i = 4; i < data.length - 1; i++)
+                hex += String.fromCharCode(data[i]);
+            const off = data[3] * 64;
+            const bytes = hex.match(/../g) || [];
+            console.log(`[EEPROM ${off.toString(16).padStart(4, '0')}] ` +
+                        bytes.join(' '));
             break;
         }
 
@@ -1803,6 +1825,14 @@ function handleIdentity(id) {
     document.getElementById('identity-info').textContent =
         notes.concat(wrong, early).join(' ');
 }
+
+//
+// Bench tool, on window so it can be driven from the console.
+//
+window.dumpEeprom = function (blk = 0, count = 1) {
+    for (let i = 0; i < count; i++)
+        setTimeout(() => sendSysex([0x0e, blk + i]), i * 50);
+};
 
 function handleGlobalStatus(val) {
     const dropped = val & STATUS_DROPPED_MASK;

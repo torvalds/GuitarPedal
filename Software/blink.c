@@ -412,6 +412,15 @@ static void sysex_send_identity(void)
 	sysex_write_str("{\"build\":\"" __DATE__ " " __TIME__ "\"");
 	sysex_write_str(",\"scenes\":");
 	sysex_write_str(nr_scenes == 1 ? "1" : "32");
+	//
+	// How that number was arrived at.  Three of the ways of deciding
+	// it land on 32 for entirely different reasons, and one of those
+	// is "gave up", so the number alone does not say whether the
+	// board was identified or merely defaulted to.
+	//
+	sysex_write_str(",\"eeprom_why\":\"");
+	sysex_write_str(eeprom_verdict);
+	sysex_write_str("\"");
 	sysex_write_str(",\"midi_hw\":");
 	sysex_write_str(MIDI_HW ? "true" : "false");
 	sysex_write_str(",\"found\":{\"eeprom\":");
@@ -624,6 +633,48 @@ static void sysex_send_bindings(void)
 	sysex_tx_finish("Sent control bindings");
 }
 
+//
+// 64 bytes of the eeprom cache, as ASCII hex.
+//
+// Summary statistics about that array have now been wrong twice, in
+// different directions, so this exists to end the arguing: ask for a
+// block and look at it.  ASCII because SysEx data has to stay under
+// 0x80 and hex is the encoding that survives being pasted into a bug
+// report.
+//
+#define DUMP_BLOCK_SIZE 64
+static uint8_t dump_block_req = 0xff;		// 0xff: nothing asked for
+
+static void sysex_send_dump(void)
+{
+	uint8_t blk = dump_block_req;
+	unsigned int off = blk * DUMP_BLOCK_SIZE;
+	char hex[DUMP_BLOCK_SIZE * 2];
+
+	if (blk == 0xff)
+		return;
+	dump_block_req = 0xff;
+
+	if (off + DUMP_BLOCK_SIZE > sizeof(eeprom_cache.bytes))
+		return;
+
+	for (unsigned int i = 0; i < DUMP_BLOCK_SIZE; i++) {
+		uint8_t v = eeprom_cache.bytes[off + i];
+		hex[i*2 + 0] = "0123456789abcdef"[v >> 4];
+		hex[i*2 + 1] = "0123456789abcdef"[v & 15];
+	}
+
+	static const uint8_t header[] = { 0xF0, 0x7D, 0x0f };
+	static const uint8_t trailer[] = { 0xF7 };
+
+	sysex_tx_start();
+	sysex_stream_write(header, sizeof(header));
+	sysex_stream_write(&blk, 1);
+	sysex_stream_write((const uint8_t *)hex, sizeof(hex));
+	sysex_stream_write(trailer, sizeof(trailer));
+	sysex_tx_finish("Sent eeprom dump");
+}
+
 bool state_dump_tx = false;
 static void sysex_send_state_dump(void)
 {
@@ -760,6 +811,9 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 	} else if (cmd == 0x05) { // State Dump Request
 
 		state_dump_tx = true;
+
+	} else if (cmd == 0x0e && sysex_len >= 2) { // Dump eeprom block
+		dump_block_req = sysex_buf[1];
 
 	} else if (cmd == 0x0c && sysex_len >= 5) { // Set Binding
 		//
@@ -1031,7 +1085,13 @@ int main()
 
 	absolute_time_t next_ui_update = delayed_by_ms(now, 50);
 
-	eeprom_set_geometry();
+	//
+	// The codec decides the eeprom geometry, so it has to be asked
+	// first.  Every board with a TAC5112 was built with the 2kbit
+	// part, and that part cannot be identified by probing it - see
+	// eeprom_set_geometry().
+	//
+	eeprom_set_geometry(i2c_probe(TAC5112_I2C));
 
 	//
 	// After the eeprom, not before.  Reading it retries for fifty
@@ -1070,6 +1130,7 @@ int main()
 		sysex_send_schema();
 		sysex_send_state_dump();
 		sysex_send_status();
+		sysex_send_dump();
 		usb_audio_task();
 
 		// Claim 25Hz screen updates

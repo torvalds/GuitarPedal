@@ -148,34 +148,138 @@ static bool eeprom_probe_addressing(unsigned int bytes)
 }
 
 //
+// Say what was decided, and on what evidence.
+//
+// There are four ways out of eeprom_set_geometry() and three of them
+// used to be silent, all three landing on the same answer - the 64kbit
+// default - for completely different reasons.  From outside, a board
+// that had been identified correctly and one that had given up looked
+// identical, which is a bad property in the one decision that everything
+// else about storage depends on.
+//
+// This is *recorded*, not reported.  The status mailbox is one slot with
+// overwrite semantics and the first reader takes the message away, which
+// makes it the wrong shape for this twice over: probe_hardware() runs
+// one line later and overwrites whatever is in there, and even without
+// that, whether anybody ever saw a startup message would depend on
+// whether they happened to be connected for the first read after boot.
+//
+// Which part is fitted is not an event, it is what this board *is*, so
+// it goes out with the identity where it can be asked for and answers
+// the same every time.
+//
+// One buffer, because only one of these is ever produced: the decision
+// is made once, at startup, before anything can read it.
+//
+// Formatted by hand: snprintf() brings newlib's float conversion with
+// it, which is exactly what scripts/check-float.py is there to refuse.
+static char eeprom_verdict[96];
+static char *eeprom_vp = eeprom_verdict;
+
+static void ep_str(const char *s)
+{
+	char *end = eeprom_verdict + sizeof(eeprom_verdict) - 1;
+
+	while (*s && eeprom_vp < end)
+		*eeprom_vp++ = *s++;
+	*eeprom_vp = 0;
+}
+
+static void ep_num(unsigned long v, unsigned int base)
+{
+	char digits[16];
+	int n = 0;
+
+	do {
+		digits[n++] = "0123456789abcdef"[v % base];
+		v /= base;
+	} while (v);
+
+	while (n) {
+		char one[2] = { digits[--n], 0 };
+		ep_str(one);
+	}
+}
+
+//
 // Which of the two eeproms is fitted, and how to talk to it.
 //
-// Read it as though it were the 64kbit part.  A 2kbit part answers that
-// by wrapping - its address counter rolls over every 256 bytes, which is
-// documented for the whole family - so what comes back is its 256 bytes
-// repeated thirty-two times.  Nothing else needs asking: the periodicity
-// is the answer, and it does not matter that the extra address byte went
-// into its page buffer as data, because a wrapped read is 256-periodic
-// wherever it started.
+// The obvious test does not work, and it is worth saying why before
+// somebody reinvents it.  A 2kbit part read as though it were the
+// 64kbit one *ought* to answer by wrapping, its address counter rolling
+// over every 256 bytes, so that 8K comes back 256-periodic.  That is
+// true of most of the family and it is not true of the part on these
+// boards.  From the M24C02 datasheet:
+//
+//	For device delivered in DFN5 package, after the last memory
+//	address (FFh for a 2Kbit), the address counter doesn't roll-over
+//	to the memory address 00h.  The next addresses and data bytes
+//	outputted are therefore undefined and not guaranteed.
+//
+// DFN5 is the tiny package, chosen for being small and simple and for
+// needing no address strapping at all: it answers at 0x50 and that is
+// the end of it.  The TAC5112 was then strapped around *it* - the codec
+// has one address pin selecting among 0x50..0x53, and a 4.7k to ground
+// puts it at 0x51.  So the package whose footnote causes all this was
+// picked for reasons that had nothing to do with any of it.
+//
+// The read past 255 therefore returns undefined data, the periodicity
+// test sees noise, and the part gets called a 64kbit one - which is what
+// happened on every early board, silently, until somebody tried to save
+// a scene.
+//
+// Note the asymmetry that is left: wrapping still *proves* the small
+// part, because nothing else would produce it.  Not wrapping proves
+// nothing at all.  So the test is kept, one-sided, below the thing that
+// actually decides.
+//
+// What decides is the codec.  Every board with a TAC5112 on it was
+// built with the 2kbit part, and that is a fact about how these boards
+// were made rather than about how either chip behaves - so it is
+// checked first and believed.  It is out-of-band knowledge and it is
+// the only non-destructive signal available, the alternative being to
+// write to a part whose geometry is the thing in question.
+//
+// The real answer is a header that says what the part is instead of a
+// probe that guesses - see the storage rework, where the format grows
+// one anyway.
 //
 // Examining the whole array rather than a window matters.  An unused
 // scene reads uniform, and a uniform *window* would look blank on a part
 // that has data elsewhere - which would then have been written to by the
 // probe below.  Uniform across all 8K is genuinely blank.
 //
-static void eeprom_set_geometry(void)
+static void eeprom_set_geometry(bool early_board)
 {
 	const unsigned char *b = eeprom_cache.bytes;
 	bool varies = false, repeats = true;
+	size_t first_diff = 0, breaks = 0;
 
-	if (!init_eeprom())
-		return;			// nothing answered; leave the default
+	if (early_board) {
+		eeprom_addr_bytes = 1;
+		nr_scenes = 1;
+		if (!init_eeprom()) {
+			ep_str("2kbit by the codec, but it did not answer");
+			return;
+		}
+		ep_str("2kbit: a TAC5112 answered, and those boards all have it");
+		return;
+	}
+
+	if (!init_eeprom()) {
+		ep_str("no answer to the initial read, assuming 64kbit");
+		return;
+	}
 
 	for (size_t i = 0; i < sizeof(eeprom_cache.bytes); i++) {
 		if (b[i] != b[0])
 			varies = true;
-		if (i >= 256 && b[i] != b[i - 256])
+		if (i >= 256 && b[i] != b[i - 256]) {
+			if (repeats)
+				first_diff = i;
 			repeats = false;
+			breaks++;
+		}
 	}
 
 	if (varies) {
@@ -184,7 +288,30 @@ static void eeprom_set_geometry(void)
 			eeprom_addr_bytes = 1;
 			nr_scenes = 1;
 			init_eeprom();
+			ep_str("2kbit: the read wrapped at 256");
+			return;
 		}
+		//
+		// Has content and does not wrap, so it is taken to be
+		// the big part.  Worth saying which byte settled it: if
+		// this is wrong, that offset is where to look.
+		//
+		//
+		// Not wrapping is not evidence - see above, the DFN5 part
+		// does not wrap either.  This is the 64kbit answer by
+		// default rather than by demonstration, so the numbers are
+		// here to be looked at rather than trusted.
+		//
+		ep_str("64kbit: not 256-periodic, first at ");
+		ep_num(first_diff, 10);
+		ep_str(" (");
+		ep_num(b[first_diff], 16);
+		ep_str(" vs ");
+		ep_num(b[first_diff - 256], 16);
+		ep_str("), ");
+		ep_num(breaks, 10);
+		ep_str(" breaks in ");
+		ep_num(sizeof(eeprom_cache.bytes) - 256, 10);
 		return;
 	}
 
@@ -199,12 +326,13 @@ static void eeprom_set_geometry(void)
 	// ever needs it: the read above settles it from then on.
 	//
 	if (eeprom_probe_addressing(2))
-		;			// the default is already right
+		ep_str("64kbit: blank, two-byte addressing round-tripped");
 	else if (eeprom_probe_addressing(1)) {
 		eeprom_addr_bytes = 1;
 		nr_scenes = 1;
+		ep_str("2kbit: blank, one-byte addressing round-tripped");
 	} else {
-		report_status("Cannot identify the eeprom");
+		ep_str("blank, neither addressing round-tripped, assuming 64kbit");
 	}
 	init_eeprom();
 }
