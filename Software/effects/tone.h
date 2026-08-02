@@ -1,5 +1,6 @@
 // NAME: Tone [TONE]
 // PRIORITY: 10
+// COPIES: 2
 // GRAPH: LOSHELF:0.707 PEAKING:POT6 HISHELF:0.707
 // POT: "Bass Freq" EXPONENTIAL(20.0 20480.0) = 200.0 Hz
 // POT: "Bass" LINEAR(-15.0 15.0) = 0.0 dB
@@ -44,14 +45,25 @@
 // number the app draws with and the number the filter is built from
 // cannot be different ones.
 //
-// There are two of these, and they are the same file: tone2.h is a
-// symlink to this one.  Two rather than one because an effect owns one
-// set of state, so routing the same one twice would run a filter
-// through its own delay line and produce nonsense - and one file rather
-// than two copies because twins that are edited separately stop being
-// twins.  Nothing here says which of them is which; SELF() is how a
-// header refers to itself without knowing its own name, and the
-// generator supplies the name at each include.
+// There are two of these, which is what 'COPIES: 2' above asks for.
+// Two rather than one because an effect owns one set of state, so
+// routing the same one twice would run a filter through its own delay
+// line and produce nonsense - and one file rather than two copies
+// because twins that are edited separately stop being twins.
+//
+// The copies differ in exactly one thing, which is that each has its
+// own state.  So the generator emits the pot accessors and the Q table
+// once and both copies share them - they are pure functions of the pot
+// array and two of each would only be two things to keep in step - and
+// generates just the state, the init and the step per copy.  Those
+// three are the only names here that cannot be written down, because
+// this file does not know which copy it is being included as; SELF()
+// is how it refers to them, and the generator supplies the name at
+// each include.
+//
+// This used to be a symlink, tone2.h pointing here, and the second
+// copy existed only in a directory listing.  Saying it in the file is
+// better mostly because it is visible from inside the file.
 //
 // Which one goes where is not decided here either.  They are ordinary
 // routable effects, so put one at the front, or one at the back, or
@@ -77,13 +89,13 @@ static void SELF(_init)(unsigned char pot[10])
 {
 	float q[3];
 
-	SELF(_graph_q)(q, pot);
-	biquad_lowshelf(&SELF(_state).bass, SELF(_pot0)(pot[0]), q[0],
-			db_to_A(SELF(_pot1)(pot[1])));
-	biquad_peaking(&SELF(_state).mid, SELF(_pot2)(pot[2]), q[1],
-		       db_to_A(SELF(_pot3)(pot[3])));
-	biquad_highshelf(&SELF(_state).treble, SELF(_pot4)(pot[4]), q[2],
-			 db_to_A(SELF(_pot5)(pot[5])));
+	tone_graph_q(q, pot);
+	biquad_lowshelf(&SELF(_state).bass, tone_pot0(pot[0]), q[0],
+			db_to_A(tone_pot1(pot[1])));
+	biquad_peaking(&SELF(_state).mid, tone_pot2(pot[2]), q[1],
+		       db_to_A(tone_pot3(pot[3])));
+	biquad_highshelf(&SELF(_state).treble, tone_pot4(pot[4]), q[2],
+			 db_to_A(tone_pot5(pot[5])));
 }
 
 static float SELF(_step)(float in)

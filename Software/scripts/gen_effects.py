@@ -74,7 +74,8 @@ def default_pot_value(pot):
 
 def generate(audio_dir, out_h, out_js, out_md):
     ui_effects = [] # List of dicts for JS/Schema output
-    effects_data = []
+    sources = []    # one per effects/*.h - what gets emitted once
+    effects_data = []   # one per copy - what gets an id and a struct
 
     for filename in os.listdir(audio_dir):
         if not filename.endswith('.h'):
@@ -96,6 +97,30 @@ def generate(audio_dir, out_h, out_js, out_md):
         full_name = name_match.group(1).strip()
         short_name = name_match.group(2).strip()
         priority = int(priority_match.group(1)) if priority_match else 100
+
+        #
+        # 'COPIES: 2' asks for two of this effect rather than one.
+        #
+        # An effect owns one set of state, so routing the same one twice
+        # would run a filter through its own delay line - which is why
+        # there have to be two of a thing you might want twice.  This
+        # used to be done with a symlink, one file under two names, and
+        # the duplication was invisible from inside the file: nothing in
+        # tone.h said there were two of it, and the second name existed
+        # only in a directory listing.
+        #
+        # The copies differ in exactly one way, which is that each has
+        # its own state.  So everything derived from the POT: lines -
+        # the constants, the accessors, the Q table - is emitted once and
+        # shared, and only _state, _init and _step are generated per
+        # copy.  That is also the whole remaining job of SELF(): a header
+        # that has copies cannot name those three itself.
+        #
+        copies_match = re.search(r'//[ \t]*COPIES:[ \t]*(\d+)', content)
+        copies = int(copies_match.group(1)) if copies_match else 1
+        if copies < 1:
+            raise SystemExit(f"{header_path}: COPIES: {copies} - an effect "
+                             f"that exists no times is a file you can delete")
 
         def_mix_match = re.search(r'//\s*DEFAULT_MIX:\s*(\S+)', content)
         def_mix = float(def_mix_match.group(1)) if def_mix_match else 1.0
@@ -235,9 +260,10 @@ def generate(audio_dir, out_h, out_js, out_md):
                 raise SystemExit(f"{header_path}: ROLE: '{role}' named twice")
             roles[role] = n
 
-        effects_data.append({
+        sources.append({
             'id': effect_id,
             'base': base,
+            'copies': copies,
             'graph': graph,
             'roles': roles,
             'full_name': full_name,
@@ -259,7 +285,26 @@ def generate(audio_dir, out_h, out_js, out_md):
     # the filesystem, and the ids are what end up in saved scenes and on
     # the wire.  Filenames are unique in a directory, so this key is a
     # total order and the result is the same everywhere.
-    effects_data.sort(key=lambda x: (x['priority'], x['base']))
+    sources.sort(key=lambda x: (x['priority'], x['base']))
+
+    #
+    # One file becomes one effect, or several.  The copies land next to
+    # each other because they share every part of the sort key, so the
+    # ids come out in the order the file asked for them and the first
+    # copy keeps the id the single effect had.
+    #
+    # The first copy is named for the file and the rest are numbered from
+    # two - 'tone' and 'tone2', which is what the symlink produced back
+    # when the second copy was a second filename.  Keeping that spelling
+    # is not nostalgia: those names are in the ELF, in every map file and
+    # in anything anybody has been reading while debugging.
+    #
+    for src in sources:
+        for copy in range(src['copies']):
+            e = dict(src)
+            e['copy'] = copy
+            e['self_name'] = src['base'] if not copy else f"{src['base']}{copy + 1}"
+            effects_data.append(e)
 
     #
     # A file included twice brings its display name twice with it, and
@@ -335,14 +380,22 @@ def generate(audio_dir, out_h, out_js, out_md):
         f.write("#define _EFFECT_EXPAND(a, b) _EFFECT_PASTE(a, b)\n")
         f.write("#define SELF(suffix) _EFFECT_EXPAND(EFFECT_SELF, suffix)\n\n")
 
-        for e_data in effects_data:
-            base = e_data['base']
-            struct_name = f"{base}_effect" if base != "eq" else "EQ"
-            e_data['struct_name'] = struct_name
+        #
+        # Everything an effect's copies have in common, emitted once
+        # whether there is one copy or three.  A pot accessor and the Q
+        # table are pure functions of the pot array - two copies would be
+        # the same code twice, and the second one would be the one that
+        # got edited.
+        #
+        # This is also why it is a pass of its own rather than the head
+        # of the per-copy loop: a shared thing has to exist before every
+        # copy that uses it, and "before" is easier to guarantee by
+        # writing it all out first than by reasoning about the sort.
+        #
+        for src in sources:
+            base = src['base']
 
-            f.write(f"static struct effect {struct_name};\n")
-
-            for p_idx, pot in enumerate(e_data['pots']):
+            for p_idx, pot in enumerate(src['pots']):
                 fn_name = f"{base}_pot{p_idx}"
                 pot['fn_name'] = fn_name
 
@@ -369,24 +422,6 @@ def generate(audio_dir, out_h, out_js, out_md):
                     log2_ratio = math.log2(b_val / a_val) if a_val != 0 else 0
                     f.write(f"static float {fn_name}(unsigned char pot) {{ float p = POT_TO_FLOAT(pot); return {a_val}f * pow2(p * {log2_ratio}f); }}\n")
 
-            # Declare the two entry points ahead of the header, marked as
-            # running on the audio core. Gcc carries a section attribute
-            # from the declaration to the definition, so the effect headers
-            # don't have to know about any of this.
-            channels = e_data['channels']
-
-            f.write(f"static void __audio_func({base}_init)(unsigned char[10]);\n")
-            if channels in ('STEREO', 'NONE'):
-                f.write(f"static sample_t __audio_func({base}_step)(sample_t);\n")
-            else:
-                f.write(f"static float __audio_func({base}_step)(float);\n")
-            #
-            # An effect header may refer to itself as SELF(_thing)
-            # instead of writing its own name out.  Then the same file
-            # can be included as two effects - see effects/tone.h and
-            # the symlink beside it - and the two cannot drift apart,
-            # because there is only one of them.
-            #
             #
             # The Q of each graphed band, from the same declaration the
             # app draws from.  It used to be a constant in the effect
@@ -395,23 +430,55 @@ def generate(audio_dir, out_h, out_js, out_md):
             # app drew every band at 1.0 while the tone control ran at
             # 0.707, so the picture was not the filter.
             #
-            #
             # Written into an array at init rather than read where it is
             # used, so there is exactly one call site whatever the bands
             # turn out to be - a helper with several would risk becoming
             # a real call, and this runs on the audio core.
             #
-            if e_data['graph']:
+            if src['graph']:
                 f.write(f"static inline void {base}_graph_q("
                         f"float *q, const unsigned char pot[10])\n{{\n")
-                for n, b in enumerate(e_data['graph']):
+                for n, b in enumerate(src['graph']):
                     if 'q_pot' in b:
                         f.write(f"\tq[{n}] = {base}_pot{b['q_pot']}"
                                 f"(pot[{b['q_pot']}]);\n")
                     else:
                         f.write(f"\tq[{n}] = {b['q']}f;\n")
                 f.write("}\n")
-            f.write(f"#define EFFECT_SELF {base}\n")
+            f.write("\n")
+
+        #
+        # ...and then what each copy owns for itself: its state, its two
+        # entry points, and the struct that names them.
+        #
+        for e_data in effects_data:
+            base = e_data['base']
+            self_name = e_data['self_name']
+            struct_name = f"{self_name}_effect"
+            e_data['struct_name'] = struct_name
+
+            f.write(f"static struct effect {struct_name};\n")
+
+            # Declare the two entry points ahead of the header, marked as
+            # running on the audio core. Gcc carries a section attribute
+            # from the declaration to the definition, so the effect headers
+            # don't have to know about any of this.
+            channels = e_data['channels']
+
+            f.write(f"static void __audio_func({self_name}_init)(unsigned char[10]);\n")
+            if channels in ('STEREO', 'NONE'):
+                f.write(f"static sample_t __audio_func({self_name}_step)(sample_t);\n")
+            else:
+                f.write(f"static float __audio_func({self_name}_step)(float);\n")
+            #
+            # A header with copies refers to itself as SELF(_thing)
+            # rather than writing a name it cannot know.  One file is
+            # then two effects that cannot drift apart, because there is
+            # only one of them - and SELF() covers just the three things
+            # a copy owns, because everything else was emitted above and
+            # is shared.
+            #
+            f.write(f"#define EFFECT_SELF {self_name}\n")
             f.write(f"#include \"../effects/{base}.h\"\n")
             f.write("#undef EFFECT_SELF\n")
 
@@ -423,24 +490,25 @@ def generate(audio_dir, out_h, out_js, out_md):
             # that one can stop being mono without every other one having
             # to care.
             #
-            # This is the only call site of {base}_step(), so it inlines
-            # here and the chain is still one indirect call per effect.
+            # This is the only call site of {self_name}_step(), so it
+            # inlines here and the chain is still one indirect call per
+            # effect.
             #
             # NONE gets no wrapper and no .step at all - nothing about
             # the chain's wet and dry describes it, and whoever does call
             # it calls it by name.
             step = None
             if channels != 'NONE':
-                step = f"{base}_mix_step"
+                step = f"{self_name}_mix_step"
                 f.write(f"static sample_t __audio_func({step})"
                         "(sample_t val, float dry, float wet)\n")
                 f.write("{\n")
                 if channels == 'STEREO':
-                    f.write(f"\tsample_t out = {base}_step(val);\n")
+                    f.write(f"\tsample_t out = {self_name}_step(val);\n")
                     f.write("\tval.left  = dry * val.left  + wet * out.left;\n")
                     f.write("\tval.right = dry * val.right + wet * out.right;\n")
                 else:
-                    f.write(f"\tfloat out = {base}_step(val.left);\n")
+                    f.write(f"\tfloat out = {self_name}_step(val.left);\n")
                     f.write("\tval.left  = dry * val.left  + wet * out;\n")
                     f.write("\tval.right = dry * val.right + wet * out;\n")
                 f.write("\treturn val;\n")
@@ -451,7 +519,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             f.write(f"\t.short_name = \"{e_data['short_name']}\",\n")
             f.write(f"\t.def_mix = {e_data['def_mix']}f,\n")
             f.write(f"\t.mix_law = MIX_{e_data['mix_law']},\n")
-            f.write(f"\t.init = {base}_init,\n")
+            f.write(f"\t.init = {self_name}_init,\n")
             if step:
                 f.write(f"\t.step = {step},\n")
             else:
