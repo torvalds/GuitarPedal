@@ -151,6 +151,7 @@ static void routing_end(routing_bitmap_t routable)
 }
 
 #include "eeprom.h"
+#include "bindings.h"
 
 static void init_i2s(void)
 {
@@ -239,8 +240,6 @@ static void switch_irq(void)
 
 	user_interaction = 1;
 }
-
-int current_midi_effect_idx = 0;
 
 #include "midi_schema.h"
 
@@ -590,6 +589,41 @@ static void sysex_send_pot_value(int eff, int pot, int value)
 	sysex_stream_write(sysex_pot_message, sizeof(sysex_pot_message));
 }
 
+//
+// Say what the physical controls are bound to.
+//
+// The whole table in one message, because it is five entries of three
+// bytes and the app wants all of it or none of it.  Sent as part of the
+// state dump, and again whenever the pedal changes a binding by itself
+// - which it does when a gesture is bound to ACT_NEXT_POT, the one
+// action whose effect is to move another binding.
+//
+// The message itself, with no transmit session of its own, so that it
+// can go inside somebody else's.
+static void sysex_write_bindings(void)
+{
+	static const uint8_t header[] = { 0xF0, 0x7D, 0x0d };
+	static const uint8_t trailer[] = { 0xF7 };
+	uint8_t table[NR_CONTROLS * 3];
+
+	for (int i = 0; i < NR_CONTROLS; i++) {
+		table[i*3 + 0] = bindings[i].action;
+		table[i*3 + 1] = bindings[i].arg[0];
+		table[i*3 + 2] = bindings[i].arg[1];
+	}
+
+	sysex_stream_write(header, sizeof(header));
+	sysex_stream_write(table, sizeof(table));
+	sysex_stream_write(trailer, sizeof(trailer));
+}
+
+static void sysex_send_bindings(void)
+{
+	sysex_tx_start();
+	sysex_write_bindings();
+	sysex_tx_finish("Sent control bindings");
+}
+
 bool state_dump_tx = false;
 static void sysex_send_state_dump(void)
 {
@@ -630,7 +664,14 @@ static void sysex_send_state_dump(void)
 		}
 	}
 
-	// And finally, send the routing order
+	// What the pedal's own controls are bound to
+	report_info("Sending control bindings");
+	sysex_write_bindings();
+
+	//
+	// And finally the routing order, which stays last because the app
+	// takes it as the end of the dump.
+	//
 	report_info("Sending routing information");
 	static const uint8_t sysex_routing_header[] = { 0xF0, 0x7D, 0x08 };
 	static const uint8_t sysex_routing_trailer[] = { 0xF7 };
@@ -719,6 +760,18 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 	} else if (cmd == 0x05) { // State Dump Request
 
 		state_dump_tx = true;
+
+	} else if (cmd == 0x0c && sysex_len >= 5) { // Set Binding
+		//
+		// Echo the whole table back rather than acknowledging
+		// the one row, and do it whether or not the write was
+		// taken.  A refused binding is the case where the app
+		// and the pedal disagree, so it is exactly the case
+		// where the app needs to be told what is really there.
+		//
+		set_binding(sysex_buf[1], sysex_buf[2],
+			    sysex_buf[3], sysex_buf[4]);
+		sysex_send_bindings();
 
 	} else if (cmd == 0x08) { // Set Routing Order
 		routing_bitmap_t routable = routing_start();
@@ -1024,12 +1077,18 @@ int main()
 			next_ui_update = delayed_by_ms(now, 40);
 			eeprom_task();
 
-			// Stomp held down: switch to tuner mode
-			if (switch_pressed(LONGPRESS(STOMP_SWITCH))) {
-				switch_clear(LONGPRESS(STOMP_SWITCH));
-				tuner_mode = !tuner_mode;
-				send_midi_cc(MIDI_CC_GLOBAL_ENABLE, tuner_mode ? 68 : 69);
-			}
+			//
+			// Whatever the switches are bound to.
+			//
+			// Ahead of the tuner check on purpose: update_ui()
+			// does not run in tuner mode, and a gesture bound to
+			// ACT_TUNER has to be able to turn it off again.  A
+			// side effect is that a switch now acts while the
+			// tuner is up rather than being queued until it is
+			// dismissed, which is the more predictable of the
+			// two behaviours anyway.
+			//
+			handle_switch_bindings();
 
 			// Are we in tuner mode?
 			if (tuner_mode) {

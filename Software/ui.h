@@ -3,24 +3,6 @@
 //
 #include "eeprom.h"
 
-//
-// Step to the next pot that exists, wrapping.
-//
-// Only ever forwards.  Going backwards was what "hold the shaft down
-// and turn" did, and that gesture is gone - see read_pots().
-//
-static void next_pot(struct effect *effect)
-{
-	int new_active = effect->active_pot;
-	do {
-		if (++new_active > 9)
-			new_active = 0;
-		if (new_active == effect->active_pot)
-			return;
-	} while (!effect->pots[new_active].label);
-	effect->active_pot = new_active;
-}
-
 struct pot_range { int min, max; };
 
 static const struct pot_range get_pot_range(const struct pot_descr *pot)
@@ -35,12 +17,32 @@ static const struct pot_range get_pot_range(const struct pot_descr *pot)
 	return (struct pot_range) { min, max };
 }
 
+//
+// The rotary, turned.
+//
 // Note that the "__atomic" part isn't actually about SMP, just the
-// interrupts
-static bool read_pots(struct effect *effect, unsigned char *pots)
+// interrupts.  The low bits of the accumulator are deliberately left
+// behind rather than drained, so that sub-detent movement on a coarse
+// pot adds up instead of being thrown away a click at a time.
+//
+static void rotary_turned(void)
 {
-	const struct pot_descr *pot = effect->pots + effect->active_pot;
-	const struct pot_range range = get_pot_range(pot);
+	const struct binding *b = &bindings[CTRL_ROTARY_TURN];
+
+	if (b->action != ACT_POT) {
+		//
+		// Nothing to drive.  Drop what has accumulated rather
+		// than saving it up, or the first thing bound here
+		// would jump by however far the knob was fiddled with
+		// while it was pointing at nothing.
+		//
+		__atomic_store_n(&rotary_value, 0, __ATOMIC_RELAXED);
+		return;
+	}
+
+	struct effect *effect = effects[b->arg[0]];
+	unsigned int idx = b->arg[1];
+	const struct pot_range range = get_pot_range(effect->pots + idx);
 
 	// For small ranges, don't make the rotary so twitchy
 	int ignore_low_bits = 0;
@@ -50,36 +52,123 @@ static bool read_pots(struct effect *effect, unsigned char *pots)
 	int mask = (1 << ignore_low_bits)-1;
 	int val = __atomic_fetch_and(&rotary_value, mask, __ATOMIC_RELAXED);
 	val >>= ignore_low_bits;
+	if (!val)
+		return;
 
-	if (!val) {
-		//
-		// No turn.  Shaft pressed?
-		//
-		// The long press is cleared along with the short one
-		// because nothing is bound to it, not because it is
-		// noise.  It used to be noise: holding the shaft down
-		// in order to turn it manufactured a long press every
-		// time, which is why the two gestures could not coexist
-		// and why hold-and-turn had to go before this bit could
-		// ever mean anything.
-		//
-		unsigned int both = (1u << ROTARY_SWITCH) | (1u << LONGPRESS(ROTARY_SWITCH));
-		unsigned int sw = __atomic_fetch_and(&switch_val, ~both, __ATOMIC_RELAXED);
-		if (!(sw & (1u << ROTARY_SWITCH)))
-			return false;
-		next_pot(effect);
-		return true;
-	}
-
-	val += pots[effect->active_pot];
+	unsigned char *cur_pot = effect->pot_values[effect->seq & 1];
+	val += cur_pot[idx];
 	if (val < range.min)
 		val = range.min;
 	else if (val > range.max)
 		val = range.max;
 
-	pots[effect->active_pot] = val;
+	if (val == cur_pot[idx])
+		return;
 
-	return true;
+	set_effect_pot(effect, idx, val);
+
+	//
+	// Tell the app.  It is only a notification - the pedal has
+	// already made the change and would have made it with nothing
+	// connected at all, which is the entire point of having a knob.
+	//
+	send_sysex_set_param(b->arg[0], idx + 1, val);
+}
+
+//
+// Step the rotary's target to the next pot that exists on the same
+// effect, wrapping.  Only ever forwards: going backwards was what
+// hold-and-turn did, and that gesture is gone.
+//
+// This is the one action whose effect is to move another binding, so it
+// is also the one that has to say so afterwards.
+//
+static void next_bound_pot(void)
+{
+	struct binding *b = &bindings[CTRL_ROTARY_TURN];
+
+	if (b->action != ACT_POT)
+		return;
+
+	struct effect *effect = effects[b->arg[0]];
+	int idx = b->arg[1];
+
+	do {
+		if (++idx > 9)
+			idx = 0;
+		if (idx == b->arg[1])
+			return;
+	} while (!effect->pots[idx].label);
+
+	b->arg[1] = idx;
+
+	//
+	// Keep 'active_pot' meaning what it has always meant: the pot
+	// the rotary is pointing at.  settings.h reads it to decide
+	// whether to preview the attention brightness while you are
+	// setting it, and that has never once been true - until now the
+	// rotary could only ever be on effect 0.
+	//
+	effect->active_pot = idx;
+
+	sysex_send_bindings();
+}
+
+static void do_binding(const struct binding *b)
+{
+	switch (b->action) {
+	case ACT_NEXT_POT:
+		next_bound_pot();
+		break;
+
+	case ACT_BYPASS:
+		disable_all = EFF_ENABLE_STEPS * !disable_all;
+		send_midi_cc(MIDI_CC_GLOBAL_ENABLE, disable_all ? 0 : 127);
+		break;
+
+	case ACT_TUNER:
+		tuner_mode = !tuner_mode;
+		send_midi_cc(MIDI_CC_GLOBAL_ENABLE, tuner_mode ? 68 : 69);
+		break;
+
+	case ACT_SCENE:
+		//
+		// Checked again rather than trusted from the table.
+		// set_binding() saw the same 'nr_scenes', but it is
+		// decided by probing the board at startup and this
+		// costs nothing.
+		//
+		if (b->arg[0] < nr_scenes)
+			load_scene(b->arg[0]);
+		break;
+	}
+}
+
+//
+// Whatever the switches are bound to.
+//
+// Called from the main loop ahead of the tuner-mode check rather than
+// from update_ui(), which does not run in tuner mode - something has to
+// be able to turn it off again.
+//
+static void handle_switch_bindings(void)
+{
+	static const struct {
+		unsigned char sw;
+		unsigned char ctrl;
+	} gestures[] = {
+		{ ROTARY_SWITCH,		CTRL_ROTARY_TAP },
+		{ LONGPRESS(ROTARY_SWITCH),	CTRL_ROTARY_HOLD },
+		{ STOMP_SWITCH,			CTRL_STOMP_TAP },
+		{ LONGPRESS(STOMP_SWITCH),	CTRL_STOMP_HOLD },
+	};
+
+	for (int i = 0; i < ARRAY_SIZE(gestures); i++) {
+		if (!switch_pressed(gestures[i].sw))
+			continue;
+		switch_clear(gestures[i].sw);
+		do_binding(&bindings[gestures[i].ctrl]);
+	}
 }
 
 
@@ -218,54 +307,18 @@ static void show_status(void)
 	output_clipped = 0;
 }
 
+//
 // 'update_ui()' is called every few ms to react to user events.
+//
+// The switches are not read here - see handle_switch_bindings(), which
+// the main loop calls before deciding whether it is in tuner mode.
+//
 static void update_ui(void)
 {
-	static int effect_idx = 0;
-
-	struct effect *effect = effects[effect_idx];
-
-	// Stomp: enable/disable all effects
-	if (switch_pressed(STOMP_SWITCH)) {
-		switch_clear(STOMP_SWITCH);
-		disable_all = EFF_ENABLE_STEPS * !disable_all;
-		send_midi_cc(MIDI_CC_GLOBAL_ENABLE, disable_all ? 0 : 127);
-	}
-
-	//
-	// Which effect the pedal itself is editing.  Nothing sets this
-	// yet: the encoder that used to pick the effect is gone, and
-	// what replaces it is bound up with making the stomp switch and
-	// the rotary programmable.  So this is the hook for that, and
-	// today it stays on effect 0.
-	//
-	int idx = current_midi_effect_idx;
-
-	if (idx != effect_idx) {
-		effect_idx = idx;
-		effect = effects[idx];
-	}
-
 	show_status();
 
 	if (attention_preview)
 		attention_preview--;
 
-	unsigned int seq = effect->seq;
-	unsigned char *cur_pot = effect->pot_values[seq & 1];
-	unsigned char *new_pot = effect->pot_values[!(seq & 1)];
-	memcpy(new_pot, cur_pot, 10);
-
-	// If something changed, let the other CPU know
-	if (read_pots(effect, new_pot)) {
-		for (int i=0; i<10; i++) {
-			int val = new_pot[i];
-			int old_val = cur_pot[i];
-			if (val != old_val) {
-				send_sysex_set_param(effect_idx, i+1, val);
-			}
-		}
-		smp_store_release(&effect->seq, seq + 1);
-	}
-
+	rotary_turned();
 }
