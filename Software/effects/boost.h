@@ -23,7 +23,8 @@ static float fold(float in, float level)
 {
 	float fold_scale = 0.5;
 	boost_effect.intense = 1;
-	for (;;) {
+	// Cap iterations to prevent infinite loop on float precision stalls
+	for (int i = 0; i < 20; i++) {
 		float over = (in - level) * fold_scale;
 
 		in = level - over;
@@ -35,6 +36,7 @@ static float fold(float in, float level)
 		if (in <= level)
 			return in;
 	}
+	return in;
 }
 
 static float boost_step(float in)
