@@ -848,6 +848,53 @@ input[type=range]:focus::-moz-range-thumb {
   padding-bottom: 20px;
 }
 
+/* The knob shortcut, and what it is about to take the knob away from. */
+.active-pot-knob {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 18px;
+}
+
+.active-pot-knob > .menu-hint {
+  margin-top: 0;
+}
+
+#assign-knob-btn {
+  flex: none;
+  width: auto;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+#assign-knob-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/*
+ * A binding is an action and, for two of them, a target.  Two selects
+ * on one row rather than two rows, because they are one sentence and
+ * reading them apart is harder than reading them together.
+ */
+#bindings-rows .menu-field {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+#bindings-rows .menu-field > label {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
+}
+
+#bindings-rows .menu-field > .menu-select:only-of-type {
+  grid-column: 1 / -1;
+}
+
 /* Larger slider for fine adjustments */
 input[type=range].large-slider {
   height: 40px;

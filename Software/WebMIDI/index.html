@@ -42,6 +42,7 @@
             <button id="global-unroute-btn" role="menuitem">⏏&nbsp;&nbsp;Unroute All Effects</button>
             <hr>
             <button id="update-app-btn" role="menuitem">⬇️&nbsp;&nbsp;Update App</button>
+            <button id="open-bindings-btn" role="menuitem">🎛️&nbsp;&nbsp;Physical Controls…</button>
             <button id="open-settings-btn" role="menuitem">🔌&nbsp;&nbsp;MIDI Connection…</button>
             <hr>
             <button id="global-program-btn" class="danger-item" role="menuitem">⚠️&nbsp;&nbsp;Reboot to Programming Mode</button>
@@ -141,6 +142,22 @@
       </div>
     </div>
 
+    <!-- The pedal has one knob and one footswitch and no way at all to
+         say what either of them is for.  This is where that gets said,
+         and it is the only place it is written down. -->
+    <div id="bindings-panel" class="glass-panel dialog-panel hidden" role="dialog" aria-modal="true">
+      <div class="panel-header">
+        <h2>Physical Controls</h2>
+        <button id="close-bindings" class="action-btn" title="Close">✕</button>
+      </div>
+      <div class="dialog-body">
+        <div class="menu-section">
+          <div id="bindings-rows"></div>
+          <p class="menu-hint" id="bindings-hint">Not connected.</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Active Pot Panel -->
     <div id="active-pot-panel" class="glass-panel bottom-panel hidden">
       <div class="panel-header">
@@ -152,6 +169,13 @@
       </div>
       <div class="active-pot-slider-container">
         <input type="range" id="active-pot-slider" class="large-slider" min="0" max="120" value="60">
+      </div>
+      <!-- The knob is the one control you can reach without the app, so
+           the shortcut to point it here belongs next to the thing it
+           would be pointed at. -->
+      <div class="active-pot-knob">
+        <button id="assign-knob-btn" class="action-btn">Assign knob</button>
+        <span id="knob-target-hint" class="menu-hint"></span>
       </div>
     </div>
 
