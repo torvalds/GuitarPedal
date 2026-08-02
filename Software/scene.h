@@ -79,7 +79,7 @@
 _Static_assert(EFFECT_COUNT <= SCENE_MAX_EFFECTS,
 	       "more effects than a scene can hold");
 
-#define SCENE_VERSION 1
+#define SCENE_VERSION 2
 
 //
 // Keys are 'kind << 8 | index', so a new kind of saved thing costs
@@ -114,6 +114,16 @@ struct globals_payload {
 	uint8_t nr_rules;
 	uint8_t pad;
 	struct scene_effect settings;
+
+	//
+	// Which effect each rule target index means, and nothing else -
+	// id hashes without the pot values a scene stores beside them.
+	// Global rules have no scene to index into and would otherwise
+	// be the one thing left naming effects by a number that moves.
+	// 128 bytes.
+	//
+	uint32_t effect_ids[SCENE_MAX_EFFECTS];
+
 	struct rule rules[MAX_RULES];
 };
 
@@ -181,6 +191,50 @@ static void scene_save_effect(struct effect *eff, struct scene_effect *out)
 }
 
 //
+// Translate one level's stored rules into live ones.
+//
+// A rule's 'effect' field is three things depending on the action: an
+// effect for ACT_POT and its relatives, a scene for ACT_SCENE, and
+// BIND_FOLLOW meaning "whatever the knob is on".  Only the first is a
+// number that moves, so only the first goes through the remap.
+//
+// 'remap' is stored index -> current effect id, or 0xFF for an effect
+// that is no longer here.  A rule pointing at one of those is dropped:
+// its target does not exist, and guessing a different one would be
+// worse than the gesture doing nothing.
+//
+static void scene_load_rules(struct rule *dst, unsigned int *dst_count,
+			     const struct rule *src, unsigned int count,
+			     const uint8_t *remap)
+{
+	unsigned int kept = 0;
+
+	if (count > MAX_RULES)
+		count = MAX_RULES;
+
+	for (unsigned int i = 0; i < count; i++) {
+		struct rule r = src[i];
+
+		if (action_has_target(r.action) && r.effect != BIND_FOLLOW) {
+			if (r.effect >= SCENE_MAX_EFFECTS)
+				continue;
+			if (remap[r.effect] == 0xFF)
+				continue;
+			r.effect = remap[r.effect];
+		}
+
+		//
+		// Checked after remapping, not before: rule_ok() asks
+		// whether the pot exists on that effect, and which
+		// effect it is has only just been decided.
+		//
+		if (rule_ok(&r))
+			dst[kept++] = r;
+	}
+	*dst_count = kept;
+}
+
+//
 // Load a scene, or leave everything at its defaults if there is none.
 //
 // An unsaved scene is not an error and has no fallback - the same
@@ -201,11 +255,22 @@ static bool load_scene(uint8_t scene_id)
 	for (int i = 0; i < EFFECT_COUNT; i++)
 		reset_effect(effects[i]);
 
+	//
+	// Cleared here, and resolved on the way out of every path
+	// including the ones that give up below.  A scene with nothing
+	// in it has no rules of its own and inherits, which is the same
+	// thing a scene that was never saved should do - and getting
+	// that wrong would leave a new pedal with an empty resolved
+	// table and no working controls at all.
+	//
+	nr_scene_rules = 0;
+
 	scene = save_read(SCENE_KEY(scene_id));
-	if (!scene || scene->version != SCENE_VERSION)
+	if (!scene || scene->version != SCENE_VERSION ||
+	    scene->nr_effects > SCENE_MAX_EFFECTS) {
+		resolve_rules();
 		return false;
-	if (scene->nr_effects > SCENE_MAX_EFFECTS)
-		return false;
+	}
 
 	//
 	// The values first, then the chain.  An effect whose entry is
@@ -213,37 +278,35 @@ static bool load_scene(uint8_t scene_id)
 	// "the effect moved on" and "the effect was never saved" arrive
 	// at the same place.
 	//
+	uint8_t remap[SCENE_MAX_EFFECTS];
+
+	memset(remap, 0xFF, sizeof(remap));
 	for (int i = 0; i < scene->nr_effects; i++) {
 		struct effect *eff = scene_find_effect(&scene->effects[i]);
 
-		if (eff)
-			scene_load_effect(eff, &scene->effects[i]);
+		if (!eff)
+			continue;
+		scene_load_effect(eff, &scene->effects[i]);
+		for (int n = 0; n < EFFECT_COUNT; n++) {
+			if (effects[n] == eff) {
+				remap[i] = n;
+				break;
+			}
+		}
 	}
 
 	routable = routing_start();
 	for (int i = 0; i < scene->nr_routed && i < MAX_ROUTED_EFFECTS; i++) {
 		uint8_t idx = scene->routing[i];
-		struct effect *eff;
 
-		if (idx >= scene->nr_effects)
-			continue;
-		eff = scene_find_effect(&scene->effects[idx]);
-		if (!eff)
-			continue;
-
-		//
-		// routing_add() takes an effect id, so the index has to
-		// come back to one here - but only after the identity
-		// search has said which effect it actually is.
-		//
-		for (int n = 0; n < EFFECT_COUNT; n++) {
-			if (effects[n] == eff) {
-				routing_add(&routable, n);
-				break;
-			}
-		}
+		if (idx < SCENE_MAX_EFFECTS && remap[idx] != 0xFF)
+			routing_add(&routable, remap[idx]);
 	}
 	routing_end(routable);
+
+	scene_load_rules(scene_rules, &nr_scene_rules,
+			 scene->rules, scene->nr_rules, remap);
+	resolve_rules();
 
 	return true;
 }
@@ -274,6 +337,17 @@ static bool save_scene(uint8_t scene_id)
 	for (int i = 0; i < routed_effect_count; i++)
 		scene->routing[i] = effect_chain[i];
 
+	//
+	// The entry list above is written in effect id order, so an
+	// index into it and an effect id are the same number here and
+	// nothing has to be translated on the way out.  Only the load
+	// side does work, because only the load side can find the list
+	// numbered differently than it left it.
+	//
+	scene->nr_rules = nr_scene_rules;
+	for (unsigned int i = 0; i < nr_scene_rules; i++)
+		scene->rules[i] = scene_rules[i];
+
 	return save_commit(SCENE_KEY(scene_id));
 }
 
@@ -291,12 +365,32 @@ static bool load_globals(void)
 
 	reset_effect(&settings_effect);
 
+	nr_global_rules = 0;
+
 	globals = save_read(GLOBALS_KEY);
-	if (!globals || globals->version != SCENE_VERSION)
+	if (!globals || globals->version != SCENE_VERSION) {
+		resolve_rules();
 		return false;
+	}
 
 	if (settings_effect.id_hash == globals->settings.id_hash)
 		scene_load_effect(&settings_effect, &globals->settings);
+
+	uint8_t remap[SCENE_MAX_EFFECTS];
+
+	memset(remap, 0xFF, sizeof(remap));
+	for (int i = 0; i < SCENE_MAX_EFFECTS; i++) {
+		for (int n = 0; n < EFFECT_COUNT; n++) {
+			if (effects[n]->id_hash == globals->effect_ids[i]) {
+				remap[i] = n;
+				break;
+			}
+		}
+	}
+
+	scene_load_rules(global_rules, &nr_global_rules,
+			 globals->rules, globals->nr_rules, remap);
+	resolve_rules();
 
 	return true;
 }
@@ -308,6 +402,13 @@ static bool save_globals(void)
 	globals = (struct globals_payload *)save_buffer();
 	globals->version = SCENE_VERSION;
 	scene_save_effect(&settings_effect, &globals->settings);
+
+	for (int i = 0; i < EFFECT_COUNT; i++)
+		globals->effect_ids[i] = effects[i]->id_hash;
+
+	globals->nr_rules = nr_global_rules;
+	for (unsigned int i = 0; i < nr_global_rules; i++)
+		globals->rules[i] = global_rules[i];
 
 	return save_commit(GLOBALS_KEY);
 }

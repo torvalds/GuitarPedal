@@ -654,30 +654,75 @@ static void sysex_send_pot_value(int eff, int pot, int value)
 //
 // The message itself, with no transmit session of its own, so that it
 // can go inside somebody else's.
-static void sysex_write_bindings(void)
-{
-	static const uint8_t header[] = { 0xF0, 0x7D, 0x0d };
-	static const uint8_t trailer[] = { 0xF7 };
-	uint8_t table[MAX_RULES * 6];
+//
+// One level of the rule table.
+//
+// Four of them, and only two can be written: a scene's rules, the
+// pedal-wide ones, what those resolve to, and what is compiled in.  The
+// last two are answers rather than settings.
+//
+// RULES_EFFECTIVE is the one worth having on the wire.  It is what a
+// gesture actually does, which is not something the app can work out
+// from the other two without implementing the shadowing a second time -
+// and two implementations of one rule is how the pot defaults and the
+// graph Q both went wrong before.
+//
+// RULES_DEFAULT closes the other gap.  The compiled-in table has never
+// been readable at all, so an app showing "this control is unbound"
+// could not say what would happen instead.
+//
+enum rule_level {
+	RULES_SCENE,
+	RULES_GLOBAL,
+	RULES_EFFECTIVE,
+	RULES_DEFAULT,
+	NR_RULE_LEVELS,
+};
 
-	for (unsigned int i = 0; i < nr_rules; i++) {
-		table[i*6 + 0] = rules[i].control;
-		table[i*6 + 1] = rules[i].action;
-		table[i*6 + 2] = rules[i].effect;
-		table[i*6 + 3] = rules[i].pot;
-		table[i*6 + 4] = rules[i].val[0];
-		table[i*6 + 5] = rules[i].val[1];
+static const struct rule *rule_level(unsigned int level, unsigned int *count)
+{
+	switch (level) {
+	case RULES_SCENE:
+		*count = nr_scene_rules;
+		return scene_rules;
+	case RULES_GLOBAL:
+		*count = nr_global_rules;
+		return global_rules;
+	case RULES_EFFECTIVE:
+		*count = nr_rules;
+		return rules;
+	default:
+		*count = ARRAY_SIZE(default_rules);
+		return default_rules;
+	}
+}
+
+static void sysex_write_bindings(unsigned int level)
+{
+	const uint8_t header[] = { 0xF0, 0x7D, 0x0d, level };
+	static const uint8_t trailer[] = { 0xF7 };
+	uint8_t table[EFFECTIVE_RULES * 6];
+	unsigned int count;
+	const struct rule *src = rule_level(level, &count);
+
+	for (unsigned int i = 0; i < count; i++) {
+		table[i*6 + 0] = src[i].control;
+		table[i*6 + 1] = src[i].action;
+		table[i*6 + 2] = src[i].effect;
+		table[i*6 + 3] = src[i].pot;
+		table[i*6 + 4] = src[i].val[0];
+		table[i*6 + 5] = src[i].val[1];
 	}
 
 	sysex_stream_write(header, sizeof(header));
-	sysex_stream_write(table, nr_rules * 6);
+	sysex_stream_write(table, count * 6);
 	sysex_stream_write(trailer, sizeof(trailer));
 }
 
-static void sysex_send_bindings(void)
+static void sysex_send_bindings(unsigned int level)
 {
 	sysex_tx_start();
-	sysex_write_bindings();
+	sysex_write_bindings(level);
 	sysex_tx_finish("Sent control bindings");
 }
 
@@ -721,9 +766,15 @@ static void sysex_send_state_dump(void)
 		}
 	}
 
-	// What the pedal's own controls are bound to
+	//
+	// What the pedal's own controls are bound to - every level of
+	// it.  The dump is what the app builds its whole picture from,
+	// and "what this control does" and "why" are different
+	// questions that it now has to be able to answer separately.
+	//
 	report_info("Sending control bindings");
-	sysex_write_bindings();
+	for (unsigned int level = 0; level < NR_RULE_LEVELS; level++)
+		sysex_write_bindings(level);
 
 	//
 	// And finally the routing order, which stays last because the app
@@ -843,7 +894,9 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 
 		state_dump_tx = true;
 
-	} else if (cmd == 0x0c) { // Set the whole rule table
+	} else if (cmd == 0x0c && sysex_len >= 2) { // Write one rule level
+		unsigned int level = sysex_buf[1];
+
 		//
 		// Echo it back, always, and not as an acknowledgement:
 		// rules that do not check out are dropped, so what came
@@ -851,8 +904,34 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 		// also the case where the two ends disagree, which is
 		// exactly when the app needs telling.
 		//
-		set_rules(sysex_buf + 1, (sysex_len - 1) / 6);
-		sysex_send_bindings();
+		// A write to a level that is computed rather than kept
+		// is refused rather than ignored - it still answers, with
+		// the level unchanged, so the app sees that nothing
+		// happened instead of assuming it worked.
+		//
+		if (level == RULES_SCENE || level == RULES_GLOBAL) {
+			struct rule *dst = level == RULES_SCENE ?
+				scene_rules : global_rules;
+			unsigned int *n = level == RULES_SCENE ?
+				&nr_scene_rules : &nr_global_rules;
+
+			set_rules(dst, n, sysex_buf + 2, (sysex_len - 2) / 6);
+		}
+		if (level < NR_RULE_LEVELS)
+			sysex_send_bindings(level);
+
+	} else if (cmd == 0x0d && sysex_len >= 2) { // Read one rule level
+		//
+		// Separate from the write, because "set the table to
+		// nothing" and "tell me the table" would otherwise be
+		// the same message - and clearing a level by asking to
+		// look at it is a memorable way to lose work.
+		//
+		// Same command number as the reply, which is how 0x0a
+		// and 0x0b already work.
+		//
+		if (sysex_buf[1] < NR_RULE_LEVELS)
+			sysex_send_bindings(sysex_buf[1]);
 
 	} else if (cmd == 0x08) { // Set Routing Order
 		routing_bitmap_t routable = routing_start();

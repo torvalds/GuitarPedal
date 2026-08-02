@@ -22,6 +22,22 @@ const SYSEX_CMD = {
 const SYSEX_SET_BINDING = 0x0c;
 const SYSEX_BINDINGS = 0x0d;
 
+//
+// The four rule tables.  A gesture is answered by the most specific
+// level that mentions its control at all, and that level answers it
+// completely - so a scene rule does not add to a global one, it
+// replaces it for that control.
+//
+// SCENE and GLOBAL are settings.  EFFECTIVE is what those two and the
+// defaults resolve to, and DEFAULT is what is compiled in; both are
+// read-only, and the pedal refuses a write to either rather than
+// pretending it worked.
+//
+const RULES_SCENE = 0;
+const RULES_GLOBAL = 1;
+const RULES_EFFECTIVE = 2;
+const RULES_DEFAULT = 3;
+
 const ACT = {
     NONE: 0, POT: 1, NEXT_POT: 2, RESET_POT: 3,
     SET_POT: 4, TOGGLE_POT: 5, BYPASS: 6, TUNER: 7, SCENE: 8
@@ -88,6 +104,13 @@ function actionsFor(ctrl) {
 //
 let pedalRules = [];
 let haveRules = false;
+
+//
+// Every level the pedal reported, indexed by RULES_*.  The editor works
+// on the scene's table; the rest are here so the UI can say what a
+// control actually does and what it would do if this rule went away.
+//
+let rulesByLevel = [[], [], [], []];
 
 let midiAccess = null;
 let midiInput = null;
@@ -616,15 +639,27 @@ function handleSysex(data) {
         }
 
         case SYSEX_BINDINGS: {
-            pedalRules = [];
-            for (let at = 3; at + 5 < data.length; at += 6) {
-                pedalRules.push({ control: data[at],
-                                  action: data[at + 1],
-                                  effect: data[at + 2],
-                                  pot: data[at + 3],
-                                  val: [data[at + 4], data[at + 5]] });
+            const level = data[3];
+            const list = [];
+
+            for (let at = 4; at + 5 < data.length; at += 6) {
+                list.push({ control: data[at],
+                            action: data[at + 1],
+                            effect: data[at + 2],
+                            pot: data[at + 3],
+                            val: [data[at + 4], data[at + 5]] });
             }
-            haveRules = true;
+            rulesByLevel[level] = list;
+
+            //
+            // The editor still edits one table, and it is the scene's.
+            // The other three are what it draws around that: what a
+            // control ends up doing, and what it would fall back to.
+            //
+            if (level === RULES_SCENE) {
+                pedalRules = list;
+                haveRules = true;
+            }
             renderBindings();
             renderKnobHint();
             break;
@@ -1936,8 +1971,8 @@ window.dumpEeprom = function (blk = 0, count = 1) {
 // what it was asked for, and a rule that did not survive is visible as
 // a row that did not come back.
 //
-function sendRules(list) {
-    const out = [SYSEX_SET_BINDING];
+function sendRules(list, level = RULES_SCENE) {
+    const out = [SYSEX_SET_BINDING, level];
     list.forEach(r => out.push(r.control & 0x7f, r.action & 0x7f,
                                r.effect & 0x7f, (r.pot || 0) & 0x7f,
                                (r.val[0] || 0) & 0x7f,

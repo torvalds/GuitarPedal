@@ -216,8 +216,17 @@ static void next_bound_pot(void)
 			return;
 	} while (idx ? !effect->pots[idx - 1].label : effect->no_mix);
 
+	//
+	// Deliberately on the resolved table rather than on whichever
+	// level supplied the rule.  Stepping the knob to the next
+	// parameter is something you do mid-song to pick what it
+	// adjusts, not a change to how the pedal is set up - so it
+	// lasts until the scene is reloaded and is not written to
+	// flash, which is also what it did when there was only one
+	// table and nothing was saved at all.
+	//
 	b->pot = idx;
-	sysex_send_bindings();
+	sysex_send_bindings(RULES_EFFECTIVE);
 }
 
 //
