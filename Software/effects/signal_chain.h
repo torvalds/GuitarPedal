@@ -1,11 +1,10 @@
 // NAME: Signal Chain [CHAIN]
 // PRIORITY: 0 (Special: always runs first, and is never in effect_chain)
 // MIX: NONE		// not an effect - it is the two ends of the chain
-// POT: "Trim" LINEAR(-20.0 20.0) = 0.0 dB
-// POT: "Gate" ENUM(Off On) = On
-// POT: "Level" LINEAR(-100.0 -40.0) = -70.0 dB
+// POT: "Gate" LINEAR(-100.0 -40.0) = -70.0 dB
 // POT: "Attack" LINEAR(0.0 10.0) = 1.5 ms
 // POT: "Release" LINEAR(50.0 500.0) = 150.0 ms
+// POT: "Trim" LINEAR(-20.0 20.0) = 0.0 dB
 // POT: "Volume" LINEAR(-40.0 20.0) = 0.0 dB
 //
 // The beginning and the end of the signal chain.
@@ -62,18 +61,17 @@
 // the top of this file - that is the order gen_effects.py assigns.
 //
 enum signal_chain_pot {
-	CHAIN_TRIM,
-	CHAIN_GATE,
 	CHAIN_LEVEL,
 	CHAIN_ATTACK,
 	CHAIN_RELEASE,
+	CHAIN_TRIM,
 	CHAIN_VOLUME,
 };
 
 static struct {
 	struct envelope envelope;
 	float mult, level;
-	int active;
+	bool active;
 
 	//
 	// Both gains are slewed rather than applied as they arrive.
@@ -91,14 +89,14 @@ static struct {
 
 static inline void signal_chain_init(unsigned char pot[10])
 {
-	signal_chain.trim_target = db_to_level(signal_chain_pot0(pot[CHAIN_TRIM]));
-	signal_chain.active = (int)signal_chain_pot1(pot[CHAIN_GATE]);
+	signal_chain.trim_target = db_to_level(signal_chain_pot3(pot[CHAIN_TRIM]));
+	signal_chain.active = pot[CHAIN_LEVEL] != 0;
 
-	float level_db = signal_chain_pot2(pot[CHAIN_LEVEL]);
+	float level_db = signal_chain_pot0(pot[CHAIN_LEVEL]);
 	signal_chain.level = db_to_level(level_db);
 
-	float attack_ms = signal_chain_pot3(pot[CHAIN_ATTACK]);
-	float release_ms = signal_chain_pot4(pot[CHAIN_RELEASE]);
+	float attack_ms = signal_chain_pot1(pot[CHAIN_ATTACK]);
+	float release_ms = signal_chain_pot2(pot[CHAIN_RELEASE]);
 	envelope_init(&signal_chain.envelope, attack_ms, release_ms);
 
 	//
@@ -114,7 +112,7 @@ static inline void signal_chain_init(unsigned char pot[10])
 	// stopping at the -20dB that would otherwise be plenty.
 	//
 	unsigned char vol = pot[CHAIN_VOLUME];
-	signal_chain.volume_target = vol ? db_to_level(signal_chain_pot5(vol)) : 0.0f;
+	signal_chain.volume_target = vol ? db_to_level(signal_chain_pot4(vol)) : 0.0f;
 }
 
 //
