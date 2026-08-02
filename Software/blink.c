@@ -151,6 +151,7 @@ static void routing_end(routing_bitmap_t routable)
 }
 
 #include "eeprom.h"
+#include "bindings.h"
 
 static void init_i2s(void)
 {
@@ -239,8 +240,6 @@ static void switch_irq(void)
 
 	user_interaction = 1;
 }
-
-int current_midi_effect_idx = 0;
 
 #include "midi_schema.h"
 
@@ -413,6 +412,15 @@ static void sysex_send_identity(void)
 	sysex_write_str("{\"build\":\"" __DATE__ " " __TIME__ "\"");
 	sysex_write_str(",\"scenes\":");
 	sysex_write_str(nr_scenes == 1 ? "1" : "32");
+	//
+	// How that number was arrived at.  Three of the ways of deciding
+	// it land on 32 for entirely different reasons, and one of those
+	// is "gave up", so the number alone does not say whether the
+	// board was identified or merely defaulted to.
+	//
+	sysex_write_str(",\"eeprom_why\":\"");
+	sysex_write_str(eeprom_verdict);
+	sysex_write_str("\"");
 	sysex_write_str(",\"midi_hw\":");
 	sysex_write_str(MIDI_HW ? "true" : "false");
 	sysex_write_str(",\"found\":{\"eeprom\":");
@@ -590,6 +598,87 @@ static void sysex_send_pot_value(int eff, int pot, int value)
 	sysex_stream_write(sysex_pot_message, sizeof(sysex_pot_message));
 }
 
+//
+// Say what the physical controls are bound to.
+//
+// The whole table in one message, because the app wants all of it or
+// none of it - a rule only means anything alongside the others that
+// share its gesture.  Sent as part of the
+// state dump, and again whenever the pedal changes a binding by itself
+// - which it does when a gesture is bound to ACT_NEXT_POT, the one
+// action whose effect is to move another binding.
+//
+// The message itself, with no transmit session of its own, so that it
+// can go inside somebody else's.
+static void sysex_write_bindings(void)
+{
+	static const uint8_t header[] = { 0xF0, 0x7D, 0x0d };
+	static const uint8_t trailer[] = { 0xF7 };
+	uint8_t table[MAX_RULES * 6];
+
+	for (unsigned int i = 0; i < nr_rules; i++) {
+		table[i*6 + 0] = rules[i].control;
+		table[i*6 + 1] = rules[i].action;
+		table[i*6 + 2] = rules[i].effect;
+		table[i*6 + 3] = rules[i].pot;
+		table[i*6 + 4] = rules[i].val[0];
+		table[i*6 + 5] = rules[i].val[1];
+	}
+
+	sysex_stream_write(header, sizeof(header));
+	sysex_stream_write(table, nr_rules * 6);
+	sysex_stream_write(trailer, sizeof(trailer));
+}
+
+static void sysex_send_bindings(void)
+{
+	sysex_tx_start();
+	sysex_write_bindings();
+	sysex_tx_finish("Sent control bindings");
+}
+
+//
+// 64 bytes of the eeprom cache, as ASCII hex.
+//
+// Summary statistics about that array have now been wrong twice, in
+// different directions, so this exists to end the arguing: ask for a
+// block and look at it.  ASCII because SysEx data has to stay under
+// 0x80 and hex is the encoding that survives being pasted into a bug
+// report.
+//
+#define DUMP_BLOCK_SIZE 64
+static uint8_t dump_block_req = 0xff;		// 0xff: nothing asked for
+
+static void sysex_send_dump(void)
+{
+	uint8_t blk = dump_block_req;
+	unsigned int off = blk * DUMP_BLOCK_SIZE;
+	char hex[DUMP_BLOCK_SIZE * 2];
+
+	if (blk == 0xff)
+		return;
+	dump_block_req = 0xff;
+
+	if (off + DUMP_BLOCK_SIZE > sizeof(eeprom_cache.bytes))
+		return;
+
+	for (unsigned int i = 0; i < DUMP_BLOCK_SIZE; i++) {
+		uint8_t v = eeprom_cache.bytes[off + i];
+		hex[i*2 + 0] = "0123456789abcdef"[v >> 4];
+		hex[i*2 + 1] = "0123456789abcdef"[v & 15];
+	}
+
+	static const uint8_t header[] = { 0xF0, 0x7D, 0x0f };
+	static const uint8_t trailer[] = { 0xF7 };
+
+	sysex_tx_start();
+	sysex_stream_write(header, sizeof(header));
+	sysex_stream_write(&blk, 1);
+	sysex_stream_write((const uint8_t *)hex, sizeof(hex));
+	sysex_stream_write(trailer, sizeof(trailer));
+	sysex_tx_finish("Sent eeprom dump");
+}
+
 bool state_dump_tx = false;
 static void sysex_send_state_dump(void)
 {
@@ -630,7 +719,14 @@ static void sysex_send_state_dump(void)
 		}
 	}
 
-	// And finally, send the routing order
+	// What the pedal's own controls are bound to
+	report_info("Sending control bindings");
+	sysex_write_bindings();
+
+	//
+	// And finally the routing order, which stays last because the app
+	// takes it as the end of the dump.
+	//
 	report_info("Sending routing information");
 	static const uint8_t sysex_routing_header[] = { 0xF0, 0x7D, 0x08 };
 	static const uint8_t sysex_routing_trailer[] = { 0xF7 };
@@ -642,7 +738,11 @@ static void sysex_send_state_dump(void)
 	sysex_tx_finish("Sent state dump");
 }
 
-static uint8_t sysex_buf[32];
+//
+// Big enough for the largest thing that arrives, which is the rule
+// table: six bytes each and a command byte in front.
+//
+static uint8_t sysex_buf[1 + MAX_RULES * 6];
 static int sysex_len = 0;
 static bool in_sysex = false;
 
@@ -664,6 +764,35 @@ static void set_effect_pot(struct effect *e, unsigned int pot_idx, unsigned char
 	smp_store_release(&e->seq, seq + 1);
 }
 
+//
+// Change an effect's mix from core 0.
+//
+// Not just a parameter write: an effect that is in the chain has to be
+// stepped at all for its mix to mean anything, so setting the mix also
+// re-asserts whether it runs.  Being in the chain is the whole of that
+// now - both ends of effects[] used to be listed here as honorary chain
+// members, the signal chain because it always runs and settings because
+// forcing 'target' was how it kept its init() scheduled, and neither has
+// a wet or a dry for this to be about.
+//
+// It lives here rather than inside the SysEx handler because a binding
+// can set the mix too, and two callers with their own idea of what that
+// entails is how the two would come to disagree.
+//
+static void set_effect_mix(struct effect *e, unsigned char val)
+{
+	bool routed = false;
+
+	set_mix_pot(e, POT_TO_FLOAT(val));
+
+	for (int i = 0; !routed && i < routed_effect_count; i++) {
+		if (effects[effect_chain[i]] == e)
+			routed = true;
+	}
+	if (!e->no_mix)
+		e->target = routed ? EFF_ENABLE_STEPS : 0;
+}
+
 static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 {
 	uint8_t cmd = sysex_buf[0];
@@ -678,27 +807,10 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 			e = effects[eff_id];
 		}
 		if (e) {
-			if (pot_idx == 0) {
-				set_mix_pot(e, POT_TO_FLOAT(val));
-
-				//
-				// Being in the chain is the whole of it now.
-				// Both ends of effects[] used to be listed
-				// here as honorary chain members - the signal
-				// chain because it always runs, settings
-				// because forcing 'target' was how it kept
-				// its init() scheduled - and neither has a
-				// wet or a dry for this to be about.
-				//
-				bool routed = false;
-				for (int i = 0; !routed && i < routed_effect_count; i++) {
-					if (effects[effect_chain[i]] == e) routed = true;
-				}
-				if (!e->no_mix)
-					e->target = routed ? EFF_ENABLE_STEPS : 0;
-			} else if (pot_idx <= 10) {
+			if (pot_idx == 0)
+				set_effect_mix(e, val);
+			else if (pot_idx <= 10)
 				set_effect_pot(e, pot_idx - 1, val);
-			}
 		}
 	} else if (cmd == 0x04 && sysex_len >= 2) { // Save Scene
 		uint8_t scene_id = sysex_buf[1];
@@ -719,6 +831,20 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 	} else if (cmd == 0x05) { // State Dump Request
 
 		state_dump_tx = true;
+
+	} else if (cmd == 0x0e && sysex_len >= 2) { // Dump eeprom block
+		dump_block_req = sysex_buf[1];
+
+	} else if (cmd == 0x0c) { // Set the whole rule table
+		//
+		// Echo it back, always, and not as an acknowledgement:
+		// rules that do not check out are dropped, so what came
+		// back is the answer to "what did you keep".  That is
+		// also the case where the two ends disagree, which is
+		// exactly when the app needs telling.
+		//
+		set_rules(sysex_buf + 1, (sysex_len - 1) / 6);
+		sysex_send_bindings();
 
 	} else if (cmd == 0x08) { // Set Routing Order
 		routing_bitmap_t routable = routing_start();
@@ -848,18 +974,14 @@ static void init_i2c_bus(i2c_inst_t *i2c, int kbps, int sda, int scl)
 }
 
 //
-// The one rotary encoder.  Which of these a click lands in depends on
-// whether the shaft is held down at the time:
-//
-//	turn		change the selected pot's value
-//	press and turn	select a different pot
+// The one rotary encoder.  Turning it changes the selected pot's value,
+// and that is all a turn has ever meant to anything but the old EQ.
 //
 // Accumulated by the interrupt, drained by update_ui().  There used to
 // be a second encoder for picking the effect; it is gone, and picking
 // the effect is done over MIDI.
 //
 static volatile int rotary_value;
-static volatile int rotary_select;
 
 static void rotary_irq(void)
 {
@@ -882,12 +1004,7 @@ static void rotary_irq(void)
 		if (!val)
 			continue;
 
-		// Held down while turning means "pick a pot" rather
-		// than "change this one".  Pull-up, so low is pressed.
-		if (gpio_get(ROTARY_SW_GPIO))
-			rotary_value += val;
-		else
-			rotary_select += val;
+		rotary_value += val;
 	}
 	user_interaction = 1;
 }
@@ -987,7 +1104,13 @@ int main()
 
 	absolute_time_t next_ui_update = delayed_by_ms(now, 50);
 
-	eeprom_set_geometry();
+	//
+	// The codec decides the eeprom geometry, so it has to be asked
+	// first.  Every board with a TAC5112 was built with the 2kbit
+	// part, and that part cannot be identified by probing it - see
+	// eeprom_set_geometry().
+	//
+	eeprom_set_geometry(i2c_probe(TAC5112_I2C));
 
 	//
 	// After the eeprom, not before.  Reading it retries for fifty
@@ -1026,6 +1149,7 @@ int main()
 		sysex_send_schema();
 		sysex_send_state_dump();
 		sysex_send_status();
+		sysex_send_dump();
 		usb_audio_task();
 
 		// Claim 25Hz screen updates
@@ -1033,12 +1157,18 @@ int main()
 			next_ui_update = delayed_by_ms(now, 40);
 			eeprom_task();
 
-			// Stomp held down: switch to tuner mode
-			if (switch_pressed(LONGPRESS(STOMP_SWITCH))) {
-				switch_clear(LONGPRESS(STOMP_SWITCH));
-				tuner_mode = !tuner_mode;
-				send_midi_cc(MIDI_CC_GLOBAL_ENABLE, tuner_mode ? 68 : 69);
-			}
+			//
+			// Whatever the switches are bound to.
+			//
+			// Ahead of the tuner check on purpose: update_ui()
+			// does not run in tuner mode, and a gesture bound to
+			// ACT_TUNER has to be able to turn it off again.  A
+			// side effect is that a switch now acts while the
+			// tuner is up rather than being queued until it is
+			// dismissed, which is the more predictable of the
+			// two behaviours anyway.
+			//
+			handle_switch_bindings();
 
 			// Are we in tuner mode?
 			if (tuner_mode) {

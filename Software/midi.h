@@ -63,8 +63,6 @@
 // How many effects fit in one of the chain CCs
 #define STATUS_CHAIN_BITS        7
 
-extern int current_midi_effect_idx;
-
 //
 // USB-MIDI 1.0 packs everything into four bytes: a cable number in the
 // high nibble of the first byte - always zero here - and a Code Index

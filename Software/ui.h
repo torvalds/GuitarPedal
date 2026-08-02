@@ -3,24 +3,6 @@
 //
 #include "eeprom.h"
 
-static void move_pot(struct effect *effect, int dir)
-{
-	if (!dir)
-		return;
-
-	int new_active = effect->active_pot;
-	do {
-		new_active += dir;
-		if (new_active < 0)
-			new_active = 9;
-		else if (new_active > 9)
-			new_active = 0;
-		if (new_active == effect->active_pot)
-			return;
-	} while (!effect->pots[new_active].label);
-	effect->active_pot = new_active;
-}
-
 struct pot_range { int min, max; };
 
 static const struct pot_range get_pot_range(const struct pot_descr *pot)
@@ -35,58 +17,330 @@ static const struct pot_range get_pot_range(const struct pot_descr *pot)
 	return (struct pot_range) { min, max };
 }
 
-// Note that the "__atomic" part isn't actually about SMP, just the
-// interrupts
 //
-// Also note how the 'select' rotary low bits are ignored but allowed
-// to accumulate - but cleared if something else happens.
-static bool read_pots(struct effect *effect, unsigned char *pots)
+// Which pot a binding acts on.
+//
+// BIND_FOLLOW means the knob's, which can only be answered at the
+// moment the gesture happens - that is the entire point of it, and why
+// it is resolved here rather than stored.
+//
+//
+// The rule the knob is driving, for the things that follow it.
+//
+// The first one, when there are several: a knob bound to two parameters
+// at once is a perfectly good macro control, but "reset the knob's
+// parameter" has to mean one parameter, and the first is the only
+// answer that does not depend on how the list happens to be ordered
+// later.
+//
+static struct rule *knob_rule(void)
 {
-	const struct pot_descr *pot = effect->pots + effect->active_pot;
-	const struct pot_range range = get_pot_range(pot);
+	for (unsigned int i = 0; i < nr_rules; i++) {
+		if (rules[i].control == CTRL_ROTARY_TURN &&
+		    rules[i].action == ACT_POT)
+			return &rules[i];
+	}
+	return NULL;
+}
+
+static struct effect *bind_target(const struct rule *b, unsigned int *pot,
+				  unsigned int *eff_id)
+{
+	unsigned int eff = b->effect, idx = b->pot;
+
+	if (eff == BIND_FOLLOW) {
+		const struct rule *knob = knob_rule();
+
+		if (!knob)
+			return NULL;
+		eff = knob->effect;
+		idx = knob->pot;
+	}
+
+	if (eff >= ARRAY_SIZE(effects) || idx > 10)
+		return NULL;
+	if (!idx) {
+		if (effects[eff]->no_mix)
+			return NULL;
+	} else if (!effects[eff]->pots[idx - 1].label) {
+		return NULL;
+	}
+
+	*pot = idx;
+	*eff_id = eff;
+	return effects[eff];
+}
+
+//
+// A target's current value, default and range, with the mix folded in
+// as parameter 0 the way the wire numbers it.  The mix is a float on
+// its own scale rather than a byte in pot_values[], which is the whole
+// reason these three exist instead of the callers indexing directly.
+//
+static int target_value(struct effect *e, unsigned int pot)
+{
+	if (!pot)
+		return FLOAT_TO_POT(e->mix_pot);
+	return e->pot_values[e->seq & 1][pot - 1];
+}
+
+static int target_default(struct effect *e, unsigned int pot)
+{
+	if (!pot)
+		return FLOAT_TO_POT(e->def_mix);
+	return e->pots[pot - 1].def_val;
+}
+
+static struct pot_range target_range(struct effect *e, unsigned int pot)
+{
+	if (!pot)
+		return (struct pot_range){ 0, 120 };
+	return get_pot_range(e->pots + pot - 1);
+}
+
+//
+// Put a value on a bound pot, and tell the app.
+//
+// Clamped here rather than where the binding was accepted, because this
+// is the only place that always knows which pot it is: a following
+// target does not have one until the gesture happens.
+//
+static void set_target(struct effect *effect, unsigned int eff_id,
+		       unsigned int pot, int val)
+{
+	const struct pot_range range = target_range(effect, pot);
+
+	if (val < range.min)
+		val = range.min;
+	else if (val > range.max)
+		val = range.max;
+
+	if (val == target_value(effect, pot))
+		return;
+
+	if (pot)
+		set_effect_pot(effect, pot - 1, val);
+	else
+		set_effect_mix(effect, val);
+
+	send_sysex_set_param(eff_id, pot, val);
+}
+
+//
+// The rotary, turned.
+//
+// Every rule the knob has gets the same movement, so a knob bound to
+// two parameters moves both - which is what a macro control is.  The
+// accumulator is drained once, using the first rule's range to decide
+// how coarse to be, because it is one physical movement and it cannot
+// be spent twice.
+//
+// Note that the "__atomic" part isn't actually about SMP, just the
+// interrupts.  The low bits are deliberately left behind rather than
+// drained, so that sub-detent movement on a coarse pot adds up instead
+// of being thrown away a click at a time.
+//
+static void rotary_turned(void)
+{
+	struct rule *first = knob_rule();
+	unsigned int pot, eff_id;
+	struct effect *effect;
+	int ignore_low_bits = 0;
+
+	if (!first || !(effect = bind_target(first, &pot, &eff_id))) {
+		//
+		// Nothing to drive.  Drop what has accumulated rather
+		// than saving it up, or the first thing bound here
+		// would jump by however far the knob was fiddled with
+		// while it was pointing at nothing.
+		//
+		__atomic_store_n(&rotary_value, 0, __ATOMIC_RELAXED);
+		return;
+	}
 
 	// For small ranges, don't make the rotary so twitchy
-	int ignore_low_bits = 0;
+	const struct pot_range range = target_range(effect, pot);
 	if (range.max - range.min < 25)
 		ignore_low_bits = 2;
 
 	int mask = (1 << ignore_low_bits)-1;
 	int val = __atomic_fetch_and(&rotary_value, mask, __ATOMIC_RELAXED);
 	val >>= ignore_low_bits;
+	if (!val)
+		return;
 
-	if (!val) {
-		// Ignore low two bits of rotary select
-		int select = __atomic_fetch_and(&rotary_select, 3, __ATOMIC_RELAXED);
-		select &= ~3;
+	for (unsigned int i = 0; i < nr_rules; i++) {
+		struct rule *r = &rules[i];
 
-		if (select) {
-			int dir = (select < 0) ? -1 : 1;
+		if (r->control != CTRL_ROTARY_TURN || r->action != ACT_POT)
+			continue;
+		effect = bind_target(r, &pot, &eff_id);
+		if (!effect)
+			continue;
+		//
+		// set_target() clamps and tells the app, and does
+		// nothing when the value did not move - which is what
+		// stops a knob held against an end from sending the
+		// same number for ever.
+		//
+		set_target(effect, eff_id, pot,
+			   target_value(effect, pot) + val);
+	}
+}
 
-			move_pot(effect, dir);
-			return true;
+//
+// Step the rotary's target to the next parameter that exists on the
+// same effect, wrapping.  Parameter 0 is the mix, so an effect that has
+// one is stepped through as well.
+//
+// Only ever forwards: going backwards was what hold-and-turn did, and
+// that gesture is gone.
+//
+// This is the one action whose effect is to move another binding, so it
+// is also the one that has to say so afterwards.
+//
+static void next_bound_pot(void)
+{
+	struct rule *b = knob_rule();
+
+	if (!b || b->effect >= ARRAY_SIZE(effects))
+		return;
+
+	struct effect *effect = effects[b->effect];
+	int idx = b->pot;
+
+	do {
+		if (++idx > 10)
+			idx = 0;
+		if (idx == b->pot)
+			return;
+	} while (idx ? !effect->pots[idx - 1].label : effect->no_mix);
+
+	b->pot = idx;
+	sysex_send_bindings();
+}
+
+//
+// The three press actions that put a value on a pot.
+//
+// The LED flashes whether or not anything moved.  A press that changes
+// nothing - because you were already at the default, or because the
+// binding points at nothing - still has to be distinguishable from a
+// press that did not register.  "Did that do anything?" is the question
+// these exist to stop you having to ask, so they cannot be silent.
+//
+static void do_pot_action(const struct rule *b)
+{
+	unsigned int pot, eff_id;
+	struct effect *effect = bind_target(b, &pot, &eff_id);
+
+	if (effect) {
+		int val = -1;
+
+		switch (b->action) {
+		case ACT_RESET_POT:
+			val = target_default(effect, pot);
+			break;
+		case ACT_SET_POT:
+			val = b->val[0];
+			break;
+		case ACT_TOGGLE_POT:
+			//
+			// Stateless: whichever of the two it is not on
+			// right now.  Remembering which one it went to
+			// last would be one more thing to fall out of
+			// step with a value the app has since changed.
+			//
+			val = target_value(effect, pot) == b->val[0]
+			    ? b->val[1] : b->val[0];
+			break;
 		}
 
-		// No rotary changes. Shaft pressed?
-		//
-		// Clear and ignore the long press, it's the result
-		// of "hold and rotate"
-		unsigned int both = (1u << ROTARY_SWITCH) | (1u << LONGPRESS(ROTARY_SWITCH));
-		unsigned int sw = __atomic_fetch_and(&switch_val, ~both, __ATOMIC_RELAXED);
-		if (!(sw & (1u << ROTARY_SWITCH)))
-			return false;
-		move_pot(effect, 1);
-		return true;
+		if (val >= 0)
+			set_target(effect, eff_id, pot, val);
 	}
 
-	val += pots[effect->active_pot];
-	if (val < range.min)
-		val = range.min;
-	else if (val > range.max)
-		val = range.max;
+	attention_preview = ATTENTION_PREVIEW_TICKS;
+}
 
-	pots[effect->active_pot] = val;
+static void do_rule(const struct rule *b)
+{
+	switch (b->action) {
+	case ACT_NEXT_POT:
+		next_bound_pot();
+		break;
 
-	return true;
+	case ACT_RESET_POT:
+	case ACT_SET_POT:
+	case ACT_TOGGLE_POT:
+		do_pot_action(b);
+		break;
+
+	case ACT_BYPASS:
+		disable_all = EFF_ENABLE_STEPS * !disable_all;
+		send_midi_cc(MIDI_CC_GLOBAL_ENABLE, disable_all ? 0 : 127);
+		break;
+
+	case ACT_TUNER:
+		tuner_mode = !tuner_mode;
+		send_midi_cc(MIDI_CC_GLOBAL_ENABLE, tuner_mode ? 68 : 69);
+		break;
+
+	case ACT_SCENE:
+		//
+		// Checked again rather than trusted from the table.
+		// set_binding() saw the same 'nr_scenes', but it is
+		// decided by probing the board at startup and this
+		// costs nothing.
+		//
+		if (b->effect < nr_scenes)
+			load_scene(b->effect);
+		break;
+	}
+}
+
+//
+// Every rule that names this gesture, in table order.
+//
+// They are not atomic against the audio core: each one publishes as it
+// goes, so core 1 can see one parameter moved and the next not yet.
+// That is a sample or two apart on a 25Hz tick, and every one of these
+// ends up crossfaded by EFF_ENABLE_STEPS anyway, so it is not audible
+// and not worth a second publishing mechanism to avoid.
+//
+static void fire_control(unsigned int ctrl)
+{
+	for (unsigned int i = 0; i < nr_rules; i++) {
+		if (rules[i].control == ctrl)
+			do_rule(&rules[i]);
+	}
+}
+
+//
+// Whatever the switches are bound to.
+//
+// Called from the main loop ahead of the tuner-mode check rather than
+// from update_ui(), which does not run in tuner mode - something has to
+// be able to turn it off again.
+//
+static void handle_switch_bindings(void)
+{
+	static const struct {
+		unsigned char sw;
+		unsigned char ctrl;
+	} gestures[] = {
+		{ ROTARY_SWITCH,		CTRL_ROTARY_TAP },
+		{ LONGPRESS(ROTARY_SWITCH),	CTRL_ROTARY_HOLD },
+		{ STOMP_SWITCH,			CTRL_STOMP_TAP },
+		{ LONGPRESS(STOMP_SWITCH),	CTRL_STOMP_HOLD },
+	};
+
+	for (int i = 0; i < ARRAY_SIZE(gestures); i++) {
+		if (!switch_pressed(gestures[i].sw))
+			continue;
+		switch_clear(gestures[i].sw);
+		fire_control(gestures[i].ctrl);
+	}
 }
 
 
@@ -225,54 +479,18 @@ static void show_status(void)
 	output_clipped = 0;
 }
 
+//
 // 'update_ui()' is called every few ms to react to user events.
+//
+// The switches are not read here - see handle_switch_bindings(), which
+// the main loop calls before deciding whether it is in tuner mode.
+//
 static void update_ui(void)
 {
-	static int effect_idx = 0;
-
-	struct effect *effect = effects[effect_idx];
-
-	// Stomp: enable/disable all effects
-	if (switch_pressed(STOMP_SWITCH)) {
-		switch_clear(STOMP_SWITCH);
-		disable_all = EFF_ENABLE_STEPS * !disable_all;
-		send_midi_cc(MIDI_CC_GLOBAL_ENABLE, disable_all ? 0 : 127);
-	}
-
-	//
-	// Which effect the pedal itself is editing.  Nothing sets this
-	// yet: the encoder that used to pick the effect is gone, and
-	// what replaces it is bound up with making the stomp switch and
-	// the rotary programmable.  So this is the hook for that, and
-	// today it stays on effect 0.
-	//
-	int idx = current_midi_effect_idx;
-
-	if (idx != effect_idx) {
-		effect_idx = idx;
-		effect = effects[idx];
-	}
-
 	show_status();
 
 	if (attention_preview)
 		attention_preview--;
 
-	unsigned int seq = effect->seq;
-	unsigned char *cur_pot = effect->pot_values[seq & 1];
-	unsigned char *new_pot = effect->pot_values[!(seq & 1)];
-	memcpy(new_pot, cur_pot, 10);
-
-	// If something changed, let the other CPU know
-	if (read_pots(effect, new_pot)) {
-		for (int i=0; i<10; i++) {
-			int val = new_pot[i];
-			int old_val = cur_pot[i];
-			if (val != old_val) {
-				send_sysex_set_param(effect_idx, i+1, val);
-			}
-		}
-		smp_store_release(&effect->seq, seq + 1);
-	}
-
+	rotary_turned();
 }

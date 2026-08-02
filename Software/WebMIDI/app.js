@@ -10,6 +10,85 @@ const SYSEX_CMD = {
     TELEMETRY: 0x0b
 };
 
+//
+// What the pedal's own controls do.  Must match enum control_id and
+// enum bind_action in bindings.h.
+//
+// There is no schema for these the way there is for effects, and there
+// should not be: the set of gestures is fixed by what the hardware
+// physically has, so it changes when a board does rather than when an
+// effect header does.
+//
+const SYSEX_SET_BINDING = 0x0c;
+const SYSEX_BINDINGS = 0x0d;
+
+const ACT = {
+    NONE: 0, POT: 1, NEXT_POT: 2, RESET_POT: 3,
+    SET_POT: 4, TOGGLE_POT: 5, BYPASS: 6, TUNER: 7, SCENE: 8
+};
+
+// A target effect of this means "whatever the knob is turning".
+const BIND_FOLLOW = 0x7f;
+
+//
+// A target parameter is numbered the way the SysEx parameter write
+// numbers it: 0 is the mix, 1..10 are the effect's own pots.  The mix
+// is not a pot and has no schema entry, so it needs a definition to be
+// drawn from - the same one the effect cards use for their own mix
+// slider.
+//
+const MIX_POT_DEF = { name: 'Mix', curve: 'LINEAR', min: 0, max: 100, unit: '%' };
+
+const CONTROLS = [
+    { name: 'Knob \u2014 turn',        turns: true  },
+    { name: 'Knob \u2014 press',       turns: false },
+    { name: 'Knob \u2014 hold',        turns: false },
+    { name: 'Footswitch \u2014 press', turns: false },
+    { name: 'Footswitch \u2014 hold',  turns: false }
+];
+
+//
+// 'target' is whether the action names a parameter, and 'follow' is
+// whether that parameter may be "the knob's" rather than a named one.
+// 'values' is how many numbers it carries.
+//
+const ACTIONS = [
+    { v: ACT.NONE,       label: 'Nothing' },
+    { v: ACT.POT,        label: 'Control', target: true },
+    { v: ACT.NEXT_POT,   label: 'Next parameter' },
+    { v: ACT.RESET_POT,  label: 'Reset to default',
+      target: true, follow: true },
+    { v: ACT.SET_POT,    label: 'Set value', target: true, values: 1 },
+    { v: ACT.TOGGLE_POT, label: 'Toggle between', target: true, values: 2 },
+    { v: ACT.BYPASS,     label: 'Bypass' },
+    { v: ACT.TUNER,      label: 'Tuner' },
+    { v: ACT.SCENE,      label: 'Load scene' }
+];
+
+function actionDef(v) {
+    return ACTIONS.find(a => a.v === v) || ACTIONS[0];
+}
+
+//
+// The pedal accepts any action on any control, because a useless
+// binding is not a dangerous one and it has no business refusing
+// something merely silly.  Making the silly thing hard to say is this
+// end's job: a control that turns can only drive a parameter, and one
+// that clicks can do anything except that.
+//
+function actionsFor(ctrl) {
+    return ACTIONS.filter(a => CONTROLS[ctrl].turns
+                          ? (a.v === ACT.NONE || a.v === ACT.POT)
+                          : a.v !== ACT.POT);
+}
+
+//
+// The rule table, flat and in the pedal's order.  A gesture appears in
+// it as many times as it has things to do.
+//
+let pedalRules = [];
+let haveRules = false;
+
 let midiAccess = null;
 let midiInput = null;
 let midiOutput = null;
@@ -460,7 +539,16 @@ function handleSysex(data) {
             for (let i = 3; i < data.length - 1; i++)
                 jsonStr += String.fromCharCode(data[i]);
             try {
-                handleIdentity(JSON.parse(jsonStr));
+                const id = JSON.parse(jsonStr);
+                //
+                // Log the whole thing rather than the fields we happen
+                // to render. It is a handful of bytes once per connect,
+                // and it means a field added to answer a question on the
+                // bench is visible without the app having to learn it
+                // first.
+                //
+                console.log('[Pedal Identity]', id);
+                handleIdentity(id);
             } catch (e) {
                 console.error("Failed to parse identity", e);
             }
@@ -524,6 +612,34 @@ function handleSysex(data) {
                     }
                 }
             }
+            break;
+        }
+
+        case SYSEX_BINDINGS: {
+            pedalRules = [];
+            for (let at = 3; at + 5 < data.length; at += 6) {
+                pedalRules.push({ control: data[at],
+                                  action: data[at + 1],
+                                  effect: data[at + 2],
+                                  pot: data[at + 3],
+                                  val: [data[at + 4], data[at + 5]] });
+            }
+            haveRules = true;
+            renderBindings();
+            renderKnobHint();
+            break;
+        }
+
+        // Raw eeprom cache, 64 bytes as ASCII hex. Ask for it with
+        // dumpEeprom(n) from the console; n counts 64-byte blocks.
+        case 0x0f: {
+            let hex = '';
+            for (let i = 4; i < data.length - 1; i++)
+                hex += String.fromCharCode(data[i]);
+            const off = data[3] * 64;
+            const bytes = hex.match(/../g) || [];
+            console.log(`[EEPROM ${off.toString(16).padStart(4, '0')}] ` +
+                        bytes.join(' '));
             break;
         }
 
@@ -1804,6 +1920,427 @@ function handleIdentity(id) {
         notes.concat(wrong, early).join(' ');
 }
 
+//
+// Bench tool, on window so it can be driven from the console.
+//
+window.dumpEeprom = function (blk = 0, count = 1) {
+    for (let i = 0; i < count; i++)
+        setTimeout(() => sendSysex([0x0e, blk + i]), i * 50);
+};
+
+
+//
+// Send the whole table.  Nothing optimistic happens here: the pedal
+// drops rules it does not like and echoes back what it kept, and that
+// is what redraws.  So the screen shows what the pedal has rather than
+// what it was asked for, and a rule that did not survive is visible as
+// a row that did not come back.
+//
+function sendRules(list) {
+    const out = [SYSEX_SET_BINDING];
+    list.forEach(r => out.push(r.control & 0x7f, r.action & 0x7f,
+                               r.effect & 0x7f, (r.pot || 0) & 0x7f,
+                               (r.val[0] || 0) & 0x7f,
+                               (r.val[1] || 0) & 0x7f));
+    sendSysex(out);
+}
+
+// Replace one rule, or drop it when 'r' is null.
+function putRule(i, r) {
+    const list = pedalRules.slice();
+    if (r)
+        list[i] = r;
+    else
+        list.splice(i, 1);
+    sendRules(list);
+}
+
+function potDefFor(effId, potIdx) {
+    if (potIdx === 0)
+        return MIX_POT_DEF;
+    const e = PEDAL_EFFECTS[effectIdMap.get(effId)];
+    return e && e.pots ? e.pots[potIdx - 1] : null;
+}
+
+function potLabel(effId, potIdx) {
+    const pot = potDefFor(effId, potIdx);
+    const e = PEDAL_EFFECTS[effectIdMap.get(effId)];
+
+    if (!e || !pot || !pot.name)
+        return `effect ${effId}, parameter ${potIdx}`;
+    return `${e.name} \u2013 ${pot.name}`;
+}
+
+//
+// Every (effect, pot) worth pointing something at, in the order the
+// signal travels: the front anchor, the routed chain, the back anchor.
+//
+// An unrouted effect is left out because pointing at one would be
+// pointing at nothing - the pedal does not step an effect that is not
+// in the chain, and unrouting one throws its values away, so the value
+// being set is about to be overwritten by a default.  The two anchors
+// are always in even though neither is in effect_chain[]: the Signal
+// Chain always runs, and Settings is where the attention brightness
+// lives, which is the one setting whose whole point is to be adjusted
+// from the pedal while watching the LED.
+//
+function potTargets() {
+    const out = [];
+    const seen = new Set();
+
+    const add = (id) => {
+        const idx = effectIdMap.get(id);
+        const e = PEDAL_EFFECTS[idx];
+        if (!e || seen.has(id))
+            return;
+        seen.add(id);
+        //
+        // The mix first, because turning an effect off by taking its
+        // mix to nothing is the most useful thing a footswitch can do
+        // to one.  The anchors have no wet and no dry, so no mix.
+        //
+        if (!isAnchorEffect(idx))
+            out.push({ effId: e.id, pot: 0, label: potLabel(e.id, 0) });
+        e.pots.forEach((pot, i) => {
+            if (pot.name)
+                out.push({ effId: e.id, pot: i + 1,
+                           label: potLabel(e.id, i + 1) });
+        });
+    };
+
+    if (PEDAL_EFFECTS.length)
+        add(PEDAL_EFFECTS[0].id);
+    currentRouting.forEach(add);
+    if (PEDAL_EFFECTS.length > 1)
+        add(PEDAL_EFFECTS[PEDAL_EFFECTS.length - 1].id);
+
+    return out;
+}
+
+function sceneCount() {
+    const sel = document.getElementById('global-scene-select');
+    return sel && sel.options.length ? sel.options.length : 1;
+}
+
+function bindingSummary(b) {
+    const def = actionDef(b.action);
+
+    if (b.action === ACT.SCENE)
+        return `Scene ${b.effect}`;
+    if (!def.target)
+        return def.label;
+    if (b.effect === BIND_FOLLOW)
+        return `${def.label}: the knob\u2019s`;
+    return `${def.label}: ${potLabel(b.effect, b.pot)}`;
+}
+
+//
+// One number, drawn the way that pot's own control is drawn: a menu for
+// something enumerated, a slider and a readout for anything else.
+//
+// It has to be the pot's own units.  A raw 0-120 would make "toggle
+// between 40 and 80" unanswerable without doing the arithmetic that the
+// rest of the app exists to avoid.
+//
+function valueControl(pot, val, onChange) {
+    const wrap = document.createElement('div');
+    wrap.className = 'binding-value';
+
+    if (pot && pot.curve === 'ENUM' && pot.enum && pot.enum.length) {
+        const sel = document.createElement('select');
+        sel.className = 'menu-select';
+        pot.enum.forEach((name, i) => {
+            const o = document.createElement('option');
+            o.value = i;
+            o.textContent = name;
+            sel.appendChild(o);
+        });
+        sel.value = Math.min(val, pot.enum.length - 1);
+        sel.addEventListener('change', () => onChange(parseInt(sel.value)));
+        wrap.appendChild(sel);
+        return wrap;
+    }
+
+    const range = document.createElement('input');
+    range.type = 'range';
+    range.min = 0;
+    range.max = 120;
+    range.value = val;
+
+    const out = document.createElement('span');
+    out.className = 'pot-value';
+    const show = (v) => out.textContent = pot ? formatPotValue(pot, v) : v;
+    show(val);
+
+    // Follow the drag, but only send when it is let go of.
+    range.addEventListener('input', () => show(parseInt(range.value)));
+    range.addEventListener('change', () => onChange(parseInt(range.value)));
+
+    wrap.appendChild(range);
+    wrap.appendChild(out);
+    return wrap;
+}
+
+//
+// A sensible rule to start from when a gesture gains one.
+//
+// A click gets a mix toggle on the first thing in the chain, because
+// that is overwhelmingly what a footswitch is added for, and an empty
+// row you then have to fill in twice is not a starting point.
+//
+function newRule(ctrl) {
+    const t = potTargets()[0];
+
+    if (CONTROLS[ctrl].turns)
+        return { control: ctrl, action: ACT.POT,
+                 effect: t ? t.effId : 0, pot: t ? t.pot : 0, val: [0, 0] };
+    return { control: ctrl, action: ACT.TOGGLE_POT,
+             effect: t ? t.effId : 0, pot: t ? t.pot : 0, val: [0, 120] };
+}
+
+function renderRule(r, i) {
+    const def = actionDef(r.action);
+    const row = document.createElement('div');
+    row.className = 'rule-row';
+
+    //
+    // Everything the rule says goes in the body, which wraps onto a
+    // second line when there are values.  The remove button sits beside
+    // the whole thing rather than in the flow, because it belongs to
+    // the rule and not to any one line of it.
+    //
+    const body = document.createElement('div');
+    body.className = 'rule-body';
+    if (r.action === ACT.SCENE || def.target)
+        body.classList.add('has-target');
+    row.appendChild(body);
+
+    const act = document.createElement('select');
+    act.className = 'menu-select';
+    actionsFor(r.control).forEach(a => {
+        const o = document.createElement('option');
+        o.value = a.v;
+        o.textContent = a.label;
+        act.appendChild(o);
+    });
+    act.value = r.action;
+    body.appendChild(act);
+
+    act.addEventListener('change', () => {
+        const a = parseInt(act.value);
+        const nd = actionDef(a);
+        const next = { control: r.control, action: a,
+                       effect: 0, pot: 0, val: [0, 0] };
+
+        //
+        // A new action inherits the target when it can still use one,
+        // because changing "reset this" to "toggle this" and being
+        // handed a different parameter would be a surprise.  What it
+        // cannot inherit is a following target, which only reset may
+        // have.
+        //
+        if (a === ACT.SCENE) {
+            next.effect = (r.action === ACT.SCENE) ? r.effect : 0;
+        } else if (nd.target) {
+            const usable = r.effect !== BIND_FOLLOW || nd.follow;
+            if (def.target && usable) {
+                next.effect = r.effect;
+                next.pot = r.pot;
+            } else if (nd.follow) {
+                next.effect = BIND_FOLLOW;
+            } else {
+                const t = potTargets()[0];
+                if (t) { next.effect = t.effId; next.pot = t.pot; }
+            }
+            if (nd.values && next.effect !== BIND_FOLLOW)
+                next.val = [r.val[0], r.val[1]];
+        }
+        putRule(i, next);
+    });
+
+    if (r.action === ACT.SCENE || def.target) {
+        const arg = document.createElement('select');
+        arg.className = 'menu-select';
+
+        if (r.action === ACT.SCENE) {
+            for (let sc = 0; sc < sceneCount(); sc++) {
+                const o = document.createElement('option');
+                o.value = `s${sc}`;
+                o.textContent = `Scene ${sc}`;
+                arg.appendChild(o);
+            }
+            arg.value = `s${r.effect}`;
+        } else {
+            if (def.follow) {
+                const o = document.createElement('option');
+                o.value = 'follow';
+                o.textContent = 'The knob\u2019s parameter';
+                arg.appendChild(o);
+            }
+            const targets = potTargets();
+            const cur = `${r.effect}:${r.pot}`;
+            //
+            // Whatever it points at stays in the list even after that
+            // effect leaves the chain.  Dropping it would make the
+            // select show some other parameter's name while the pedal
+            // went on driving this one.
+            //
+            if (r.effect !== BIND_FOLLOW &&
+                !targets.some(t => `${t.effId}:${t.pot}` === cur))
+                targets.unshift({ effId: r.effect, pot: r.pot,
+                                  label: potLabel(r.effect, r.pot) +
+                                         ' (not routed)' });
+            targets.forEach(t => {
+                const o = document.createElement('option');
+                o.value = `${t.effId}:${t.pot}`;
+                o.textContent = t.label;
+                arg.appendChild(o);
+            });
+            arg.value = r.effect === BIND_FOLLOW ? 'follow' : cur;
+        }
+
+        arg.addEventListener('change', () => {
+            const v = arg.value;
+            const next = { ...r, val: r.val.slice() };
+            if (v.startsWith('s'))
+                next.effect = parseInt(v.slice(1));
+            else if (v === 'follow') {
+                next.effect = BIND_FOLLOW;
+                next.pot = 0;
+            } else {
+                const [e, p] = v.split(':').map(Number);
+                next.effect = e;
+                next.pot = p;
+            }
+            putRule(i, next);
+        });
+        body.appendChild(arg);
+    }
+
+    if (def.values && r.effect !== BIND_FOLLOW) {
+        const pot = potDefFor(r.effect, r.pot);
+        for (let v = 0; v < def.values; v++) {
+            body.appendChild(valueControl(pot, r.val[v], (nv) => {
+                const next = { ...r, val: r.val.slice() };
+                next.val[v] = nv;
+                putRule(i, next);
+            }));
+        }
+    }
+
+    const del = document.createElement('button');
+    del.className = 'action-btn rule-remove';
+    del.textContent = '\u00d7';
+    del.title = 'Remove';
+    del.addEventListener('click', () => putRule(i, null));
+    row.appendChild(del);
+
+    return row;
+}
+
+function renderBindings() {
+    const host = document.getElementById('bindings-rows');
+    const hint = document.getElementById('bindings-hint');
+
+    if (hint)
+        hint.textContent = haveRules
+            ? 'Nothing here is saved yet: the pedal goes back to its ' +
+              'defaults when it is power-cycled. A gesture can have more ' +
+              'than one rule, and they all happen together \u2014 which is ' +
+              'how one press swaps between two effects.'
+            : 'Not connected.';
+
+    if (!host)
+        return;
+    host.innerHTML = '';
+
+    //
+    // Rows only once the pedal has told us what it has.  An empty table
+    // here would claim every control does nothing, which is a specific
+    // and wrong answer to a question we have not asked yet.
+    //
+    if (!haveRules || !PEDAL_EFFECTS.length)
+        return;
+
+    CONTROLS.forEach((ctrl, c) => {
+        const group = document.createElement('div');
+        group.className = 'rule-group';
+
+        //
+        // The gesture's name, and adding to it, on one line - so that
+        // the button lands in the same column as the removes below it
+        // and it is obvious which gesture it adds to.
+        //
+        const head = document.createElement('div');
+        head.className = 'rule-head';
+
+        const label = document.createElement('label');
+        label.textContent = ctrl.name;
+        head.appendChild(label);
+
+        const add = document.createElement('button');
+        add.className = 'action-btn rule-add';
+        add.textContent = '+';
+        add.title = `Add a rule to ${ctrl.name}`;
+        add.disabled = pedalRules.length >= 16;
+        add.addEventListener('click', () =>
+            sendRules(pedalRules.concat([newRule(c)])));
+        head.appendChild(add);
+        group.appendChild(head);
+
+        pedalRules.forEach((r, i) => {
+            if (r.control === c)
+                group.appendChild(renderRule(r, i));
+        });
+
+        host.appendChild(group);
+    });
+}
+
+//
+// What the knob is on, said next to the pot you are looking at.
+//
+// Without this the shortcut below is a button that silently steals the
+// knob from wherever it was - and with one knob, every assignment is a
+// theft from something.
+//
+function renderKnobHint() {
+    const hintEl = document.getElementById('knob-target-hint');
+    const btn = document.getElementById('assign-knob-btn');
+    if (!hintEl || !btn)
+        return;
+
+    const b = pedalRules.find(r => r.control === 0 && r.action === ACT.POT);
+    const here = activePotTarget();
+
+    if (here && b && b.effect === here.effId && b.pot === here.pot) {
+        hintEl.textContent = 'The knob is on this.';
+        btn.disabled = true;
+    } else {
+        hintEl.textContent = b
+            ? `Knob is on ${potLabel(b.effect, b.pot)}.`
+            : 'The knob drives nothing.';
+        btn.disabled = !here;
+    }
+}
+
+// Which (effect, parameter) the open panel is showing, mix included.
+function activePotTarget() {
+    if (!activePotCc)
+        return null;
+
+    const parts = activePotCc.split('-');
+    const eff = PEDAL_EFFECTS[parseInt(parts[1])];
+    if (!eff)
+        return null;
+
+    if (parts.length >= 4 && parts[2] === 'pot')
+        return { effId: eff.id, pot: parseInt(parts[3]) + 1 };
+    if (parts.length === 3 && parts[2] === 'mix')
+        return { effId: eff.id, pot: 0 };
+    return null;
+}
+
 function handleGlobalStatus(val) {
     const dropped = val & STATUS_DROPPED_MASK;
 
@@ -1984,6 +2521,11 @@ function setCardCollapsed(card, collapsed) {
 function applyRouting(routeIds) {
     const wasRouted = new Set(currentRouting);
     currentRouting = routeIds.slice();
+
+    // What the knob can be pointed at is a function of what is in the
+    // chain, so it changed just now too.
+    renderBindings();
+    renderKnobHint();
 
     // The chain bits are by position, so what they mean just changed
     renderAttention();
@@ -3175,6 +3717,7 @@ appTitleEl.addEventListener('click', () => {
     function closeAllPanels() {
         if (document.getElementById('panel-backdrop')) document.getElementById('panel-backdrop').classList.add('hidden');
         if (document.getElementById('settings-panel')) document.getElementById('settings-panel').classList.add('hidden');
+        if (document.getElementById('bindings-panel')) document.getElementById('bindings-panel').classList.add('hidden');
         if (document.getElementById('active-pot-panel')) document.getElementById('active-pot-panel').classList.add('hidden');
         closeMenu();
         activePotCc = null;
@@ -3285,6 +3828,47 @@ appTitleEl.addEventListener('click', () => {
     }
 
     // Active Pot initialization
+    const openBindingsBtn = document.getElementById('open-bindings-btn');
+    if (openBindingsBtn) {
+        openBindingsBtn.addEventListener('click', () => {
+            closeAllPanels();
+            renderBindings();
+            document.getElementById('bindings-panel').classList.remove('hidden');
+            if (backdrop) backdrop.classList.remove('hidden');
+        });
+    }
+
+    const closeBindingsBtn = document.getElementById('close-bindings');
+    if (closeBindingsBtn)
+        closeBindingsBtn.addEventListener('click', closeAllPanels);
+
+    //
+    // Point the knob at whatever pot the panel is showing.  The hint
+    // beside it says what is being taken away, because with one knob
+    // every assignment takes it off something else.
+    //
+    const assignKnobBtn = document.getElementById('assign-knob-btn');
+    if (assignKnobBtn) {
+        assignKnobBtn.addEventListener('click', () => {
+            const t = activePotTarget();
+            if (!t)
+                return;
+            //
+            // Move the knob's first rule rather than adding another,
+            // since "assign" means point it here and a second rule
+            // would mean drive both.
+            //
+            const i = pedalRules.findIndex(r => r.control === 0 &&
+                                                r.action === ACT.POT);
+            const r = { control: 0, action: ACT.POT,
+                        effect: t.effId, pot: t.pot, val: [0, 0] };
+            if (i < 0)
+                sendRules(pedalRules.concat([r]));
+            else
+                putRule(i, r);
+        });
+    }
+
     const closeActivePotBtn = document.getElementById('close-active-pot');
     if (closeActivePotBtn) {
         closeActivePotBtn.addEventListener('click', () => {
@@ -3348,6 +3932,8 @@ appTitleEl.addEventListener('click', () => {
         if (name) name.textContent = `${effectName} - ${potDef.name}`;
         if (valDisplay) valDisplay.textContent = formatPotValue(potDef, currentVal);
         if (activePotSlider) activePotSlider.value = currentVal;
+
+        renderKnobHint();
 
         panel.classList.remove('hidden');
         if (backdrop) backdrop.classList.remove('hidden');

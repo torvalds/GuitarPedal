@@ -848,6 +848,135 @@ input[type=range]:focus::-moz-range-thumb {
   padding-bottom: 20px;
 }
 
+/* The knob shortcut, and what it is about to take the knob away from. */
+.active-pot-knob {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 18px;
+}
+
+.active-pot-knob > .menu-hint {
+  margin-top: 0;
+}
+
+#assign-knob-btn {
+  flex: none;
+  width: auto;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+#assign-knob-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* One gesture, and everything it does. */
+.rule-group {
+  margin-bottom: 20px;
+}
+
+/*
+ * The gesture's name and its add button, laid out like a rule row so
+ * that the + lands in the same column as the x below it - which is
+ * also what makes it obvious which gesture it adds to.
+ *
+ * Both keep .action-btn's own size.  They are circles, and a circle
+ * told to be any other shape stops being one.
+ */
+.rule-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.rule-head > label {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.rule-add {
+  flex: none;
+  opacity: 0.5;
+}
+
+.rule-add:hover {
+  opacity: 1;
+}
+
+.rule-add:disabled {
+  opacity: 0.2;
+  cursor: default;
+}
+
+/*
+ * A rule reads left to right as a sentence - what it does, what it does
+ * it to, and the values it does it with - wrapping onto a second line
+ * when there are values.  The remove button is outside that, beside the
+ * whole rule, because it belongs to the rule rather than to any line of
+ * it.  It also has to keep .action-btn's fixed size: it is a circle,
+ * and a circle stretched to fill a grid cell is an oval.
+ */
+.rule-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.rule-body {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+/* An action with nothing to point at gets the line to itself. */
+.rule-body:not(.has-target) > .menu-select {
+  grid-column: 1 / -1;
+}
+
+.rule-remove {
+  flex: none;
+  font-size: 0.95rem;
+  opacity: 0.5;
+}
+
+.rule-remove:hover {
+  opacity: 1;
+}
+
+
+/*
+ * A value is the pot's own control in miniature - the slider and the
+ * readout it would have on its card, in the units it would use there.
+ */
+.binding-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.binding-value > input[type="range"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.binding-value > .pot-value {
+  flex: none;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 /* Larger slider for fine adjustments */
 input[type=range].large-slider {
   height: 40px;
