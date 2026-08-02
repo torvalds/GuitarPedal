@@ -15,7 +15,13 @@
 
 sample_t get_usb_audio_input(void);
 
-typedef float (*pot_convert_fn)(unsigned char);
+//
+// A pot's raw value turned into whatever the pot is measured in.  Takes
+// the whole array rather than the one byte, and knows its own index -
+// so a call site names the pot once and cannot pair the accessor of one
+// with the position of another.
+//
+typedef float (*pot_convert_fn)(const unsigned char *);
 
 //
 // How an effect's wet and dry get mixed together.
@@ -213,7 +219,7 @@ static inline raw_sample_t *i2s_dma_rx_ptr(void)
 //
 // The floor is fed the *gate's* envelope and nothing else, and the reason
 // is definitional rather than measured: a floor reading is only useful if
-// it can be compared against 'Level', Level is compared against the
+// it can be compared against 'Gate', Gate is compared against the
 // gate's envelope, so the floor has to be that same envelope.  Anything
 // else is a different quantity wearing the same units, and would only
 // happen to agree.
@@ -332,23 +338,23 @@ static inline void __audio_func(single_sample)(float mix)
 	// routed.  Called straight rather than through do_effect_step()
 	// because it is not an effect - see effects/signal_chain.h.
 	//
-	sample_t out = signal_chain_step(in);
+	sample_t out = chain_step(in);
 
 	//
 	// ...and the floor after it, because it follows the gate's own
-	// envelope rather than the peak meter above.  Same quantity 'Level'
+	// envelope rather than the peak meter above.  Same quantity 'Gate'
 	// is compared against, so the two numbers can be read against each
 	// other - which is the only reason to show a floor at all.
 	//
-	meter_floor = envelope_step(&meter_floor_env, signal_chain.envelope.value);
+	meter_floor = envelope_step(&meter_floor_env, chain.envelope.value);
 
 	for (int i = 0; i < routed_effect_count; i++) {
 		out = do_effect_step(effects[effect_chain[i]], out);
 	}
 
-	// ...and the far end of it.  Slewed by signal_chain_step() above.
-	out.left *= signal_chain.volume;
-	out.right *= signal_chain.volume;
+	// ...and the far end of it.  Slewed by chain_step() above.
+	out.left *= chain.volume;
+	out.right *= chain.volume;
 
 	//
 	// Global bypass crossfades to the untouched input, so trim, the

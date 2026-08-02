@@ -1,7 +1,7 @@
 // NAME: Tone [TONE]
 // PRIORITY: 10
 // COPIES: 2
-// GRAPH: LOSHELF:0.707 PEAKING:POT6 HISHELF:0.707
+// GRAPH: LOSHELF:0.707 PEAKING:MID_Q HISHELF:0.707
 // POT: "Bass Freq" EXPONENTIAL(20.0 20480.0) = 200.0 Hz
 // POT: "Bass" LINEAR(-15.0 15.0) = 0.0 dB
 // POT: "Mid Freq" EXPONENTIAL(20.0 20480.0) = 800.0 Hz
@@ -40,7 +40,7 @@
 // of a boxy guitar.  It reads as Q rather than as a width because that
 // is what it is, and the graph shows what it does the moment it moves.
 //
-// The GRAPH: line says POT6, and that is the only place the connection
+// The GRAPH: line names Mid Q, and that is the only place the connection
 // is made - the generator writes the Q out from that declaration, so the
 // number the app draws with and the number the filter is built from
 // cannot be different ones.
@@ -90,12 +90,12 @@ static void SELF(_init)(unsigned char pot[10])
 	float q[3];
 
 	tone_graph_q(q, pot);
-	biquad_lowshelf(&SELF(_state).bass, tone_pot0(pot[0]), q[0],
-			db_to_A(tone_pot1(pot[1])));
-	biquad_peaking(&SELF(_state).mid, tone_pot2(pot[2]), q[1],
-		       db_to_A(tone_pot3(pot[3])));
-	biquad_highshelf(&SELF(_state).treble, tone_pot4(pot[4]), q[2],
-			 db_to_A(tone_pot5(pot[5])));
+	biquad_lowshelf(&SELF(_state).bass, tone_bass_freq_pot(pot), q[0],
+			db_to_A(tone_bass_pot(pot)));
+	biquad_peaking(&SELF(_state).mid, tone_mid_freq_pot(pot), q[1],
+		       db_to_A(tone_mid_pot(pot)));
+	biquad_highshelf(&SELF(_state).treble, tone_treble_freq_pot(pot), q[2],
+			 db_to_A(tone_treble_pot(pot)));
 }
 
 static float SELF(_step)(float in)

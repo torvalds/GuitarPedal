@@ -1,4 +1,4 @@
-// NAME: Preamp [PRE]
+// NAME: Preamp [PREAMP]
 // PRIORITY: 20
 // POT: "Level" LINEAR(-20.0 20.0) = 0.0 dB
 // POT: "Sat" LINEAR(0.5 4.0) = 1.2 x
@@ -63,9 +63,9 @@ static struct {
 
 static inline void preamp_init(unsigned char pot[10])
 {
-	preamp.level = db_to_level(preamp_pot0(pot[0]));
-	preamp.drive = preamp_pot1(pot[1]);
-	preamp.voice = pot[2];
+	preamp.level = db_to_level(preamp_level_pot(pot));
+	preamp.drive = preamp_sat_pot(pot);
+	preamp.voice = pot[PREAMP_VOICE];
 
 	// Shelf and miller corners are fixed; computed here because pow2() needs runtime tables.
 	preamp_onepole_set(&preamp.jfet.shelf,  PREAMP_JFET_SHELF);

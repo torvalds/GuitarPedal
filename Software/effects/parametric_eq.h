@@ -1,4 +1,4 @@
-// NAME: Parametric EQ [PEQ]
+// NAME: Parametric EQ [EQ]
 // PRIORITY: 120
 // GRAPH: LOSHELF PEAKING PEAKING PEAKING HISHELF
 // POT: "LS Freq" EXPONENTIAL(20.0 20480.0) = 100.0 Hz
@@ -54,31 +54,31 @@
 struct {
 	struct biquad_coeff coeff[5];
 	struct biquad_state state[5];
-} peq;
+} eq;
 
 // Q comes from the GRAPH: line above, so the app draws the same shape
 // this builds.  Unstated there means 1.0, which is what these five have
 // always used - all ten pots are spent on frequencies and gains, so
 // there is nothing left to make it adjustable with.  See tone.h, which
 // has the room.
-static void parametric_eq_init(unsigned char pot[10])
+static void eq_init(unsigned char pot[10])
 {
-	struct biquad_coeff *c = peq.coeff;
+	struct biquad_coeff *c = eq.coeff;
 	float q[5];
 
-	parametric_eq_graph_q(q, pot);
+	eq_graph_q(q, pot);
 
-	_biquad_loshelf(c+0, fastsincos(parametric_eq_pot0(pot[0]) / SAMPLES_PER_SEC), q[0], db_to_A(parametric_eq_pot1(pot[1])));
-	_biquad_peaking(c+1, fastsincos(parametric_eq_pot2(pot[2]) / SAMPLES_PER_SEC), q[1], db_to_A(parametric_eq_pot3(pot[3])));
-	_biquad_peaking(c+2, fastsincos(parametric_eq_pot4(pot[4]) / SAMPLES_PER_SEC), q[2], db_to_A(parametric_eq_pot5(pot[5])));
-	_biquad_peaking(c+3, fastsincos(parametric_eq_pot6(pot[6]) / SAMPLES_PER_SEC), q[3], db_to_A(parametric_eq_pot7(pot[7])));
-	_biquad_hishelf(c+4, fastsincos(parametric_eq_pot8(pot[8]) / SAMPLES_PER_SEC), q[4], db_to_A(parametric_eq_pot9(pot[9])));
+	_biquad_loshelf(c+0, fastsincos(eq_ls_freq_pot(pot) / SAMPLES_PER_SEC), q[0], db_to_A(eq_ls_gain_pot(pot)));
+	_biquad_peaking(c+1, fastsincos(eq_p1_freq_pot(pot) / SAMPLES_PER_SEC), q[1], db_to_A(eq_p1_gain_pot(pot)));
+	_biquad_peaking(c+2, fastsincos(eq_p2_freq_pot(pot) / SAMPLES_PER_SEC), q[2], db_to_A(eq_p2_gain_pot(pot)));
+	_biquad_peaking(c+3, fastsincos(eq_p3_freq_pot(pot) / SAMPLES_PER_SEC), q[3], db_to_A(eq_p3_gain_pot(pot)));
+	_biquad_hishelf(c+4, fastsincos(eq_hs_freq_pot(pot) / SAMPLES_PER_SEC), q[4], db_to_A(eq_hs_gain_pot(pot)));
 }
 
-static float parametric_eq_step(float in)
+static float eq_step(float in)
 {
-	const struct biquad_coeff *c = peq.coeff;
-	struct biquad_state *s = peq.state;
+	const struct biquad_coeff *c = eq.coeff;
+	struct biquad_state *s = eq.state;
 
 	float val = _biquad_step(c+0, s+0, in);
 	val = _biquad_peaking_step(c+1, s+1, val);

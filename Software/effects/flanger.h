@@ -1,4 +1,4 @@
-// NAME: Flanger [FLNGR]
+// NAME: Flanger [FLANGER]
 // PRIORITY: 60
 // POT: "Freq" SQUARED(0.0 10.0) = 2.5 Hz
 // POT: "Delay" LINEAR(0.0 4.0) = 2.0 ms
@@ -18,10 +18,10 @@ static struct {
 
 static inline void flanger_init(unsigned char pot[10])
 {
-	set_lfo_freq(&flanger.lfo, flanger_pot0(pot[0]));
-	flanger.delay = flanger_pot1(pot[1]) * SAMPLES_PER_MSEC;
-	flanger.depth = flanger_pot2(pot[2]);
-	flanger.feedback = flanger_pot3(pot[3]);
+	set_lfo_freq(&flanger.lfo, flanger_freq_pot(pot));
+	flanger.delay = flanger_delay_pot(pot) * SAMPLES_PER_MSEC;
+	flanger.depth = flanger_depth_pot(pot);
+	flanger.feedback = flanger_feedback_pot(pot);
 }
 
 static inline float flanger_step(float in)

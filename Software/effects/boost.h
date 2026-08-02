@@ -12,10 +12,10 @@ struct {
 
 void boost_init(unsigned char pot[10])
 {
-	boost.mult = db_to_level(boost_pot0(pot[0]));
-	boost.level = db_to_level(boost_pot1(pot[1]));
-	biquad_hpf(&boost.basscut, boost_pot2(pot[2]), 0.707);
-	biquad_lpf(&boost.highcut, boost_pot3(pot[3])*1000, 0.707);
+	boost.mult = db_to_level(boost_boost_pot(pot));
+	boost.level = db_to_level(boost_level_pot(pot));
+	biquad_hpf(&boost.basscut, boost_basscut_pot(pot), 0.707);
+	biquad_lpf(&boost.highcut, boost_highcut_pot(pot)*1000, 0.707);
 }
 
 

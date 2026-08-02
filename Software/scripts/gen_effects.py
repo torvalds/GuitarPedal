@@ -32,6 +32,30 @@ def c_string(s):
     return ''.join(out)
 
 
+def c_ident(where, what, text):
+    """Turn a label into the identifier fragment that names it in C.
+
+    Runs of anything that is not alphanumeric collapse to one underscore
+    and the ends are trimmed - so "Bass Freq" is BASS_FREQ, "USB L/R In"
+    is USB_L_R_IN, and the two spaces settings.h pads "  ATTN" with for
+    the app's benefit simply fall off.
+
+    A label is written to be read by a person, so it can say anything.
+    Refuse the ones that cannot be an identifier here rather than
+    emitting something that will not compile, because the mistake
+    belongs to the header that spelled the label and not to a generated
+    file nobody meant to read.
+    """
+    ident = re.sub(r'[^0-9A-Za-z]+', '_', text).strip('_')
+    if not ident:
+        raise SystemExit(f"{where}: {what} '{text}' has nothing in it that "
+                         f"can be part of a C identifier")
+    if ident[0].isdigit():
+        raise SystemExit(f"{where}: {what} '{text}' starts with a digit, so "
+                         f"'{ident}' cannot be a C identifier")
+    return ident
+
+
 def default_pot_value(pot):
     """Turn a pot default in engineering units into the raw 0..120 value.
 
@@ -168,12 +192,26 @@ def generate(audio_dir, out_h, out_js, out_md):
 
             pots.append({
                 'label': p_label,
+                'ident': c_ident(header_path, 'pot label', p_label),
                 'unit': p_unit if p_unit else "none",
                 'curve': p_curve,
                 'args': p_args.split() if p_args else [],
                 'enum': enum_list,
                 'default': default_val
             })
+
+        #
+        # Two labels that come out as one identifier would define one
+        # constant twice, and the compiler would blame the second
+        # definition rather than the pair that caused it.  Name both.
+        #
+        seen_idents = {}
+        for pot in pots:
+            first = seen_idents.setdefault(pot['ident'].upper(), pot['label'])
+            if first != pot['label']:
+                raise SystemExit(f"{header_path}: pot labels '{first}' and "
+                                 f"'{pot['label']}' both come out as "
+                                 f"'{pot['ident'].upper()}'")
 
         #
         # An effect whose controls are better drawn than listed says so
@@ -196,7 +234,15 @@ def generate(audio_dir, out_h, out_js, out_md):
         # A band may carry its Q as 'PEAKING:0.707'.  Default 1.0, which
         # is what the only graphed effect used before there was anywhere
         # to say otherwise.
-        graph_match = re.search(r'//[ \t]*GRAPH:[ \t]*([A-Z0-9.: \t]*)', content)
+        #
+        # Or it may name a pot - 'PEAKING:MID_Q' - and then the Q can be
+        # moved while playing.  A pot is named the way the generated
+        # constant names it, which is the label with the spaces turned
+        # into underscores; it used to be 'POT6', a position that had to
+        # be recounted every time the POT: lines above it moved.
+        #
+        by_ident = {pot['ident'].upper(): n for n, pot in enumerate(pots)}
+        graph_match = re.search(r'//[ \t]*GRAPH:[ \t]*([A-Z0-9._: \t]*)', content)
         graph = []
 
         for word in graph_match.group(1).split() if graph_match else []:
@@ -204,22 +250,15 @@ def generate(audio_dir, out_h, out_js, out_md):
             if kind not in ('LOSHELF', 'PEAKING', 'HISHELF'):
                 raise SystemExit(f"{header_path}: GRAPH: unknown band '{kind}' "
                                  f"(want LOSHELF/PEAKING/HISHELF)")
-            # 'PEAKING:POT6' takes its Q from a pot, so it can be moved
-            # while playing.  Anything else is a fixed number.
-            if q.startswith('POT'):
-                try:
-                    q_pot = int(q[3:])
-                except ValueError:
-                    raise SystemExit(f"{header_path}: GRAPH: '{word}' is not a pot")
-                if not 0 <= q_pot < len(pots):
-                    raise SystemExit(f"{header_path}: GRAPH: '{word}' names pot "
-                                     f"{q_pot}, and there are {len(pots)}")
-                graph.append({'type': kind, 'q_pot': q_pot})
+            if q in by_ident:
+                graph.append({'type': kind, 'q_pot': by_ident[q]})
                 continue
             try:
                 q = float(q) if q else 1.0
             except ValueError:
-                raise SystemExit(f"{header_path}: GRAPH: '{word}' has no readable Q")
+                raise SystemExit(f"{header_path}: GRAPH: '{word}' is neither a "
+                                 f"number nor one of this effect's pots "
+                                 f"({', '.join(by_ident) or 'it has none'})")
             if q <= 0.0:
                 raise SystemExit(f"{header_path}: GRAPH: Q must be positive, got {q}")
             graph.append({'type': kind, 'q': q})
@@ -231,12 +270,15 @@ def generate(audio_dir, out_h, out_js, out_md):
         #
         # What a pot is *for*, where the app needs to know.
         #
-        # 'ROLE: CHANNEL:POT2' says that pot 2 is the MIDI channel, in
-        # the same shape GRAPH: names a pot for a band's Q.  The app used
-        # to find it by matching the label "MIDI Ch", so renaming that
-        # label quietly stopped the app tracking the channel - quietly,
-        # because the fallback is the old behaviour of transmitting on
-        # channel 1, which works fine until somebody sets a channel.
+        # 'ROLE: CHANNEL:MIDI_CH' says that the MIDI Ch pot is the MIDI
+        # channel, in the same shape GRAPH: names a pot for a band's Q.
+        # The app used to find it by matching the label "MIDI Ch", so
+        # renaming that label quietly stopped the app tracking the
+        # channel - quietly, because the fallback is the old behaviour of
+        # transmitting on channel 1, which works fine until somebody sets
+        # a channel.  Naming it here still tracks the label, but a label
+        # that no longer exists is now a build failure rather than a
+        # silence.
         #
         # Nothing here knows what a role means; that is the app's
         # business.  This only carries the fact that a pot has one.
@@ -246,23 +288,29 @@ def generate(audio_dir, out_h, out_js, out_md):
 
         for word in role_match.group(1).split() if role_match else []:
             role, _, which = word.partition(':')
-            if not which.startswith('POT'):
+            if which not in by_ident:
                 raise SystemExit(f"{header_path}: ROLE: '{word}' does not name "
-                                 f"a pot (want ROLE:POTn)")
-            try:
-                n = int(which[3:])
-            except ValueError:
-                raise SystemExit(f"{header_path}: ROLE: '{word}' is not a pot")
-            if not 0 <= n < len(pots):
-                raise SystemExit(f"{header_path}: ROLE: '{word}' names pot {n}, "
-                                 f"and there are {len(pots)}")
+                                 f"one of this effect's pots "
+                                 f"({', '.join(by_ident) or 'it has none'})")
             if role in roles:
                 raise SystemExit(f"{header_path}: ROLE: '{role}' named twice")
-            roles[role] = n
+            roles[role] = by_ident[which]
 
         sources.append({
             'id': effect_id,
             'base': base,
+            #
+            # Every C name this effect owns is built from the short name:
+            # lowercased for functions and variables, uppercased for
+            # constants.  The short name used to be the label in the
+            # effect selector on a display the pedal no longer has, which
+            # is why a few of them still read as five-character
+            # abbreviations.  What it is now is the effect's name in the
+            # generated code, which leaves the filename free to be
+            # descriptive - parametric_eq.h is EQ, signal_chain.h is
+            # CHAIN.
+            #
+            'prefix': c_ident(header_path, 'short name', short_name).lower(),
             'copies': copies,
             'graph': graph,
             'roles': roles,
@@ -288,22 +336,38 @@ def generate(audio_dir, out_h, out_js, out_md):
     sources.sort(key=lambda x: (x['priority'], x['base']))
 
     #
+    # Every generated name hangs off the prefix, and they all land in one
+    # translation unit, so two effects sharing one is a pile of
+    # redefinitions rather than a style problem.  Filenames cannot
+    # collide - a directory sees to that - but short names are written by
+    # hand and nothing else checks them.
+    #
+    by_prefix = {}
+    for src in sources:
+        first = by_prefix.setdefault(src['prefix'], src)
+        if first is not src:
+            raise SystemExit(f"{src['header_path']}: short name "
+                             f"'{src['short_name']}' gives the prefix "
+                             f"'{src['prefix']}', which "
+                             f"{first['header_path']} already uses")
+
+    #
     # One file becomes one effect, or several.  The copies land next to
     # each other because they share every part of the sort key, so the
     # ids come out in the order the file asked for them and the first
     # copy keeps the id the single effect had.
     #
-    # The first copy is named for the file and the rest are numbered from
-    # two - 'tone' and 'tone2', which is what the symlink produced back
-    # when the second copy was a second filename.  Keeping that spelling
-    # is not nostalgia: those names are in the ELF, in every map file and
-    # in anything anybody has been reading while debugging.
+    # The first copy is named for the effect and the rest are numbered
+    # from two - 'tone' and 'tone2', which is what the symlink produced
+    # back when the second copy was a second filename.  Keeping that
+    # spelling is not nostalgia: those names are in the ELF, in every map
+    # file, and in whatever anybody has been reading while debugging.
     #
     for src in sources:
         for copy in range(src['copies']):
             e = dict(src)
             e['copy'] = copy
-            e['self_name'] = src['base'] if not copy else f"{src['base']}{copy + 1}"
+            e['self_name'] = src['prefix'] if not copy else f"{src['prefix']}{copy + 1}"
             effects_data.append(e)
 
     #
@@ -393,34 +457,56 @@ def generate(audio_dir, out_h, out_js, out_md):
         # writing it all out first than by reasoning about the sort.
         #
         for src in sources:
-            base = src['base']
+            prefix = src['prefix']
 
-            for p_idx, pot in enumerate(src['pots']):
-                fn_name = f"{base}_pot{p_idx}"
+            #
+            # Which pot is which.  This used to be written by hand in the
+            # two effects that wanted it, with a comment saying it had to
+            # stay in step with the POT: lines above it - and naming one
+            # of the two numbers that had to agree is exactly what let
+            # them disagree, because signal_chain_pot3(pot[CHAIN_TRIM])
+            # is not something you can check by reading it.
+            #
+            if src['pots']:
+                f.write(f"enum {prefix}_pot {{\n")
+                for pot in src['pots']:
+                    pot['const'] = f"{prefix}_{pot['ident']}".upper()
+                    f.write(f"\t{pot['const']},\n")
+                f.write("};\n")
+
+            for pot in src['pots']:
+                fn_name = f"{prefix}_{pot['ident'].lower()}_pot"
                 pot['fn_name'] = fn_name
 
                 if pot['curve'] == 'ENUM' and pot['enum']:
-                    enum_name = f"{base}_pot{p_idx}_enum"
+                    enum_name = f"{prefix}_{pot['ident'].lower()}_enum"
                     pot['enum_name'] = enum_name
                     f.write(f"static const char *const {enum_name}[] = {{ ")
                     for val in pot['enum']:
                         f.write(f'"{val}", ')
                     f.write("NULL };\n")
 
+                #
+                # The accessor does its own indexing, so the pot is named
+                # once at the call site and there is no second number to
+                # get wrong.
+                #
+                val = f"pot[{pot['const']}]"
                 args_str = ", ".join(pot['args'])
+                sig = f"static float {fn_name}(const unsigned char pot[10])"
                 if pot['curve'] == 'RAW' or pot['curve'] == 'ENUM':
-                    f.write(f"static float {fn_name}(unsigned char pot) {{ return pot; }}\n")
+                    f.write(f"{sig} {{ return {val}; }}\n")
                 elif pot['curve'] == 'LINEAR':
-                    f.write(f"static float {fn_name}(unsigned char pot) {{ return linear_pot(pot, {args_str}); }}\n")
+                    f.write(f"{sig} {{ return linear_pot({val}, {args_str}); }}\n")
                 elif pot['curve'] == 'FREQUENCY':
-                    f.write(f"static float {fn_name}(unsigned char pot) {{ return frequency_pot(pot, {args_str}); }}\n")
+                    f.write(f"{sig} {{ return frequency_pot({val}, {args_str}); }}\n")
                 elif pot['curve'] == 'SQUARED':
-                    f.write(f"static float {fn_name}(unsigned char pot) {{ float p = POT_TO_FLOAT(pot); return linear(p*p, {args_str}); }}\n")
+                    f.write(f"{sig} {{ float p = POT_TO_FLOAT({val}); return linear(p*p, {args_str}); }}\n")
                 elif pot['curve'] == 'EXPONENTIAL':
                     a_val = float(pot['args'][0])
                     b_val = float(pot['args'][1])
                     log2_ratio = math.log2(b_val / a_val) if a_val != 0 else 0
-                    f.write(f"static float {fn_name}(unsigned char pot) {{ float p = POT_TO_FLOAT(pot); return {a_val}f * pow2(p * {log2_ratio}f); }}\n")
+                    f.write(f"{sig} {{ float p = POT_TO_FLOAT({val}); return {a_val}f * pow2(p * {log2_ratio}f); }}\n")
 
             #
             # The Q of each graphed band, from the same declaration the
@@ -436,12 +522,12 @@ def generate(audio_dir, out_h, out_js, out_md):
             # a real call, and this runs on the audio core.
             #
             if src['graph']:
-                f.write(f"static inline void {base}_graph_q("
+                f.write(f"static inline void {prefix}_graph_q("
                         f"float *q, const unsigned char pot[10])\n{{\n")
                 for n, b in enumerate(src['graph']):
                     if 'q_pot' in b:
-                        f.write(f"\tq[{n}] = {base}_pot{b['q_pot']}"
-                                f"(pot[{b['q_pot']}]);\n")
+                        f.write(f"\tq[{n}] = "
+                                f"{src['pots'][b['q_pot']]['fn_name']}(pot);\n")
                     else:
                         f.write(f"\tq[{n}] = {b['q']}f;\n")
                 f.write("}\n")
@@ -647,7 +733,7 @@ def generate(audio_dir, out_h, out_js, out_md):
         f.write("- `<in>` is the input peak before Trim, and `<floor>` the\n")
         f.write("  quiet level under it. The floor follows the *gate's* own\n")
         f.write("  envelope rather than the peak meter, so that it is the\n")
-        f.write("  same quantity the gate's Level setting is compared\n")
+        f.write("  same quantity the gate's own setting is compared\n")
         f.write("  against - measured any other way it would only happen to\n")
         f.write("  agree. In practice the floor lands within a couple of dB\n")
         f.write("  of where the gate starts closing.\n")

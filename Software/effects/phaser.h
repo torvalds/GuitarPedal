@@ -1,4 +1,4 @@
-// NAME: Phaser [PHSR]
+// NAME: Phaser [PHASER]
 // PRIORITY: 50
 // POT: "LFO" FREQUENCY(25.0 2000.0) = 270.0 ms
 // POT: "Feedback" LINEAR(0.0 0.75) = 0.376
@@ -13,13 +13,13 @@ struct {
 
 void phaser_init(unsigned char pot[10])
 {
-	float ms = phaser_pot0(pot[0]);		// 25ms .. 2s
+	float ms = phaser_lfo_pot(pot);		// 25ms .. 2s
 	set_lfo_ms(&phaser.lfo, ms);
-	phaser.feedback = phaser_pot1(pot[1]);
+	phaser.feedback = phaser_feedback_pot(pot);
 
-	phaser.center_f = phaser_pot2(pot[2]);		// 220Hz .. 6.5kHz
+	phaser.center_f = phaser_freq_pot(pot);		// 220Hz .. 6.5kHz
 	phaser.octaves = 0.5;				// 155Hz .. 9kHz
-	phaser.Q = phaser_pot3(pot[3]);
+	phaser.Q = phaser_q_pot(pot);
 }
 
 float phaser_step(float in)

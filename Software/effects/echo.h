@@ -152,20 +152,20 @@ struct {
 
 static inline void echo_init(unsigned char pot[10])
 {
-	echo.target_blend = echo_pot0(pot[0]);
-	echo.target_sustain = echo_pot1(pot[1]);
+	echo.target_blend = echo_blend_pot(pot);
+	echo.target_sustain = echo_sustain_pot(pot);
 
 	// The EXPONENTIAL metadata sets up the curve directly, so the pot value
 	// is already in milliseconds. We just convert it to seconds.
-	float time_ms = echo_pot2(pot[2]);
+	float time_ms = echo_time_pot(pot);
 	echo.target_delay_s = time_ms / 1000.0f;
 
-	echo.target_record_level = echo_pot3(pot[3]);
-	echo.target_tone = echo_pot4(pot[4]);
-	echo.target_wow = echo_pot5(pot[5]);
+	echo.target_record_level = echo_record_pot(pot);
+	echo.target_tone = echo_tone_pot(pot);
+	echo.target_wow = echo_wowflut_pot(pot);
 
 	// Mode: 0=Normal, 1=SOS
-	echo.sos_mode = (pot[6] == 1);
+	echo.sos_mode = (pot[ECHO_MODE] == 1);
 
 	echo.preamp_dc_offset = tanhf(model.preamp_asymmetry);
 	echo.last_blend = -1.0f;

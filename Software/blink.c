@@ -499,7 +499,7 @@ static void sysex_send_telemetry(void)
 	// read as a gate holding the signal down when it is doing nothing
 	// of the kind.
 	//
-	float gate = signal_chain.active ? signal_chain.mult : 1.0f;
+	float gate = chain.active ? chain.mult : 1.0f;
 
 	const uint8_t body[] = {
 		1,				// layout version

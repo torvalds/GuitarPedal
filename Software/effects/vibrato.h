@@ -14,19 +14,19 @@ static struct {
 	float depth;		// delay amplitude in samples
 	unsigned int idx;
 	float samples[1024];	// ~21ms at 48kHz; max read = center(6ms) + depth(5ms) = 528 samples
-} vibrato;
+} vib;
 
-static void vibrato_init(unsigned char pot[10])
+static void vib_init(unsigned char pot[10])
 {
-	set_lfo_freq(&vibrato.lfo, vibrato_pot0(pot[0]));
-	vibrato.depth = vibrato_pot1(pot[1]) * SAMPLES_PER_MSEC;
+	set_lfo_freq(&vib.lfo, vib_rate_pot(pot));
+	vib.depth = vib_depth_pot(pot) * SAMPLES_PER_MSEC;
 
 }
 
-static float vibrato_step(float in)
+static float vib_step(float in)
 {
-	float d = VIBRATO_CENTER_SAMPLES + vibrato.depth * lfo_step(&vibrato.lfo, lfo_sinewave);
-	sample_array_write(in, &vibrato.idx, vibrato.samples);
-	float wet = sample_array_read(d, &vibrato.idx, vibrato.samples);
+	float d = VIBRATO_CENTER_SAMPLES + vib.depth * lfo_step(&vib.lfo, lfo_sinewave);
+	sample_array_write(in, &vib.idx, vib.samples);
+	float wet = sample_array_read(d, &vib.idx, vib.samples);
 	return wet;
 }

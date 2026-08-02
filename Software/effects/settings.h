@@ -14,7 +14,7 @@
 // arriving - and it used to find the pot by matching the label above,
 // which made renaming that label a silent way to break it.
 //
-// ROLE: CHANNEL:POT2
+// ROLE: CHANNEL:MIDI_CH
 //
 // Settings "effect" - dummy effect to save various settings
 //
@@ -34,26 +34,13 @@ struct {
 	int tuning;
 } settings;
 
-//
-// Which pot is which.  These have to stay in step with the POT lines
-// at the top of this file - that is the order gen_effects.py assigns.
-//
-enum settings_pot {
-	SETTINGS_USB_OUT,
-	SETTINGS_USB_IN,
-	SETTINGS_MIDI_CH,
-	SETTINGS_LED,
-	SETTINGS_ATTN,
-	SETTINGS_TUNING,
-};
-
 static void settings_init(unsigned char pot[10])
 {
-	settings.usb_output = pot[SETTINGS_USB_OUT];
-	settings.usb_input = pot[SETTINGS_USB_IN];
+	settings.usb_output = pot[SETTINGS_USB_L_R_OUT];
+	settings.usb_input = pot[SETTINGS_USB_L_R_IN];
 	settings.midi_channel = pot[SETTINGS_MIDI_CH];
 
-	settings.led_pwm = settings_pot3(pot[SETTINGS_LED]) / 100;
+	settings.led_pwm = settings_led_pot(pot) / 100;
 
 	//
 	// The attention brightness is the one setting whose effect you
@@ -66,7 +53,7 @@ static void settings_init(unsigned char pot[10])
 	// This is also what the second LED used to do, back when there
 	// was one to do it with.
 	//
-	float intense = settings_pot4(pot[SETTINGS_ATTN]) / 100;
+	float intense = settings_attn_pot(pot) / 100;
 	if (intense != settings.led_intense ||
 	    settings_effect.active_pot == SETTINGS_ATTN)
 		attention_preview = ATTENTION_PREVIEW_TICKS;

@@ -47,41 +47,41 @@ static struct {
 	int harmonic;
 	float lp1_a, lp1_z;  // one-pole LP at 144.7 Hz (low branch)
 	float lp2_a, lp2_z;  // one-pole LP at 636.6 Hz; HP = in - lp2 (high branch)
-} tremolo;
+} trem;
 
-static void tremolo_init(unsigned char pot[10])
+static void trem_init(unsigned char pot[10])
 {
-	set_lfo_freq(&tremolo.lfo, tremolo_pot0(pot[0]));
-	float d = tremolo_pot1(pot[1]);
-	tremolo.depth = d;
-	tremolo.k = d / (2.0f - d);
-	tremolo.harmonic = (pot[2] == 1);
+	set_lfo_freq(&trem.lfo, trem_rate_pot(pot));
+	float d = trem_depth_pot(pot);
+	trem.depth = d;
+	trem.k = d / (2.0f - d);
+	trem.harmonic = (pot[TREM_MODE] == 1);
 
-	tremolo.lp1_a = pow2(-9.06472028f * 144.7f / SAMPLES_PER_SEC);
-	tremolo.lp2_a = pow2(-9.06472028f * 636.6f / SAMPLES_PER_SEC);
+	trem.lp1_a = pow2(-9.06472028f * 144.7f / SAMPLES_PER_SEC);
+	trem.lp2_a = pow2(-9.06472028f * 636.6f / SAMPLES_PER_SEC);
 }
 
-static sample_t tremolo_step(sample_t in)
+static sample_t trem_step(sample_t in)
 {
 	sample_t out;
 
-	if (tremolo.harmonic) {
+	if (trem.harmonic) {
 		// Still mono: the 6G4 circuit this models has one signal
 		// path, and the two branches are filters, not channels.
-		float lfo = lfo_step(&tremolo.lfo, lfo_sinewave);
+		float lfo = lfo_step(&trem.lfo, lfo_sinewave);
 		float x = in.left;
 
-		float lo = (tremolo.lp1_z = x + tremolo.lp1_a * (tremolo.lp1_z - x));
-		float hi = x - (tremolo.lp2_z = x + tremolo.lp2_a * (tremolo.lp2_z - x));
-		out.left = out.right = x + tremolo.k * lfo * (lo - hi);
+		float lo = (trem.lp1_z = x + trem.lp1_a * (trem.lp1_z - x));
+		float hi = x - (trem.lp2_z = x + trem.lp2_a * (trem.lp2_z - x));
+		out.left = out.right = x + trem.k * lfo * (lo - hi);
 		return out;
 	}
 
 	// The sawtooth is the raw phase, which is what we want here -
 	// fastsincos() takes its phase in cycles, so the two line up
 	// without any scaling in between.
-	struct sincos w = fastsincos(lfo_step(&tremolo.lfo, lfo_sawtooth));
-	float d = tremolo.depth;
+	struct sincos w = fastsincos(lfo_step(&trem.lfo, lfo_sawtooth));
+	float d = trem.depth;
 	float re = 1.0f + d * (w.cos - 1.0f);
 	float im = d * w.sin;
 
