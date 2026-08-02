@@ -47,10 +47,56 @@ set(SAMPLES_PER_SEC 48000.0)
 set(SCRIPT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
 
 #
+# How much flash there actually is.
+#
+# PICO_BOARD is not set, so the SDK defaults it to 'pico2' - a board
+# with 4MB of flash hanging off the QSPI pins.  This is an RP2354B and
+# the 2MB is on the die.  Nothing has cared so far, because nothing has
+# addressed flash by anything but a symbol.
+#
+# It starts mattering the moment something works backwards from the end
+# of flash, because 'the end' would be an address that is not there.
+# flash_range_erase() guards itself with
+#
+#	hard_assert(flash_offs + count <= PICO_FLASH_SIZE_BYTES)
+#
+# so getting this right is also what makes the SDK's own bounds check
+# mean something.
+#
+set(FLASH_SIZE_BYTES 0x200000)
+
+#
+# The save area: sixty-four 4kB slots at the top of flash.
+#
+# 4kB because that is the erase size, and there is no reason to be
+# cleverer when the part has 2MB and the firmware uses 84kB.  Sixty-four
+# rather than the thirty-two that would do, because slots are expected
+# to be live at once - one per scene, plus whatever else - and a region
+# with no spare slots cannot rotate, so 'enough for one copy of
+# everything' is the one size that does not work.
+#
+set(SAVE_SLOT_SIZE 0x1000)
+set(SAVE_SLOT_COUNT 64)
+math(EXPR SAVE_AREA_SIZE "${SAVE_SLOT_SIZE} * ${SAVE_SLOT_COUNT}"
+	OUTPUT_FORMAT HEXADECIMAL)
+math(EXPR SAVE_AREA_OFFSET "${FLASH_SIZE_BYTES} - ${SAVE_AREA_SIZE}"
+	OUTPUT_FORMAT HEXADECIMAL)
+
+target_compile_definitions(blink PRIVATE
+	PICO_FLASH_SIZE_BYTES=${FLASH_SIZE_BYTES}
+	SAVE_SLOT_SIZE=${SAVE_SLOT_SIZE}
+	SAVE_SLOT_COUNT=${SAVE_SLOT_COUNT}
+	SAVE_AREA_OFFSET=${SAVE_AREA_OFFSET})
+
+#
 # Only the audio core runs from RAM: everything marked with
 # __audio_func() lands in a '.time_critical.audio_*' section, which the
 # default linker script already pulls out of flash. The rest is cold
 # enough to run from XIP.
+#
+# Its constant data has to be there too, marked __not_in_flash("audio"),
+# because the audio core keeps playing while core 0 writes flash with
+# XIP switched off.  check-audio.py enforces both halves.
 #
 
 # Math table generation
@@ -200,6 +246,15 @@ add_custom_command(TARGET blink POST_BUILD
 add_custom_command(TARGET blink POST_BUILD
 	COMMAND "${SCRIPT_DIR}/check-float.py"
 		"$<TARGET_FILE:blink>"
+		"${CMAKE_NM}"
+	VERBATIM)
+
+# ...and the image is not allowed to grow into the save area
+add_custom_command(TARGET blink POST_BUILD
+	COMMAND "${SCRIPT_DIR}/check-flash.py"
+		"$<TARGET_FILE:blink>"
+		"${FLASH_SIZE_BYTES}"
+		"${SAVE_AREA_OFFSET}"
 		"${CMAKE_NM}"
 	VERBATIM)
 
