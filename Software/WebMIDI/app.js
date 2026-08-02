@@ -3486,6 +3486,20 @@ function renderUI() {
             label.className = 'pot-label';
             label.textContent = pot.name;
 
+            //
+            // What the control is for, if the effect said.  On the whole
+            // control rather than the label, because the slider is the
+            // part you are already pointing at when you wonder.
+            //
+            // The pedal supplies this along with everything else it
+            // reports about itself, so a firmware that gains a pot gains
+            // its explanation too, without the app being redeployed.
+            //
+            if (pot.info) {
+                potDiv.title = `${pot.name} — ${pot.info}`;
+                potDiv.classList.add('has-info');
+            }
+
             const initialVal = getInitialPotValue(pot);
 
             if (pot.curve === 'ENUM' && pot.enum) {

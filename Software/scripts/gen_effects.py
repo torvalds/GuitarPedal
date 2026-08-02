@@ -171,11 +171,50 @@ def generate(audio_dir, out_h, out_js, out_md):
                          f"'{word}' (want LINEAR/POWER and "
                          f"MONO/STEREO/NONE)")
 
-        pots = []
+        #
+        # The pots, and what each one is for.
+        #
+        # Read a line at a time rather than swept out of the whole file,
+        # because 'INFO:' attaches to the POT: line above it and
+        # adjacency is not something a search of the text can express.
+        # It also means a complaint can name the line it is about.
+        #
         # Match: // POT: "Name" CURVE(a b c) = 1.0 Unit
-        pot_lines = re.findall(r'//[ \t]*POT:[ \t]*"([^"]+)"[ \t]+(LINEAR|FREQUENCY|SQUARED|EXPONENTIAL|RAW|ENUM)(?:\(([^)]+)\))?(?:[ \t]*=[ \t]*(\S+))?(?:[ \t]+(\S+))?[ \t]*\n?', content)
+        pot_re = re.compile(r'//[ \t]*POT:[ \t]*"([^"]+)"[ \t]+(LINEAR|FREQUENCY|SQUARED|EXPONENTIAL|RAW|ENUM)(?:\(([^)]+)\))?(?:[ \t]*=[ \t]*(\S+))?(?:[ \t]+(\S+))?[ \t]*$')
+        info_re = re.compile(r'//[ \t]*INFO:[ \t]*(.*?)[ \t]*$')
 
-        for p_label, p_curve, p_args, p_def, p_unit in pot_lines:
+        pots = []
+        open_pot = None     # the pot an INFO: line would belong to
+
+        for lineno, line in enumerate(content.splitlines(), 1):
+            line = line.rstrip()
+
+            #
+            # A sentence or three about what this control does, for the
+            # app to show when somebody hovers over it.  Several lines
+            # run together into one paragraph, so it can be wrapped here
+            # the way the rest of the file is.
+            #
+            # Only directly under its POT:, or under another INFO:.
+            # Anywhere else it is prose that happens to start with the
+            # word, and quietly attaching it to whichever pot came last
+            # would be worse than refusing.
+            #
+            info = info_re.match(line)
+            if info:
+                if not open_pot:
+                    raise SystemExit(f"{header_path}:{lineno}: INFO: does not "
+                                     f"follow a POT: line")
+                open_pot['info'].append(info.group(1))
+                continue
+
+            m = pot_re.match(line)
+            if not m:
+                open_pot = None
+                continue
+
+            p_label, p_curve, p_args, p_def, p_unit = m.groups()
+
             enum_list = None
             if p_curve == 'ENUM' and p_args:
                 enum_list = p_args.split()
@@ -190,15 +229,20 @@ def generate(audio_dir, out_h, out_js, out_md):
                     except ValueError:
                         default_val = 0.0
 
-            pots.append({
+            open_pot = {
                 'label': p_label,
                 'ident': c_ident(header_path, 'pot label', p_label),
                 'unit': p_unit if p_unit else "none",
                 'curve': p_curve,
                 'args': p_args.split() if p_args else [],
                 'enum': enum_list,
-                'default': default_val
-            })
+                'default': default_val,
+                'info': [],
+            }
+            pots.append(open_pot)
+
+        for pot in pots:
+            pot['info'] = ' '.join(pot['info']) or None
 
         #
         # Two labels that come out as one identifier would define one
@@ -414,7 +458,8 @@ def generate(audio_dir, out_h, out_js, out_md):
                 "max": max_v,
                 "default": pot['default'],
                 "defaultPot": pot['pot_val'],
-                "enum": pot['enum']
+                "enum": pot['enum'],
+                "info": pot['info']
             })
 
         ui_effects.append({
@@ -838,6 +883,8 @@ def generate(audio_dir, out_h, out_js, out_md):
                         range_str = "0.0 to 1.0"
                     input_str = f"Index: {p_idx} (0-120, maps to: {range_str})"
                 f.write(f"- **{pot['label']}:** {input_str}\n")
+                if pot['info']:
+                    f.write(f"  - {pot['info']}\n")
             f.write("\n")
 
 if __name__ == "__main__":

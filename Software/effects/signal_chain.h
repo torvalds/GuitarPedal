@@ -2,10 +2,22 @@
 // PRIORITY: 0 (Special: always runs first, and is never in effect_chain)
 // MIX: NONE		// not an effect - it is the two ends of the chain
 // POT: "Gate" LINEAR(-100.0 -40.0) = -70.0 dB
+// INFO: Everything quieter than this is silenced. Set it just above the
+// INFO: noise floor shown below. Fully down switches the gate off.
 // POT: "Attack" LINEAR(0.0 10.0) = 1.5 ms
+// INFO: How fast the gate opens once you play. Too slow eats the pick
+// INFO: attack; too fast lets the noise through between notes.
 // POT: "Release" LINEAR(50.0 500.0) = 150.0 ms
+// INFO: How long it waits before closing again. Too short chops the
+// INFO: tail off a chord as it decays.
 // POT: "Trim" LINEAR(-20.0 20.0) = 0.0 dB
+// INFO: Brings your pickup up to the level the rest of the chain is
+// INFO: calibrated for, so every effect's dB markings mean what they
+// INFO: say. Set it once, by the meters, and leave it.
 // POT: "Volume" LINEAR(-40.0 20.0) = 0.0 dB
+// INFO: How loud the pedal is, applied right at the end and changing
+// INFO: nothing about the sound. Wanting more out of the pedal is not
+// INFO: a reason to turn Trim up. Fully down is silence.
 //
 // The beginning and the end of the signal chain.
 //
