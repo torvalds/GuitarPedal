@@ -151,7 +151,18 @@ static void routing_end(routing_bitmap_t routable)
 }
 
 #include "eeprom.h"
+#include "flash_store.h"
 #include "bindings.h"
+
+//
+// What the save area looked like at boot.
+//
+// Read once, before core 1 is running and before anything can have
+// written to it, and reported in the identity reply.  It is diagnostic
+// and nothing depends on it: a reader asks save_read() for a key and
+// gets a fresh answer, because sequence numbers are not state.
+//
+static struct save_scan save_state;
 
 static void init_i2s(void)
 {
@@ -382,6 +393,25 @@ static void sysex_write_str(const char *str)
 }
 
 //
+// A number, for the JSON below.  Hand-rolled for the same reason
+// eeprom.h rolls its own: snprintf() drags newlib's float conversion in
+// behind it, and scripts/check-float.py exists to refuse exactly that.
+//
+static void sysex_write_num(uint32_t val)
+{
+	char buf[11];
+	unsigned int n = sizeof(buf);
+
+	buf[--n] = 0;
+	do {
+		buf[--n] = '0' + val % 10;
+		val /= 10;
+	} while (val);
+
+	sysex_write_str(buf + n);
+}
+
+//
 // Identity, as JSON.
 //
 // Two kinds of thing come back from the pedal and they want opposite
@@ -429,6 +459,26 @@ static void sysex_send_identity(void)
 	sysex_write_str(hardware.legacy_codec ? "true" : "false");
 	sysex_write_str(",\"legacy_screen\":");
 	sysex_write_str(hardware.legacy_screen ? "true" : "false");
+	sysex_write_str("}");
+
+	//
+	// What the save area held at boot.  Nothing needs this to run;
+	// it is here so that a slot planted with picotool can be asked
+	// about from a shell, which is the whole test rig for the
+	// format - 'marked' counts what carried a marker and 'valid'
+	// what also survived its hash, so a deliberately corrupted
+	// signature shows up as the difference between the two.
+	//
+	sysex_write_str(",\"save\":{\"slots\":");
+	sysex_write_num(SAVE_SLOT_COUNT);
+	sysex_write_str(",\"marked\":");
+	sysex_write_num(save_state.marked);
+	sysex_write_str(",\"valid\":");
+	sysex_write_num(save_state.valid);
+	sysex_write_str(",\"keys\":");
+	sysex_write_num(save_state.keys);
+	sysex_write_str(",\"newest\":");
+	sysex_write_num(save_state.newest);
 	sysex_write_str("}}");
 
 	sysex_stream_write(sysex_identity_trailer, sizeof(sysex_identity_trailer));
@@ -1129,6 +1179,13 @@ int main()
 	tac5112_init();
 
 	init_effects();
+
+	//
+	// Before core 1 starts, because it is the last moment nothing
+	// else is running - not because the scan would mind, since it
+	// only reads XIP the ordinary way.
+	//
+	save_scan(&save_state);
 
 	multicore_launch_core1(audio_processing);
 
