@@ -1,4 +1,4 @@
-// NAME: Frenchie Amp [FRENCH]
+// NAME: Frenchie Amp [FRENCHIE]
 // PRIORITY: 125
 // POT: "Gain" LINEAR(0 1) = 0.5
 // POT: "Tone" LINEAR(0 1) = 0.5
@@ -405,11 +405,11 @@ static inline void frenchie_init(unsigned char pot[10])
 	frenchie_power_amp_init(&frenchie.power_amp);
 	frenchie_gate_init(&frenchie.gate);
 
-	frenchie.gain = frenchie_pot0(pot[0]);
-	float tone = frenchie_pot1(pot[1]);
-	frenchie.input_intensity = frenchie_pot2(pot[2]);
-	frenchie.sag_depth = frenchie_pot3(pot[3]);
-	frenchie.out_level = frenchie_pot4(pot[4]);
+	frenchie.gain = frenchie_gain_pot(pot);
+	float tone = frenchie_tone_pot(pot);
+	frenchie.input_intensity = frenchie_input_pot(pot);
+	frenchie.sag_depth = frenchie_sag_pot(pot);
+	frenchie.out_level = frenchie_level_pot(pot);
 
 	frenchie.tone_coeff = single_pole_freq(1500.0f + tone * 18500.0f);
 }

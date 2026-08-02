@@ -49,9 +49,9 @@ struct {
 
 void klon_init(unsigned char pot[10])
 {
-	klon.drive = klon_pot0(pot[0]);
-	klon.treble = klon_pot1(pot[1]);		// 0 = dark, 1 = bright
-	klon.level = klon_pot2(pot[2]);
+	klon.drive = klon_gain_pot(pot);
+	klon.treble = klon_treble_pot(pot);		// 0 = dark, 1 = bright
+	klon.level = klon_output_pot(pot);
 
 	float hs_db = (klon.treble - 0.5f) * 12.0f;	// -6 to +6 dB
 	float peaking_db = klon.treble * 6.0;		//  0 to +6 dB (original effectively doubled the boost)

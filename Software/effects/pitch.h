@@ -32,9 +32,9 @@ static void pitch_init(unsigned char pot[10])
 	// Walking forwards raises the pitch
 	// Staying at the same delay keeps the pitch the same
 	//
-	float step = pow2(pitch_pot0(pot[0]));	//  0.25 .. 4
+	float step = pow2(pitch_octave_pot(pot));	//  0.25 .. 4
 	pitch.step = step - 1;				// -0.75 .. 3
-	pitch.feedback = pitch_pot1(pot[1]);
+	pitch.feedback = pitch_feedback_pot(pot);
 }
 
 // i is discontinuous when sin**2 is 0

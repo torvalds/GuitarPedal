@@ -1,4 +1,4 @@
-// NAME: Reverb [VERB]
+// NAME: Reverb [REVERB]
 // PRIORITY: 90
 // MIX: POWER		// same as the echo, only more so
 // DEFAULT_MIX: 0.18
@@ -67,8 +67,8 @@ static struct {
 
 static void reverb_init(unsigned char pot[10])
 {
-	reverb_state.g         = reverb_pot0(pot[0]);
-	reverb_state.damp      = reverb_pot1(pot[1]);
+	reverb_state.g         = reverb_room_pot(pot);
+	reverb_state.damp      = reverb_damp_pot(pot);
 
 	for (int i = 0; i < 8; i++)
 		reverb_state.combs[i].delay = reverb_comb_L[i];

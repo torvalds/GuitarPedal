@@ -1,4 +1,4 @@
-// NAME: Compressor [COMPR]
+// NAME: Compressor [COMPRESSOR]
 // PRIORITY: 30
 // POT: "Level" LINEAR(-40.0 0.0) = -20.0 dB
 // POT: "Attack" LINEAR(2.0 100.0) = 15.0 ms
@@ -25,17 +25,17 @@ static struct {
 
 static inline void compressor_init(unsigned char pot[10])
 {
-	float level_db = compressor_pot0(pot[0]);
+	float level_db = compressor_level_pot(pot);
 	compressor.level = db_to_level(level_db);
 
-	float attack_ms = compressor_pot1(pot[1]);
-	float release_ms = compressor_pot2(pot[2]);
+	float attack_ms = compressor_attack_pot(pot);
+	float release_ms = compressor_release_pot(pot);
 	envelope_init(&compressor.envelope, attack_ms, release_ms);
 
-	float ratio = compressor_pot3(pot[3]);
+	float ratio = compressor_ratio_pot(pot);
 	compressor.ratio = 1.0f - (1.0f / ratio);
 
-	float boost_db = compressor_pot4(pot[4]);
+	float boost_db = compressor_boost_pot(pot);
 	compressor.boost = db_to_level(boost_db);
 }
 

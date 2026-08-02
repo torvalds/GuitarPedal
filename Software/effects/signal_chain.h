@@ -2,10 +2,22 @@
 // PRIORITY: 0 (Special: always runs first, and is never in effect_chain)
 // MIX: NONE		// not an effect - it is the two ends of the chain
 // POT: "Gate" LINEAR(-100.0 -40.0) = -70.0 dB
+// INFO: Everything quieter than this is silenced. Set it just above the
+// INFO: noise floor shown below. Fully down switches the gate off.
 // POT: "Attack" LINEAR(0.0 10.0) = 1.5 ms
+// INFO: How fast the gate opens once you play. Too slow eats the pick
+// INFO: attack; too fast lets the noise through between notes.
 // POT: "Release" LINEAR(50.0 500.0) = 150.0 ms
+// INFO: How long it waits before closing again. Too short chops the
+// INFO: tail off a chord as it decays.
 // POT: "Trim" LINEAR(-20.0 20.0) = 0.0 dB
+// INFO: Brings your pickup up to the level the rest of the chain is
+// INFO: calibrated for, so every effect's dB markings mean what they
+// INFO: say. Set it once, by the meters, and leave it.
 // POT: "Volume" LINEAR(-40.0 20.0) = 0.0 dB
+// INFO: How loud the pedal is, applied right at the end and changing
+// INFO: nothing about the sound. Wanting more out of the pedal is not
+// INFO: a reason to turn Trim up. Fully down is silence.
 //
 // The beginning and the end of the signal chain.
 //
@@ -33,7 +45,7 @@
 // non-linearity by itself with the loudness held still, which is the only
 // honest way to judge it - louder always sounds better.
 //
-// The gate measures ahead of Trim deliberately - see signal_chain_step()
+// The gate measures ahead of Trim deliberately - see chain_step()
 // for why.  Trim is about the chain that follows; the noise the gate
 // exists to cut is a property of the room and the pickup, and does not
 // move when trim does.
@@ -56,18 +68,6 @@
 // But the attack/release values are probably different.
 //
 
-//
-// Which pot is which.  These have to stay in step with the POT lines at
-// the top of this file - that is the order gen_effects.py assigns.
-//
-enum signal_chain_pot {
-	CHAIN_LEVEL,
-	CHAIN_ATTACK,
-	CHAIN_RELEASE,
-	CHAIN_TRIM,
-	CHAIN_VOLUME,
-};
-
 static struct {
 	struct envelope envelope;
 	float mult, level;
@@ -82,22 +82,37 @@ static struct {
 	//
 	float trim, trim_target;
 	float volume, volume_target;
-} signal_chain;
+} chain;
 
 // How fast the two gains chase their target: ~10ms at 48kHz, as MIX_SLEW
 #define CHAIN_SLEW (1.0f / 512)
 
-static inline void signal_chain_init(unsigned char pot[10])
+static inline void chain_init(unsigned char pot[10])
 {
-	signal_chain.trim_target = db_to_level(signal_chain_pot3(pot[CHAIN_TRIM]));
-	signal_chain.active = pot[CHAIN_LEVEL] != 0;
+	chain.trim_target = db_to_level(chain_trim_pot(pot));
 
-	float level_db = signal_chain_pot0(pot[CHAIN_LEVEL]);
-	signal_chain.level = db_to_level(level_db);
+	//
+	// Gate fully down is off, and not merely very quiet.
+	//
+	// The bottom of the travel is -100dBV, which is 28uV peak to peak.
+	// No signal chain is that clean, so a threshold set there would
+	// never close the gate anyway and switching it off changes nothing
+	// you can hear.  What it does change is what gets *reported*: the
+	// telemetry sends the gate multiplier, and a gate that is off has
+	// to say 1.0 rather than whatever it last ramped to.  So make it
+	// an explicit off internally, and let the one control mean both
+	// things - a knob whose bottom end is "not at all" is what people
+	// expect, and it saves an on/off switch that only ever agreed with
+	// where the knob already was.
+	//
+	chain.active = pot[CHAIN_GATE] != 0;
 
-	float attack_ms = signal_chain_pot1(pot[CHAIN_ATTACK]);
-	float release_ms = signal_chain_pot2(pot[CHAIN_RELEASE]);
-	envelope_init(&signal_chain.envelope, attack_ms, release_ms);
+	float level_db = chain_gate_pot(pot);
+	chain.level = db_to_level(level_db);
+
+	float attack_ms = chain_attack_pot(pot);
+	float release_ms = chain_release_pot(pot);
+	envelope_init(&chain.envelope, attack_ms, release_ms);
 
 	//
 	// Volume reads in dB and goes above unity as well as below,
@@ -111,8 +126,8 @@ static inline void signal_chain_init(unsigned char pot[10])
 	// inaudible - which is why the range goes that low rather than
 	// stopping at the -20dB that would otherwise be plenty.
 	//
-	unsigned char vol = pot[CHAIN_VOLUME];
-	signal_chain.volume_target = vol ? db_to_level(signal_chain_pot4(vol)) : 0.0f;
+	chain.volume_target = pot[CHAIN_VOLUME] ?
+		db_to_level(chain_volume_pot(pot)) : 0.0f;
 }
 
 //
@@ -128,19 +143,19 @@ static inline void signal_chain_init(unsigned char pot[10])
 // time, which is a control whose only job is to undo another one.
 // Measured before, it depends on the room, the pickup and the converter,
 // none of which trim can reach.  Which is what a noise gate is about,
-// and why 'Level' reads in dBFS rather than as a fraction of anything.
+// and why 'Gate' reads in dBFS rather than as a fraction of anything.
 //
 // Also where Volume is slewed, even though single_sample() is what
 // applies it at the far end.  This runs once per sample and that is all a
 // slew needs, and it beats teaching the tail of the chain how to chase a
 // target of its own.
 //
-static inline sample_t signal_chain_step(sample_t in)
+static inline sample_t chain_step(sample_t in)
 {
-	signal_chain.trim += (signal_chain.trim_target - signal_chain.trim) * CHAIN_SLEW;
-	signal_chain.volume += (signal_chain.volume_target - signal_chain.volume) * CHAIN_SLEW;
+	chain.trim += (chain.trim_target - chain.trim) * CHAIN_SLEW;
+	chain.volume += (chain.volume_target - chain.volume) * CHAIN_SLEW;
 
-	float gain = signal_chain.trim;
+	float gain = chain.trim;
 
 	//
 	// The envelope follows the left channel - the guitar - but the gate
@@ -151,15 +166,15 @@ static inline sample_t signal_chain_step(sample_t in)
 	// noise floor freezes at whatever it was when the gate was switched
 	// off - the floor meter is derived from this and from nothing else,
 	// deliberately, so that the number on screen is the same quantity
-	// 'Level' gets compared against.  See single_sample().
+	// 'Gate' gets compared against.  See single_sample().
 	//
-	float env = envelope_step(&signal_chain.envelope, in.left);
+	float env = envelope_step(&chain.envelope, in.left);
 
-	if (signal_chain.active) {
-		float mult = signal_chain.mult;
+	if (chain.active) {
+		float mult = chain.mult;
 
 		// Ramp up fairly quickly, ramp down slowly
-		if (env >= signal_chain.level) {
+		if (env >= chain.level) {
 			mult = linear(0.01f, mult, 1.0f);
 			if (mult > 0.99f)
 				mult = 1.0f;
@@ -167,9 +182,9 @@ static inline sample_t signal_chain_step(sample_t in)
 			mult = linear(0.001f, mult, 0.0f);
 			if (mult < 0.01f)
 				mult = 0.0f;
-			signal_chain_effect.intense = 1;
+			chain_effect.intense = 1;
 		}
-		signal_chain.mult = mult;
+		chain.mult = mult;
 		gain *= mult;
 	}
 

@@ -283,6 +283,16 @@ input:checked + .slider:before {
   text-align: center;
 }
 
+/*
+ * A pot that can explain itself says so, faintly.  Dotted rather than
+ * a cursor change, because half of these are used on a touchscreen
+ * where there is no hover and no pointer to change.
+ */
+.pot-control.has-info > .pot-label {
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+}
+
 .pot-value {
   font-size: 1.1rem;
   font-weight: 500;
