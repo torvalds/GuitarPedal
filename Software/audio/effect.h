@@ -125,6 +125,32 @@ struct effect {
 #define EFFECT_POT(...) { __VA_ARGS__ }
 
 //
+// The largest value this pot can hold.
+//
+// 120 for anything continuous - see POT_TO_FLOAT() - but an enumeration
+// only has as many valid values as it has names, and a stored value
+// past the end of the list would index a NULL.  A pot with no label is
+// not a pot at all and holds nothing.
+//
+static int max_pot_val(struct effect *effect, int pot)
+{
+	const struct pot_descr *desc = effect->pots + pot;
+	const char *const *enums;
+
+	if (!desc->label)
+		return 0;
+
+	enums = desc->enum_names;
+	if (!enums)
+		return 120;
+
+	for (int i = 0; ; i++) {
+		if (!enums[i])
+			return i - 1;
+	}
+}
+
+//
 // How many effects one scene can route.
 //
 // This is a storage limit, not a limit on how many effects exist - the

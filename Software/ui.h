@@ -1,7 +1,7 @@
 //
 // This is the "ui" for now - really just for very random testing
 //
-#include "eeprom.h"
+#include "scene.h"
 
 struct pot_range { int min, max; };
 
@@ -289,11 +289,11 @@ static void do_rule(const struct rule *b)
 	case ACT_SCENE:
 		//
 		// Checked again rather than trusted from the table.
-		// set_binding() saw the same 'nr_scenes', but it is
+		// set_binding() saw the same MAX_SCENES, but it is
 		// decided by probing the board at startup and this
 		// costs nothing.
 		//
-		if (b->effect < nr_scenes)
+		if (b->effect < MAX_SCENES)
 			load_scene(b->effect);
 		break;
 	}

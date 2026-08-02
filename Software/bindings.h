@@ -178,7 +178,7 @@ static bool rule_ok(const struct rule *r)
 		return false;
 
 	if (r->action == ACT_SCENE)
-		return r->effect < nr_scenes;
+		return r->effect < MAX_SCENES;
 
 	if (!action_has_target(r->action))
 		return true;
