@@ -221,7 +221,7 @@ static inline void tuner_magnitudes(void)
 	tuner_state.dominant_mag = dominant_mag;
 }
 
-static const struct tuning EADGBE = {
+static const struct tuning __not_in_flash("audio") EADGBE = {
 	.name = "Standard",
 	.num_strings = 6,
 	.strings = {
@@ -234,7 +234,7 @@ static const struct tuning EADGBE = {
 	},
 };
 
-static const struct tuning DADGAD = {
+static const struct tuning __not_in_flash("audio") DADGAD = {
 	.name = "DADGAD",
 	.num_strings = 6,
 	.strings = {
@@ -248,7 +248,7 @@ static const struct tuning DADGAD = {
 };
 
 // 6-string standard bass tuning
-static const struct tuning BEADGC = {
+static const struct tuning __not_in_flash("audio") BEADGC = {
 	.name = "BEADGC",
 	.num_strings = 6,
 	.strings = {
@@ -262,7 +262,7 @@ static const struct tuning BEADGC = {
 };
 
 // 4-string standard bass tuning
-static const struct tuning EADG = {
+static const struct tuning __not_in_flash("audio") EADG = {
 	.name = "EADG",
 	.num_strings = 4,
 	.strings = {
@@ -274,7 +274,7 @@ static const struct tuning EADG = {
 };
 
 
-static const struct tuning *const tunings[4] = {
+static const struct tuning *const __not_in_flash("audio") tunings[4] = {
 	&EADGBE,
 	&DADGAD,
 	&BEADGC,

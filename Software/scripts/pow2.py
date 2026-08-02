@@ -9,7 +9,7 @@ def generate_pow2(output_path, step_shift):
 
 	with open(output_path, 'w') as f:
 		f.write(f"#define POW2_STEP_SHIFT {step_shift}\n")
-		f.write("const float pow2_table[] = {")
+		f.write("const float __not_in_flash(\"audio\") pow2_table[] = {")
 
 		for i in range(steps + 1):
 			prefix = "\n\t" if i % 4 == 0 else " "

@@ -667,7 +667,15 @@ def generate(audio_dir, out_h, out_js, out_md):
             f.write("\t}\n")
             f.write("};\n\n")
 
-        f.write("static struct effect *const effects[] = {\n")
+        #
+        # In RAM, not in flash.  single_sample() indexes this every
+        # sample on the audio core, and the audio core has to keep
+        # running while core 0 erases a flash sector with XIP switched
+        # off - see check-audio.py, which will not let it back into
+        # .rodata by accident.
+        #
+        f.write("static struct effect *const __not_in_flash(\"audio\")"
+                " effects[] = {\n")
         for e_data in effects_data:
             f.write(f"\t&{e_data['struct_name']},\n")
         f.write("};\n\n")
