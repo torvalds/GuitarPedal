@@ -79,7 +79,7 @@
 _Static_assert(EFFECT_COUNT <= SCENE_MAX_EFFECTS,
 	       "more effects than a scene can hold");
 
-#define SCENE_VERSION 2
+#define SCENE_VERSION 3
 
 //
 // Keys are 'kind << 8 | index', so a new kind of saved thing costs
@@ -93,10 +93,12 @@ struct scene_effect {
 	uint32_t pot_hash;
 	uint8_t pots[10];
 	uint8_t mix;
+	uint8_t channels;	// which channels it reads and writes
+	uint8_t merge;		// how much of the kept channel a merge keeps
 	uint8_t pad;
 };
 
-_Static_assert(sizeof(struct scene_effect) == 20, "scene_effect is 20 bytes");
+_Static_assert(sizeof(struct scene_effect) == 24, "scene_effect is 24 bytes");
 
 struct scene_payload {
 	uint16_t version;
@@ -126,6 +128,21 @@ struct globals_payload {
 
 	struct rule rules[MAX_RULES];
 };
+
+//
+// On-flash layout, so the offsets are asserted rather than assumed.
+//
+// Both structs carry uint32_t and so are 4-aligned, which means the
+// compiler pads them in two places that reading the declaration does
+// not show: two bytes at the end of every scene_effect, and two more
+// before the array of them starts.  tools/scenebuild writes these from
+// python and got both wrong first time.
+//
+_Static_assert(offsetof(struct scene_payload, routing) == 4, "routing at 4");
+_Static_assert(offsetof(struct scene_payload, nr_rules) == 18, "nr_rules at 18");
+_Static_assert(offsetof(struct scene_payload, effects) == 24, "effects at 24");
+_Static_assert(offsetof(struct scene_payload, rules) == 24 + 32 * 24,
+	       "rules follow the effects");
 
 _Static_assert(sizeof(struct scene_payload) <= SAVE_PAYLOAD_SIZE,
 	       "a scene does not fit in a slot");
@@ -173,6 +190,8 @@ static void scene_load_effect(struct effect *eff, const struct scene_effect *sav
 	memcpy(eff->pot_values[0], saved->pots, 10);
 	memcpy(eff->pot_values[1], saved->pots, 10);
 	set_mix_pot(eff, POT_TO_FLOAT(saved->mix));
+	eff->channels = saved->channels;
+	eff->merge = POT_TO_FLOAT(saved->merge);
 	eff->target = EFF_ENABLE_STEPS;
 	eff->mix = eff->target;
 	if (eff->init)
@@ -187,6 +206,8 @@ static void scene_save_effect(struct effect *eff, struct scene_effect *out)
 	out->pot_hash = eff->pot_hash;
 	memcpy(out->pots, eff->pot_values[seq], 10);
 	out->mix = FLOAT_TO_POT(eff->mix_pot);
+	out->channels = eff->channels;
+	out->merge = FLOAT_TO_POT(eff->merge);
 	out->pad = 0;
 }
 

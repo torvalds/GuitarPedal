@@ -661,13 +661,19 @@ def generate(audio_dir, out_h, out_js, out_md):
             f.write(f"#include \"../effects/{base}.h\"\n")
             f.write("#undef EFFECT_SELF\n")
 
-            # The mixing wrapper, which is what the chain actually calls -
-            # see do_effect_step(). A mono effect gets the left channel
-            # and its one answer goes to both, which is the behaviour the
-            # caller used to impose on every effect alike; a stereo one
-            # gets both and answers for both. Written out per effect so
-            # that one can stop being mono without every other one having
-            # to care.
+            # The wrapper the chain calls - see do_effect_step().
+            #
+            # It runs the effect and hands back what it produced, and
+            # that is all.  Where the answer goes is the caller's, so
+            # that per-effect channel routing lives in one place instead
+            # of being generated into eighteen effects.
+            #
+            # The mono and stereo difference is still here, because it
+            # is a property of the effect rather than of the caller: a
+            # mono one has a single answer and puts it in both halves, a
+            # stereo one answers for each channel.  do_effect_step()
+            # places whichever it is handed without needing to know
+            # which it got.
             #
             # This is the only call site of {self_name}_step(), so it
             # inlines here and the chain is still one indirect call per
@@ -678,19 +684,15 @@ def generate(audio_dir, out_h, out_js, out_md):
             # it calls it by name.
             step = None
             if channels != 'NONE':
-                step = f"{self_name}_mix_step"
-                f.write(f"static sample_t __audio_func({step})"
-                        "(sample_t val, float dry, float wet)\n")
+                step = f"{self_name}_raw_step"
+                f.write(f"static sample_t __audio_func({step})(sample_t val)\n")
                 f.write("{\n")
                 if channels == 'STEREO':
-                    f.write(f"\tsample_t out = {self_name}_step(val);\n")
-                    f.write("\tval.left  = dry * val.left  + wet * out.left;\n")
-                    f.write("\tval.right = dry * val.right + wet * out.right;\n")
+                    f.write(f"\treturn {self_name}_step(val);\n")
                 else:
                     f.write(f"\tfloat out = {self_name}_step(val.left);\n")
-                    f.write("\tval.left  = dry * val.left  + wet * out;\n")
-                    f.write("\tval.right = dry * val.right + wet * out;\n")
-                f.write("\treturn val;\n")
+                    f.write("\tval.left = val.right = out;\n")
+                    f.write("\treturn val;\n")
                 f.write("}\n")
 
             f.write(f"static struct effect {struct_name} = {{\n")
@@ -700,6 +702,8 @@ def generate(audio_dir, out_h, out_js, out_md):
             f.write(f"\t.pot_hash = 0x{pot_layout_hash(e_data['pots']):08x},\n")
             f.write(f"\t.def_mix = {e_data['def_mix']}f,\n")
             f.write(f"\t.mix_law = MIX_{e_data['mix_law']},\n")
+            if e_data['channels'] == 'STEREO':
+                f.write("\t.stereo = 1,\n")
             f.write(f"\t.init = {self_name}_init,\n")
             if step:
                 f.write(f"\t.step = {step},\n")

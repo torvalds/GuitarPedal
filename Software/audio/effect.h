@@ -107,6 +107,25 @@ struct effect {
 	//
 	unsigned char no_mix;
 
+	//
+	// Set by 'MIX: STEREO': this effect reads both channels itself,
+	// so the input half of 'channels' does not apply to it.  There
+	// is nothing to select when it wanted both anyway.
+	//
+	unsigned char stereo;
+
+	//
+	// Which channels this effect reads and writes, and how much of
+	// the channel it did not write survives a merge.
+	//
+	// A property of the effect exactly like 'mix', and like 'mix' it
+	// is applied entirely by do_effect_step() - no effect knows any
+	// of this exists.  Zero is "read left, write both", which is
+	// what every effect did before there was a choice.
+	//
+	unsigned char channels;
+	float merge;
+
 	// What the mix law works out to, and where we are on the way
 	// there. Slewed rather than applied straight so that dragging
 	// the mix around doesn't click.
@@ -118,7 +137,7 @@ struct effect {
 	void (*init)(unsigned char[10]);
 	void (*load)(struct effect *, unsigned char[10]);
 	void (*save)(struct effect *, unsigned char[10]);
-	sample_t (*step)(sample_t, float dry, float wet);
+	sample_t (*step)(sample_t);
 	const struct pot_descr pots[10];
 };
 
@@ -192,21 +211,44 @@ static void set_mix_pot(struct effect *eff, float m)
 #define MIX_SLEW (1.0f / 512)
 
 //
-// Run one effect, and work out how much of it to use.
+// Which channels an effect reads and writes.
 //
-// What this does *not* do is combine the wet signal with the dry one.
-// It works out the two multipliers and hands them over, because there
-// is no single right way to put two channels back together: a mono
-// effect has one answer to spread across both, a panner has a different
-// one for each, and a caller that already decided would stop either of
-// them from being written.
+// Two 2-bit fields in one byte, and zero is what every effect did
+// before there was a choice: read the left channel, write both.  So an
+// effect that has never been told otherwise behaves exactly as it did,
+// and a saved scene full of zeroes means the same thing it always did.
 //
-// So the mixing lives in a small per-effect function that gen_effects.py
-// writes out next to the effect itself.  For a mono effect - which is
-// all of them today - that function reads the left channel, runs the
-// effect, and mixes the one result into both, which is exactly what this
-// used to do inline.  The difference is that it is now the effect's own
-// business rather than something imposed on it from here.
+#define CH_IN(c)	((c) & 3)
+#define CH_OUT(c)	(((c) >> 2) & 3)
+
+enum ch_in {
+	CH_IN_LEFT,
+	CH_IN_RIGHT,
+	// 2 and 3 reserved.  A "sum of both" input is the one thing the
+	// output modes below cannot already express - read both, write
+	// one, keep the other for a later merge - and it is reserved
+	// rather than written so that adding it is not a format change.
+};
+
+enum ch_out {
+	CH_OUT_BOTH,		// the answer goes everywhere
+	CH_OUT_LEFT,		// ...to the left, right keeps what it had
+	CH_OUT_RIGHT,
+	CH_OUT_MERGE,		// answer plus what was kept, to both
+};
+
+//
+// Run one effect, and work out how much of it to use, and where it goes.
+//
+// The effect itself knows none of this.  It is handed a sample and hands
+// one back; everything about which channel it came from, how much of it
+// to use and where to put the answer happens here - the same bargain
+// 'mix' already had, extended to say where as well as how much.
+//
+// The wet and dry are still blended against the channel being *written*,
+// using that channel's own prior value.  Which means an effect writing
+// to one side leaves the other exactly alone, and that is what lets a
+// split survive several effects before anything merges it.
 //
 static inline sample_t do_effect_step(struct effect *effect, sample_t val)
 {
@@ -228,7 +270,52 @@ static inline sample_t do_effect_step(struct effect *effect, sample_t val)
 	float dry = 1.0f + r * (effect->dry - 1.0f);
 	float wet = r * effect->wet;
 
-	return effect->step(val, dry, wet);
+	unsigned int in = CH_IN(effect->channels);
+	unsigned int out = CH_OUT(effect->channels);
+
+	//
+	// A mono effect reads whatever is in the left half, so feeding it
+	// the right channel means putting it there.  A stereo one already
+	// wanted both and is handed the sample untouched.
+	//
+	sample_t fed = val;
+	if (!effect->stereo && in == CH_IN_RIGHT)
+		fed.left = val.right;
+
+	sample_t got = effect->step(fed);
+
+	switch (out) {
+	case CH_OUT_LEFT:
+		val.left = dry * val.left + wet * got.left;
+		return val;
+
+	case CH_OUT_RIGHT:
+		val.right = dry * val.right + wet * got.right;
+		return val;
+
+	case CH_OUT_MERGE: {
+		//
+		// The answer, blended against the channel it came from,
+		// plus whatever weight of the channel it did not touch.
+		// At unity that is a plain sum, so a signal split in two
+		// and put back together with nothing in between comes
+		// back at unity - which is the property that makes a
+		// split path worth having at all.
+		//
+		float src = in == CH_IN_RIGHT ? val.right : val.left;
+		float kept = in == CH_IN_RIGHT ? val.left : val.right;
+		float here = in == CH_IN_RIGHT ? got.right : got.left;
+
+		val.left = val.right = dry * src + wet * here +
+				       effect->merge * kept;
+		return val;
+	}
+
+	default:
+		val.left = dry * val.left + wet * got.left;
+		val.right = dry * val.right + wet * got.right;
+		return val;
+	}
 }
 
 #include "process.h"

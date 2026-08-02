@@ -63,6 +63,14 @@ static void reset_effect(struct effect *eff)
 	eff->mix = eff->target = 0;
 	eff->dry = 1.0f;
 	eff->wet = 0.0f;
+
+	//
+	// No channel routing, and a merge that is a plain sum if one is
+	// ever asked for.  Zero here has to mean "as it always was".
+	//
+	eff->channels = 0;
+	eff->merge = 1.0f;
+
 	set_mix_pot(eff, eff->def_mix);
 	for (int i = 0; i < 10; i++) {
 		unsigned char def_val = eff->pots[i].def_val;
