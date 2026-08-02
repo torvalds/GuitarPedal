@@ -73,6 +73,26 @@ struct pot_descr {
 //
 struct effect {
 	const char *name, *short_name;
+
+	//
+	// What saved state is matched against.  Both are computed by
+	// gen_effects.py and compiled in, so nothing here ever hashes
+	// anything - loading a scene compares two words per effect.
+	//
+	// 'id_hash' says *which effect this is*, and comes from the
+	// short name, which is already required to be unique and is
+	// already the effect's name in this generated code.  Rename it
+	// and this effect's saved state stops being found, which is the
+	// price of not asking people to hand out permanent numbers.
+	//
+	// 'pot_hash' says *what its pots meant*, and covers their
+	// labels, curves, ranges and enumerations in order.  Not their
+	// defaults or units: changing a default does not change what an
+	// already-stored value means, and wiping everybody's scenes over
+	// a retuned default would be a poor trade.
+	//
+	uint32_t id_hash, pot_hash;
+
 	unsigned int mix, target;
 	float mix_pot;
 	float def_mix;

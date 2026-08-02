@@ -2,6 +2,7 @@
 import sys
 import os
 import re
+import hashlib
 import json
 import math
 from collections import Counter
@@ -30,6 +31,53 @@ def c_string(s):
         else:
             out.append('\\%03o' % ord(ch))
     return ''.join(out)
+
+
+def short_hash(*parts):
+    """A 32-bit tag over a canonical description.
+
+    The first four bytes of a SHA-256.  Overkill for telling whether two
+    effects are the same effect, and chosen anyway because it runs once
+    per build on a workstation and never on the pedal - what ends up in
+    the firmware is a constant.  Free is free, and there is no algorithm
+    here to reimplement or get subtly wrong the day something else wants
+    to compute the same number.
+
+    The pieces are joined with a byte that cannot appear in any of them,
+    so that ["ab", "c"] and ["a", "bc"] are different inputs.
+    """
+    blob = "\x1f".join(parts).encode("utf-8")
+    return int.from_bytes(hashlib.sha256(blob).digest()[:4], "big")
+
+
+def effect_id_hash(short_name, copy):
+    """Which effect this is, for matching saved state against.
+
+    The copy index is in there because copies share a short name -
+    tone and tone2 are both [TONE] - and two effects that cannot be told
+    apart would load each other's settings.
+    """
+    return short_hash(short_name, str(copy))
+
+
+def pot_layout_hash(pots):
+    """What this effect's pots mean, so stale values can be spotted.
+
+    Covers what decides how to read a stored 0..120 byte: which pot is
+    where, its curve, its range, and for an enumeration the list of what
+    the indices stand for.  The label is in there too, on the grounds
+    that renaming a control is usually a sign of repurposing it.
+
+    Deliberately absent: the default, and the unit.  Neither changes
+    what an already-stored value means, and invalidating every saved
+    scene because somebody retuned a default would be a poor trade.
+    """
+    parts = [str(len(pots))]
+    for pot in pots:
+        parts += [pot['label'], pot['curve']]
+        parts += pot['args']
+        parts += pot['enum'] or []
+    return short_hash(*parts)
 
 
 def c_ident(where, what, text):
@@ -648,6 +696,8 @@ def generate(audio_dir, out_h, out_js, out_md):
             f.write(f"static struct effect {struct_name} = {{\n")
             f.write(f"\t.name = \"{e_data['full_name']}\",\n")
             f.write(f"\t.short_name = \"{e_data['short_name']}\",\n")
+            f.write(f"\t.id_hash = 0x{effect_id_hash(e_data['short_name'], e_data['copy']):08x},\n")
+            f.write(f"\t.pot_hash = 0x{pot_layout_hash(e_data['pots']):08x},\n")
             f.write(f"\t.def_mix = {e_data['def_mix']}f,\n")
             f.write(f"\t.mix_law = MIX_{e_data['mix_law']},\n")
             f.write(f"\t.init = {self_name}_init,\n")
