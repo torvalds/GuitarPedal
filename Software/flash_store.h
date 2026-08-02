@@ -164,10 +164,11 @@ static bool save_verify(const struct save_slot *slot)
 }
 
 //
-// What the boot scan found.  Diagnostic rather than load-bearing: the
-// pedal reports it in the identity reply so that a test can plant slots
-// with picotool and ask what happened to them, without any of this
-// having to grow a debug interface of its own.
+// What a scan found.  Diagnostic rather than load-bearing: the pedal
+// reports it in the identity reply so that slots planted with picotool
+// can be asked about from a shell, without any of this having to grow a
+// debug interface of its own - and in particular without the shipped
+// firmware being able to be told to write flash.
 //
 struct save_scan {
 	uint8_t marked;			// slots carrying a marker
@@ -272,6 +273,210 @@ static inline const void *save_read(uint16_t key)
 
 		ceiling = best->tail.seq;
 	}
+}
+
+//
+// The staging buffer, which is also just the buffer.
+//
+// A caller does not build a payload somewhere and hand 4kB over - it
+// asks for this, fills it in, and then commits it under a key.  One
+// copy of a big buffer instead of two, and the awkward question of who
+// owns the other one never comes up.
+//
+// It has to be in RAM and it has to be static.  In RAM because
+// flash_range_program() reads its source with XIP switched off, so a
+// payload living in flash would program garbage; static because core
+// 0's stack is 2kB and this is 4.
+//
+static struct save_slot save_staging;
+
+//
+// Cleared on the way out, so that whatever the caller does not write is
+// zero rather than the last save's contents.  Two reasons: the padding
+// goes into the hash, and one of the ways this could leak something is
+// by writing out a buffer somebody else filled.
+//
+static inline uint8_t *save_buffer(void)
+{
+	memset(&save_staging, 0, sizeof(save_staging));
+	return save_staging.payload;
+}
+
+//
+// Which slot the next write should go to, and what sequence it gets.
+//
+// The rule that matters: never a slot that is the only intact copy of
+// its key.  Picking simply the oldest would let thirty-three saves of
+// one scene quietly erase a different scene that had not been touched.
+//
+// So, in order of preference: a slot holding nothing - never written,
+// or written and since found broken - and failing that the superseded
+// copy with the lowest sequence.  If neither exists then every slot is
+// somebody's only copy, and the honest answer is to refuse rather than
+// to destroy one.
+//
+static inline bool save_next_write(unsigned *slot_out, uint32_t *seq_out)
+{
+	uint64_t good = 0, winner = 0;
+	uint32_t newest = 0;
+	bool any = false;
+
+	for (unsigned i = 0; i < SAVE_SLOT_COUNT; i++) {
+		const struct save_slot *slot = save_slot(i);
+
+		if (!save_marked(slot) || !save_verify(slot))
+			continue;
+		good |= 1ull << i;
+		if (!any || slot->tail.seq > newest)
+			newest = slot->tail.seq;
+		any = true;
+	}
+
+	//
+	// A slot is the winner for its key unless some other valid slot
+	// with the same key beats it.  Ties go to the lower index, which
+	// is the same way save_read() breaks them - they must agree, or
+	// a write would reclaim the slot a read is about to return.
+	//
+	for (unsigned i = 0; i < SAVE_SLOT_COUNT; i++) {
+		if (!(good & (1ull << i)))
+			continue;
+
+		bool beaten = false;
+		for (unsigned j = 0; j < SAVE_SLOT_COUNT && !beaten; j++) {
+			if (j == i || !(good & (1ull << j)))
+				continue;
+			if (save_slot(j)->tail.key != save_slot(i)->tail.key)
+				continue;
+			beaten = save_slot(j)->tail.seq > save_slot(i)->tail.seq ||
+				 (save_slot(j)->tail.seq == save_slot(i)->tail.seq &&
+				  j < i);
+		}
+		if (!beaten)
+			winner |= 1ull << i;
+	}
+
+	int best = -1;
+	uint32_t best_seq = 0;
+
+	for (unsigned i = 0; i < SAVE_SLOT_COUNT; i++) {
+		if (!(good & (1ull << i))) {
+			best = i;
+			break;
+		}
+		if (winner & (1ull << i))
+			continue;
+		if (best < 0 || save_slot(i)->tail.seq < best_seq) {
+			best = i;
+			best_seq = save_slot(i)->tail.seq;
+		}
+	}
+
+	if (best < 0)
+		return false;
+
+	//
+	// Unreachable by wear - the flash dies after a few million
+	// writes - but a planted slot can put any number here, and
+	// SAVE_SEQ_NONE has to keep meaning 'erased'.
+	//
+	if (newest >= SAVE_SEQ_NONE - 1)
+		return false;
+
+	*slot_out = best;
+	*seq_out = any ? newest + 1 : 1;
+	return true;
+}
+
+//
+// Write the staging buffer to flash under a key.
+//
+// Core 0 stops for the duration and core 1 keeps playing, which is what
+// all the __not_in_flash("audio") marking is in aid of - see
+// check-audio.py.  Interrupts go off because with XIP disabled there is
+// nothing safe for a handler to run from; core 1 has none of its own.
+//
+// How long core 0 is gone for, measured on the pedal over ten writes:
+//
+//	erase	  30.3 - 37.3 ms
+//	program	   8.7 -  8.8 ms
+//	verify	   0.42 - 0.43 ms	(interrupts back on)
+//
+// So about 40ms, four fifths of it the erase, and comfortably short of
+// the 300ms a datasheet will allow for a sector erase.  USB misses that
+// many frames and the host may or may not mind; saving is a thing you
+// do while setting the pedal up rather than while playing.
+//
+// If that ever becomes annoying, the erase is separable: erase the next
+// free slot straight after a save rather than just before the following
+// one, and what the person waiting sees is the 8.8ms program.  The
+// format does not change for it.
+//
+static inline bool save_commit(uint16_t key)
+{
+	unsigned slot;
+	uint32_t seq, offset;
+
+	if (!save_next_write(&slot, &seq))
+		return false;
+
+	offset = SAVE_AREA_OFFSET + slot * SAVE_SLOT_SIZE;
+
+	//
+	// The one that matters.  Everything above says this cannot be
+	// out of range, and the cost of being wrong is erasing the
+	// firmware out from under the pedal - which takes a physical
+	// BOOTSEL to recover from, on a pedal where the button is inside
+	// the enclosure.  So check it anyway, against the region rather
+	// than against the flash: flash_range_erase()'s own assert only
+	// knows where the chip ends.
+	//
+	if (offset < SAVE_AREA_OFFSET ||
+	    offset + SAVE_SLOT_SIZE > SAVE_AREA_OFFSET + SAVE_SLOT_COUNT * SAVE_SLOT_SIZE)
+		return false;
+
+	memcpy(save_staging.tail.marker, SAVE_MARKER,
+	       sizeof(save_staging.tail.marker));
+	save_staging.tail.seq = seq;
+	save_staging.tail.version = SAVE_VERSION;
+	save_staging.tail.key = key;
+	memset(save_staging.tail.reserved, 0,
+	       sizeof(save_staging.tail.reserved));
+
+	{
+		pico_sha256_state_t sha;
+		sha256_result_t result;
+
+		if (pico_sha256_try_start(&sha, SHA256_BIG_ENDIAN, false) != PICO_OK)
+			return false;
+		pico_sha256_update(&sha, (const uint8_t *)&save_staging,
+				   SAVE_HASHED_SIZE);
+		pico_sha256_finish(&sha, &result);
+		memcpy(save_staging.tail.hash, result.bytes,
+		       sizeof(save_staging.tail.hash));
+	}
+
+	{
+		uint32_t irq = save_and_disable_interrupts();
+		flash_range_erase(offset, SAVE_SLOT_SIZE);
+		restore_interrupts(irq);
+	}
+	{
+		uint32_t irq = save_and_disable_interrupts();
+		flash_range_program(offset, (const uint8_t *)&save_staging,
+				    SAVE_SLOT_SIZE);
+		restore_interrupts(irq);
+	}
+
+	//
+	// Read it back through XIP and check it twice: that the bytes
+	// are the ones we meant, and that the hash they carry is one a
+	// future boot will accept.  The first catches a bad write, the
+	// second catches us having computed the hash wrong - which the
+	// first would happily agree with.
+	//
+	return !memcmp(save_slot(slot), &save_staging, SAVE_SLOT_SIZE) &&
+	       save_verify(save_slot(slot));
 }
 
 #endif // FLASH_STORE_H

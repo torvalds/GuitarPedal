@@ -154,16 +154,6 @@ static void routing_end(routing_bitmap_t routable)
 #include "flash_store.h"
 #include "bindings.h"
 
-//
-// What the save area looked like at boot.
-//
-// Read once, before core 1 is running and before anything can have
-// written to it, and reported in the identity reply.  It is diagnostic
-// and nothing depends on it: a reader asks save_read() for a key and
-// gets a fresh answer, because sequence numbers are not state.
-//
-static struct save_scan save_state;
-
 static void init_i2s(void)
 {
 	uint tx_offset, rx_offset;
@@ -462,23 +452,27 @@ static void sysex_send_identity(void)
 	sysex_write_str("}");
 
 	//
-	// What the save area held at boot.  Nothing needs this to run;
-	// it is here so that a slot planted with picotool can be asked
-	// about from a shell, which is the whole test rig for the
+	// What is in the save area, read now.  Nothing needs this to
+	// run; it is here so that slots planted with picotool can be
+	// asked about from a shell, which is the whole test rig for the
 	// format - 'marked' counts what carried a marker and 'valid'
 	// what also survived its hash, so a deliberately corrupted
 	// signature shows up as the difference between the two.
 	//
+	struct save_scan found;
+
+	save_scan(&found);
+
 	sysex_write_str(",\"save\":{\"slots\":");
 	sysex_write_num(SAVE_SLOT_COUNT);
 	sysex_write_str(",\"marked\":");
-	sysex_write_num(save_state.marked);
+	sysex_write_num(found.marked);
 	sysex_write_str(",\"valid\":");
-	sysex_write_num(save_state.valid);
+	sysex_write_num(found.valid);
 	sysex_write_str(",\"keys\":");
-	sysex_write_num(save_state.keys);
+	sysex_write_num(found.keys);
 	sysex_write_str(",\"newest\":");
-	sysex_write_num(save_state.newest);
+	sysex_write_num(found.newest);
 	sysex_write_str("}}");
 
 	sysex_stream_write(sysex_identity_trailer, sizeof(sysex_identity_trailer));
@@ -1179,13 +1173,6 @@ int main()
 	tac5112_init();
 
 	init_effects();
-
-	//
-	// Before core 1 starts, because it is the last moment nothing
-	// else is running - not because the scan would mind, since it
-	// only reads XIP the ordinary way.
-	//
-	save_scan(&save_state);
 
 	multicore_launch_core1(audio_processing);
 
