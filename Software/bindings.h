@@ -53,19 +53,66 @@ enum control_id {
 //
 enum bind_action {
 	ACT_NONE,
-	ACT_POT,	// arg[0] = effect, arg[1] = pot, 0..9
-	ACT_NEXT_POT,	// step whatever ACT_POT is pointing at
-	ACT_RESET_POT,	// put whatever ACT_POT points at back to its default
+	ACT_POT,	// turn it: drive the target
+	ACT_NEXT_POT,	// step the knob's pot to the next one
+	ACT_RESET_POT,	// put the target back to its schema default
+	ACT_SET_POT,	// set the target to val[0]
+	ACT_TOGGLE_POT,	// flip the target between val[0] and val[1]
 	ACT_BYPASS,
 	ACT_TUNER,
-	ACT_SCENE,	// arg[0] = scene
+	ACT_SCENE,	// effect = scene id
 	NR_ACTIONS,
 };
 
-struct binding {
+//
+// A target of BIND_FOLLOW means "whatever the knob is turning", rather
+// than a particular pot.
+//
+// It exists for the way back.  A press that resets the knob has to
+// follow the knob when the knob is rebound, or it quietly goes on
+// resetting the pot you moved away from - and the whole reason that
+// press exists is to be the reliable way back when you cannot see
+// anything.  Naming the pot twice would work right up until it did not.
+//
+// It is deliberately not offered for the actions that carry a value.
+// A value only means something once the pot is known: 80 is unity on
+// the master volume and an arbitrary number of milliseconds on a delay
+// time.  If you want to name a value, name the pot it belongs to.
+//
+// 0x7f rather than 0xff because everything here goes out over SysEx,
+// where the high bit is not ours to use.
+//
+#define BIND_FOLLOW 0x7f
+
+//
+// 'pot' numbers a parameter the way the SysEx parameter write already
+// does: 0 is the mix, 1 to 10 are the effect's own pots.  Two
+// conventions for "which parameter of which effect" in one firmware
+// would be one too many, and the mix is worth having - toggling it
+// between nothing and everything is how a footswitch turns a single
+// effect on and off.
+//
+// 'control' is which gesture fires it, and the table is flat: a gesture
+// may appear in it more than once, so one press can do several things.
+// Toggling one effect's mix up while taking another's down is how you
+// switch between two effects without leaving the scene, and that is not
+// expressible at all when a gesture gets exactly one action.
+//
+// Flat rather than a list hanging off each control, because it makes
+// the natural write "here is the whole table" instead of "insert into
+// row K's list" - and the app already draws only what the pedal echoes
+// back, so that makes both directions the same message and leaves no
+// insert, delete or reorder protocol to get wrong.
+//
+struct rule {
+	unsigned char control;
 	unsigned char action;
-	unsigned char arg[2];
+	unsigned char effect;
+	unsigned char pot;
+	unsigned char val[2];
 };
+
+#define MAX_RULES 16
 
 //
 // Defaults for a pedal nobody has programmed.
@@ -88,54 +135,90 @@ struct binding {
 //
 // The footswitch keeps what it always did.
 //
-static struct binding bindings[NR_CONTROLS] = {
-	[CTRL_ROTARY_TURN]	= { ACT_POT, { 0, CHAIN_VOLUME } },
-	[CTRL_ROTARY_TAP]	= { ACT_RESET_POT },
-	[CTRL_ROTARY_HOLD]	= { ACT_RESET_POT },
-	[CTRL_STOMP_TAP]	= { ACT_BYPASS },
-	[CTRL_STOMP_HOLD]	= { ACT_TUNER },
+static struct rule rules[MAX_RULES] = {
+	{ CTRL_ROTARY_TURN, ACT_POT,       0, CHAIN_VOLUME + 1 },
+	{ CTRL_ROTARY_TAP,  ACT_RESET_POT, BIND_FOLLOW },
+	{ CTRL_ROTARY_HOLD, ACT_RESET_POT, BIND_FOLLOW },
+	{ CTRL_STOMP_TAP,   ACT_BYPASS },
+	{ CTRL_STOMP_HOLD,  ACT_TUNER },
 };
+static unsigned int nr_rules = 5;
 
 //
-// Take a binding off the wire.
+// Does this action point at a pot, and may it say "the knob's one"?
+//
+static bool action_has_target(unsigned int action)
+{
+	return action == ACT_POT || action == ACT_RESET_POT ||
+	       action == ACT_SET_POT || action == ACT_TOGGLE_POT;
+}
+
+static bool action_may_follow(unsigned int action)
+{
+	return action == ACT_RESET_POT;
+}
+
+//
+// Take the whole table off the wire.
 //
 // Everything is range checked here rather than where it is used, so
 // that the table can be trusted by the things that walk it.  An effect
 // id out of range is an array read off the end, and the app is not the
 // only thing that can send one of these.
 //
-// A pot with no label does not exist on that effect, which is the same
-// test the UI uses to decide what to step past.
+// A rule that does not check out is dropped rather than the batch being
+// rejected.  The pedal answers with what it kept, so a dropped rule
+// shows up at once as a row that did not come back - which is a better
+// way to be told than an error the app would have to render, and it
+// stops one bad rule from losing the other fifteen.
 //
-static bool set_binding(unsigned int ctrl, unsigned int action,
-			unsigned int arg0, unsigned int arg1)
+static bool rule_ok(const struct rule *r)
 {
-	if (ctrl >= NR_CONTROLS || action >= NR_ACTIONS)
+	if (r->control >= NR_CONTROLS || r->action >= NR_ACTIONS)
 		return false;
 
-	switch (action) {
-	case ACT_POT:
-		if (arg0 >= ARRAY_SIZE(effects) || arg1 >= 10)
-			return false;
-		if (!effects[arg0]->pots[arg1].label)
-			return false;
-		break;
-	case ACT_SCENE:
-		if (arg0 >= nr_scenes)
-			return false;
-		break;
-	default:
-		// The arguments belong to the action, so an action that
-		// takes none does not get to remember any.
-		arg0 = 0;
-		arg1 = 0;
-		break;
-	}
+	if (r->action == ACT_SCENE)
+		return r->effect < nr_scenes;
 
-	bindings[ctrl].action = action;
-	bindings[ctrl].arg[0] = arg0;
-	bindings[ctrl].arg[1] = arg1;
-	return true;
+	if (!action_has_target(r->action))
+		return true;
+
+	if (r->effect == BIND_FOLLOW)
+		return action_may_follow(r->action);
+
+	if (r->effect >= ARRAY_SIZE(effects) || r->pot > 10)
+		return false;
+
+	//
+	// An effect with no wet and no dry has no mix to bind to, and a
+	// pot with no label does not exist on that effect.
+	//
+	if (!r->pot)
+		return !effects[r->effect]->no_mix;
+	return effects[r->effect]->pots[r->pot - 1].label != NULL;
+}
+
+static void set_rules(const uint8_t *buf, unsigned int count)
+{
+	unsigned int kept = 0;
+
+	if (count > MAX_RULES)
+		count = MAX_RULES;
+
+	for (unsigned int i = 0; i < count; i++) {
+		const uint8_t *p = buf + i * 6;
+		struct rule r = { p[0], p[1], p[2], p[3], { p[4], p[5] } };
+
+		//
+		// Values are not checked.  A pot's range is a property
+		// of the pot, and for a following target there is no pot
+		// yet to ask - so they are clamped where they are used,
+		// which is the only place that can always do it.
+		//
+		if (rule_ok(&r))
+			rules[kept++] = r;
+	}
+	nr_rules = kept;
 }
 
 #endif
