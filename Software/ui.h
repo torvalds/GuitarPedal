@@ -114,11 +114,42 @@ static void next_bound_pot(void)
 	sysex_send_bindings();
 }
 
+//
+// Put the rotary's pot back where it started.
+//
+// The LED says so whether or not anything moved.  A press that changes
+// nothing because you were already at the default still has to be
+// distinguishable from a press that did not register - "did that do
+// anything?" is exactly the question this action exists to stop you
+// having to ask, so it cannot itself be silent.
+//
+static void reset_bound_pot(void)
+{
+	struct binding *b = &bindings[CTRL_ROTARY_TURN];
+
+	if (b->action == ACT_POT) {
+		struct effect *effect = effects[b->arg[0]];
+		unsigned int idx = b->arg[1];
+		unsigned char def = effect->pots[idx].def_val;
+
+		if (effect->pot_values[effect->seq & 1][idx] != def) {
+			set_effect_pot(effect, idx, def);
+			send_sysex_set_param(b->arg[0], idx + 1, def);
+		}
+	}
+
+	attention_preview = ATTENTION_PREVIEW_TICKS;
+}
+
 static void do_binding(const struct binding *b)
 {
 	switch (b->action) {
 	case ACT_NEXT_POT:
 		next_bound_pot();
+		break;
+
+	case ACT_RESET_POT:
+		reset_bound_pot();
 		break;
 
 	case ACT_BYPASS:

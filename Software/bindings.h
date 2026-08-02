@@ -55,6 +55,7 @@ enum bind_action {
 	ACT_NONE,
 	ACT_POT,	// arg[0] = effect, arg[1] = pot, 0..9
 	ACT_NEXT_POT,	// step whatever ACT_POT is pointing at
+	ACT_RESET_POT,	// put whatever ACT_POT points at back to its default
 	ACT_BYPASS,
 	ACT_TUNER,
 	ACT_SCENE,	// arg[0] = scene
@@ -67,16 +68,30 @@ struct binding {
 };
 
 //
-// The defaults are the old hardcoded behaviour, spelled out.
+// Defaults for a pedal nobody has programmed.
 //
-// The rotary starts on the noise gate's first pot because that is where
-// it always was - 'current_midi_effect_idx' was never assigned, so the
-// pedal's own UI could only ever edit effect 0.
+// The rotary is the master volume, which is the only thing a single
+// unlabelled knob can plausibly be.  It does not change what any effect
+// hears - Trim and Volume are the two ends of the chain and this is the
+// far one - so getting it wrong costs loudness rather than tone, and it
+// is audible, which matters when there is nothing to look at.  It is
+// also the parameter this firmware already treats as special: CC 7 goes
+// straight to it.
+//
+// Both rotary presses reset it, and that is deliberate rather than a
+// gesture going to waste.  switch_irq() sets either the short bit or
+// the long one and never both, so a press held a moment too long
+// arrives only as a long press.  If the two did different things, a
+// slightly slow press would silently do the wrong one - and this action
+// exists precisely to be the way back when you cannot see what you are
+// doing, so it is the last thing that should be fussy about timing.
+//
+// The footswitch keeps what it always did.
 //
 static struct binding bindings[NR_CONTROLS] = {
-	[CTRL_ROTARY_TURN]	= { ACT_POT, { 0, 0 } },
-	[CTRL_ROTARY_TAP]	= { ACT_NEXT_POT },
-	[CTRL_ROTARY_HOLD]	= { ACT_NONE },
+	[CTRL_ROTARY_TURN]	= { ACT_POT, { 0, CHAIN_VOLUME } },
+	[CTRL_ROTARY_TAP]	= { ACT_RESET_POT },
+	[CTRL_ROTARY_HOLD]	= { ACT_RESET_POT },
 	[CTRL_STOMP_TAP]	= { ACT_BYPASS },
 	[CTRL_STOMP_HOLD]	= { ACT_TUNER },
 };
