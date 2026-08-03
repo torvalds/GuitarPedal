@@ -163,6 +163,81 @@ def find(match, among=None):
     return hits[0] if len(hits) == 1 else None
 
 
+def dongle(match=""):
+    """A sequencer port that is not a pedal - the USB-MIDI adapter.
+
+    The hardware MIDI jacks go to the UART rather than to USB, so they
+    are reachable only through something else plugged into them, and
+    that something is not discoverable the way a pedal is: it has no
+    serial we care about and no audio side to join to.  It is simply
+    the MIDI port that is not one of ours.
+    """
+    try:
+        out = subprocess.run(["aplaymidi", "-l"], capture_output=True,
+                             text=True, check=True).stdout
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return None
+    for line in out.splitlines()[1:]:
+        m = re.match(r"\s*(\d+:\d+)\s+(.*\S)", line)
+        if not m or "pedal" in m.group(2).lower():
+            continue
+        if match.lower() in m.group(2).lower():
+            return m.group(1)
+    return None
+
+
+def midi_listen(port, seconds=1.5, during=None):
+    """Every byte that arrives on a port, as a list of ints.
+
+    'during' is called once the listener is actually up, for whatever is
+    supposed to provoke the bytes.  Sending first and listening after
+    loses anything that arrives while amidi is still opening the device -
+    which does not show on a stream that never stops, like the status
+    CCs, and shows badly on a single note.  Same bargain as
+    audio.capture()'s 'during'.
+    """
+    dev = rawmidi(port)
+    if not dev:
+        return []
+    #
+    # Stopped by the clock here rather than by amidi's own -t, which is
+    # an *idle* timeout: it restarts on every byte, and a pedal streams
+    # its status CCs continuously, so a listener with -t on one never
+    # returns at all.  That is how the first attempt at this wedged the
+    # device and left it busy for everything after it.
+    #
+    try:
+        proc = subprocess.Popen(["amidi", "-p", dev, "-d"],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.DEVNULL, text=True)
+    except FileNotFoundError:
+        return []
+    try:
+        time.sleep(0.3)          # let it get the device open
+        if during:
+            during()
+        time.sleep(seconds)
+    finally:
+        proc.terminate()
+        out = proc.stdout.read()
+        proc.wait()
+    return [int(b, 16) for b in out.split()]
+
+
+def midi_alive(port, seconds=1.5):
+    """Is a pedal running, asked without USB.
+
+    The pedal streams its status CCs - 102, 103 and 104 - out of the
+    hardware MIDI jack whether or not anything is listening, so this
+    needs nothing sent and no reply parsed.  It is the one question
+    that can still be put to a pedal whose USB never came up: firmware
+    running, or nothing running at all.  See issue 86.
+    """
+    seen = midi_listen(port, seconds)
+    return any(seen[i] == 0xB0 and seen[i + 1] in (102, 103, 104)
+               for i in range(len(seen) - 2))
+
+
 def _smf(payloads):
     """One standard MIDI file carrying several messages, all at time zero."""
     ev = b""

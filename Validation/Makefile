@@ -52,6 +52,18 @@ check-split:
 check-loop:
 	./test-loop.py
 
+#
+# The hardware MIDI jacks, through a USB-MIDI adapter on the other end.
+#
+# Reports and never fails.  The adapter is a cheap CH345 and the path has
+# shown intermittent trouble nobody has pinned down, so wiring it into a
+# gate would only teach us to ignore the gate.  What is wanted is the
+# rate: run it, watch the number, and let the data say whether the
+# flakiness is the dongle, the parser, or nothing.
+#
+check-midi:
+	./test-midi.py
+
 check: test-midi-cin
 	./test-midi-cin
 ifeq ($(NODE),)
@@ -69,4 +81,4 @@ else
 	r=$$?; rm -rf $$t; exit $$r
 endif
 
-.PHONY: check
+.PHONY: check check-hw check-loop check-midi check-split
