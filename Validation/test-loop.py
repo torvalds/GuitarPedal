@@ -52,7 +52,14 @@ LEVEL_OFF = 0
 
 # Freq is EXPONENTIAL(13.75 14080) over 120 steps: ten octaves, twelve
 # steps each, so a step is a semitone and these are octaves.
-SWEEP_LOW_POT, SWEEP_HIGH_POT = 24, 108
+#
+# From the bottom of the pot rather than from 55 Hz, which is a guitar's
+# low E and not the bottom of what gets plugged in: a four-string bass
+# reaches 41.2 Hz and a five-string 30.9 Hz, which is exactly where the
+# roll-off starts and where the measurement used to stop.  The step has
+# to stay a multiple of twelve so that 440 Hz - the point everything is
+# reported against - is one of the points.
+SWEEP_LOW_POT, SWEEP_HIGH_POT = 0, 108
 FREQ_440_POT = 60
 
 #
