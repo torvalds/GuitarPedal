@@ -76,6 +76,39 @@ def main():
         print("test-audio: SKIPPED - nothing on the analog input")
         return 0
 
+    #
+    # ...and that it is the signal that was *declared*, before anything
+    # is measured against the declaration.
+    #
+    # Everything below is denominated in --ptp and --freq, so an input
+    # that is not what those say does not produce a wrong result, it
+    # produces a confident wrong result: the frequency check reports
+    # -50%, the harmonic measure calls the real tone distortion, and the
+    # noise floor counts it as noise.  Three failures that all say
+    # "pedal" and all mean "bench".
+    #
+    # Which stopped being hypothetical the moment a second pedal was
+    # wired to this one's input, since a pedal is a perfectly good signal
+    # source and simply is not the one on the command line.
+    #
+    # Skipped rather than failed, because nothing here has been shown to
+    # be wrong - the run was not set up to ask.
+    #
+    f0 = audio.dominant(dry)
+    if abs(f0 - args.freq) > 0.05 * args.freq:
+        print(f"test-audio: SKIPPED - the input is {f0:.1f} Hz, not the "
+              f"{args.freq:.0f} Hz declared.")
+        print("            Is the generator on the other channel, or is "
+              "another pedal driving this one?")
+        return 0
+
+    want = args.ptp / 2 / np.sqrt(2)
+    seen = audio.rms(dry * audio.SAMPLE_TO_FLOAT)
+    if abs(audio.dbfs(seen / want)) > 6.0:
+        print(f"test-audio: SKIPPED - the input is {audio.dbfs(seen / want):+.1f} "
+              f"dB from the {args.ptp * 1000:.0f}mV PtP declared.")
+        return 0
+
     # ---- the scale everything else is denominated in ----------------
     #
     # audio/process.h arranges for a 1Vrms sine to peak at 1.0, and every
@@ -123,13 +156,33 @@ def main():
 
     #
     # The gate's default threshold is -70dBFS, and a gate set below the
-    # noise never closes.  Worth saying out loud rather than leaving to
-    # be discovered by a quiet passage that never gates.
+    # noise never closes.  Reported, and deliberately not asserted on.
+    #
+    # What this measures is whatever is driving the input, and the pedal
+    # only underneath it.  What that is depends on the bench: a signal
+    # generator, another pedal, or an open jack, and the spread between
+    # those is far wider than the thing being asked about.  Measured, by
+    # putting a pedal output on one input channel of a board and a bench
+    # generator on the other and reading both in the same capture:
+    #
+    #     LEFT  driven by a pedal, silent    -91.8 dBFS
+    #     RIGHT driven by the generator      -69.1 dBFS
+    #
+    # Twenty-two decibels, between two sources on one converter.  So a
+    # pass/fail here is a pass/fail on the cabling, which is what it was:
+    # it used to flip between runs while nothing changed but which side
+    # of -70 the afternoon landed on.
+    #
+    # The real check lives in test-loop.py, which knows what is driving
+    # the input because it is another pedal it just told to be silent.
+    # There the floor is the pedal's own, reads about -91 dBFS, and gets
+    # asserted against six decibels of margin rather than against a sign.
     #
     margin = -70.0 - nf["noise_dbfs"]
-    check("gate has somewhere to sit", margin > 0,
-          f"default threshold -70 dBFS is {margin:+.1f} dB "
-          f"{'above' if margin > 0 else 'BELOW'} the measured floor")
+    note("gate headroom here",
+         f"default threshold -70 dBFS is {margin:+.1f} dB "
+         f"{'above' if margin > 0 else 'below'} this floor, which is "
+         f"the bench's and not the pedal's - see check-loop")
 
     # ---- and whether the pedal agrees about its own level ------------
     tel = pedal.telemetry(p)
