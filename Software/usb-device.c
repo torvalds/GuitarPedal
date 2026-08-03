@@ -5,6 +5,7 @@
 
 #include "board.h"
 #include "tusb.h"
+#include "pico/usb_reset.h"
 
 #include "midi.h"
 
@@ -50,6 +51,7 @@ enum {
 	ITF_NUM_AUDIO_STREAMING_MIC,
 	ITF_NUM_MIDI,
 	ITF_NUM_MIDI_STREAMING,
+	ITF_NUM_RESET,
 	ITF_NUM_TOTAL
 };
 
@@ -268,7 +270,7 @@ enum {
 		/*_lockdelay*/ 0x0000)
 
 #define IAD_DESC_LEN 8
-#define CONFIG_TOTAL_LEN (TUD_CONFIG_DESC_LEN + CFG_TUD_AUDIO * TUD_AUDIO20_HEADSET_STEREO_DESC_LEN + TUD_MIDI_DESC_LEN + IAD_DESC_LEN)
+#define CONFIG_TOTAL_LEN (TUD_CONFIG_DESC_LEN + CFG_TUD_AUDIO * TUD_AUDIO20_HEADSET_STEREO_DESC_LEN + TUD_MIDI_DESC_LEN + IAD_DESC_LEN + TUD_RPI_RESET_DESC_LEN)
 
 #define EPNUM_AUDIO_OUT 0x01
 #define EPNUM_AUDIO_IN 0x81
@@ -281,7 +283,8 @@ enum {
 	STRID_PRODUCT,
 	STRID_SERIAL,
 	STRID_AUDIO_INTERFACE,
-	STRID_MIDI_INTERFACE
+	STRID_MIDI_INTERFACE,
+	STRID_RESET_INTERFACE
 };
 
 uint8_t const desc_configuration[] =
@@ -300,7 +303,13 @@ uint8_t const desc_configuration[] =
 	// bLength, bDescriptorType, bFirstInterface, bInterfaceCount, bFunctionClass, bFunctionSubClass, bFunctionProtocol, iFunction
 	8, TUSB_DESC_INTERFACE_ASSOCIATION, ITF_NUM_MIDI, 2, TUSB_CLASS_AUDIO, AUDIO_SUBCLASS_MIDI_STREAMING, 0, 0,
 
-	TUD_MIDI_DESCRIPTOR(ITF_NUM_MIDI, STRID_MIDI_INTERFACE, EPNUM_MIDI_OUT, EPNUM_MIDI_IN, CFG_TUD_MIDI_EP_BUFSIZE)
+	TUD_MIDI_DESCRIPTOR(ITF_NUM_MIDI, STRID_MIDI_INTERFACE, EPNUM_MIDI_OUT, EPNUM_MIDI_IN, CFG_TUD_MIDI_EP_BUFSIZE),
+
+	// Nine bytes and no endpoints: a vendor interface that exists
+	// only to be recognised.  picotool finds it by class, subclass
+	// and protocol and sends one control request to it.  No
+	// endpoint, so it cannot compete with the isochronous audio.
+	TUD_RPI_RESET_DESCRIPTOR(ITF_NUM_RESET, STRID_RESET_INTERFACE)
 };
 
 //
@@ -389,6 +398,8 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 		return utf16_desc("UAC2");
 	case STRID_MIDI_INTERFACE:
 		return utf16_desc("MIDI");
+	case STRID_RESET_INTERFACE:
+		return utf16_desc("Reset");
 	}
 	return NULL;
 }

@@ -181,7 +181,20 @@ target_compile_definitions(blink PRIVATE
 	SAMPLES_PER_SEC=${SAMPLES_PER_SEC}f
 	CFG_TUSB_MCU=OPT_MCU_RP2040
 	CFG_TUSB_OS=OPT_OS_PICO
-	CFG_TUSB_DEBUG=0)
+	CFG_TUSB_DEBUG=0
+	#
+	# The reset interface picotool looks for.  The sdk picks defaults
+	# for these from whether LIB_TINYUSB_* is defined, which comes from
+	# linking its tinyusb target - and this builds the submodule's
+	# sources directly, so they all land on the branch meant for a
+	# project not using tinyusb at all.  Stated rather than inherited.
+	#
+	# The baud-rate escape is the 1200-baud trick and wants a CDC
+	# interface to have a baud rate on.  There isn't one.
+	#
+	PICO_ENABLE_USB_RESET_VIA_VENDOR_INTERFACE=1
+	PICO_ENABLE_USB_RESET_VIA_BAUD_RATE=0
+	PICO_USB_RESET_INCLUDE_DEFAULT_APP_DRIVER_CB=1)
 
 target_sources(blink PRIVATE
 	blink.c
@@ -196,7 +209,14 @@ target_sources(blink PRIVATE
 	tinyusb/src/device/usbd.c
 	tinyusb/src/class/audio/audio_device.c
 	tinyusb/src/class/midi/midi_device.c
-	tinyusb/src/portable/raspberrypi/rp2040/dcd_rp2040.c)
+	tinyusb/src/portable/raspberrypi/rp2040/dcd_rp2040.c
+	#
+	# Compiled in rather than linked as pico_usb_reset, which would
+	# drag in the sdk's own tinyusb alongside the submodule this
+	# builds against.  The file includes "tusb.h" and gets whichever
+	# one is on the path.
+	#
+	pico-sdk/src/rp2_common/pico_usb_reset/usb_reset.c)
 
 target_link_libraries(blink
 	pico_stdlib
@@ -214,6 +234,8 @@ target_link_libraries(blink
 target_include_directories(blink PRIVATE
 	include
 	tinyusb/src
+	pico-sdk/src/rp2_common/pico_usb_reset/include
+	pico-sdk/src/common/pico_usb_reset_interface_headers/include
 	"${CMAKE_CURRENT_BINARY_DIR}")
 
 #
