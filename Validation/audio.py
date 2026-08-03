@@ -94,18 +94,56 @@ def find_card(match=""):
     return cards[0][0] if cards else None
 
 
-def capture(seconds, card, during=None):
+def discard(card):
+    """One capture thrown away, to get the stale one out of the way.
+
+    The first arecord after the device has been left alone for even a
+    second comes back holding audio from *before* it was left alone.
+    Measured: set a pot, wait, capture, and the capture shows the old
+    value; capture again and it shows the new one, and every capture
+    after that is right until the next pause.
+
+    pipewire is what is doing it.  It has the pedal open - `pactl list
+    short sources` shows an alsa_input for each one, SUSPENDED - and the
+    backlog it hands over is about a second, which is far more than the
+    three packets the pedal's own endpoint holds.
+
+    This is worth knowing beyond the value being wrong, because a stale
+    capture is not merely late: it was recorded across the moment the
+    device was picked up again, so it is also where the discontinuities
+    come from that get counted as breaks, and then as noise, and then as
+    distortion.  A test that measures the first capture after a gap is
+    measuring the gap.
+    """
+    subprocess.run(
+        ["arecord", "-D", f"hw:{card},0", "-f", "S32_LE", "-c", "2",
+         "-r", str(RATE), "-d", "1", "-t", "raw", "-q"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def capture(seconds, card, during=None, warm=True):
     """Record from the pedal, as a float array of shape (n, 2).
 
     'during' is called once recording is under way, for the things that
     have to happen while the tape is rolling.
+
+    'warm' throws one capture away first - see discard().  It is on by
+    default because the alternative default is a number that is silently
+    a second out of date, and costs a second per capture, which is worth
+    it.  Turn it off only when the staleness is the thing being measured.
 
     How long it took in wall-clock is left in capture.elapsed, and that
     is the honest way to measure a stall.  When the pedal stops feeding
     the endpoint, get_output_samples() returns short and the host simply
     waits - the captured audio has no hole in it, the recording just
     takes longer.  Counting samples cannot see that; a clock can.
+
+    The warm-up is deliberately outside that clock: it is the host being
+    got ready, not the pedal being measured.
     """
+    if warm:
+        discard(card)
+
     t0 = time.time()
     proc = subprocess.Popen(
         ["arecord", "-D", f"hw:{card},0", "-f", "S32_LE", "-c", "2",
