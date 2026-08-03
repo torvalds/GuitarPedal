@@ -207,6 +207,7 @@ target_link_libraries(blink
 	hardware_i2c
 	hardware_dma
 	hardware_flash
+	pico_unique_id
 	pico_sha256)
 
 target_include_directories(blink PRIVATE

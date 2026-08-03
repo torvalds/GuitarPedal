@@ -366,6 +366,19 @@ static void probe_hardware(void)
 	hardware.legacy_screen = i2c_probe(SH1106_I2C);
 
 	//
+	// The one inference drawn from any of this, and it is drawn here
+	// rather than on the wire.  A name is allowed to guess: nothing
+	// depends on it being right beyond a human reading a port list,
+	// and being wrong costs a rebuild.  The identity reply is not
+	// allowed to, for the reason above - so it keeps reporting that
+	// nothing answered at 0x51, and this says what that means.
+	//
+	// It has to be said before init_usb(), which is why probing
+	// happens as early as it does.
+	//
+	usb_set_product(hardware.legacy_codec ? "TAC5112 Pedal" : "TAC5242 Pedal");
+
+	//
 	// Worst first, and only one of these arrives: report_status() is a
 	// plain overwrite and get_status() takes the message away as it
 	// reads it, so a chain of ifs would deliver the last thing tested
@@ -1197,14 +1210,20 @@ int main()
 	init_i2c_bus(i2c0, 400, I2C0_SDA, I2C0_SCL);
 	init_i2c_bus(i2c1, 400, I2C1_SDA, I2C1_SCL);
 
+	//
+	// Before init_usb(), because it decides what the pedal enumerates
+	// as.  USB is a hotplug bus and the host may already be attached
+	// and waiting, so the name wants to exist before the device does.
+	// The i2c buses above are all this needs.
+	//
+	probe_hardware();
+
 	init_usb();
 	uart_midi_init();
 
 	absolute_time_t now = get_absolute_time();
 
 	absolute_time_t next_ui_update = delayed_by_ms(now, 50);
-
-	probe_hardware();
 
 	//
 	// Early boards need their codec set up; the current ones strap it

@@ -1,5 +1,6 @@
 #include "pico/stdlib.h"
 #include "pico.h"
+#include "pico/unique_id.h"
 
 #include "board.h"
 #include "tusb.h"
@@ -311,20 +312,76 @@ uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
 //--------------------------------------------------------------------+
 
 
-#define DESC_STRING(len) (2*((len)+1)+(TUSB_DESC_STRING<<8))
+//
+// What this pedal calls itself.
+//
+// Neither of these is known at build time.  The product string names the
+// codec, and which codec is fitted is something probe_hardware() works out
+// on the i2c bus; the serial is the chip's own unique id.  Both are here
+// because two pedals on one desk otherwise enumerate identically, and then
+// lsusb, the sequencer port list, the ALSA card list and the app's port
+// selector are all unable to say which one you are looking at.
+//
+// The default is what a pedal says before anything has told it otherwise,
+// which is the truthful answer for the moment before the bus is probed.
+//
+static const char *usb_product = "Pedal";
+static char usb_serial[2 * PICO_UNIQUE_BOARD_ID_SIZE_BYTES + 1] = "0";
+
+void usb_set_product(const char *name)
+{
+	usb_product = name;
+}
+
+//
+// A string descriptor is its own two-byte header - the descriptor type in
+// the high byte and the total length in the low one - followed by the text
+// as UTF-16, all in one buffer.  That is why the strings here are plain
+// ASCII and get converted on the way out rather than being u"" literals: a
+// literal supplies the payload and leaves nowhere to put the header, so the
+// length ends up hand-counted next to the text it has to agree with.
+//
+// One buffer serves all of them.  The host asks for one descriptor at a
+// time and cannot begin the next request before this transfer completes,
+// and tinyusb passes the pointer straight through without copying, so the
+// buffer has to outlive the call and does not have to be per-string.
+//
+static uint16_t desc_str[48];
+
+static const uint16_t *utf16_desc(const char *s)
+{
+	unsigned int i = 0;
+
+	while (s[i] && i < ARRAY_SIZE(desc_str) - 1) {
+		desc_str[i + 1] = (unsigned char) s[i];
+		i++;
+	}
+	desc_str[0] = (TUSB_DESC_STRING << 8) | (2 * (i + 1));
+	return desc_str;
+}
+
 uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 {
-	static const uint16_t reply[6][15] = {
-		{ DESC_STRING(1), 0x0409 }, // English
-		{ DESC_STRING(5), 'L', 'i', 'n', 'u', 's' },
-		{ DESC_STRING(11), 'L', 'i', 'n', 'u', 's', ' ', 'P', 'e', 'd', 'a', 'l' },
-		{ DESC_STRING(1), '0' },
-		{ DESC_STRING(4), 'U', 'A', 'C', '2' },
-		{ DESC_STRING(4), 'M', 'I', 'D', 'I' },
+	// Not text, so it does not go through the conversion above
+	static const uint16_t langid_desc[] = {
+		(TUSB_DESC_STRING << 8) | 4, 0x0409	// English
 	};
-	if (index >= 6)
-		return NULL;
-	return reply[index];
+
+	switch (index) {
+	case STRID_LANGID:
+		return langid_desc;
+	case STRID_MANUFACTURER:
+		return utf16_desc("Linus");
+	case STRID_PRODUCT:
+		return utf16_desc(usb_product);
+	case STRID_SERIAL:
+		return utf16_desc(usb_serial);
+	case STRID_AUDIO_INTERFACE:
+		return utf16_desc("UAC2");
+	case STRID_MIDI_INTERFACE:
+		return utf16_desc("MIDI");
+	}
+	return NULL;
 }
 
 //--------------------------------------------------------------------+
@@ -333,6 +390,8 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 
 int init_usb(void)
 {
+	pico_get_unique_board_id_string(usb_serial, sizeof(usb_serial));
+
 	tusb_rhport_init_t dev_init = {
 		.role = TUSB_ROLE_DEVICE,
 		.speed = TUSB_SPEED_AUTO
