@@ -40,6 +40,18 @@ check-hw:
 check-split:
 	./test-split.py
 
+#
+# Two pedals, patched output to input in both directions, one generating
+# and the other measured.  Separate from check-hw because it needs the
+# second board, and because what it is for is different: check-hw asks
+# whether the pedal does the right thing to a signal somebody else
+# provides, and this asks the questions that need the signal to be under
+# the test's control - what the analog link does, how quiet a properly
+# driven input is, and whether the audio survives the pedal's own sysex.
+#
+check-loop:
+	./test-loop.py
+
 check: test-midi-cin
 	./test-midi-cin
 ifeq ($(NODE),)
