@@ -34,18 +34,64 @@ SETTINGS_USB_OUT = 1
 USB_OUT_WET_DRY = 3
 
 
-def port(match="pedal"):
-    """The sequencer port to play to, or None."""
+def ports(match=""):
+    """Every pedal's sequencer port, as [(port, name)].
+
+    The port name comes from the USB product string, which names the codec
+    - "TAC5242 Pedal" - so 'match' is how a caller says which pedal it
+    means: "TAC5242", or "5112".  Empty means any of them.
+    """
     try:
         out = subprocess.run(["aplaymidi", "-l"], capture_output=True,
                              text=True, check=True).stdout
     except (FileNotFoundError, subprocess.CalledProcessError):
-        return None
+        return []
+    found = []
     for line in out.splitlines()[1:]:
         m = re.match(r"\s*(\d+:\d+)\s+(.*\S)", line)
-        if m and match.lower() in m.group(2).lower():
-            return m.group(1)
-    return None
+        if not m or "pedal" not in m.group(2).lower():
+            continue
+        if match.lower() not in m.group(2).lower():
+            continue
+        found.append((m.group(1), m.group(2)))
+    return found
+
+
+def port(match=""):
+    """The sequencer port to play to, or None."""
+    found = ports(match)
+    return found[0][0] if found else None
+
+
+def discover():
+    """Every pedal on the machine, as [{codec, port, card, name}].
+
+    The two halves of a pedal - a sequencer port and an ALSA card - are
+    found by two different tools that have no idea they are looking at the
+    same device.  What ties them together is the USB product string, which
+    both of them report and which names the codec, so the codec is the key.
+
+    Which is the whole reason the pedals had to be told apart before any
+    of this could be written: with both of them called "Linus Pedal" there
+    is nothing here to join on.
+    """
+    import audio
+
+    cards = {}
+    for number, name in audio.find_cards():
+        m = re.search(r"TAC\d+", name)
+        if m:
+            cards[m.group(0)] = (number, name)
+
+    found = []
+    for p, name in ports():
+        m = re.search(r"TAC\d+", name)
+        if not m or m.group(0) not in cards:
+            continue
+        number, card_name = cards[m.group(0)]
+        found.append({"codec": m.group(0), "port": p,
+                      "card": number, "name": card_name})
+    return sorted(found, key=lambda d: d["codec"])
 
 
 def _smf(payload):

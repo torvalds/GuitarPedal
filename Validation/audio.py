@@ -56,15 +56,42 @@ FULL_SCALE_VRMS = 1.0
 SAMPLE_TO_FLOAT = 3.45 / 2.82843
 
 
-def find_card(name="Pedal"):
-    """The ALSA card number, or None if it is not plugged in."""
+def find_cards(match=""):
+    """Every pedal arecord can see, as [(card number, name)].
+
+    A card line carries a short name and a longer one in brackets, and
+    which of them the USB product string ends up in depends on whether the
+    product starts with the manufacturer - "Linus Pedal" reduced to
+    "Pedal", "TAC5242 Pedal" does not.  So the match is against the whole
+    line rather than either field, and the name handed back is the
+    bracketed one, which is the full product string and therefore names
+    the codec.
+
+    'match' narrows that further, and is how a caller says which pedal it
+    means when there is more than one: "TAC5242", or "5112".
+    """
     try:
         out = subprocess.run(["arecord", "-l"], capture_output=True,
                              text=True, check=True).stdout
     except (FileNotFoundError, subprocess.CalledProcessError):
-        return None
-    m = re.search(r"^card (\d+): %s\b" % re.escape(name), out, re.M)
-    return int(m.group(1)) if m else None
+        return []
+
+    found = {}
+    for line in out.splitlines():
+        m = re.match(r"card (\d+): (\S+) \[([^]]*)\]", line)
+        if not m or "pedal" not in line.lower():
+            continue
+        if match.lower() not in line.lower():
+            continue
+        # One line per device, and only the first device is the audio one
+        found.setdefault(int(m.group(1)), m.group(3))
+    return sorted(found.items())
+
+
+def find_card(match=""):
+    """One pedal's ALSA card number, or None if it is not plugged in."""
+    cards = find_cards(match)
+    return cards[0][0] if cards else None
 
 
 def capture(seconds, card, during=None):

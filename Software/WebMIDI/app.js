@@ -345,13 +345,27 @@ async function initMidi() {
 let selectedInputId = null;
 let selectedOutputId = null;
 
+//
+// Which of the ports on offer is a pedal.
+//
+// The pedal names itself after the codec it found - "TAC5242 Pedal",
+// "TAC5112 Pedal" - so the only part common to all of them is the word
+// the match is now on.  As a word, so that something called "Pedalboard"
+// is not mistaken for one.
+//
+// With two pedals plugged in both match and the first one wins.  That is
+// what the selector below is for: auto-detect answers "a pedal", and
+// saying which pedal is a choice only the person at the desk can make.
+//
+const PEDAL_PORT = /(^|\s)Pedal(\s|$)/;
+
 function populateMidiSelects() {
     const inSelect = document.getElementById('midi-input-select');
     const outSelect = document.getElementById('midi-output-select');
     if (!inSelect || !outSelect) return;
 
-    inSelect.innerHTML = '<option value="">-- Auto-detect Linus Pedal --</option>';
-    outSelect.innerHTML = '<option value="">-- Auto-detect Linus Pedal --</option>';
+    inSelect.innerHTML = '<option value="">-- Auto-detect pedal --</option>';
+    outSelect.innerHTML = '<option value="">-- Auto-detect pedal --</option>';
 
     for (let input of midiAccess.inputs.values()) {
         const opt = document.createElement('option');
@@ -394,7 +408,7 @@ function updateMidiState() {
     } else {
         for (let input of midiAccess.inputs.values()) {
             if (!foundInput) foundInput = input;
-            if (input.name.includes('Linus Pedal')) {
+            if (PEDAL_PORT.test(input.name)) {
                 foundInput = input;
                 break;
             }
@@ -407,7 +421,7 @@ function updateMidiState() {
     } else {
         for (let output of midiAccess.outputs.values()) {
             if (!foundOutput) foundOutput = output;
-            if (output.name.includes('Linus Pedal')) {
+            if (PEDAL_PORT.test(output.name)) {
                 foundOutput = output;
                 break;
             }
