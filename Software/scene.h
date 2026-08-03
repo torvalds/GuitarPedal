@@ -273,8 +273,19 @@ static bool load_scene(uint8_t scene_id)
 
 	current_scene_id = scene_id;
 
-	for (int i = 0; i < EFFECT_COUNT; i++)
+	//
+	// Back to defaults first, so an effect the scene does not
+	// mention is at its defaults rather than at whatever the last
+	// scene left it - except the settings, which are the pedal's and
+	// not the song's.  Resetting those here would undo load_globals()
+	// every time a scene loaded, which is a slower way of making them
+	// per-scene again.
+	//
+	for (int i = 0; i < EFFECT_COUNT; i++) {
+		if (effects[i] == &settings_effect)
+			continue;
 		reset_effect(effects[i]);
+	}
 
 	//
 	// Cleared here, and resolved on the way out of every path
@@ -306,6 +317,21 @@ static bool load_scene(uint8_t scene_id)
 		struct effect *eff = scene_find_effect(&scene->effects[i]);
 
 		if (!eff)
+			continue;
+
+		//
+		// Not the settings.  They are the pedal's rather than the
+		// song's and live under their own key - see load_globals()
+		// - and a scene that restored them would put the MIDI
+		// channel and the USB routing back to whatever they were
+		// when it was saved, which is the thing making them global
+		// was meant to stop.
+		//
+		// Skipped here as well as left out of save_scene(), so a
+		// scene written before that stops being true does not get
+		// to apply what it kept.
+		//
+		if (eff == &settings_effect)
 			continue;
 		scene_load_effect(eff, &scene->effects[i]);
 		for (int n = 0; n < EFFECT_COUNT; n++) {
@@ -350,9 +376,19 @@ static bool save_scene(uint8_t scene_id)
 	// is not in the chain still has somewhere to keep its values.
 	// Costs 20 bytes each against 4032.
 	//
+	//
+	// Every effect gets a slot whether it is routed or not, so that
+	// the routing below can index this list and an unrouted effect
+	// still has somewhere to keep its values.  Except the settings,
+	// which belong to the pedal - their entry is left zeroed, and a
+	// zero id_hash matches nothing on the way back in.
+	//
 	scene->nr_effects = EFFECT_COUNT;
-	for (int i = 0; i < EFFECT_COUNT; i++)
+	for (int i = 0; i < EFFECT_COUNT; i++) {
+		if (effects[i] == &settings_effect)
+			continue;
 		scene_save_effect(effects[i], &scene->effects[i]);
+	}
 
 	scene->nr_routed = routed_effect_count;
 	for (int i = 0; i < routed_effect_count; i++)
