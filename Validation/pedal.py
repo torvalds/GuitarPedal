@@ -109,6 +109,37 @@ def enter_bootsel(p, channel=1):
         os.unlink(tmp.name)
 
 
+def identity(p, in_port=None, wait=2.0):
+    """The pedal's self-description, as a dict, or None.
+
+    SysEx 0x0a, answered as JSON - build stamp, what answered on the i2c
+    bus, and what the save area holds.
+    """
+    import json
+    dump = subprocess.Popen(["aseqdump", "-p", in_port or p],
+                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                            text=True)
+    try:
+        time.sleep(0.4)
+        send(p, 0x0A)
+        time.sleep(wait)
+    finally:
+        dump.terminate()
+        text = dump.stdout.read()
+        dump.wait()
+
+    blob = bytes.fromhex("".join(
+        re.findall(r"System exclusive\s+((?:[0-9A-Fa-f]{2} ?)+)", text)
+    ).replace(" ", ""))
+    i = blob.find(bytes([0xF0, 0x7D, 0x0A]))
+    if i < 0:
+        return None
+    try:
+        return json.loads(blob[i + 3:blob.find(0xF7, i)].decode())
+    except (ValueError, UnicodeDecodeError):
+        return None
+
+
 def telemetry(p, in_port=None, wait=1.5):
     """What the pedal thinks its own levels are.
 

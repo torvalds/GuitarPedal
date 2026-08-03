@@ -42,7 +42,7 @@ import scene
 PICOTOOL = "picotool"
 
 
-def plant(scenes, picotool):
+def plant(scenes, picotool, base_seq):
     """Both scenes, one trip through BOOTSEL."""
     p = pedal.port()
     pedal.enter_bootsel(p)
@@ -57,7 +57,7 @@ def plant(scenes, picotool):
     import tempfile
     import os
     for slot, (key, payload) in enumerate(scenes, start=40):
-        img = scene.slot_image(payload, key, 2000 + slot)
+        img = scene.slot_image(payload, key, base_seq + slot)
         tmp = tempfile.NamedTemporaryFile(suffix=".bin", delete=False)
         try:
             tmp.write(img)
@@ -108,8 +108,19 @@ def main():
     t2["channels"] = scene.channels(scene.IN_LEFT, scene.OUT_LEFT)
     kept = scene.build(effects, routed)
 
-    print("test-split: planting two scenes, one BOOTSEL trip")
-    plant([(0, merged), (1, kept)], picotool)
+    #
+    # Above whatever the pedal has already written, not at some number
+    # chosen in advance.  A planted scene only wins if its sequence beats
+    # the ones already there, and the pedal has been saving scene 0 every
+    # time anything measured what a save costs - so a fixed base quietly
+    # stops working after enough of those, and the test then measures two
+    # scenes that never loaded.
+    #
+    ident = pedal.identity(p)
+    newest = (ident or {}).get("save", {}).get("newest", 0)
+    print(f"test-split: planting two scenes above sequence {newest}, "
+          f"one BOOTSEL trip")
+    plant([(0, merged), (1, kept)], picotool, newest + 10)
 
     n = pedal.effect_count()
     pedal.wet_dry(p, n - 1)
