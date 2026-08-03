@@ -108,6 +108,39 @@ def main():
     note("distortion", f"{audio.thd(clean, args.freq):.1f} dB below the "
                        f"fundamental, harmonics 2-5")
 
+    # ---- how quiet it is when nothing is asked of it -----------------
+    #
+    # The tone cannot be switched off from here, so it is left out of
+    # the spectrum instead.  Which makes this an upper bound on the
+    # pedal's noise rather than a measurement of it: whatever the
+    # generator contributes is in here too.
+    #
+    nf = audio.noise_floor(dry * audio.SAMPLE_TO_FLOAT)
+    note("noise floor", f"{nf['noise_dbfs']:.1f} dBFS "
+                        f"({nf['noise_vrms'] * 1e6:.0f} uV rms in), "
+                        f"{nf['density_dbfs']:.1f} dBFS/sqrt(Hz), "
+                        f"snr {nf['snr_db']:.1f} dB")
+
+    #
+    # The gate's default threshold is -70dBFS, and a gate set below the
+    # noise never closes.  Worth saying out loud rather than leaving to
+    # be discovered by a quiet passage that never gates.
+    #
+    margin = -70.0 - nf["noise_dbfs"]
+    check("gate has somewhere to sit", margin > 0,
+          f"default threshold -70 dBFS is {margin:+.1f} dB "
+          f"{'above' if margin > 0 else 'BELOW'} the measured floor")
+
+    # ---- and whether the pedal agrees about its own level ------------
+    tel = pedal.telemetry(p)
+    if tel:
+        mine = audio.dbfs(audio.peak(wet))
+        check("pedal's own meter", abs(tel["in_dbfs"] - mine) <= 2.0,
+              f"reports {tel['in_dbfs']} dBFS in, measured {mine:.1f} dBFS "
+              f"(gate {tel['gate']}, load {tel['load']}/127)")
+    else:
+        note("pedal's own meter", "no telemetry reply")
+
     # ---- what the USB stream costs, before anything is asked of it ---
     #
     # This is the floor.  A save has to be told apart from it, and if the

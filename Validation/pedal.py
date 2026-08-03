@@ -109,6 +109,38 @@ def enter_bootsel(p, channel=1):
         os.unlink(tmp.name)
 
 
+def telemetry(p, in_port=None, wait=1.5):
+    """What the pedal thinks its own levels are.
+
+    SysEx 0x0b, answered as packed bytes: version, input peak, noise
+    floor, output peak, gate, load.  The levels are -dBFS, one byte per
+    dB, counting down from full scale.
+    """
+    dump = subprocess.Popen(["aseqdump", "-p", in_port or p],
+                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                            text=True)
+    try:
+        time.sleep(0.4)
+        send(p, 0x0B)
+        time.sleep(wait)
+    finally:
+        dump.terminate()
+        text = dump.stdout.read()
+        dump.wait()
+
+    blob = bytes.fromhex("".join(
+        re.findall(r"System exclusive\s+((?:[0-9A-Fa-f]{2} ?)+)", text)
+    ).replace(" ", ""))
+    i = blob.find(bytes([0xF0, 0x7D, 0x0B]))
+    if i < 0:
+        return None
+    body = blob[i + 3:blob.find(0xF7, i)]
+    if len(body) < 6:
+        return None
+    return {"version": body[0], "in_dbfs": -body[1], "floor_dbfs": -body[2],
+            "out_dbfs": -body[3], "gate": body[4], "load": body[5]}
+
+
 def set_pot(p, effect, pot, value):
     """Pot 0 is the mix; 1-10 are the effect's own."""
     send(p, 0x03, effect, pot, value)

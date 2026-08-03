@@ -154,6 +154,83 @@ def thd(x, f0, harmonics=5):
     return dbfs(np.sqrt(power) / fund)
 
 
+#
+# What is left when the signal is taken away.
+#
+# The generator cannot be switched off from here, so the tone is removed
+# arithmetically instead: fit it by least squares at its measured
+# frequency, subtract, and what remains is noise plus whatever the fit
+# could not describe.  Harmonics are fitted too and reported separately,
+# because distortion is not noise and lumping them together flatters
+# neither.
+#
+# Assumes the generator itself is clean.  It is not, so this is an upper
+# bound on the pedal's own noise rather than a measurement of it - what
+# comes out is "no worse than this".
+#
+def noise_floor(x, f0=None, harmonics=8, guard=12):
+    """Everything that is not the tone or its harmonics.
+
+    Done in the frequency domain by leaving bins out rather than in the
+    time domain by fitting and subtracting.  A fit has to know the
+    frequency exactly: a thousandth of a Hz of error walks a quarter
+    turn out of phase over five seconds and the "residual" it leaves is
+    mostly signal.  Dropping bins does not care, which matters when the
+    frequency is a dial on a bench rather than a number.
+
+    'guard' bins either side of each harmonic go too, because a Hann
+    window spreads a pure tone over about three.
+    """
+    if f0 is None:
+        f0 = dominant(x)
+
+    #
+    # Blackman-Harris rather than Hann, because this is looking for
+    # something a hundred dB down from a tone that is present.  Hann's
+    # sidelobes put the tone's own leakage at about -86dBFS across the
+    # whole spectrum, and a noise floor measured through that is a
+    # measurement of the window.  Blackman-Harris buries its sidelobes
+    # near -92dB and the leakage stops being what is being measured.
+    #
+    # The cost is a wider main lobe - eight bins rather than three - so
+    # the guard has to widen with it.
+    #
+    n = np.arange(len(x))
+    z = 2 * np.pi * n / len(x)
+    win = (0.35875 - 0.48829 * np.cos(z) + 0.14128 * np.cos(2 * z)
+           - 0.01168 * np.cos(3 * z))
+    gain = np.sqrt(np.mean(win ** 2))
+    sp = np.fft.rfft(x * win) / (len(x) / 2) / gain
+    power = np.abs(sp) ** 2
+    step = RATE / len(x)
+
+    def band(f):
+        k = int(round(f / step))
+        return slice(max(0, k - guard), min(len(power), k + guard + 1))
+
+    fund = np.sqrt(power[band(f0)].sum() / 2)
+    harm = 0.0
+    keep = np.ones(len(power), dtype=bool)
+    keep[:2] = False                      # DC and the bin next to it
+    keep[band(f0)] = False
+    for h in range(2, harmonics + 1):
+        if f0 * h < RATE / 2:
+            harm += power[band(f0 * h)].sum() / 2
+            keep[band(f0 * h)] = False
+
+    noise = np.sqrt(power[keep].sum() / 2)
+    harm = np.sqrt(harm)
+
+    return {
+        "noise_dbfs": dbfs(noise),
+        "noise_vrms": noise * FULL_SCALE_VRMS,
+        "snr_db": dbfs(fund) - dbfs(noise),
+        "harmonics_db": dbfs(harm) - dbfs(fund),
+        "density_dbfs": dbfs(noise / np.sqrt(RATE / 2)),
+        "f0": f0,
+    }
+
+
 def ratio_db(a, b):
     """How much louder a is than b."""
     return dbfs(rms(a)) - dbfs(rms(b))
