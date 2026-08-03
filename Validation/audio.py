@@ -203,6 +203,33 @@ def dominant(x):
     return float(k) * RATE / len(x)
 
 
+def tone_level(x, f0, frac=0.02):
+    """The level of just the energy near f0, in dBFS.
+
+    The complement of noise_floor(): that one answers "everything except
+    the tone", this answers "the tone and nothing else".
+
+    Which is what it takes to measure one signal on a bench that has
+    another one on it.  A generator wired to a channel cannot be switched
+    off from here, so anything asking "is there signal on this input"
+    finds it whether or not it is the signal being asked about - and then
+    reports a channel as carried, or crossed, on the strength of a tone
+    nothing in the test put there.
+    """
+    #
+    # Summed as power and normalised by the window's power gain, not by
+    # summing an amplitude spectrum: a windowed tone occupies several
+    # bins and adding per-bin amplitude estimates in quadrature counts
+    # the same sine once per bin, which reads about 2.4 dB high.
+    #
+    w = np.blackman(len(x))
+    sp = np.abs(np.fft.rfft(x * w)) ** 2
+    f = np.fft.rfftfreq(len(x), 1.0 / RATE)
+    band = np.abs(f - f0) <= frac * f0
+    power = 2.0 * np.sum(sp[band]) / (len(x) * np.sum(w ** 2))
+    return dbfs(np.sqrt(power))
+
+
 def delay_samples(reference, delayed, max_lag):
     """How far 'delayed' lags 'reference', in samples, by correlation.
 

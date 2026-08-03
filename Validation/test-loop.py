@@ -218,7 +218,7 @@ def main():
     print()
     for src, dst in ring:
         print("  %s -> %s" % (src["label"], dst["label"]))
-        one_edge(src, dst, args)
+        one_edge(src, dst, found, args)
 
     print()
     latency(ring, found, args)
@@ -290,7 +290,7 @@ def topology(found, args):
     return edges
 
 
-def one_edge(src, dst, args):
+def one_edge(src, dst, found, args):
     #
     # Cut the ring here and prove it is cut before measuring anything.
     #
@@ -364,7 +364,86 @@ def one_edge(src, dst, args):
           "%.1f dB across 110 Hz to 3520 Hz" % (max(mid) - min(mid)))
 
     pedal.set_pot(src["port"], TONE, TONE_FREQ, FREQ_440_POT)
+    stereo(src, dst, found, args)
     mute(src)
+
+
+def stereo(src, dst, found, args):
+    """Which channels the cable carries, and whether it crossed them.
+
+    Steering (92) is what makes this askable.  The chain copies left over
+    right before anything else runs, so both of a pedal's output channels
+    normally carry the same thing - and a crossed pair is then
+    indistinguishable from a straight one, because there is nothing to
+    tell apart.  Steering the generator to one side at a time puts
+    something different on each, which is exactly the question.
+
+    Everything but the source is silenced first, so the channel that is
+    not being driven is carrying nothing rather than carrying the rest of
+    the ring.
+    """
+    for d in found:
+        if d is not src and d is not dst:
+            mute(d)
+    passthrough(dst)
+
+    #
+    # At the topology frequency and measured only there, for the reason
+    # that frequency exists: a bench generator wired to one board's right
+    # input is on all the time, and a plain level reading calls that a
+    # carried channel and then calls the link crossed because it happens
+    # to be a decibel louder than the tone.  Which it duly did.
+    #
+    seen = {}
+    for side, out in (("L", 1), ("R", 2)):     # CH_OUT_LEFT, CH_OUT_RIGHT
+        generate(src, args.level, freq=TOPOLOGY_FREQ_POT)
+        pedal.send_many(src["port"], (0x03, TONE, POT_CH_OUT, out))
+        time.sleep(0.3)
+        L, R = raw_in(dst, args.seconds)
+        seen[side] = (audio.tone_level(L, TOPOLOGY_FREQ_HZ),
+                      audio.tone_level(R, TOPOLOGY_FREQ_HZ))
+    mute(src)
+
+    #
+    # Steering has to have done something, or none of this means
+    # anything.  Firmware without it ignores the write, the tone goes to
+    # both channels both times, and the two readings come back identical
+    # - at which point "drove R, saw it on L" is true and says nothing
+    # about the cable.  Skipped rather than answered, for the same reason
+    # check-hw skips an input that is not what was declared.
+    #
+    same = (abs(seen["L"][0] - seen["R"][0]) < 1.0 and
+            abs(seen["L"][1] - seen["R"][1]) < 1.0)
+    if same:
+        note("stereo", "skipped - %s ignores channel steering, so both "
+                       "sides carry the same thing" % src["label"])
+        return
+
+    #
+    # A channel is "carried" if driving it puts something there well above
+    # what the link is doing when it is quiet.
+    #
+    carried = [s for s, (l, r) in (("L", seen["L"]), ("R", seen["R"]))
+               if max(l, r) > -60.0]
+    note("channels carried", ", ".join(carried) if carried else "neither")
+
+    #
+    # Crossed is a different question from missing, and only answerable
+    # for a channel that arrives at all: driving L has to show up on L.
+    # A mono cable carries one channel and is not crossed, so it passes.
+    #
+    crossed = []
+    for side, (l, r) in seen.items():
+        here, there = (l, r) if side == "L" else (r, l)
+        if max(l, r) > -60.0 and there > here:
+            crossed.append(side)
+    check("channels are not crossed", not crossed,
+          "; ".join("drove %s, saw L %.1f R %.1f" % (s, seen[s][0], seen[s][1])
+                    for s in ("L", "R")))
+
+    if len(carried) == 2:
+        sep = min(seen["L"][0] - seen["L"][1], seen["R"][1] - seen["R"][0])
+        note("channel separation", "%.1f dB, the worse of the two" % sep)
 
 
 def latency(ring, found, args):
