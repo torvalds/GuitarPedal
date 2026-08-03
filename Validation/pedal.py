@@ -63,35 +63,104 @@ def port(match=""):
     return found[0][0] if found else None
 
 
+#
+# What a pedal looks like on the USB, and how the two halves of it are
+# found again.
+#
+PEDAL_VID, PEDAL_PID = "ffff", "0003"
+
+#
+# ALSA hands a card-bound sequencer client a number by a fixed rule:
+# sixteen global clients, then four per card.  So the client that belongs
+# to card N is 16 + 4*N, and that is the missing link between the audio
+# side and the MIDI side - the sequencer reports neither a card nor a
+# serial, only a name.
+#
+# Used as a candidate rather than as gospel: the name at that client has
+# to match the card's USB product string before it is believed.
+#
+SEQ_GLOBAL_CLIENTS = 16
+SEQ_CLIENTS_PER_CARD = 4
+
+
+def _usb_attr(card, name):
+    """One attribute of the USB device behind an ALSA card."""
+    dev = os.path.realpath("/sys/class/sound/card%d/device" % card)
+    try:
+        return open(os.path.join(dev, "..", name)).read().strip()
+    except OSError:
+        return None
+
+
 def discover():
-    """Every pedal on the machine, as [{codec, port, card, name}].
+    """Every pedal on the machine, keyed by the one thing that is unique.
 
-    The two halves of a pedal - a sequencer port and an ALSA card - are
-    found by two different tools that have no idea they are looking at the
-    same device.  What ties them together is the USB product string, which
-    both of them report and which names the codec, so the codec is the key.
+    A pedal is an ALSA card and a sequencer port, and nothing reports
+    both.  This used to join them through the codec name in the product
+    string, which worked exactly as long as no two boards had the same
+    codec - and then a second TAC5242 arrived and the join started
+    silently pairing one board's MIDI with another board's audio, which
+    is worse than not finding it.
 
-    Which is the whole reason the pedals had to be told apart before any
-    of this could be written: with both of them called "Linus Pedal" there
-    is nothing here to join on.
+    So the join is through the USB serial now, which sysfs does report
+    for the card, and the sequencer client is derived from the card
+    number and then checked against the name before it is used.  Nothing
+    here depends on what the pedal calls itself.
+
+    Sorted by serial, so the order is stable across reboots and
+    re-plugging in a way that card numbers are not.
     """
-    import audio
-
-    cards = {}
-    for number, name in audio.find_cards():
-        m = re.search(r"TAC\d+", name)
-        if m:
-            cards[m.group(0)] = (number, name)
-
     found = []
-    for p, name in ports():
-        m = re.search(r"TAC\d+", name)
-        if not m or m.group(0) not in cards:
+    for path in sorted(os.listdir("/sys/class/sound")):
+        m = re.fullmatch(r"card(\d+)", path)
+        if not m:
             continue
-        number, card_name = cards[m.group(0)]
-        found.append({"codec": m.group(0), "port": p,
-                      "card": number, "name": card_name})
-    return sorted(found, key=lambda d: d["codec"])
+        card = int(m.group(1))
+        if (_usb_attr(card, "idVendor") != PEDAL_VID or
+                _usb_attr(card, "idProduct") != PEDAL_PID):
+            continue
+
+        product = _usb_attr(card, "product") or "?"
+        serial = _usb_attr(card, "serial") or "?"
+        client = SEQ_GLOBAL_CLIENTS + SEQ_CLIENTS_PER_CARD * card
+
+        # The name has to agree, or the rule above has stopped being true
+        port, name = None, None
+        for cand, cname in ports():
+            if cand.split(":")[0] == str(client):
+                port, name = cand, cname
+                break
+        if port and product not in name:
+            port = None
+
+        codec = (re.search(r"TAC\d+", product) or [None])
+        codec = codec.group(0) if hasattr(codec, "group") else None
+
+        found.append({
+            "serial": serial,
+            "product": product,
+            "codec": codec,
+            "card": card,
+            "port": port,
+            # Unique and short, for saying which board a number came from
+            "label": "%s/%s" % (codec or product.split()[0], serial[-4:]),
+        })
+    return sorted(found, key=lambda d: d["serial"])
+
+
+def find(match, among=None):
+    """The one pedal matching 'match', or None if it is not exactly one.
+
+    Matches a serial, a label or a product string, and refuses to guess:
+    two boards of the same codec both match "TAC5242", and answering
+    either of them is how a test ends up measuring the wrong board.
+    """
+    pedals = among if among is not None else discover()
+    m = match.lower()
+    hits = [d for d in pedals
+            if m in d["serial"].lower() or m in d["label"].lower()
+            or m in (d["product"] or "").lower()]
+    return hits[0] if len(hits) == 1 else None
 
 
 def _smf(payload):
