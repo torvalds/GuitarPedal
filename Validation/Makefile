@@ -32,6 +32,14 @@ NODE := $(shell command -v node 2>/dev/null)
 check-hw:
 	./test-audio.py --ptp 0.100 --freq 440
 
+#
+# Separate from check-hw because it reflashes: planting a scene with
+# channel routing in it means a trip through BOOTSEL, since nothing sets
+# that over MIDI yet.  It leaves two scenes behind in the save area.
+#
+check-split:
+	./test-split.py
+
 check: test-midi-cin
 	./test-midi-cin
 ifeq ($(NODE),)

@@ -71,6 +71,44 @@ def send(p, *payload):
     time.sleep(0.06)
 
 
+def program_change(p, scene, channel=1):
+    """Load a scene.  Not SysEx - a plain Program Change."""
+    tmp = tempfile.NamedTemporaryFile(suffix=".mid", delete=False)
+    try:
+        ev = bytes([0x00, 0xC0 | (channel - 1), scene,
+                    0x00, 0xFF, 0x2F, 0x00])
+        hdr = bytes([0x4D, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, 0, 0x60])
+        tmp.write(hdr + b"MTrk" + len(ev).to_bytes(4, "big") + ev)
+        tmp.close()
+        subprocess.run(["aplaymidi", "-p", p, tmp.name], check=True,
+                       capture_output=True)
+    finally:
+        os.unlink(tmp.name)
+    # Loading a scene re-inits every effect; give it a tick to settle
+    # before anything measures what came out.
+    time.sleep(0.5)
+
+
+def enter_bootsel(p, channel=1):
+    """CC 20 value 126 - the way in without touching the board.
+
+    There is no picotool reset interface on this device, so this is the
+    only way to get it into BOOTSEL from software.  MIDI_CC_MAP.md has
+    the number frozen for exactly this reason.
+    """
+    tmp = tempfile.NamedTemporaryFile(suffix=".mid", delete=False)
+    try:
+        ev = bytes([0x00, 0xB0 | (channel - 1), 20, 126,
+                    0x00, 0xFF, 0x2F, 0x00])
+        hdr = bytes([0x4D, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, 0, 0x60])
+        tmp.write(hdr + b"MTrk" + len(ev).to_bytes(4, "big") + ev)
+        tmp.close()
+        subprocess.run(["aplaymidi", "-p", p, tmp.name], check=True,
+                       capture_output=True)
+    finally:
+        os.unlink(tmp.name)
+
+
 def set_pot(p, effect, pot, value):
     """Pot 0 is the mix; 1-10 are the effect's own."""
     send(p, 0x03, effect, pot, value)
