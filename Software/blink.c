@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "pico/stdlib.h"
 #include "pico/bootrom.h"
+#include "hardware/watchdog.h"
 #include "pico/multicore.h"
 
 #include "hardware/gpio.h"
@@ -1198,8 +1199,48 @@ static void init_effects(void)
 
 #include "tuner.h"
 
+//
+// How long boot is allowed to take before it is called a hang.
+//
+// Everything between here and the main loop is i2c probes with 2ms
+// timeouts, some table building and a flash read, so the real figure is
+// milliseconds and this is all margin.  It has to stay well clear of
+// the truth in the other direction too: a boot that legitimately took
+// longer than this would reach BOOTSEL instead of playing, which is a
+// worse failure than the one being guarded against.
+//
+#define BOOT_WATCHDOG_MS 3000
+
 int main()
 {
+	//
+	// A pedal that hangs before its main loop is a brick.
+	//
+	// It has no USB, so it is not a device and not in BOOTSEL and the
+	// host logs nothing at all - from the other end nothing was ever
+	// plugged in.  It has no audio either, so the only way back is the
+	// BOOTSEL button, and on a board in an enclosure that is a screw-
+	// driver.  This has been seen occasionally for a long time without
+	// ever being pinned down, which is partly because every occurrence
+	// destroys the evidence and costs a disassembly.
+	//
+	// So the hang is made survivable rather than diagnosed: arm a
+	// watchdog before anything that could hang, and if the previous
+	// boot never got far enough to disarm it, ask the bootrom for
+	// BOOTSEL instead of trying again.  A hung pedal then comes back
+	// as something picotool can talk to, and the next attempt costs a
+	// reflash rather than a screwdriver.
+	//
+	// watchdog_enable_caused_reboot() is specifically a *timeout*, not
+	// any reset - a deliberate watchdog_reboot() sets a different
+	// magic - so this cannot be tripped by anything asking for a
+	// restart on purpose.
+	//
+	if (watchdog_enable_caused_reboot())
+		reset_usb_boot(0, 0);
+
+	watchdog_enable(BOOT_WATCHDOG_MS, false);
+
 	enable_ftz();
 
 	init_i2s();
@@ -1236,6 +1277,12 @@ int main()
 	init_effects();
 
 	multicore_launch_core1(audio_processing);
+
+	//
+	// Booted.  Everything from here is the main loop, which has its own
+	// ways of going wrong and is not what this was guarding.
+	//
+	watchdog_disable();
 
 	for (;;) {
 		absolute_time_t now = get_absolute_time();

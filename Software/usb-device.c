@@ -1,6 +1,7 @@
 #include "pico/stdlib.h"
 #include "pico.h"
 #include "pico/unique_id.h"
+#include "pico/bootrom.h"
 
 #include "board.h"
 #include "tusb.h"
@@ -302,6 +303,14 @@ uint8_t const desc_configuration[] =
 	TUD_MIDI_DESCRIPTOR(ITF_NUM_MIDI, STRID_MIDI_INTERFACE, EPNUM_MIDI_OUT, EPNUM_MIDI_IN, CFG_TUD_MIDI_EP_BUFSIZE)
 };
 
+//
+// The length in the header has to be the length of the thing.  Get
+// it wrong and the host reads the descriptor short, which does not
+// fail anywhere near here.
+//
+TU_VERIFY_STATIC(sizeof(desc_configuration) == CONFIG_TOTAL_LEN,
+		 "CONFIG_TOTAL_LEN disagrees with desc_configuration");
+
 uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
 {
 	return desc_configuration;
@@ -396,7 +405,30 @@ int init_usb(void)
 		.role = TUSB_ROLE_DEVICE,
 		.speed = TUSB_SPEED_AUTO
 	};
-	tusb_init(0, &dev_init);
+
+	//
+	// The return value was being dropped, and dropping it is the
+	// reason a whole class of failure here is invisible.
+	//
+	// usbd_init() is a run of TU_ASSERTs - the descriptor count, the
+	// queue, a driver with no init function - and any one of them
+	// makes it return false *before* dcd_init(), so D+ is never pulled
+	// up.  The pedal then boots, plays, blinks and answers its
+	// switches, and simply is not on the USB: no device, no BOOTSEL,
+	// and nothing in the host's log, because from the host's side
+	// nothing was ever plugged in.
+	//
+	// So it asks to be reflashed instead.  This is not a runtime
+	// hazard dressed up as a recovery: tusb_init() failing is a
+	// property of the image, the same every boot, so a pedal that
+	// does this was never going to work and could not have said so.
+	// Being findable by picotool is the only useful thing left, and
+	// it is what makes a bad USB change cost a reflash rather than a
+	// trip to the BOOTSEL button.
+	//
+	if (!tusb_init(0, &dev_init))
+		reset_usb_boot(0, 0);
+
 	return 0;
 }
 

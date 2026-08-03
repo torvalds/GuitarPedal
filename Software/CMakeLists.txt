@@ -208,6 +208,7 @@ target_link_libraries(blink
 	hardware_dma
 	hardware_flash
 	pico_unique_id
+	hardware_watchdog
 	pico_sha256)
 
 target_include_directories(blink PRIVATE
