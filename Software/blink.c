@@ -104,6 +104,16 @@ static void unroute_effect(struct effect *eff)
 	eff->mix = eff->target = 0;
 	eff->dry = 1.0f;
 	eff->wet = 0.0f;
+
+	//
+	// Including where it sat across the channels, which is state in
+	// exactly the same sense as a pot is and was being kept.  An
+	// effect steered to one side and then unrouted came back steered,
+	// which is not what "starts from the defaults" says.
+	//
+	eff->channels = 0;
+	eff->merge = 1.0f;
+
 	smp_store_release(&eff->seq, seq + 1);
 }
 

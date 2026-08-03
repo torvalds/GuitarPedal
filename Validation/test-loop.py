@@ -76,6 +76,24 @@ TOPOLOGY_FREQ_POT, TOPOLOGY_FREQ_HZ = 48, 220.0
 # usb_output enum
 LR_WET, LR_DRY, LR_WETDRY = 1, 2, 3
 
+#
+# Channel steering, and the defaults every helper below re-asserts.
+#
+# Not paranoia: an effect left on CH_OUT_MERGE does not mute when its
+# level is taken to zero, because a merge adds the channel it kept -
+# 'dry * src + wet * here + merge * kept' is still 'kept' when 'here' is
+# silence.  So a stale steering setting quietly turns mute() into a
+# pass-through, and then the topology says one pedal feeds two others.
+#
+POT_CH_IN, POT_CH_OUT, POT_MERGE = 11, 12, 13
+STRAIGHT = ((0x03, None, POT_CH_IN, 0),
+            (0x03, None, POT_CH_OUT, 0),
+            (0x03, None, POT_MERGE, 120))
+
+
+def straight(eff):
+    return tuple((c, eff, pot, val) for c, _, pot, val in STRAIGHT)
+
 # Room for a trip around a ring of pedals.
 MAX_LAG = audio.RATE // 10
 
@@ -117,6 +135,11 @@ def usb_mode(d, mode):
     time.sleep(0.4)
 
 
+#
+# Each of these is one invocation of aplaymidi rather than one per
+# parameter, which is worth about two seconds a message - see pedal.py
+# for why sending them back to back is safe.
+#
 def generate(d, dbfs, shape=SHAPE_SINE, freq=FREQ_440_POT):
     """Make this pedal's output the tone, and nothing else.
 
@@ -124,24 +147,30 @@ def generate(d, dbfs, shape=SHAPE_SINE, freq=FREQ_440_POT):
     this also cuts the ring at this pedal - which is what stops the whole
     thing being an oscillator.
     """
-    pedal.set_routing(d["port"], TONE)
-    pedal.set_pot(d["port"], TONE, TONE_MIX, 120)
-    pedal.set_pot(d["port"], TONE, TONE_SHAPE, shape)
-    pedal.set_pot(d["port"], TONE, TONE_FREQ, freq)
-    pedal.set_pot(d["port"], TONE, TONE_LEVEL, level_pot(dbfs))
+    pedal.send_many(d["port"],
+                    (0x08, TONE),
+                    (0x03, TONE, TONE_MIX, 120),
+                    (0x03, TONE, TONE_SHAPE, shape),
+                    (0x03, TONE, TONE_FREQ, freq),
+                    (0x03, TONE, TONE_LEVEL, level_pot(dbfs)),
+                    *straight(TONE))
 
 
 def mute(d):
     """Full mix, no level: digital silence out, and the input ignored."""
-    generate(d, -90.0)
-    pedal.set_pot(d["port"], TONE, TONE_LEVEL, LEVEL_OFF)
+    pedal.send_many(d["port"],
+                    (0x08, TONE),
+                    (0x03, TONE, TONE_MIX, 120),
+                    (0x03, TONE, TONE_LEVEL, LEVEL_OFF),
+                    *straight(TONE))
 
 
 def passthrough(d):
-    pedal.set_routing(d["port"])
-    pedal.set_pot(d["port"], 0, pedal.CHAIN_GATE, 0)     # fully down is off
-    pedal.set_pot(d["port"], 0, pedal.CHAIN_TRIM, 60)    # 0 dB
-    pedal.set_pot(d["port"], 0, pedal.CHAIN_VOLUME, 80)  # 0 dB
+    pedal.send_many(d["port"],
+                    (0x08,),                             # nothing routed
+                    (0x03, 0, pedal.CHAIN_GATE, 0),      # fully down is off
+                    (0x03, 0, pedal.CHAIN_TRIM, 60),     # 0 dB
+                    (0x03, 0, pedal.CHAIN_VOLUME, 80))   # 0 dB
 
 
 def raw_in(d, seconds):

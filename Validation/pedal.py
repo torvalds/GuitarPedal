@@ -163,17 +163,21 @@ def find(match, among=None):
     return hits[0] if len(hits) == 1 else None
 
 
-def _smf(payload):
-    body = payload[1:]
-    ev = bytes([0x00, 0xF0, len(body)]) + body + bytes([0x00, 0xFF, 0x2F, 0x00])
+def _smf(payloads):
+    """One standard MIDI file carrying several messages, all at time zero."""
+    ev = b""
+    for payload in payloads:
+        body = payload[1:]              # the F0 is the event tag
+        ev += bytes([0x00, 0xF0, len(body)]) + body
+    ev += bytes([0x00, 0xFF, 0x2F, 0x00])
     hdr = bytes([0x4D, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, 0, 0x60])
     return hdr + b"MTrk" + len(ev).to_bytes(4, "big") + ev
 
 
-def send(p, *payload):
+def _play(p, payloads):
     tmp = tempfile.NamedTemporaryFile(suffix=".mid", delete=False)
     try:
-        tmp.write(_smf(HEADER + bytes(payload) + bytes([0xF7])))
+        tmp.write(_smf(payloads))
         tmp.close()
         r = subprocess.run(["aplaymidi", "-p", p, tmp.name],
                            capture_output=True, text=True)
@@ -181,9 +185,37 @@ def send(p, *payload):
         os.unlink(tmp.name)
     if r.returncode:
         sys.exit(f"pedal: aplaymidi failed:\n{r.stderr}")
-    # The pedal acts on these from its main loop at 25Hz, so back-to-back
-    # writes need to be spaced or the later ones land in the same tick.
+    #
+    # One settle for the whole file, rather than one per message.
+    #
+    # This used to be per message, on the grounds that the pedal acts on
+    # them from its main loop at 25Hz and back-to-back writes would land
+    # in the same tick.  Landing in the same tick turns out to be fine -
+    # usb_midi_poll() drains every packet it can see in one pass and
+    # hands each complete message to handle_sysex_payload() - and it was
+    # costing a process spawn per parameter.  Checked by putting 6, 12,
+    # 24, 48 and 96 writes in one file and reading every one of them back
+    # out of a state dump: all landed, at every size.
+    #
     time.sleep(0.06)
+
+
+def send(p, *payload):
+    _play(p, [HEADER + bytes(payload) + bytes([0xF7])])
+
+
+def send_many(p, *messages):
+    """Several SysEx messages down one invocation of aplaymidi.
+
+    Each message is the payload without the F0 7D in front or the F7
+    behind, the same as send() takes.
+    """
+    _play(p, [HEADER + bytes(m) + bytes([0xF7]) for m in messages])
+
+
+def set_pots(p, *triples):
+    """Several (effect, pot, value) at once."""
+    send_many(p, *[(0x03, eff, pot, val) for eff, pot, val in triples])
 
 
 def program_change(p, scene, channel=1):
