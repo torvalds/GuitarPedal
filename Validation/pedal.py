@@ -174,7 +174,71 @@ def _smf(payloads):
     return hdr + b"MTrk" + len(ev).to_bytes(4, "big") + ev
 
 
+#
+# The raw MIDI device behind a sequencer port, remembered once.
+#
+# ALSA numbers a card-bound sequencer client 16 + 4*card, which is the
+# rule discover() uses to find a port from a card; this is the same rule
+# run backwards.  Checked against the devices amidi can actually see
+# rather than trusted, and anything that does not resolve simply falls
+# back to the sequencer.
+#
+_rawmidi_cache = {}
+
+
+def _rawmidi_devices():
+    if None not in _rawmidi_cache:
+        try:
+            out = subprocess.run(["amidi", "-l"], capture_output=True,
+                                 text=True, check=True).stdout
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            out = ""
+        _rawmidi_cache[None] = set(re.findall(r"hw:\d+,\d+,\d+", out))
+    return _rawmidi_cache[None]
+
+
+def rawmidi(port):
+    """hw:C,D,S for a sequencer port, or None if it cannot be had."""
+    if port in _rawmidi_cache:
+        return _rawmidi_cache[port]
+
+    dev = None
+    try:
+        card, rem = divmod(int(port.split(":")[0]) - SEQ_GLOBAL_CLIENTS,
+                           SEQ_CLIENTS_PER_CARD)
+        if card >= 0 and not rem:
+            cand = "hw:%d,0,0" % card
+            dev = cand if cand in _rawmidi_devices() else None
+    except ValueError:
+        dev = None
+    _rawmidi_cache[port] = dev
+    return dev
+
+
 def _play(p, payloads):
+    #
+    # The raw device if it can be had, because aplaymidi costs two
+    # seconds a call and amidi costs a millisecond.
+    #
+    # That is not a wake-up being paid: 'aplaymidi -l' talks to the same
+    # daemon and returns instantly, and the two seconds is the same
+    # 2.001s every time - it holds its sequencer queue open to let it
+    # drain.  amidi writes the bytes and returns.
+    #
+    # The sequencer is still the fallback, and the reason it was the
+    # default is still a real one: another program can hold the raw
+    # device, and on a machine where something does, this finds out by
+    # being refused rather than by being told in advance.
+    #
+    dev = rawmidi(p)
+    if dev:
+        hexed = " ".join("%02X" % b for m in payloads for b in m)
+        r = subprocess.run(["amidi", "-p", dev, "-S", hexed],
+                           capture_output=True, text=True)
+        if not r.returncode:
+            time.sleep(0.06)
+            return
+
     tmp = tempfile.NamedTemporaryFile(suffix=".mid", delete=False)
     try:
         tmp.write(_smf(payloads))
