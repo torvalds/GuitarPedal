@@ -23,7 +23,24 @@
 // audible as a step in the waveform, several times a second.
 //
 #define CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX (49 * 4 * 2)
-#define CFG_TUD_AUDIO_FUNC_1_EP_IN_SW_BUF_SZ (48 * 4 * 2 * 2)
+//
+// Three packets, and counted in the same samples the endpoint is.
+//
+// This is what the audio endpoint has to live on while core 0 is busy
+// elsewhere.  A long SysEx reply - the state dump the web app asks for
+// when it connects is fifteen kilobytes - is written in one pass of the
+// main loop, and usb_audio_task() is at the bottom of that loop, so the
+// endpoint gets nothing until the reply is done.
+//
+// One dump costs nothing measurable at any depth.  Two back to back
+// cost about nine breaks in the stream at two packets and about six at
+// three, measured five runs each - see Validation/test-audio.py.
+//
+// Counted from 49 rather than 48 because the endpoint is 49: written
+// the other way this came out at 1.96 packets, which is a strange thing
+// to have meant.
+//
+#define CFG_TUD_AUDIO_FUNC_1_EP_IN_SW_BUF_SZ (49 * 4 * 2 * 3)
 #define CFG_TUD_AUDIO_ENABLE_EP_IN (1)
 #define CFG_TUD_AUDIO_FUNC_1_FORMAT_1_N_BYTES_PER_SAMPLE_TX (4)
 #define CFG_TUD_AUDIO_FUNC_1_FORMAT_1_RESOLUTION_TX (32)
