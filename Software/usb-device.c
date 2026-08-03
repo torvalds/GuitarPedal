@@ -500,11 +500,18 @@ void usb_audio_task(void)
 		unsigned max_samples_to_write = bytes_available / (sizeof(int32_t) * 2);
 
 		if (max_samples_to_write > 0) {
-			if (max_samples_to_write > 48) {
-				max_samples_to_write = 48; // Max per ms at 48kHz
+			//
+			// 49, not 48.  48 is the nominal rate; the extra
+			// one is how a device whose clock runs slightly
+			// fast catches up, and without it the surplus is
+			// discarded instead - see the endpoint size in
+			// tusb_config.h.
+			//
+			if (max_samples_to_write > 49) {
+				max_samples_to_write = 49;
 			}
 
-			int32_t buf[48 * 2];
+			int32_t buf[49 * 2];
 			unsigned nr = get_audio_samples(buf, max_samples_to_write);
 
 			if (nr > 0) {
