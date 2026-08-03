@@ -1981,7 +1981,31 @@ function sendRules(list, level = RULES_SCENE) {
 }
 
 // Replace one rule, or drop it when 'r' is null.
+//
+// Make this control the scene's before changing it.
+//
+// Resolution is per control and the most specific level wins outright,
+// so the moment a scene says anything about a control it says
+// everything.  A scene that inherits four rules and wants to change one
+// therefore has to take all four, or the other three vanish.
+//
+function promoteControl(c) {
+    if (pedalRules.some(r => r.control === c))
+        return pedalRules;
+    return pedalRules.concat(
+        rulesByLevel[RULES_EFFECTIVE].filter(r => r.control === c));
+}
+
 function putRule(i, r) {
+    if (i < 0) {
+        // An inherited row: take the control first, then edit the copy.
+        const list = promoteControl(r.control);
+        const at = list.findIndex(x => x.control === r.control);
+        if (r)
+            list[at] = r;
+        sendRules(list);
+        return;
+    }
     const list = pedalRules.slice();
     if (r)
         list[i] = r;
@@ -2279,9 +2303,12 @@ function renderBindings() {
 
     if (hint)
         hint.textContent = haveRules
-            ? 'Nothing here is saved yet: the pedal goes back to its ' +
-              'defaults when it is power-cycled. A gesture can have more ' +
-              'than one rule, and they all happen together \u2014 which is ' +
+            ? 'What each control does now. Rules belong to the scene and ' +
+              'are kept when you save it; a control this scene says ' +
+              'nothing about is shown greyed, inherited from the ' +
+              'pedal-wide rules or from the built-in defaults. Editing ' +
+              'one makes it this scene\u0027s. A gesture can have more ' +
+              'than one rule and they all happen together \u2014 which is ' +
               'how one press swaps between two effects.'
             : 'Not connected.';
 
@@ -2319,13 +2346,32 @@ function renderBindings() {
         add.title = `Add a rule to ${ctrl.name}`;
         add.disabled = pedalRules.length >= 16;
         add.addEventListener('click', () =>
-            sendRules(pedalRules.concat([newRule(c)])));
+            sendRules(promoteControl(c).concat([newRule(c)])));
         head.appendChild(add);
         group.appendChild(head);
 
-        pedalRules.forEach((r, i) => {
-            if (r.control === c)
-                group.appendChild(renderRule(r, i));
+        //
+        // The effective table, not the scene's.  A scene that says
+        // nothing about a control still has that control doing
+        // something - the pedal-wide rules or the built-in defaults -
+        // and drawing an empty row would claim it does nothing, which
+        // is a specific and wrong answer.
+        //
+        // Inherited rows carry no index into the scene's list because
+        // they are not in it.  editing one promotes it first; see
+        // promoteControl().
+        //
+        const own = pedalRules.filter(r => r.control === c);
+        const shown = own.length ? own
+                                 : rulesByLevel[RULES_EFFECTIVE]
+                                       .filter(r => r.control === c);
+
+        shown.forEach(r => {
+            const i = pedalRules.indexOf(r);
+            const row = renderRule(r, i);
+            if (i < 0)
+                row.classList.add('inherited');
+            group.appendChild(row);
         });
 
         host.appendChild(group);
