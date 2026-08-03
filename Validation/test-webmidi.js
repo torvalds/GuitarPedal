@@ -283,7 +283,28 @@ check('the real schema builds the cards',
 // effects stay out of both - they are the ends of the chain and cannot be
 // routed, unrouted or reordered.
 //
-const schema = JSON.parse(schemaJson);
+//
+// The schema is an object with the effects under a key now, and used to
+// be a bare array of them.  Accepted both ways here for the same reason
+// the app accepts both: this test is run against whatever midi_schema.h
+// happens to be lying about, including one built before the change.
+//
+const parsedSchema = JSON.parse(schemaJson);
+const schema = Array.isArray(parsedSchema) ? parsedSchema : parsedSchema.effects;
+const steering = Array.isArray(parsedSchema) ? null : parsedSchema.steering;
+
+check('the schema declares channel steering once, not per effect',
+      steering !== null && steering.pots.length === 3 &&
+      steering.pots.map((p) => p.index).join(',') === '11,12,13');
+
+//
+// Steering means nothing for an effect that is never handed to
+// do_effect_step(), and those are exactly the two that anchor the chain.
+//
+check('only the routable effects are steerable',
+      schema.filter((e) => e.steerable).length === schema.length - 2 &&
+      !schema[0].steerable && !schema[schema.length - 1].steerable);
+
 const routable = schema.slice(1, -1);
 const pool = document.getElementById('effect-pool');
 

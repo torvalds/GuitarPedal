@@ -786,6 +786,18 @@ static void sysex_send_state_dump(void)
 				break;
 			sysex_send_pot_value(i, pot+1, pot_values[pot]);
 		}
+
+		//
+		// ...and where it sits across the channels, for the
+		// effects that have somewhere to sit.  Sent as pots so
+		// that an app which does not know these numbers yet
+		// ignores three more of what it was already reading.
+		//
+		if (!e->no_mix) {
+			sysex_send_pot_value(i, POT_CH_IN, CH_IN(e->channels));
+			sysex_send_pot_value(i, POT_CH_OUT, CH_OUT(e->channels));
+			sysex_send_pot_value(i, POT_MERGE, FLOAT_TO_POT(e->merge));
+		}
 	}
 
 	//
@@ -868,6 +880,38 @@ static void set_effect_mix(struct effect *e, unsigned char val)
 		e->target = routed ? EFF_ENABLE_STEPS : 0;
 }
 
+//
+// Where an effect sits across the two channels, from core 0.
+//
+// Deliberately not the double-buffered dance set_effect_pot() does.
+// That exists because ten values have to become visible to core 1 as a
+// set - half of an old pot array and half of a new one is a filter
+// nobody asked for - and these are single scalars that each mean
+// something on their own.  The worst a change between one sample and the
+// next can do is a click, which is what moving a signal from one side to
+// the other sounds like however carefully it is done.
+//
+// 'merge' is a float and a plain store of one is atomic here, so core 1
+// sees the old value or the new one and never a mixture.
+//
+static void set_effect_steering(struct effect *e, unsigned int pot,
+				unsigned char val)
+{
+	unsigned char ch = e->channels;
+
+	switch (pot) {
+	case POT_CH_IN:
+		e->channels = (ch & ~3) | (val & 3);
+		break;
+	case POT_CH_OUT:
+		e->channels = (ch & ~(3 << 2)) | ((val & 3) << 2);
+		break;
+	case POT_MERGE:
+		e->merge = POT_TO_FLOAT(val);
+		break;
+	}
+}
+
 static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 {
 	uint8_t cmd = sysex_buf[0];
@@ -882,10 +926,17 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 			e = effects[eff_id];
 		}
 		if (e) {
-			if (pot_idx == 0)
+			if (pot_idx == POT_MIX)
 				set_effect_mix(e, val);
-			else if (pot_idx <= 10)
+			else if (pot_idx <= POT_LAST)
 				set_effect_pot(e, pot_idx - 1, val);
+			//
+			// Steering is meaningless for an effect that
+			// is not stepped through do_effect_step() at
+			// all, which is what no_mix marks.
+			//
+			else if (pot_idx <= POT_MAX && !e->no_mix)
+				set_effect_steering(e, pot_idx, val);
 		}
 	} else if (cmd == 0x04 && sysex_len >= 2) { // Save Scene
 		uint8_t scene_id = sysex_buf[1];

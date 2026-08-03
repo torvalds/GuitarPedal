@@ -543,6 +543,13 @@ function sendSysex(data) {
 }
 
 let PEDAL_EFFECTS = [];
+
+//
+// In / Out / Merge, declared once by the pedal rather than per effect.
+// Null against firmware that predates them, which is what every check
+// of it is for.
+//
+let PEDAL_STEERING = null;
 let effectIdMap = new Map();
 
 function handleSysex(data) {
@@ -557,7 +564,17 @@ function handleSysex(data) {
                 jsonStr += String.fromCharCode(data[i]);
             }
             try {
-                PEDAL_EFFECTS = JSON.parse(jsonStr);
+                //
+                // The schema used to be a bare array of effects and is
+                // now an object with the effects under a key, alongside
+                // the steering parameters every effect shares.  Both
+                // shapes are accepted: a cached copy of this app can
+                // meet firmware older than itself, and a service worker
+                // makes that likelier than it sounds.
+                //
+                const parsed = JSON.parse(jsonStr);
+                PEDAL_EFFECTS = Array.isArray(parsed) ? parsed : parsed.effects;
+                PEDAL_STEERING = Array.isArray(parsed) ? null : parsed.steering;
                 effectIdMap.clear();
                 PEDAL_EFFECTS.forEach((e, idx) => effectIdMap.set(e.id, idx));
                 renderUI();
