@@ -59,6 +59,19 @@ SHAPE_SINE, SHAPE_NOISE = 0, 3
 # Level is LINEAR(-90 0) over 120 steps, so a step is 0.75 dB.
 LEVEL_OFF = 0
 
+#
+# Freq is EXPONENTIAL(13.75 14080) over 120 steps, which is ten octaves
+# in twelve steps each - so a step is a semitone and these are octaves.
+# 55 Hz to 7040 Hz, which is a guitar's range with room either side and
+# stays clear of both ends of the pot.
+#
+SWEEP_LOW_POT, SWEEP_HIGH_POT = 24, 108
+FREQ_440_POT = 60
+
+# Room for a round trip through two pedals: 100 ms, which is far more
+# than it can be and cheap to search.
+MAX_LAG = audio.RATE // 10
+
 
 def level_pot(dbfs):
     return max(0, min(120, int(round((dbfs + 90.0) / 0.75))))
@@ -231,6 +244,76 @@ def one_direction(src, dst, tone, args):
     check("the tone arrives", abs(f0 / 440.0 - 1.0) < 0.01,
           f"440 Hz generated reads {f0:.2f} Hz at {dst['codec']}, "
           f"{(f0 / 440.0 - 1.0) * 100:+.2f}%")
+
+    #
+    # What the analog path does to the rest of the spectrum.
+    #
+    # A bench generator on one dial can be swept by hand and never has
+    # been, so the response of two codecs and the cable between them has
+    # never been looked at.  Octaves rather than a fine sweep because
+    # this is here to find a shelf or a roll-off, not to draw a curve,
+    # and every point costs a capture.
+    #
+    # Reported against the 440 Hz point rather than in absolute terms -
+    # the absolute level is the link gain, which is measured above, and
+    # what is wanted here is only the shape.
+    #
+    resp = []
+    for pot in range(SWEEP_LOW_POT, SWEEP_HIGH_POT + 1, 12):
+        pedal.set_pot(src["port"], tone, TONE_FREQ, pot)
+        d = audio.capture(args.seconds, dst["card"])
+        seen_in = d[:, 1] * audio.SAMPLE_TO_FLOAT
+        resp.append((13.75 * 2 ** (pot / 12.0), audio.dbfs(audio.rms(seen_in))))
+
+    ref = dict((round(f), db) for f, db in resp).get(440)
+    shape = "  ".join(f"{f:.0f}Hz {db - ref:+.1f}" for f, db in resp)
+    note("frequency response", shape)
+
+    #
+    # Flatness is checked only across the middle of that, because the
+    # ends are allowed to fall away and nobody has decided by how much.
+    # Asserting a number that has never been measured is what issue 80
+    # was about, so the band is narrow and the bound is loose until
+    # there is a reason for either to be otherwise.
+    #
+    mid = [db - ref for f, db in resp if 100.0 <= f <= 4000.0]
+    check("response is flat in the middle", max(mid) - min(mid) < 3.0,
+          f"{max(mid) - min(mid):.1f} dB across 110 Hz to 3520 Hz")
+
+    pedal.set_pot(src["port"], tone, TONE_FREQ, FREQ_440_POT)
+
+    #
+    # How long the round trip takes.
+    #
+    # The generating pedal is at full mix, so its output ignores its
+    # input and the loop is open at that end - which means its own
+    # capture holds both halves of the journey at once.  In Wet/Dry the
+    # left channel is what it sent and the right is what came back to it
+    # through the other pedal, both sampled by the same converter on the
+    # same clock, so the lag between them is the whole path out and back
+    # and needs no alignment to find.
+    #
+    # Two captures of one event could not do this: they start at
+    # unrelated instants and the difference between those is far larger
+    # than the thing being measured.
+    #
+    # Noise rather than a tone, because a sine correlates with itself
+    # every cycle and the answer would be a cycle count, not a delay.
+    #
+    generate(src["port"], tone, args.level, shape=SHAPE_NOISE)
+    time.sleep(0.4)
+    d = audio.capture(args.seconds, src["card"])
+    sent, came_back = d[:, 0], d[:, 1] * audio.SAMPLE_TO_FLOAT
+
+    lag = audio.delay_samples(sent, came_back, MAX_LAG)
+    ms = lag * 1000.0 / audio.RATE
+    note("round trip",
+         f"{ms:.2f} ms out through {dst['codec']} and back, "
+         f"{lag:.0f} samples")
+    check("round trip is a real delay", 0.05 < ms < 90.0,
+          f"{ms:.2f} ms")
+
+    generate(src["port"], tone, args.level, shape=SHAPE_SINE)
 
     #
     # The one the rig was built for.

@@ -203,6 +203,35 @@ def dominant(x):
     return float(k) * RATE / len(x)
 
 
+def delay_samples(reference, delayed, max_lag):
+    """How far 'delayed' lags 'reference', in samples, by correlation.
+
+    Wants a broadband reference - the test tone's Noise shape is there
+    for this.  A sine correlates with itself once per cycle and the peak
+    picked out of that says which cycle the arithmetic happened to like,
+    not which one the signal arrived on.
+
+    Both arguments have to come out of the *same* capture, so that they
+    share a clock and a starting instant.  Two captures of the same
+    event start at unrelated moments and their offset swamps anything
+    being measured here.
+
+    Returned in samples with the peak interpolated across its
+    neighbours, since the real delay is not a whole number of them.
+    """
+    n = 1 << int(np.ceil(np.log2(len(reference) + max_lag)))
+    r = np.fft.irfft(np.fft.rfft(delayed, n) *
+                     np.conj(np.fft.rfft(reference, n)), n)[:max_lag]
+
+    k = int(np.argmax(r))
+    if 0 < k < len(r) - 1:
+        a, b, c = r[k - 1], r[k], r[k + 1]
+        denom = a - 2 * b + c
+        if denom:
+            return k + 0.5 * (a - c) / denom
+    return float(k)
+
+
 def thd(x, f0, harmonics=5):
     """Harmonic distortion, in dB below the fundamental."""
     sp = np.abs(np.fft.rfft(x * np.hanning(len(x))))
