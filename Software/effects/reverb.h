@@ -38,8 +38,10 @@ static const unsigned reverb_ap_L[4]   = {  605,  480,  371,  245 };
 // beating; phases staggered 90 degrees to decorrelate at startup.
 struct reverb_lfo { float s, c, ds, dc; };
 
-static const float reverb_lfo_rates[4]  = { 0.21f, 0.31f, 0.46f, 0.67f };
-static const float reverb_lfo_phases[4] = { 0.0f,  0.25f, 0.5f,  0.75f };
+// In RAM rather than flash: reverb_init() runs on the audio core, which
+// keeps playing while core 0 has XIP switched off to write flash.
+static const float __not_in_flash("audio") reverb_lfo_rates[4]  = { 0.21f, 0.31f, 0.46f, 0.67f };
+static const float __not_in_flash("audio") reverb_lfo_phases[4] = { 0.0f,  0.25f, 0.5f,  0.75f };
 
 struct reverb_comb {
 	float    buf[REVERB_COMB_SIZE];

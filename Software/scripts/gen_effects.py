@@ -2,6 +2,7 @@
 import sys
 import os
 import re
+import hashlib
 import json
 import math
 from collections import Counter
@@ -30,6 +31,53 @@ def c_string(s):
         else:
             out.append('\\%03o' % ord(ch))
     return ''.join(out)
+
+
+def short_hash(*parts):
+    """A 32-bit tag over a canonical description.
+
+    The first four bytes of a SHA-256.  Overkill for telling whether two
+    effects are the same effect, and chosen anyway because it runs once
+    per build on a workstation and never on the pedal - what ends up in
+    the firmware is a constant.  Free is free, and there is no algorithm
+    here to reimplement or get subtly wrong the day something else wants
+    to compute the same number.
+
+    The pieces are joined with a byte that cannot appear in any of them,
+    so that ["ab", "c"] and ["a", "bc"] are different inputs.
+    """
+    blob = "\x1f".join(parts).encode("utf-8")
+    return int.from_bytes(hashlib.sha256(blob).digest()[:4], "big")
+
+
+def effect_id_hash(short_name, copy):
+    """Which effect this is, for matching saved state against.
+
+    The copy index is in there because copies share a short name -
+    tone and tone2 are both [TONE] - and two effects that cannot be told
+    apart would load each other's settings.
+    """
+    return short_hash(short_name, str(copy))
+
+
+def pot_layout_hash(pots):
+    """What this effect's pots mean, so stale values can be spotted.
+
+    Covers what decides how to read a stored 0..120 byte: which pot is
+    where, its curve, its range, and for an enumeration the list of what
+    the indices stand for.  The label is in there too, on the grounds
+    that renaming a control is usually a sign of repurposing it.
+
+    Deliberately absent: the default, and the unit.  Neither changes
+    what an already-stored value means, and invalidating every saved
+    scene because somebody retuned a default would be a poor trade.
+    """
+    parts = [str(len(pots))]
+    for pot in pots:
+        parts += [pot['label'], pot['curve']]
+        parts += pot['args']
+        parts += pot['enum'] or []
+    return short_hash(*parts)
 
 
 def c_ident(where, what, text):
@@ -613,13 +661,19 @@ def generate(audio_dir, out_h, out_js, out_md):
             f.write(f"#include \"../effects/{base}.h\"\n")
             f.write("#undef EFFECT_SELF\n")
 
-            # The mixing wrapper, which is what the chain actually calls -
-            # see do_effect_step(). A mono effect gets the left channel
-            # and its one answer goes to both, which is the behaviour the
-            # caller used to impose on every effect alike; a stereo one
-            # gets both and answers for both. Written out per effect so
-            # that one can stop being mono without every other one having
-            # to care.
+            # The wrapper the chain calls - see do_effect_step().
+            #
+            # It runs the effect and hands back what it produced, and
+            # that is all.  Where the answer goes is the caller's, so
+            # that per-effect channel routing lives in one place instead
+            # of being generated into eighteen effects.
+            #
+            # The mono and stereo difference is still here, because it
+            # is a property of the effect rather than of the caller: a
+            # mono one has a single answer and puts it in both halves, a
+            # stereo one answers for each channel.  do_effect_step()
+            # places whichever it is handed without needing to know
+            # which it got.
             #
             # This is the only call site of {self_name}_step(), so it
             # inlines here and the chain is still one indirect call per
@@ -630,26 +684,26 @@ def generate(audio_dir, out_h, out_js, out_md):
             # it calls it by name.
             step = None
             if channels != 'NONE':
-                step = f"{self_name}_mix_step"
-                f.write(f"static sample_t __audio_func({step})"
-                        "(sample_t val, float dry, float wet)\n")
+                step = f"{self_name}_raw_step"
+                f.write(f"static sample_t __audio_func({step})(sample_t val)\n")
                 f.write("{\n")
                 if channels == 'STEREO':
-                    f.write(f"\tsample_t out = {self_name}_step(val);\n")
-                    f.write("\tval.left  = dry * val.left  + wet * out.left;\n")
-                    f.write("\tval.right = dry * val.right + wet * out.right;\n")
+                    f.write(f"\treturn {self_name}_step(val);\n")
                 else:
                     f.write(f"\tfloat out = {self_name}_step(val.left);\n")
-                    f.write("\tval.left  = dry * val.left  + wet * out;\n")
-                    f.write("\tval.right = dry * val.right + wet * out;\n")
-                f.write("\treturn val;\n")
+                    f.write("\tval.left = val.right = out;\n")
+                    f.write("\treturn val;\n")
                 f.write("}\n")
 
             f.write(f"static struct effect {struct_name} = {{\n")
             f.write(f"\t.name = \"{e_data['full_name']}\",\n")
             f.write(f"\t.short_name = \"{e_data['short_name']}\",\n")
+            f.write(f"\t.id_hash = 0x{effect_id_hash(e_data['short_name'], e_data['copy']):08x},\n")
+            f.write(f"\t.pot_hash = 0x{pot_layout_hash(e_data['pots']):08x},\n")
             f.write(f"\t.def_mix = {e_data['def_mix']}f,\n")
             f.write(f"\t.mix_law = MIX_{e_data['mix_law']},\n")
+            if e_data['channels'] == 'STEREO':
+                f.write("\t.stereo = 1,\n")
             f.write(f"\t.init = {self_name}_init,\n")
             if step:
                 f.write(f"\t.step = {step},\n")
@@ -667,7 +721,15 @@ def generate(audio_dir, out_h, out_js, out_md):
             f.write("\t}\n")
             f.write("};\n\n")
 
-        f.write("static struct effect *const effects[] = {\n")
+        #
+        # In RAM, not in flash.  single_sample() indexes this every
+        # sample on the audio core, and the audio core has to keep
+        # running while core 0 erases a flash sector with XIP switched
+        # off - see check-audio.py, which will not let it back into
+        # .rodata by accident.
+        #
+        f.write("static struct effect *const __not_in_flash(\"audio\")"
+                " effects[] = {\n")
         for e_data in effects_data:
             f.write(f"\t&{e_data['struct_name']},\n")
         f.write("};\n\n")
@@ -843,11 +905,23 @@ def generate(audio_dir, out_h, out_js, out_md):
         f.write("that turns, and the rest are the only ones that mean\n")
         f.write("anything for one that clicks; the pedal does not enforce\n")
         f.write("that, because a useless binding is not a dangerous one.\n\n")
-        f.write("**Bindings are not saved yet.** The table returns to its\n")
-        f.write("defaults on every boot. Those defaults are: the rotary is\n")
-        f.write("the master volume, both of its presses reset that volume to\n")
-        f.write("unity, the footswitch tapped is bypass and held is the\n")
-        f.write("tuner.\n\n")
+        f.write("**There are four tables, and 0x0c/0x0d carry which one**\n")
+        f.write("as a byte after the command: 0 the current scene's rules, 1\n")
+        f.write("the pedal-wide ones, 2 what those resolve to, 3 what is\n")
+        f.write("compiled in. Levels 0 and 1 are settings and are saved with\n")
+        f.write("the scene and the globals; 2 and 3 are answers, and a write\n")
+        f.write("to either is refused rather than quietly dropped.\n\n")
+        f.write("Resolution is per control, and the most specific level that\n")
+        f.write("mentions a control at all answers for it completely. Not a\n")
+        f.write("merge: every rule naming a gesture fires, so a union would\n")
+        f.write("let a scene add to the footswitch's binding but never\n")
+        f.write("replace it. Which is what makes action 0 useful - a rule\n")
+        f.write("that does nothing still counts as the scene having spoken.\n\n")
+        f.write("Delete every rule at both levels and the compiled-in ones\n")
+        f.write("come back, so a pedal cannot be configured into having no\n")
+        f.write("way out. They are: the rotary is the master volume, both of\n")
+        f.write("its presses reset that volume to unity, the footswitch\n")
+        f.write("tapped is bypass and held is the tuner.\n\n")
         f.write("Both rotary presses do the same thing on purpose. A press\n")
         f.write("held a moment too long arrives as a long press and not as a\n")
         f.write("short one, so binding them differently would make a slow\n")

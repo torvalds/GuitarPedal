@@ -22,6 +22,22 @@ const SYSEX_CMD = {
 const SYSEX_SET_BINDING = 0x0c;
 const SYSEX_BINDINGS = 0x0d;
 
+//
+// The four rule tables.  A gesture is answered by the most specific
+// level that mentions its control at all, and that level answers it
+// completely - so a scene rule does not add to a global one, it
+// replaces it for that control.
+//
+// SCENE and GLOBAL are settings.  EFFECTIVE is what those two and the
+// defaults resolve to, and DEFAULT is what is compiled in; both are
+// read-only, and the pedal refuses a write to either rather than
+// pretending it worked.
+//
+const RULES_SCENE = 0;
+const RULES_GLOBAL = 1;
+const RULES_EFFECTIVE = 2;
+const RULES_DEFAULT = 3;
+
 const ACT = {
     NONE: 0, POT: 1, NEXT_POT: 2, RESET_POT: 3,
     SET_POT: 4, TOGGLE_POT: 5, BYPASS: 6, TUNER: 7, SCENE: 8
@@ -88,6 +104,13 @@ function actionsFor(ctrl) {
 //
 let pedalRules = [];
 let haveRules = false;
+
+//
+// Every level the pedal reported, indexed by RULES_*.  The editor works
+// on the scene's table; the rest are here so the UI can say what a
+// control actually does and what it would do if this rule went away.
+//
+let rulesByLevel = [[], [], [], []];
 
 let midiAccess = null;
 let midiInput = null;
@@ -616,15 +639,27 @@ function handleSysex(data) {
         }
 
         case SYSEX_BINDINGS: {
-            pedalRules = [];
-            for (let at = 3; at + 5 < data.length; at += 6) {
-                pedalRules.push({ control: data[at],
-                                  action: data[at + 1],
-                                  effect: data[at + 2],
-                                  pot: data[at + 3],
-                                  val: [data[at + 4], data[at + 5]] });
+            const level = data[3];
+            const list = [];
+
+            for (let at = 4; at + 5 < data.length; at += 6) {
+                list.push({ control: data[at],
+                            action: data[at + 1],
+                            effect: data[at + 2],
+                            pot: data[at + 3],
+                            val: [data[at + 4], data[at + 5]] });
             }
-            haveRules = true;
+            rulesByLevel[level] = list;
+
+            //
+            // The editor still edits one table, and it is the scene's.
+            // The other three are what it draws around that: what a
+            // control ends up doing, and what it would fall back to.
+            //
+            if (level === RULES_SCENE) {
+                pedalRules = list;
+                haveRules = true;
+            }
             renderBindings();
             renderKnobHint();
             break;
@@ -1936,8 +1971,8 @@ window.dumpEeprom = function (blk = 0, count = 1) {
 // what it was asked for, and a rule that did not survive is visible as
 // a row that did not come back.
 //
-function sendRules(list) {
-    const out = [SYSEX_SET_BINDING];
+function sendRules(list, level = RULES_SCENE) {
+    const out = [SYSEX_SET_BINDING, level];
     list.forEach(r => out.push(r.control & 0x7f, r.action & 0x7f,
                                r.effect & 0x7f, (r.pot || 0) & 0x7f,
                                (r.val[0] || 0) & 0x7f,
@@ -1946,7 +1981,31 @@ function sendRules(list) {
 }
 
 // Replace one rule, or drop it when 'r' is null.
+//
+// Make this control the scene's before changing it.
+//
+// Resolution is per control and the most specific level wins outright,
+// so the moment a scene says anything about a control it says
+// everything.  A scene that inherits four rules and wants to change one
+// therefore has to take all four, or the other three vanish.
+//
+function promoteControl(c) {
+    if (pedalRules.some(r => r.control === c))
+        return pedalRules;
+    return pedalRules.concat(
+        rulesByLevel[RULES_EFFECTIVE].filter(r => r.control === c));
+}
+
 function putRule(i, r) {
+    if (i < 0) {
+        // An inherited row: take the control first, then edit the copy.
+        const list = promoteControl(r.control);
+        const at = list.findIndex(x => x.control === r.control);
+        if (r)
+            list[at] = r;
+        sendRules(list);
+        return;
+    }
     const list = pedalRules.slice();
     if (r)
         list[i] = r;
@@ -2244,9 +2303,12 @@ function renderBindings() {
 
     if (hint)
         hint.textContent = haveRules
-            ? 'Nothing here is saved yet: the pedal goes back to its ' +
-              'defaults when it is power-cycled. A gesture can have more ' +
-              'than one rule, and they all happen together \u2014 which is ' +
+            ? 'What each control does now. Rules belong to the scene and ' +
+              'are kept when you save it; a control this scene says ' +
+              'nothing about is shown greyed, inherited from the ' +
+              'pedal-wide rules or from the built-in defaults. Editing ' +
+              'one makes it this scene\u0027s. A gesture can have more ' +
+              'than one rule and they all happen together \u2014 which is ' +
               'how one press swaps between two effects.'
             : 'Not connected.';
 
@@ -2284,13 +2346,32 @@ function renderBindings() {
         add.title = `Add a rule to ${ctrl.name}`;
         add.disabled = pedalRules.length >= 16;
         add.addEventListener('click', () =>
-            sendRules(pedalRules.concat([newRule(c)])));
+            sendRules(promoteControl(c).concat([newRule(c)])));
         head.appendChild(add);
         group.appendChild(head);
 
-        pedalRules.forEach((r, i) => {
-            if (r.control === c)
-                group.appendChild(renderRule(r, i));
+        //
+        // The effective table, not the scene's.  A scene that says
+        // nothing about a control still has that control doing
+        // something - the pedal-wide rules or the built-in defaults -
+        // and drawing an empty row would claim it does nothing, which
+        // is a specific and wrong answer.
+        //
+        // Inherited rows carry no index into the scene's list because
+        // they are not in it.  editing one promotes it first; see
+        // promoteControl().
+        //
+        const own = pedalRules.filter(r => r.control === c);
+        const shown = own.length ? own
+                                 : rulesByLevel[RULES_EFFECTIVE]
+                                       .filter(r => r.control === c);
+
+        shown.forEach(r => {
+            const i = pedalRules.indexOf(r);
+            const row = renderRule(r, i);
+            if (i < 0)
+                row.classList.add('inherited');
+            group.appendChild(row);
         });
 
         host.appendChild(group);

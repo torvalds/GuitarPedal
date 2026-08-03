@@ -135,14 +135,39 @@ struct rule {
 //
 // The footswitch keeps what it always did.
 //
-static struct rule rules[MAX_RULES] = {
+static const struct rule default_rules[] = {
 	{ CTRL_ROTARY_TURN, ACT_POT,       0, CHAIN_VOLUME + 1 },
 	{ CTRL_ROTARY_TAP,  ACT_RESET_POT, BIND_FOLLOW },
 	{ CTRL_ROTARY_HOLD, ACT_RESET_POT, BIND_FOLLOW },
 	{ CTRL_STOMP_TAP,   ACT_BYPASS },
 	{ CTRL_STOMP_HOLD,  ACT_TUNER },
 };
-static unsigned int nr_rules = 5;
+
+//
+// Three tables, and the one everything reads.
+//
+// A scene's rules, the pedal-wide ones, and the defaults above.  For any
+// one control the most specific level that has anything to say about it
+// wins outright - see resolve_rules() - and what comes out is 'rules',
+// which is the table it has always been and which nothing walking it had
+// to learn about any of this.
+//
+static struct rule scene_rules[MAX_RULES];
+static unsigned int nr_scene_rules;
+
+static struct rule global_rules[MAX_RULES];
+static unsigned int nr_global_rules;
+
+//
+// Bigger than a level, because it is a sum of them: sixteen rules on one
+// control in a scene plus the globals' rules for the other four is more
+// than sixteen, and quietly dropping the tail would be a miserable thing
+// to debug.  192 bytes.
+//
+#define EFFECTIVE_RULES 32
+
+static struct rule rules[EFFECTIVE_RULES];
+static unsigned int nr_rules;
 
 //
 // Does this action point at a pot, and may it say "the knob's one"?
@@ -178,7 +203,7 @@ static bool rule_ok(const struct rule *r)
 		return false;
 
 	if (r->action == ACT_SCENE)
-		return r->effect < nr_scenes;
+		return r->effect < MAX_SCENES;
 
 	if (!action_has_target(r->action))
 		return true;
@@ -198,7 +223,68 @@ static bool rule_ok(const struct rule *r)
 	return effects[r->effect]->pots[r->pot - 1].label != NULL;
 }
 
-static void set_rules(const uint8_t *buf, unsigned int count)
+//
+// Work out what each control actually does.
+//
+// Per control, the most specific level that mentions it at all wins,
+// and wins completely.  Not a merge: every rule naming a gesture fires
+// when that gesture happens - which is how one press takes one effect's
+// mix up while taking another's down - so a union would mean a scene
+// could never stop the footswitch being bypass.  It could only ever add
+// to it.
+//
+// Which makes ACT_NONE worth something.  A scene rule that does nothing
+// still counts as the scene having spoken for that control, so it is
+// how you say "nothing happens here" as distinct from "this level is
+// silent, ask the next one".
+//
+// And deleting every global rule falls back to the compiled-in
+// defaults rather than to nothing at all, so a pedal cannot be
+// configured into having no way back.
+//
+static void resolve_rules(void)
+{
+	nr_rules = 0;
+
+	for (unsigned int ctrl = 0; ctrl < NR_CONTROLS; ctrl++) {
+		const struct rule *src;
+		unsigned int count, n = 0;
+
+		for (unsigned int i = 0; i < nr_scene_rules; i++)
+			n += scene_rules[i].control == ctrl;
+		if (n) {
+			src = scene_rules;
+			count = nr_scene_rules;
+		} else {
+			for (unsigned int i = 0; i < nr_global_rules; i++)
+				n += global_rules[i].control == ctrl;
+			if (n) {
+				src = global_rules;
+				count = nr_global_rules;
+			} else {
+				src = default_rules;
+				count = ARRAY_SIZE(default_rules);
+			}
+		}
+
+		for (unsigned int i = 0; i < count; i++) {
+			if (src[i].control != ctrl)
+				continue;
+			if (nr_rules >= EFFECTIVE_RULES)
+				return;
+			rules[nr_rules++] = src[i];
+		}
+	}
+}
+
+//
+// Take one level's table off the wire.
+//
+// Everything is range checked here rather than where it is used, so
+// that the resolved table can be trusted by the things that walk it.
+//
+static void set_rules(struct rule *dst, unsigned int *dst_count,
+		      const uint8_t *buf, unsigned int count)
 {
 	unsigned int kept = 0;
 
@@ -216,9 +302,10 @@ static void set_rules(const uint8_t *buf, unsigned int count)
 		// which is the only place that can always do it.
 		//
 		if (rule_ok(&r))
-			rules[kept++] = r;
+			dst[kept++] = r;
 	}
-	nr_rules = kept;
+	*dst_count = kept;
+	resolve_rules();
 }
 
 #endif

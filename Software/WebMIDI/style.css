@@ -1399,3 +1399,13 @@ input[type=range].large-slider::-webkit-slider-runnable-track {
     padding: 10px 12px;
   }
 }
+
+/*
+ * A rule this scene did not set, shown because the control still does
+ * it - from the pedal-wide table or from the built-in defaults.  Faded
+ * rather than hidden: "nothing here" and "nothing of its own here" are
+ * different, and only one of them means the footswitch does nothing.
+ */
+.rule-row.inherited {
+  opacity: 0.55;
+}

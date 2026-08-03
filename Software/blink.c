@@ -63,6 +63,14 @@ static void reset_effect(struct effect *eff)
 	eff->mix = eff->target = 0;
 	eff->dry = 1.0f;
 	eff->wet = 0.0f;
+
+	//
+	// No channel routing, and a merge that is a plain sum if one is
+	// ever asked for.  Zero here has to mean "as it always was".
+	//
+	eff->channels = 0;
+	eff->merge = 1.0f;
+
 	set_mix_pot(eff, eff->def_mix);
 	for (int i = 0; i < 10; i++) {
 		unsigned char def_val = eff->pots[i].def_val;
@@ -150,8 +158,7 @@ static void routing_end(routing_bitmap_t routable)
 	}
 }
 
-#include "eeprom.h"
-#include "bindings.h"
+#include "scene.h"
 
 static void init_i2s(void)
 {
@@ -324,20 +331,21 @@ static void sysex_stream_write(const uint8_t *buffer, size_t len)
 // So anything replying there means the firmware is newer than the board,
 // and nothing else in the system is in a position to notice.
 //
-// Which eeprom is fitted is the other question, and getting that wrong is
-// the quietest failure of the lot: the parts differ in how many address
-// bytes they accept, so a mismatched build writes to the wrong place and
-// the pedal runs perfectly and forgets everything on reboot.  That one
-// takes more than a presence probe - see eeprom_repeats_at_256().
+// The eeprom is in the same position now.  It was the scene store, and
+// which part was fitted mattered a great deal - the sizes differ in how
+// many address bytes they take, so a mismatched build wrote to the wrong
+// place and the pedal ran perfectly and forgot everything on reboot.
+// Scenes live in the RP2354's own flash now and nothing reads the part
+// at all, so all that is left is the same statement as the other two:
+// something is answering at 0x50.
 //
-// What gets reported is what was *observed*: something answered, the read
-// repeated, the bytes varied.  "This is the 2kbit part" is an inference
-// from those, and belongs to whoever is reading rather than in the wire
-// format, so that being wrong about it later costs an app change and not
-// a protocol one.
+// What gets reported is what was *observed*.  Any inference from it -
+// which board this is, how old - belongs to whoever is reading rather
+// than in the wire format, so that being wrong about it later costs an
+// app change and not a protocol one.
 //
 static struct {
-	bool eeprom;		// the scene store, 0x50
+	bool eeprom;		// the old scene store, 0x50
 	bool legacy_codec;	// TAC5112, 0x51 - an early board
 	bool legacy_screen;	// SH1106, 0x3c - ditto
 } hardware;
@@ -363,22 +371,42 @@ static void probe_hardware(void)
 	// reads it, so a chain of ifs would deliver the last thing tested
 	// rather than the thing worth saying.
 	//
-	// A missing eeprom is the one that matters - nothing persists and
-	// nothing else would mention it.  An early board is merely old:
-	// the TAC5112 wants a little setup, which it gets, and those
-	// boards never routed the second channel, so they are mono.  The
-	// eeprom geometry is worked out rather than compiled in, so a
-	// single scene on a 2kbit part saves and loads like any other.
+	// An early board is merely old: the TAC5112 wants a little setup,
+	// which it gets, and those boards never routed the second
+	// channel, so they are mono.
 	//
-	if (!hardware.eeprom)
-		report_status("No eeprom found - scenes will not persist");
-	else if (hardware.legacy_codec || hardware.legacy_screen)
-		report_status("Early board: mono only, one scene");
+	// A missing eeprom used to be the thing worth saying, because it
+	// meant nothing would persist.  It says nothing now - scenes are
+	// in the RP2354's flash, which is on the die and cannot be
+	// absent - so the boards built without one have stopped being
+	// useless and stopped needing a warning.
+	//
+	if (hardware.legacy_codec || hardware.legacy_screen)
+		report_status("Early board: mono only");
 }
 
 static void sysex_write_str(const char *str)
 {
 	sysex_stream_write((const uint8_t *)str, strlen(str));
+}
+
+//
+// A number, for the JSON below.  Hand-rolled for the same reason
+// eeprom.h rolls its own: snprintf() drags newlib's float conversion in
+// behind it, and scripts/check-float.py exists to refuse exactly that.
+//
+static void sysex_write_num(uint32_t val)
+{
+	char buf[11];
+	unsigned int n = sizeof(buf);
+
+	buf[--n] = 0;
+	do {
+		buf[--n] = '0' + val % 10;
+		val /= 10;
+	} while (val);
+
+	sysex_write_str(buf + n);
 }
 
 //
@@ -410,17 +438,17 @@ static void sysex_send_identity(void)
 	// blink.c is recompiled, which is exactly when the binary changed.
 	//
 	sysex_write_str("{\"build\":\"" __DATE__ " " __TIME__ "\"");
+	//
+	// How many scenes there are, and which of them have ever been
+	// saved.  The count used to depend on which eeprom was fitted and
+	// needed a paragraph explaining how it had been guessed; it is a
+	// build constant now, because every board has the same 2MB of
+	// flash on the die.
+	//
 	sysex_write_str(",\"scenes\":");
-	sysex_write_str(nr_scenes == 1 ? "1" : "32");
-	//
-	// How that number was arrived at.  Three of the ways of deciding
-	// it land on 32 for entirely different reasons, and one of those
-	// is "gave up", so the number alone does not say whether the
-	// board was identified or merely defaulted to.
-	//
-	sysex_write_str(",\"eeprom_why\":\"");
-	sysex_write_str(eeprom_verdict);
-	sysex_write_str("\"");
+	sysex_write_num(MAX_SCENES);
+	sysex_write_str(",\"populated\":");
+	sysex_write_num(populated_scenes());
 	sysex_write_str(",\"midi_hw\":");
 	sysex_write_str(MIDI_HW ? "true" : "false");
 	sysex_write_str(",\"found\":{\"eeprom\":");
@@ -429,6 +457,30 @@ static void sysex_send_identity(void)
 	sysex_write_str(hardware.legacy_codec ? "true" : "false");
 	sysex_write_str(",\"legacy_screen\":");
 	sysex_write_str(hardware.legacy_screen ? "true" : "false");
+	sysex_write_str("}");
+
+	//
+	// What is in the save area, read now.  Nothing needs this to
+	// run; it is here so that slots planted with picotool can be
+	// asked about from a shell, which is the whole test rig for the
+	// format - 'marked' counts what carried a marker and 'valid'
+	// what also survived its hash, so a deliberately corrupted
+	// signature shows up as the difference between the two.
+	//
+	struct save_scan found;
+
+	save_scan(&found);
+
+	sysex_write_str(",\"save\":{\"slots\":");
+	sysex_write_num(SAVE_SLOT_COUNT);
+	sysex_write_str(",\"marked\":");
+	sysex_write_num(found.marked);
+	sysex_write_str(",\"valid\":");
+	sysex_write_num(found.valid);
+	sysex_write_str(",\"keys\":");
+	sysex_write_num(found.keys);
+	sysex_write_str(",\"newest\":");
+	sysex_write_num(found.newest);
 	sysex_write_str("}}");
 
 	sysex_stream_write(sysex_identity_trailer, sizeof(sysex_identity_trailer));
@@ -610,73 +662,76 @@ static void sysex_send_pot_value(int eff, int pot, int value)
 //
 // The message itself, with no transmit session of its own, so that it
 // can go inside somebody else's.
-static void sysex_write_bindings(void)
-{
-	static const uint8_t header[] = { 0xF0, 0x7D, 0x0d };
-	static const uint8_t trailer[] = { 0xF7 };
-	uint8_t table[MAX_RULES * 6];
+//
+// One level of the rule table.
+//
+// Four of them, and only two can be written: a scene's rules, the
+// pedal-wide ones, what those resolve to, and what is compiled in.  The
+// last two are answers rather than settings.
+//
+// RULES_EFFECTIVE is the one worth having on the wire.  It is what a
+// gesture actually does, which is not something the app can work out
+// from the other two without implementing the shadowing a second time -
+// and two implementations of one rule is how the pot defaults and the
+// graph Q both went wrong before.
+//
+// RULES_DEFAULT closes the other gap.  The compiled-in table has never
+// been readable at all, so an app showing "this control is unbound"
+// could not say what would happen instead.
+//
+enum rule_level {
+	RULES_SCENE,
+	RULES_GLOBAL,
+	RULES_EFFECTIVE,
+	RULES_DEFAULT,
+	NR_RULE_LEVELS,
+};
 
-	for (unsigned int i = 0; i < nr_rules; i++) {
-		table[i*6 + 0] = rules[i].control;
-		table[i*6 + 1] = rules[i].action;
-		table[i*6 + 2] = rules[i].effect;
-		table[i*6 + 3] = rules[i].pot;
-		table[i*6 + 4] = rules[i].val[0];
-		table[i*6 + 5] = rules[i].val[1];
+static const struct rule *rule_level(unsigned int level, unsigned int *count)
+{
+	switch (level) {
+	case RULES_SCENE:
+		*count = nr_scene_rules;
+		return scene_rules;
+	case RULES_GLOBAL:
+		*count = nr_global_rules;
+		return global_rules;
+	case RULES_EFFECTIVE:
+		*count = nr_rules;
+		return rules;
+	default:
+		*count = ARRAY_SIZE(default_rules);
+		return default_rules;
+	}
+}
+
+static void sysex_write_bindings(unsigned int level)
+{
+	const uint8_t header[] = { 0xF0, 0x7D, 0x0d, level };
+	static const uint8_t trailer[] = { 0xF7 };
+	uint8_t table[EFFECTIVE_RULES * 6];
+	unsigned int count;
+	const struct rule *src = rule_level(level, &count);
+
+	for (unsigned int i = 0; i < count; i++) {
+		table[i*6 + 0] = src[i].control;
+		table[i*6 + 1] = src[i].action;
+		table[i*6 + 2] = src[i].effect;
+		table[i*6 + 3] = src[i].pot;
+		table[i*6 + 4] = src[i].val[0];
+		table[i*6 + 5] = src[i].val[1];
 	}
 
 	sysex_stream_write(header, sizeof(header));
-	sysex_stream_write(table, nr_rules * 6);
+	sysex_stream_write(table, count * 6);
 	sysex_stream_write(trailer, sizeof(trailer));
 }
 
-static void sysex_send_bindings(void)
+static void sysex_send_bindings(unsigned int level)
 {
 	sysex_tx_start();
-	sysex_write_bindings();
+	sysex_write_bindings(level);
 	sysex_tx_finish("Sent control bindings");
-}
-
-//
-// 64 bytes of the eeprom cache, as ASCII hex.
-//
-// Summary statistics about that array have now been wrong twice, in
-// different directions, so this exists to end the arguing: ask for a
-// block and look at it.  ASCII because SysEx data has to stay under
-// 0x80 and hex is the encoding that survives being pasted into a bug
-// report.
-//
-#define DUMP_BLOCK_SIZE 64
-static uint8_t dump_block_req = 0xff;		// 0xff: nothing asked for
-
-static void sysex_send_dump(void)
-{
-	uint8_t blk = dump_block_req;
-	unsigned int off = blk * DUMP_BLOCK_SIZE;
-	char hex[DUMP_BLOCK_SIZE * 2];
-
-	if (blk == 0xff)
-		return;
-	dump_block_req = 0xff;
-
-	if (off + DUMP_BLOCK_SIZE > sizeof(eeprom_cache.bytes))
-		return;
-
-	for (unsigned int i = 0; i < DUMP_BLOCK_SIZE; i++) {
-		uint8_t v = eeprom_cache.bytes[off + i];
-		hex[i*2 + 0] = "0123456789abcdef"[v >> 4];
-		hex[i*2 + 1] = "0123456789abcdef"[v & 15];
-	}
-
-	static const uint8_t header[] = { 0xF0, 0x7D, 0x0f };
-	static const uint8_t trailer[] = { 0xF7 };
-
-	sysex_tx_start();
-	sysex_stream_write(header, sizeof(header));
-	sysex_stream_write(&blk, 1);
-	sysex_stream_write((const uint8_t *)hex, sizeof(hex));
-	sysex_stream_write(trailer, sizeof(trailer));
-	sysex_tx_finish("Sent eeprom dump");
 }
 
 bool state_dump_tx = false;
@@ -719,9 +774,15 @@ static void sysex_send_state_dump(void)
 		}
 	}
 
-	// What the pedal's own controls are bound to
+	//
+	// What the pedal's own controls are bound to - every level of
+	// it.  The dump is what the app builds its whole picture from,
+	// and "what this control does" and "why" are different
+	// questions that it now has to be able to answer separately.
+	//
 	report_info("Sending control bindings");
-	sysex_write_bindings();
+	for (unsigned int level = 0; level < NR_RULE_LEVELS; level++)
+		sysex_write_bindings(level);
 
 	//
 	// And finally the routing order, which stays last because the app
@@ -814,7 +875,16 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 		}
 	} else if (cmd == 0x04 && sysex_len >= 2) { // Save Scene
 		uint8_t scene_id = sysex_buf[1];
+
+		//
+		// The settings go too, even though they are no longer
+		// part of the scene.  They used to be saved by being in
+		// its last slot, and "Save" meaning "keep what I have
+		// set up" is what anybody pressing it expects - the
+		// change is where they are kept, not when.
+		//
 		save_scene(scene_id);
+		save_globals();
 
 	} else if (cmd == 0x09) { // Diagnostic Request
 
@@ -832,10 +902,9 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 
 		state_dump_tx = true;
 
-	} else if (cmd == 0x0e && sysex_len >= 2) { // Dump eeprom block
-		dump_block_req = sysex_buf[1];
+	} else if (cmd == 0x0c && sysex_len >= 2) { // Write one rule level
+		unsigned int level = sysex_buf[1];
 
-	} else if (cmd == 0x0c) { // Set the whole rule table
 		//
 		// Echo it back, always, and not as an acknowledgement:
 		// rules that do not check out are dropped, so what came
@@ -843,8 +912,34 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 		// also the case where the two ends disagree, which is
 		// exactly when the app needs telling.
 		//
-		set_rules(sysex_buf + 1, (sysex_len - 1) / 6);
-		sysex_send_bindings();
+		// A write to a level that is computed rather than kept
+		// is refused rather than ignored - it still answers, with
+		// the level unchanged, so the app sees that nothing
+		// happened instead of assuming it worked.
+		//
+		if (level == RULES_SCENE || level == RULES_GLOBAL) {
+			struct rule *dst = level == RULES_SCENE ?
+				scene_rules : global_rules;
+			unsigned int *n = level == RULES_SCENE ?
+				&nr_scene_rules : &nr_global_rules;
+
+			set_rules(dst, n, sysex_buf + 2, (sysex_len - 2) / 6);
+		}
+		if (level < NR_RULE_LEVELS)
+			sysex_send_bindings(level);
+
+	} else if (cmd == 0x0d && sysex_len >= 2) { // Read one rule level
+		//
+		// Separate from the write, because "set the table to
+		// nothing" and "tell me the table" would otherwise be
+		// the same message - and clearing a level by asking to
+		// look at it is a memorable way to lose work.
+		//
+		// Same command number as the reply, which is how 0x0a
+		// and 0x0b already work.
+		//
+		if (sysex_buf[1] < NR_RULE_LEVELS)
+			sysex_send_bindings(sysex_buf[1]);
 
 	} else if (cmd == 0x08) { // Set Routing Order
 		routing_bitmap_t routable = routing_start();
@@ -920,7 +1015,7 @@ bool handle_midi_packet(const uint8_t packet[4])
 	} else if ((status & 0xF0) == 0xC0) {
 		handled = true;
 		// Program Change -> Load Scene
-		if (data1 < nr_scenes) {
+		if (data1 < MAX_SCENES) {
 			load_scene(data1);
 		}
 	}
@@ -1058,8 +1153,6 @@ unsigned get_audio_samples(int32_t *buffer, unsigned nr)
 	return get_output_samples((s32 *)buffer, nr);
 }
 
-#include "eeprom.h"
-
 static void init_effects(void)
 {
 	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
@@ -1068,12 +1161,19 @@ static void init_effects(void)
 	}
 
 	//
-	// No fallback for an empty EEPROM, because there is nothing to
-	// fall back to.  Every slot is checksummed independently, so a
-	// blank or corrupt one simply fails to load and the effect keeps
-	// the defaults reset_effect() just gave it - which leaves a new
-	// pedal with every effect at its default and nothing routed.
-	// That is the right answer, and guessing a chain would be worse.
+	// The settings first, because they are the pedal's and not the
+	// scene's - which of them is the MIDI channel should not depend
+	// on which scene happens to load next.
+	//
+	load_globals();
+
+	//
+	// No fallback for a store with nothing in it, because there is
+	// nothing to fall back to.  A slot that fails its hash, or was
+	// never written, simply does not load and every effect keeps the
+	// defaults reset_effect() just gave it - which leaves a new pedal
+	// with everything at its default and nothing routed.  That is the
+	// right answer, and guessing a chain would be worse.
 	//
 	load_scene(0);
 
@@ -1104,20 +1204,6 @@ int main()
 
 	absolute_time_t next_ui_update = delayed_by_ms(now, 50);
 
-	//
-	// The codec decides the eeprom geometry, so it has to be asked
-	// first.  Every board with a TAC5112 was built with the 2kbit
-	// part, and that part cannot be identified by probing it - see
-	// eeprom_set_geometry().
-	//
-	eeprom_set_geometry(i2c_probe(TAC5112_I2C));
-
-	//
-	// After the eeprom, not before.  Reading it retries for fifty
-	// milliseconds because the part may still be waking up, and a probe
-	// without the same patience would call a perfectly good board
-	// missing - which is a confusing thing to be told.
-	//
 	probe_hardware();
 
 	//
@@ -1149,13 +1235,11 @@ int main()
 		sysex_send_schema();
 		sysex_send_state_dump();
 		sysex_send_status();
-		sysex_send_dump();
 		usb_audio_task();
 
 		// Claim 25Hz screen updates
 		if (now > next_ui_update) {
 			next_ui_update = delayed_by_ms(now, 40);
-			eeprom_task();
 
 			//
 			// Whatever the switches are bound to.

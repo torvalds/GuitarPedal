@@ -1,7 +1,7 @@
 //
 // This is the "ui" for now - really just for very random testing
 //
-#include "eeprom.h"
+#include "scene.h"
 
 struct pot_range { int min, max; };
 
@@ -216,8 +216,17 @@ static void next_bound_pot(void)
 			return;
 	} while (idx ? !effect->pots[idx - 1].label : effect->no_mix);
 
+	//
+	// Deliberately on the resolved table rather than on whichever
+	// level supplied the rule.  Stepping the knob to the next
+	// parameter is something you do mid-song to pick what it
+	// adjusts, not a change to how the pedal is set up - so it
+	// lasts until the scene is reloaded and is not written to
+	// flash, which is also what it did when there was only one
+	// table and nothing was saved at all.
+	//
 	b->pot = idx;
-	sysex_send_bindings();
+	sysex_send_bindings(RULES_EFFECTIVE);
 }
 
 //
@@ -263,6 +272,11 @@ static void do_pot_action(const struct rule *b)
 	attention_preview = ATTENTION_PREVIEW_TICKS;
 }
 
+//
+// A scene change asked for by a rule, and not yet done.  -1 for none.
+//
+static int pending_scene = -1;
+
 static void do_rule(const struct rule *b)
 {
 	switch (b->action) {
@@ -288,13 +302,25 @@ static void do_rule(const struct rule *b)
 
 	case ACT_SCENE:
 		//
-		// Checked again rather than trusted from the table.
-		// set_binding() saw the same 'nr_scenes', but it is
-		// decided by probing the board at startup and this
-		// costs nothing.
+		// Noted, not done.  Loading a scene rebuilds the rule
+		// table - resolve_rules() - and 'b' points into that
+		// table, which fire_control() is in the middle of
+		// walking.  Switching here would pull the list out from
+		// under the loop that is reading it, and the rest of
+		// the gesture's rules would come from whichever table
+		// replaced it.
 		//
-		if (b->effect < nr_scenes)
-			load_scene(b->effect);
+		// So the switch waits until nothing is iterating.  It
+		// also means a gesture bound to two scene changes picks
+		// the last one rather than loading both, which is a more
+		// sensible answer than either.
+		//
+		// Checked again rather than trusted from the table.
+		// set_binding() saw the same MAX_SCENES, and this costs
+		// nothing.
+		//
+		if (b->effect < MAX_SCENES)
+			pending_scene = b->effect;
 		break;
 	}
 }
@@ -340,6 +366,33 @@ static void handle_switch_bindings(void)
 			continue;
 		switch_clear(gestures[i].sw);
 		fire_control(gestures[i].ctrl);
+	}
+
+	//
+	// Out here, where the rule table is not being walked.
+	//
+	// Everything moves: pots, routing, and the rules themselves, so
+	// whatever the app has cached is wrong in every particular.  Ask
+	// for the whole dump rather than working out what changed - this
+	// happens when somebody steps on a switch, not per sample.
+	//
+	if (pending_scene >= 0) {
+		//
+		// Only to a scene that has something in it.  load_scene()
+		// on an empty one resets every effect and routes nothing,
+		// so a rule aimed at a scene nobody has saved would take
+		// a working pedal to silence at the touch of a switch -
+		// and the way back would be the switch that just did it,
+		// which now belongs to whatever the defaults say.
+		//
+		// Refusing leaves you where you were, which is wrong in a
+		// way you can hear and recover from.
+		//
+		if (populated_scenes() & (1u << pending_scene)) {
+			load_scene(pending_scene);
+			state_dump_tx = true;
+		}
+		pending_scene = -1;
 	}
 }
 
