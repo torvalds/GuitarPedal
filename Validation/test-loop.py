@@ -99,8 +99,22 @@ def tone_id():
     return None
 
 
+#
+# Which USB output mode each pedal is already in.
+#
+# Setting it is a sysex and a settle, and the mode changes far less often
+# than it is asked for - a sweep asks for the same one at every point.
+# Remembering it takes about forty of those out of a run.
+#
+_usb_mode = {}
+
+
 def usb_mode(d, mode):
+    if _usb_mode.get(d["serial"]) == mode:
+        return
     pedal.set_pot(d["port"], SETTINGS, pedal.SETTINGS_USB_OUT, mode)
+    _usb_mode[d["serial"]] = mode
+    time.sleep(0.4)
 
 
 def generate(d, dbfs, shape=SHAPE_SINE, freq=FREQ_440_POT):
@@ -139,7 +153,6 @@ def raw_in(d, seconds):
     anything asked after that point cannot see a second channel.
     """
     usb_mode(d, LR_DRY)
-    time.sleep(0.4)
     x = audio.capture(seconds, d["card"])
     return x[:, 0] * audio.SAMPLE_TO_FLOAT, x[:, 1] * audio.SAMPLE_TO_FLOAT
 
