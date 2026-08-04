@@ -169,6 +169,44 @@ static void routing_end(routing_bitmap_t routable)
 	}
 }
 
+//
+// The two effects that always run, asked of ROUTABLE_EFFECTS rather than
+// spelled out again.
+//
+// Effect 0 is [CHAIN] - the trim, the gate and the master volume - which
+// runs ahead of the chain rather than in it, and the last is the settings
+// pseudo-effect, which is not an audio effect at all.  Neither is ever in
+// effect_chain[], so "is it routed" is the wrong question to ask about
+// them and always gets the wrong answer.
+//
+// Derived from the routing bitmap instead of testing 0 and EFFECT_COUNT-1
+// by hand so that the two cannot drift apart: whatever is not routable is
+// what always runs, by construction.
+//
+// Both happen to be exactly the effects declaring 'MIX: NONE' today, so
+// e->no_mix would answer this correctly - by coincidence.  Nothing stops
+// a routable effect from having no mix, and then it would not.
+//
+static bool effect_always_runs(unsigned int id)
+{
+	return !(ROUTABLE_EFFECTS & ((routing_bitmap_t)1 << id));
+}
+
+//
+// Is this effect in the chain?
+//
+// Two callers with their own copy of this loop is how they would come to
+// disagree, which is the same reason set_effect_mix() exists at all.
+//
+static bool effect_is_routed(const struct effect *e)
+{
+	for (int i = 0; i < routed_effect_count; i++) {
+		if (effects[effect_chain[i]] == e)
+			return true;
+	}
+	return false;
+}
+
 #include "scene.h"
 
 static void init_i2s(void)
@@ -442,7 +480,6 @@ static void sysex_write_num(uint32_t val)
 // can be added later without either side agreeing a version first - the
 // same bargain the schema already makes.  Anything *polled* is the other
 // case and should be packed bytes instead.
-//
 bool send_identity_tx = false;
 static void sysex_send_identity(void)
 {
@@ -782,12 +819,29 @@ static void sysex_send_state_dump(void)
 	//
 	sysex_tx_start();
 
-	// Then send the effect states
+	//
+	// Then the effect states - for the effects that have one.
+	//
+	// An effect that is not in the chain is not running, and
+	// routing_end() has reset it to the schema defaults the app
+	// already knows, so sending its pots is telling the app what it
+	// told us.  It was most of the dump: 1050 of 1099 pot bytes on a
+	// board with one effect routed, which is 95% of the traffic
+	// describing effects that do nothing.
+	//
+	// This is only correct while "unrouted means schema defaults" is
+	// the model.  If the pedal ever keeps values for effects it is
+	// not running, those values become real state and belong here
+	// again.
+	//
 	report_info("Sending effect pot state");
 	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
 		struct effect *e = effects[i];
 		const struct pot_descr *desc = e->pots;
 		unsigned char *pot_values = e->pot_values[e->seq & 1];
+
+		if (!effect_always_runs(i) && !effect_is_routed(e))
+			continue;
 
 		// We send the mix as "pot 0", and then pots numbered from 1
 		sysex_send_pot_value(i, 0, FLOAT_TO_POT(e->mix_pot));
@@ -878,16 +932,10 @@ static void set_effect_pot(struct effect *e, unsigned int pot_idx, unsigned char
 //
 static void set_effect_mix(struct effect *e, unsigned char val)
 {
-	bool routed = false;
-
 	set_mix_pot(e, POT_TO_FLOAT(val));
 
-	for (int i = 0; !routed && i < routed_effect_count; i++) {
-		if (effects[effect_chain[i]] == e)
-			routed = true;
-	}
 	if (!e->no_mix)
-		e->target = routed ? EFF_ENABLE_STEPS : 0;
+		e->target = effect_is_routed(e) ? EFF_ENABLE_STEPS : 0;
 }
 
 //
