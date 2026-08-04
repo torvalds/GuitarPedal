@@ -238,6 +238,31 @@ enum ch_out {
 };
 
 //
+// How a parameter is named, by SysEx and by a binding alike.
+//
+// Zero is the mix and 1..10 are the effect's own pots, which is the
+// numbering the app and the rule table have always used.  The three
+// above that are the same kind of thing as the mix rather than the same
+// kind of thing as a pot: properties of how an effect is wired into the
+// chain rather than of what it does to a sample, shared by every effect
+// and declared by none of them.
+//
+// Addressed as pots because that is what makes them reachable.  The one
+// place that decides what a number means - set_target() - is also what
+// bindings go through, so a footswitch can put an effect on the left and
+// another one on the right without anything here knowing about
+// footswitches.  A command of their own would have needed teaching to
+// SysEx and to bindings separately, and set_effect_mix() already has the
+// comment about where that leads.
+//
+#define POT_MIX		0
+#define POT_LAST	10
+#define POT_CH_IN	11
+#define POT_CH_OUT	12
+#define POT_MERGE	13
+#define POT_MAX		POT_MERGE
+
+//
 // Run one effect, and work out how much of it to use, and where it goes.
 //
 // The effect itself knows none of this.  It is handed a sample and hands

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "pico/stdlib.h"
 #include "pico/bootrom.h"
+#include "hardware/watchdog.h"
 #include "pico/multicore.h"
 
 #include "hardware/gpio.h"
@@ -103,6 +104,16 @@ static void unroute_effect(struct effect *eff)
 	eff->mix = eff->target = 0;
 	eff->dry = 1.0f;
 	eff->wet = 0.0f;
+
+	//
+	// Including where it sat across the channels, which is state in
+	// exactly the same sense as a pot is and was being kept.  An
+	// effect steered to one side and then unrouted came back steered,
+	// which is not what "starts from the defaults" says.
+	//
+	eff->channels = 0;
+	eff->merge = 1.0f;
+
 	smp_store_release(&eff->seq, seq + 1);
 }
 
@@ -364,6 +375,19 @@ static void probe_hardware(void)
 	hardware.eeprom = i2c_probe(MC24Cxx_I2C);
 	hardware.legacy_codec = i2c_probe(TAC5112_I2C);
 	hardware.legacy_screen = i2c_probe(SH1106_I2C);
+
+	//
+	// The one inference drawn from any of this, and it is drawn here
+	// rather than on the wire.  A name is allowed to guess: nothing
+	// depends on it being right beyond a human reading a port list,
+	// and being wrong costs a rebuild.  The identity reply is not
+	// allowed to, for the reason above - so it keeps reporting that
+	// nothing answered at 0x51, and this says what that means.
+	//
+	// It has to be said before init_usb(), which is why probing
+	// happens as early as it does.
+	//
+	usb_set_product(hardware.legacy_codec ? "TAC5112 Pedal" : "TAC5242 Pedal");
 
 	//
 	// Worst first, and only one of these arrives: report_status() is a
@@ -772,6 +796,18 @@ static void sysex_send_state_dump(void)
 				break;
 			sysex_send_pot_value(i, pot+1, pot_values[pot]);
 		}
+
+		//
+		// ...and where it sits across the channels, for the
+		// effects that have somewhere to sit.  Sent as pots so
+		// that an app which does not know these numbers yet
+		// ignores three more of what it was already reading.
+		//
+		if (!e->no_mix) {
+			sysex_send_pot_value(i, POT_CH_IN, CH_IN(e->channels));
+			sysex_send_pot_value(i, POT_CH_OUT, CH_OUT(e->channels));
+			sysex_send_pot_value(i, POT_MERGE, FLOAT_TO_POT(e->merge));
+		}
 	}
 
 	//
@@ -854,6 +890,38 @@ static void set_effect_mix(struct effect *e, unsigned char val)
 		e->target = routed ? EFF_ENABLE_STEPS : 0;
 }
 
+//
+// Where an effect sits across the two channels, from core 0.
+//
+// Deliberately not the double-buffered dance set_effect_pot() does.
+// That exists because ten values have to become visible to core 1 as a
+// set - half of an old pot array and half of a new one is a filter
+// nobody asked for - and these are single scalars that each mean
+// something on their own.  The worst a change between one sample and the
+// next can do is a click, which is what moving a signal from one side to
+// the other sounds like however carefully it is done.
+//
+// 'merge' is a float and a plain store of one is atomic here, so core 1
+// sees the old value or the new one and never a mixture.
+//
+static void set_effect_steering(struct effect *e, unsigned int pot,
+				unsigned char val)
+{
+	unsigned char ch = e->channels;
+
+	switch (pot) {
+	case POT_CH_IN:
+		e->channels = (ch & ~3) | (val & 3);
+		break;
+	case POT_CH_OUT:
+		e->channels = (ch & ~(3 << 2)) | ((val & 3) << 2);
+		break;
+	case POT_MERGE:
+		e->merge = POT_TO_FLOAT(val);
+		break;
+	}
+}
+
 static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 {
 	uint8_t cmd = sysex_buf[0];
@@ -868,10 +936,17 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 			e = effects[eff_id];
 		}
 		if (e) {
-			if (pot_idx == 0)
+			if (pot_idx == POT_MIX)
 				set_effect_mix(e, val);
-			else if (pot_idx <= 10)
+			else if (pot_idx <= POT_LAST)
 				set_effect_pot(e, pot_idx - 1, val);
+			//
+			// Steering is meaningless for an effect that
+			// is not stepped through do_effect_step() at
+			// all, which is what no_mix marks.
+			//
+			else if (pot_idx <= POT_MAX && !e->no_mix)
+				set_effect_steering(e, pot_idx, val);
 		}
 	} else if (cmd == 0x04 && sysex_len >= 2) { // Save Scene
 		uint8_t scene_id = sysex_buf[1];
@@ -1185,8 +1260,48 @@ static void init_effects(void)
 
 #include "tuner.h"
 
+//
+// How long boot is allowed to take before it is called a hang.
+//
+// Everything between here and the main loop is i2c probes with 2ms
+// timeouts, some table building and a flash read, so the real figure is
+// milliseconds and this is all margin.  It has to stay well clear of
+// the truth in the other direction too: a boot that legitimately took
+// longer than this would reach BOOTSEL instead of playing, which is a
+// worse failure than the one being guarded against.
+//
+#define BOOT_WATCHDOG_MS 3000
+
 int main()
 {
+	//
+	// A pedal that hangs before its main loop is a brick.
+	//
+	// It has no USB, so it is not a device and not in BOOTSEL and the
+	// host logs nothing at all - from the other end nothing was ever
+	// plugged in.  It has no audio either, so the only way back is the
+	// BOOTSEL button, and on a board in an enclosure that is a screw-
+	// driver.  This has been seen occasionally for a long time without
+	// ever being pinned down, which is partly because every occurrence
+	// destroys the evidence and costs a disassembly.
+	//
+	// So the hang is made survivable rather than diagnosed: arm a
+	// watchdog before anything that could hang, and if the previous
+	// boot never got far enough to disarm it, ask the bootrom for
+	// BOOTSEL instead of trying again.  A hung pedal then comes back
+	// as something picotool can talk to, and the next attempt costs a
+	// reflash rather than a screwdriver.
+	//
+	// watchdog_enable_caused_reboot() is specifically a *timeout*, not
+	// any reset - a deliberate watchdog_reboot() sets a different
+	// magic - so this cannot be tripped by anything asking for a
+	// restart on purpose.
+	//
+	if (watchdog_enable_caused_reboot())
+		reset_usb_boot(0, 0);
+
+	watchdog_enable(BOOT_WATCHDOG_MS, false);
+
 	enable_ftz();
 
 	init_i2s();
@@ -1197,14 +1312,20 @@ int main()
 	init_i2c_bus(i2c0, 400, I2C0_SDA, I2C0_SCL);
 	init_i2c_bus(i2c1, 400, I2C1_SDA, I2C1_SCL);
 
+	//
+	// Before init_usb(), because it decides what the pedal enumerates
+	// as.  USB is a hotplug bus and the host may already be attached
+	// and waiting, so the name wants to exist before the device does.
+	// The i2c buses above are all this needs.
+	//
+	probe_hardware();
+
 	init_usb();
 	uart_midi_init();
 
 	absolute_time_t now = get_absolute_time();
 
 	absolute_time_t next_ui_update = delayed_by_ms(now, 50);
-
-	probe_hardware();
 
 	//
 	// Early boards need their codec set up; the current ones strap it
@@ -1217,6 +1338,12 @@ int main()
 	init_effects();
 
 	multicore_launch_core1(audio_processing);
+
+	//
+	// Booted.  Everything from here is the main loop, which has its own
+	// ways of going wrong and is not what this was guarding.
+	//
+	watchdog_disable();
 
 	for (;;) {
 		absolute_time_t now = get_absolute_time();

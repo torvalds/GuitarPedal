@@ -345,13 +345,27 @@ async function initMidi() {
 let selectedInputId = null;
 let selectedOutputId = null;
 
+//
+// Which of the ports on offer is a pedal.
+//
+// The pedal names itself after the codec it found - "TAC5242 Pedal",
+// "TAC5112 Pedal" - so the only part common to all of them is the word
+// the match is now on.  As a word, so that something called "Pedalboard"
+// is not mistaken for one.
+//
+// With two pedals plugged in both match and the first one wins.  That is
+// what the selector below is for: auto-detect answers "a pedal", and
+// saying which pedal is a choice only the person at the desk can make.
+//
+const PEDAL_PORT = /(^|\s)Pedal(\s|$)/;
+
 function populateMidiSelects() {
     const inSelect = document.getElementById('midi-input-select');
     const outSelect = document.getElementById('midi-output-select');
     if (!inSelect || !outSelect) return;
 
-    inSelect.innerHTML = '<option value="">-- Auto-detect Linus Pedal --</option>';
-    outSelect.innerHTML = '<option value="">-- Auto-detect Linus Pedal --</option>';
+    inSelect.innerHTML = '<option value="">-- Auto-detect pedal --</option>';
+    outSelect.innerHTML = '<option value="">-- Auto-detect pedal --</option>';
 
     for (let input of midiAccess.inputs.values()) {
         const opt = document.createElement('option');
@@ -394,7 +408,7 @@ function updateMidiState() {
     } else {
         for (let input of midiAccess.inputs.values()) {
             if (!foundInput) foundInput = input;
-            if (input.name.includes('Linus Pedal')) {
+            if (PEDAL_PORT.test(input.name)) {
                 foundInput = input;
                 break;
             }
@@ -407,7 +421,7 @@ function updateMidiState() {
     } else {
         for (let output of midiAccess.outputs.values()) {
             if (!foundOutput) foundOutput = output;
-            if (output.name.includes('Linus Pedal')) {
+            if (PEDAL_PORT.test(output.name)) {
                 foundOutput = output;
                 break;
             }
@@ -529,6 +543,13 @@ function sendSysex(data) {
 }
 
 let PEDAL_EFFECTS = [];
+
+//
+// In / Out / Merge, declared once by the pedal rather than per effect.
+// Null against firmware that predates them, which is what every check
+// of it is for.
+//
+let PEDAL_STEERING = null;
 let effectIdMap = new Map();
 
 function handleSysex(data) {
@@ -543,7 +564,17 @@ function handleSysex(data) {
                 jsonStr += String.fromCharCode(data[i]);
             }
             try {
-                PEDAL_EFFECTS = JSON.parse(jsonStr);
+                //
+                // The schema used to be a bare array of effects and is
+                // now an object with the effects under a key, alongside
+                // the steering parameters every effect shares.  Both
+                // shapes are accepted: a cached copy of this app can
+                // meet firmware older than itself, and a service worker
+                // makes that likelier than it sounds.
+                //
+                const parsed = JSON.parse(jsonStr);
+                PEDAL_EFFECTS = Array.isArray(parsed) ? parsed : parsed.effects;
+                PEDAL_STEERING = Array.isArray(parsed) ? null : parsed.steering;
                 effectIdMap.clear();
                 PEDAL_EFFECTS.forEach((e, idx) => effectIdMap.set(e.id, idx));
                 renderUI();

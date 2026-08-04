@@ -79,22 +79,39 @@ static struct effect *bind_target(const struct rule *b, unsigned int *pot,
 //
 static int target_value(struct effect *e, unsigned int pot)
 {
-	if (!pot)
-		return FLOAT_TO_POT(e->mix_pot);
+	switch (pot) {
+	case POT_MIX:		return FLOAT_TO_POT(e->mix_pot);
+	case POT_CH_IN:		return CH_IN(e->channels);
+	case POT_CH_OUT:	return CH_OUT(e->channels);
+	case POT_MERGE:		return FLOAT_TO_POT(e->merge);
+	}
 	return e->pot_values[e->seq & 1][pot - 1];
 }
 
+//
+// The defaults are the ones reset_effect() hands out: read the left
+// channel, write both, and keep all of whatever was not touched - which
+// is what every effect did before there was a choice.
+//
 static int target_default(struct effect *e, unsigned int pot)
 {
-	if (!pot)
-		return FLOAT_TO_POT(e->def_mix);
+	switch (pot) {
+	case POT_MIX:		return FLOAT_TO_POT(e->def_mix);
+	case POT_CH_IN:		return CH_IN_LEFT;
+	case POT_CH_OUT:	return CH_OUT_BOTH;
+	case POT_MERGE:		return 120;
+	}
 	return e->pots[pot - 1].def_val;
 }
 
 static struct pot_range target_range(struct effect *e, unsigned int pot)
 {
-	if (!pot)
-		return (struct pot_range){ 0, 120 };
+	switch (pot) {
+	case POT_MIX:		return (struct pot_range){ 0, 120 };
+	case POT_CH_IN:		return (struct pot_range){ 0, CH_IN_RIGHT };
+	case POT_CH_OUT:	return (struct pot_range){ 0, CH_OUT_MERGE };
+	case POT_MERGE:		return (struct pot_range){ 0, 120 };
+	}
 	return get_pot_range(e->pots + pot - 1);
 }
 
@@ -118,7 +135,9 @@ static void set_target(struct effect *effect, unsigned int eff_id,
 	if (val == target_value(effect, pot))
 		return;
 
-	if (pot)
+	if (pot > POT_LAST)
+		set_effect_steering(effect, pot, val);
+	else if (pot)
 		set_effect_pot(effect, pot - 1, val);
 	else
 		set_effect_mix(effect, val);

@@ -56,29 +56,94 @@ FULL_SCALE_VRMS = 1.0
 SAMPLE_TO_FLOAT = 3.45 / 2.82843
 
 
-def find_card(name="Pedal"):
-    """The ALSA card number, or None if it is not plugged in."""
+def find_cards(match=""):
+    """Every pedal arecord can see, as [(card number, name)].
+
+    A card line carries a short name and a longer one in brackets, and
+    which of them the USB product string ends up in depends on whether the
+    product starts with the manufacturer - "Linus Pedal" reduced to
+    "Pedal", "TAC5242 Pedal" does not.  So the match is against the whole
+    line rather than either field, and the name handed back is the
+    bracketed one, which is the full product string and therefore names
+    the codec.
+
+    'match' narrows that further, and is how a caller says which pedal it
+    means when there is more than one: "TAC5242", or "5112".
+    """
     try:
         out = subprocess.run(["arecord", "-l"], capture_output=True,
                              text=True, check=True).stdout
     except (FileNotFoundError, subprocess.CalledProcessError):
-        return None
-    m = re.search(r"^card (\d+): %s\b" % re.escape(name), out, re.M)
-    return int(m.group(1)) if m else None
+        return []
+
+    found = {}
+    for line in out.splitlines():
+        m = re.match(r"card (\d+): (\S+) \[([^]]*)\]", line)
+        if not m or "pedal" not in line.lower():
+            continue
+        if match.lower() not in line.lower():
+            continue
+        # One line per device, and only the first device is the audio one
+        found.setdefault(int(m.group(1)), m.group(3))
+    return sorted(found.items())
 
 
-def capture(seconds, card, during=None):
+def find_card(match=""):
+    """One pedal's ALSA card number, or None if it is not plugged in."""
+    cards = find_cards(match)
+    return cards[0][0] if cards else None
+
+
+def discard(card):
+    """One capture thrown away, to get the stale one out of the way.
+
+    The first arecord after the device has been left alone for even a
+    second comes back holding audio from *before* it was left alone.
+    Measured: set a pot, wait, capture, and the capture shows the old
+    value; capture again and it shows the new one, and every capture
+    after that is right until the next pause.
+
+    pipewire is what is doing it.  It has the pedal open - `pactl list
+    short sources` shows an alsa_input for each one, SUSPENDED - and the
+    backlog it hands over is about a second, which is far more than the
+    three packets the pedal's own endpoint holds.
+
+    This is worth knowing beyond the value being wrong, because a stale
+    capture is not merely late: it was recorded across the moment the
+    device was picked up again, so it is also where the discontinuities
+    come from that get counted as breaks, and then as noise, and then as
+    distortion.  A test that measures the first capture after a gap is
+    measuring the gap.
+    """
+    subprocess.run(
+        ["arecord", "-D", f"hw:{card},0", "-f", "S32_LE", "-c", "2",
+         "-r", str(RATE), "-d", "1", "-t", "raw", "-q"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def capture(seconds, card, during=None, warm=True):
     """Record from the pedal, as a float array of shape (n, 2).
 
     'during' is called once recording is under way, for the things that
     have to happen while the tape is rolling.
+
+    'warm' throws one capture away first - see discard().  It is on by
+    default because the alternative default is a number that is silently
+    a second out of date, and costs a second per capture, which is worth
+    it.  Turn it off only when the staleness is the thing being measured.
 
     How long it took in wall-clock is left in capture.elapsed, and that
     is the honest way to measure a stall.  When the pedal stops feeding
     the endpoint, get_output_samples() returns short and the host simply
     waits - the captured audio has no hole in it, the recording just
     takes longer.  Counting samples cannot see that; a clock can.
+
+    The warm-up is deliberately outside that clock: it is the host being
+    got ready, not the pedal being measured.
     """
+    if warm:
+        discard(card)
+
     t0 = time.time()
     proc = subprocess.Popen(
         ["arecord", "-D", f"hw:{card},0", "-f", "S32_LE", "-c", "2",
@@ -136,6 +201,62 @@ def dominant(x):
         denom = a - 2 * b + c
         k = k + 0.5 * (a - c) / denom if denom else k
     return float(k) * RATE / len(x)
+
+
+def tone_level(x, f0, frac=0.02):
+    """The level of just the energy near f0, in dBFS.
+
+    The complement of noise_floor(): that one answers "everything except
+    the tone", this answers "the tone and nothing else".
+
+    Which is what it takes to measure one signal on a bench that has
+    another one on it.  A generator wired to a channel cannot be switched
+    off from here, so anything asking "is there signal on this input"
+    finds it whether or not it is the signal being asked about - and then
+    reports a channel as carried, or crossed, on the strength of a tone
+    nothing in the test put there.
+    """
+    #
+    # Summed as power and normalised by the window's power gain, not by
+    # summing an amplitude spectrum: a windowed tone occupies several
+    # bins and adding per-bin amplitude estimates in quadrature counts
+    # the same sine once per bin, which reads about 2.4 dB high.
+    #
+    w = np.blackman(len(x))
+    sp = np.abs(np.fft.rfft(x * w)) ** 2
+    f = np.fft.rfftfreq(len(x), 1.0 / RATE)
+    band = np.abs(f - f0) <= frac * f0
+    power = 2.0 * np.sum(sp[band]) / (len(x) * np.sum(w ** 2))
+    return dbfs(np.sqrt(power))
+
+
+def delay_samples(reference, delayed, max_lag):
+    """How far 'delayed' lags 'reference', in samples, by correlation.
+
+    Wants a broadband reference - the test tone's Noise shape is there
+    for this.  A sine correlates with itself once per cycle and the peak
+    picked out of that says which cycle the arithmetic happened to like,
+    not which one the signal arrived on.
+
+    Both arguments have to come out of the *same* capture, so that they
+    share a clock and a starting instant.  Two captures of the same
+    event start at unrelated moments and their offset swamps anything
+    being measured here.
+
+    Returned in samples with the peak interpolated across its
+    neighbours, since the real delay is not a whole number of them.
+    """
+    n = 1 << int(np.ceil(np.log2(len(reference) + max_lag)))
+    r = np.fft.irfft(np.fft.rfft(delayed, n) *
+                     np.conj(np.fft.rfft(reference, n)), n)[:max_lag]
+
+    k = int(np.argmax(r))
+    if 0 < k < len(r) - 1:
+        a, b, c = r[k - 1], r[k], r[k + 1]
+        denom = a - 2 * b + c
+        if denom:
+            return k + 0.5 * (a - c) / denom
+    return float(k)
 
 
 def thd(x, f0, harmonics=5):
