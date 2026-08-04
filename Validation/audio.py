@@ -407,8 +407,39 @@ def trim(x, edge=0.05):
 # and sees nothing at all about the analog output, which the audio core
 # feeds through DMA without core 0 in the path.
 #
-def discontinuities(x, f0, factor=6.0):
-    """Every break in a steady tone, as {at_ms, lost_samples, size}."""
+#
+# The head of a capture is not a measurement, and has to be skipped.
+#
+# discard() above throws one capture away because pipewire hands over
+# about a second of backlog, and says in passing that this is "far more
+# than the three packets the pedal's own endpoint holds".  Those three
+# packets are the rest of the story.  Nothing drains the endpoint between
+# the throwaway capture ending and the real one starting, so its fifo
+# fills, and the first thing the real capture is given is that stale
+# content - followed by a step where it runs out and live audio takes
+# over.
+#
+# CFG_TUD_AUDIO_FUNC_1_EP_IN_SW_BUF_SZ is (49 * 4 * 2 * 3), three packets
+# at 48kHz, which is 3.06ms.  Measured against a pedal doing nothing at
+# all, the break lands at 3.0ms every single time it appears - not
+# scattered, not sometimes: 3.0.  It is the join, and the audio either
+# side of it is intact.
+#
+# Five milliseconds rather than three, because the number to clear is the
+# endpoint depth and there is no reason to sit exactly on it.  Anything
+# real lasts longer than this and happens somewhere else; a stall shows
+# up as a burst of edges over tens of milliseconds.
+#
+SKIP_HEAD_MS = 5.0
+
+
+def discontinuities(x, f0, factor=6.0, skip_ms=SKIP_HEAD_MS):
+    """Every break in a steady tone, as {at_ms, lost_samples, size}.
+
+    The first skip_ms is ignored: see SKIP_HEAD_MS.  Pass 0 to see
+    everything, which is what you want when the join is the thing being
+    investigated rather than the thing in the way.
+    """
     amp = peak(x)
     slew = amp * 2 * np.pi * f0 / RATE
     if slew <= 0:
@@ -427,9 +458,10 @@ def discontinuities(x, f0, factor=6.0):
             start = b
     events.append((start, idx[-1]))
 
-    return [{"at_ms": a * 1000.0 / RATE,
-             "size": float(dif[a:b + 1].max() / slew)}
-            for a, b in events]
+    return [e for e in ({"at_ms": a * 1000.0 / RATE,
+                         "size": float(dif[a:b + 1].max() / slew)}
+                        for a, b in events)
+            if e["at_ms"] >= skip_ms]
 
 
 def bursts(events, join_ms=15.0):

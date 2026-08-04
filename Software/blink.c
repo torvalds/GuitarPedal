@@ -169,6 +169,44 @@ static void routing_end(routing_bitmap_t routable)
 	}
 }
 
+//
+// The two effects that always run, asked of ROUTABLE_EFFECTS rather than
+// spelled out again.
+//
+// Effect 0 is [CHAIN] - the trim, the gate and the master volume - which
+// runs ahead of the chain rather than in it, and the last is the settings
+// pseudo-effect, which is not an audio effect at all.  Neither is ever in
+// effect_chain[], so "is it routed" is the wrong question to ask about
+// them and always gets the wrong answer.
+//
+// Derived from the routing bitmap instead of testing 0 and EFFECT_COUNT-1
+// by hand so that the two cannot drift apart: whatever is not routable is
+// what always runs, by construction.
+//
+// Both happen to be exactly the effects declaring 'MIX: NONE' today, so
+// e->no_mix would answer this correctly - by coincidence.  Nothing stops
+// a routable effect from having no mix, and then it would not.
+//
+static bool effect_always_runs(unsigned int id)
+{
+	return !(ROUTABLE_EFFECTS & ((routing_bitmap_t)1 << id));
+}
+
+//
+// Is this effect in the chain?
+//
+// Two callers with their own copy of this loop is how they would come to
+// disagree, which is the same reason set_effect_mix() exists at all.
+//
+static bool effect_is_routed(const struct effect *e)
+{
+	for (int i = 0; i < routed_effect_count; i++) {
+		if (effects[effect_chain[i]] == e)
+			return true;
+	}
+	return false;
+}
+
 #include "scene.h"
 
 static void init_i2s(void)
@@ -262,70 +300,51 @@ static void switch_irq(void)
 #include "midi_schema.h"
 
 extern bool usb_midi_write(const uint8_t packet[4]);
+extern bool usb_midi_write_nb(const uint8_t packet[4]);
 
-static uint8_t sysex_pack_buf[3];
-static int sysex_pack_len = 0;
-static bool sysex_pack_active = false;
+#include "midi-tx.h"
 
 //
-// A SysEx message is many packets, and a transmit that gives up part-way
-// through one would leave the rest of it stranded.  So the first failure
-// abandons the whole message: every later write in it turns into a
-// no-op, and no 0xF7 goes out.
+// A reply is built whole and then queued, or it is not queued at all.
 //
-// Abandoning is better than truncating.  Web MIDI only delivers SysEx
-// messages that were terminated, so a message that never ends is one the
-// app simply never sees, and it can ask again.  A truncated message with
-// an 0xF7 stuck on the end would arrive looking complete and be parsed
-// as garbage - half a JSON schema, say.
+// This used to be a packetiser that pushed at USB as it went, and the
+// first packet that would not go abandoned the rest of the message: every
+// later write turned into a no-op and no 0xF7 went out.  Abandoning was
+// better than truncating, because Web MIDI only delivers SysEx messages
+// that were terminated - so a message that never ends is one the app
+// simply never sees and can ask for again, while a truncated one with an
+// 0xF7 stuck on the end arrives looking complete and gets parsed as
+// garbage.  Half a JSON schema, say.
 //
-static bool sysex_tx_failed = false;
-
+// All of that survives, and is now the ordinary case rather than the
+// failure: midi_tx_commit() either publishes the whole reply or rewinds
+// as though it had never been built.  What has gone is the *reason* a
+// reply used to fail, which was a transmit fifo that had no room this
+// millisecond.  That is not a failure, it is a wait, and the queue is
+// somewhere to wait.
+//
 static void sysex_tx_start(void)
 {
-	sysex_tx_failed = false;
-	sysex_pack_active = false;
-	sysex_pack_len = 0;
+	midi_tx_start();
 }
 
-static void sysex_tx_finish(const char *sent)
+//
+// True when the reply is queued, which is the caller's cue to stop asking
+// for it.  False means the queue is busy, not that anything went wrong -
+// leave the request flag set and it will be built again next time round
+// the main loop.
+//
+static bool sysex_tx_finish(const char *sent)
 {
-	report_info(sysex_tx_failed ? "MIDI transmit stalled, message dropped" : sent);
+	if (!midi_tx_commit())
+		return false;
+	report_info(sent);
+	return true;
 }
 
 static void sysex_stream_write(const uint8_t *buffer, size_t len)
 {
-	if (sysex_tx_failed)
-		return;
-
-	for (size_t i = 0; i < len; i++) {
-		uint8_t b = buffer[i];
-		if (b == 0xF0) {
-			sysex_pack_active = true;
-			sysex_pack_len = 0;
-		}
-		if (sysex_pack_active) {
-			sysex_pack_buf[sysex_pack_len++] = b;
-			if (b == 0xF7) {
-				uint8_t packet[4] = { (uint8_t)(0x04 + sysex_pack_len), 0, 0, 0 };
-				for (int j = 0; j < sysex_pack_len; j++) packet[1+j] = sysex_pack_buf[j];
-				sysex_pack_active = false;
-				sysex_pack_len = 0;
-				if (!usb_midi_write(packet)) {
-					sysex_tx_failed = true;
-					return;
-				}
-			} else if (sysex_pack_len == 3) {
-				uint8_t packet[4] = { 0x04, sysex_pack_buf[0], sysex_pack_buf[1], sysex_pack_buf[2] };
-				sysex_pack_len = 0;
-				if (!usb_midi_write(packet)) {
-					sysex_tx_failed = true;
-					sysex_pack_active = false;
-					return;
-				}
-			}
-		}
-	}
+	midi_tx_bytes(buffer, len);
 }
 
 //
@@ -443,12 +462,37 @@ static void sysex_write_num(uint32_t val)
 // same bargain the schema already makes.  Anything *polled* is the other
 // case and should be packed bytes instead.
 //
+// Measured on the wire: 208 bytes, one SysEx message.  So "a couple of
+// hundred" is exactly right, which is worth writing down because a first
+// attempt at measuring it said 1918 - the pedal streams its status CCs
+// continuously, so a capture window long enough to be sure of catching a
+// reply collects a second of those alongside it, and the inflation
+// scales with the window rather than with the reply.  Any figure taken
+// off a raw byte count has that in it.
+//
 bool send_identity_tx = false;
 static void sysex_send_identity(void)
 {
 	if (!send_identity_tx)
 		return;
-	send_identity_tx = false;
+
+	//
+	// One reply at a time.
+	//
+	// Not a queue depth limit - it is about the cost of *building*.  A
+	// sender that cannot commit leaves its request flag set and is
+	// called again next pass, and without this it would serialise the
+	// whole reply again every time round the main loop for as long as
+	// the queue stayed busy.  For a state dump that means walking every
+	// effect and both rule tables, hundreds of times, to throw all of
+	// it away.
+	//
+	// It also means the payload ring only ever holds one reply, which
+	// is what lets it be sized for the largest single one rather than
+	// for some guess at how many might pile up.
+	//
+	if (midi_tx_busy())
+		return;
 
 	static const uint8_t sysex_identity_header[] = { 0xF0, 0x7D, 0x0A };
 	static const uint8_t sysex_identity_trailer[] = { 0xF7 };
@@ -508,7 +552,8 @@ static void sysex_send_identity(void)
 	sysex_write_str("}}");
 
 	sysex_stream_write(sysex_identity_trailer, sizeof(sysex_identity_trailer));
-	sysex_tx_finish("Sent identity");
+	if (sysex_tx_finish("Sent identity"))
+		send_identity_tx = false;
 }
 
 //
@@ -564,6 +609,8 @@ static void sysex_send_telemetry(void)
 {
 	if (!send_telemetry_tx)
 		return;
+	if (midi_tx_busy())
+		return;
 	send_telemetry_tx = false;
 
 	static const uint8_t sysex_telemetry_header[] = { 0xF0, 0x7D, 0x0B };
@@ -592,10 +639,16 @@ static void sysex_send_telemetry(void)
 	sysex_stream_write(sysex_telemetry_trailer, sizeof(sysex_telemetry_trailer));
 
 	//
-	// No sysex_tx_finish().  This is polled, so a frame that does not
-	// make it out is replaced by the next one a fifth of a second later,
-	// and saying so would be noise about something that fixed itself.
+	// Committed, but not reported.  This is polled, so a frame that
+	// does not make it out is replaced by the next one a fifth of a
+	// second later, and saying so would be noise about something that
+	// fixed itself.
 	//
+	// Committed all the same.  A transaction that is built and never
+	// committed is rewound by whatever starts the next one, so leaving
+	// this out does not mean "best effort", it means "never sent".
+	//
+	midi_tx_commit();
 }
 
 bool send_schema_tx = false;
@@ -603,16 +656,28 @@ static void sysex_send_schema(void)
 {
 	if (!send_schema_tx)
 		return;
-	send_schema_tx = false;
+	if (midi_tx_busy())
+		return;
 
 	static const uint8_t sysex_schema_header[] = { 0xF0, 0x7D, 0x02 };
 	static const uint8_t sysex_schema_trailer[] = { 0xF7 };
 
+	//
+	// The body is queued where it lies rather than copied.
+	//
+	// It is a static const string in flash and by far the largest
+	// thing the pedal ever says - 15700 bytes, against a state dump's
+	// 140 - so copying it into the payload ring would mean sizing that
+	// ring for the one reply that least needs it.  Three descriptors
+	// and four bytes of RAM instead: a generated header, the flash
+	// body, a generated trailer.
+	//
 	sysex_tx_start();
 	sysex_stream_write(sysex_schema_header, sizeof(sysex_schema_header));
-	sysex_stream_write((const uint8_t *)midi_schema_json, strlen(midi_schema_json));
+	midi_tx_static((const uint8_t *)midi_schema_json, strlen(midi_schema_json));
 	sysex_stream_write(sysex_schema_trailer, sizeof(sysex_schema_trailer));
-	sysex_tx_finish("Sent schema information");
+	if (sysex_tx_finish("Sent schema information"))
+		send_schema_tx = false;
 }
 
 bool send_status_tx = false;
@@ -620,7 +685,8 @@ static void sysex_send_status(void)
 {
 	if (!send_status_tx)
 		return;
-	send_status_tx = false;
+	if (midi_tx_busy())
+		return;
 
 	static const uint8_t sysex_status_header[] = { 0xF0, 0x7D, 0x09 };
 	static const uint8_t sysex_status_trailer[] = { 0xF7 };
@@ -661,17 +727,68 @@ static void sysex_send_status(void)
 	// would report a failed status report as a status report, and start
 	// a conversation with itself.
 	//
-	if (sysex_tx_failed && status)
+	// The window this guards is much narrower now that a full transmit
+	// fifo is a wait rather than a loss - what is left is the queue
+	// itself being full, which is rarer and is still not a reason to
+	// destroy the one message somebody was asking for.
+	//
+	if (midi_tx_commit())
+		send_status_tx = false;
+	else if (status)
 		report_info(status);
 }
 
-static void sysex_send_pot_value(int eff, int pot, int value)
+//
+// Several of one effect's pots in one message.
+//
+//	F0 7D 03 <eff> [<pot> <val>] ... F7
+//
+// Seven bytes to carry three is four bytes of framing in every message,
+// and the state dump used to send one per pot.  Grouping by effect rather
+// than allowing arbitrary (effect, pot, value) triples is what makes each
+// extra pot two bytes instead of three, and it costs nothing to arrange
+// because the dump already walks effects with their pots inside.
+//
+// A message with one pair is byte for byte what was always sent, so this
+// is a superset rather than a change of format.  The pedal's own way of
+// saying one pot moved is send_sysex_set_param() in midi.h, which builds
+// that same message by hand and is untouched by any of this.
+//
+// Big enough for every pot an effect can have at once: the mix, POT_LAST
+// real ones, and the three steering pots.
+//
+struct pot_batch {
+	uint8_t buf[4 + 2 * (1 + POT_LAST + 3) + 1];
+	unsigned int len;
+};
+
+static void pot_batch_start(struct pot_batch *b, int eff)
 {
-	// This should never happen. But just in case...
+	b->buf[0] = 0xF0;
+	b->buf[1] = 0x7D;
+	b->buf[2] = 0x03;
+	b->buf[3] = eff;
+	b->len = 4;
+}
+
+static void pot_batch_add(struct pot_batch *b, int pot, int value)
+{
+	// Same "should never happen" as the single-pot version.
 	if (value < 0 || value > 120) value = 0;
 
-	uint8_t sysex_pot_message[] = { 0xF0, 0x7D, 0x03, eff, pot, value, 0xF7 };
-	sysex_stream_write(sysex_pot_message, sizeof(sysex_pot_message));
+	if (b->len + 2 > sizeof(b->buf) - 1)
+		return;
+	b->buf[b->len++] = pot;
+	b->buf[b->len++] = value;
+}
+
+static void pot_batch_send(struct pot_batch *b)
+{
+	// Nothing added is nothing to say, not an empty message.
+	if (b->len <= 4)
+		return;
+	b->buf[b->len++] = 0xF7;
+	sysex_stream_write(b->buf, b->len);
 }
 
 //
@@ -763,14 +880,22 @@ static void sysex_send_state_dump(void)
 {
 	if (!state_dump_tx)
 		return;
-	state_dump_tx = false;
+	if (midi_tx_busy())
+		return;
 
-	// Send the global enable state.  A plain CC rather than SysEx,
-	// and if it will not go then nobody is reading and there is no
-	// point starting on the rest.
+	//
+	// Send the global enable state.  A plain CC rather than SysEx, and
+	// if it will not go then there is no point starting on the rest.
+	//
+	// It used to be a probe for "is anybody reading", waiting up to
+	// 20ms to find out.  It no longer has to be: a full transmit fifo
+	// now means the endpoint is busy this instant, which is a reason to
+	// come back next time round the main loop and not a reason to wait.
+	// The request flag stays set, so nothing is lost by leaving.
+	//
 	report_info("Sending global-enable state");
 	uint8_t cc_packet[4] = { 0x0B, 0xB0, MIDI_CC_GLOBAL_ENABLE, disable_all ? 0 : 127 };
-	if (!usb_midi_write(cc_packet))
+	if (!usb_midi_write_nb(cc_packet))
 		return;
 
 	//
@@ -782,19 +907,39 @@ static void sysex_send_state_dump(void)
 	//
 	sysex_tx_start();
 
-	// Then send the effect states
+	//
+	// Then the effect states - for the effects that have one.
+	//
+	// An effect that is not in the chain is not running, and
+	// routing_end() has reset it to the schema defaults the app
+	// already knows, so sending its pots is telling the app what it
+	// told us.  It was most of the dump: 1050 of 1099 pot bytes on a
+	// board with one effect routed, which is 95% of the traffic
+	// describing effects that do nothing.
+	//
+	// This is only correct while "unrouted means schema defaults" is
+	// the model.  If the pedal ever keeps values for effects it is
+	// not running, those values become real state and belong here
+	// again.
+	//
 	report_info("Sending effect pot state");
 	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
 		struct effect *e = effects[i];
 		const struct pot_descr *desc = e->pots;
 		unsigned char *pot_values = e->pot_values[e->seq & 1];
+		struct pot_batch batch;
+
+		if (!effect_always_runs(i) && !effect_is_routed(e))
+			continue;
+
+		pot_batch_start(&batch, i);
 
 		// We send the mix as "pot 0", and then pots numbered from 1
-		sysex_send_pot_value(i, 0, FLOAT_TO_POT(e->mix_pot));
-		for (int pot = 0; pot < 10; pot++) {
+		pot_batch_add(&batch, POT_MIX, FLOAT_TO_POT(e->mix_pot));
+		for (int pot = 0; pot < POT_LAST; pot++) {
 			if (!desc[pot].label)
 				break;
-			sysex_send_pot_value(i, pot+1, pot_values[pot]);
+			pot_batch_add(&batch, pot+1, pot_values[pot]);
 		}
 
 		//
@@ -804,10 +949,12 @@ static void sysex_send_state_dump(void)
 		// ignores three more of what it was already reading.
 		//
 		if (!e->no_mix) {
-			sysex_send_pot_value(i, POT_CH_IN, CH_IN(e->channels));
-			sysex_send_pot_value(i, POT_CH_OUT, CH_OUT(e->channels));
-			sysex_send_pot_value(i, POT_MERGE, FLOAT_TO_POT(e->merge));
+			pot_batch_add(&batch, POT_CH_IN, CH_IN(e->channels));
+			pot_batch_add(&batch, POT_CH_OUT, CH_OUT(e->channels));
+			pot_batch_add(&batch, POT_MERGE, FLOAT_TO_POT(e->merge));
 		}
+
+		pot_batch_send(&batch);
 	}
 
 	//
@@ -832,7 +979,8 @@ static void sysex_send_state_dump(void)
 	sysex_stream_write(effect_chain, routed_effect_count);
 	sysex_stream_write(sysex_routing_trailer, sizeof(sysex_routing_trailer));
 
-	sysex_tx_finish("Sent state dump");
+	if (sysex_tx_finish("Sent state dump"))
+		state_dump_tx = false;
 }
 
 //
@@ -842,6 +990,7 @@ static void sysex_send_state_dump(void)
 static uint8_t sysex_buf[1 + MAX_RULES * 6];
 static int sysex_len = 0;
 static bool in_sysex = false;
+static bool sysex_over = false;
 
 //
 // Change one pot from core 0.
@@ -878,16 +1027,10 @@ static void set_effect_pot(struct effect *e, unsigned int pot_idx, unsigned char
 //
 static void set_effect_mix(struct effect *e, unsigned char val)
 {
-	bool routed = false;
-
 	set_mix_pot(e, POT_TO_FLOAT(val));
 
-	for (int i = 0; !routed && i < routed_effect_count; i++) {
-		if (effects[effect_chain[i]] == e)
-			routed = true;
-	}
 	if (!e->no_mix)
-		e->target = routed ? EFF_ENABLE_STEPS : 0;
+		e->target = effect_is_routed(e) ? EFF_ENABLE_STEPS : 0;
 }
 
 //
@@ -928,14 +1071,25 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 	if (cmd == 0x01) { // Schema Request
 		send_schema_tx = true;
 	} else if (cmd == 0x03 && sysex_len >= 4) { // Set Parameter
+		//
+		// One effect, and then as many (pot, value) pairs as the
+		// message carries - the same shape the state dump sends.
+		//
+		// An odd number of bytes after the effect id is a message
+		// somebody built wrong, and the last half-pair is dropped
+		// rather than guessed at.  A message too long to fit was
+		// already refused whole by the accumulator, so a short
+		// list here is a short list somebody meant to send.
+		//
 		uint8_t eff_id = sysex_buf[1];
-		uint8_t pot_idx = sysex_buf[2];
-		uint8_t val = sysex_buf[3];
 		struct effect *e = NULL;
 		if (eff_id < ARRAY_SIZE(effects)) {
 			e = effects[eff_id];
 		}
-		if (e) {
+		for (size_t i = 2; e && i + 1 < sysex_len; i += 2) {
+			uint8_t pot_idx = sysex_buf[i];
+			uint8_t val = sysex_buf[i + 1];
+
 			if (pot_idx == POT_MIX)
 				set_effect_mix(e, val);
 			else if (pot_idx <= POT_LAST)
@@ -1038,14 +1192,34 @@ bool handle_midi_packet(const uint8_t packet[4])
 			if (b == 0xF0) {
 				in_sysex = true;
 				sysex_len = 0;
+				sysex_over = false;
 			} else if (b == 0xF7 && in_sysex) {
 				in_sysex = false;
-				handle_sysex_payload(sysex_buf, sysex_len);
+				//
+				// A message that did not fit is dropped whole
+				// rather than acted on short.
+				//
+				// The bytes past the end used to be discarded
+				// while the rest was handled anyway, which is
+				// only harmless while every message is a fixed
+				// size - a truncated one then fails its length
+				// check and goes nowhere.  It stops being
+				// harmless the moment a message carries a list,
+				// because a short list is a valid shorter list:
+				// half the pots in a batch would be set and the
+				// other half silently ignored.
+				//
+				if (sysex_over)
+					report_info("MIDI message too long, dropped");
+				else
+					handle_sysex_payload(sysex_buf, sysex_len);
 			} else if (in_sysex) {
 				if (sysex_len == 0 && b == 0x7D) {
 					// Consume header 7D
 				} else if (sysex_len < sizeof(sysex_buf)) {
 					sysex_buf[sysex_len++] = b;
+				} else {
+					sysex_over = true;
 				}
 			}
 			if (code == 0x05 && i == 1) break;
@@ -1362,6 +1536,20 @@ int main()
 		sysex_send_schema();
 		sysex_send_state_dump();
 		sysex_send_status();
+
+		//
+		// Hand the queue whatever USB will take right now.
+		//
+		// Between the senders above and usb_audio_task() below on
+		// purpose.  A sender builds a whole reply into the queue in
+		// one pass, which is what keeps it from reporting a mixture
+		// of before and after; this hands over a few packets of it
+		// and returns the moment the endpoint is full.  So a reply
+		// the size of the schema costs many short passes through
+		// here instead of one long one, and the audio endpoint gets
+		// fed on time in between them.
+		//
+		midi_tx_drain();
 		usb_audio_task();
 
 		// Claim 25Hz screen updates
