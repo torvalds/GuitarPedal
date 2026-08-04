@@ -142,9 +142,24 @@ def _chain_volume(d):
     blob = bytes.fromhex("".join(
         re.findall(r"System exclusive\s+((?:[0-9A-Fa-f]{2} ?)+)",
                    text)).replace(" ", ""))
-    want = bytes([0xF0, 0x7D, 0x03, 0x00, pedal.CHAIN_VOLUME])
+    #
+    # One message per effect, carrying pairs: F0 7D 03 <eff> [<pot>
+    # <val>] ... F7.  This used to look for 'F0 7D 03 00 <pot>' as a
+    # prefix, which worked only while every pot was its own message - the
+    # dump now puts the mix first, so the wanted pot is somewhere in the
+    # middle of effect 0's message rather than at the front of its own.
+    #
+    want = bytes([0xF0, 0x7D, 0x03, 0x00])
     i = blob.rfind(want)
-    return blob[i + 5] if i >= 0 else None
+    if i < 0:
+        return None
+    end = blob.find(0xF7, i)
+    if end < 0:
+        return None
+    for at in range(i + 4, end - 1, 2):
+        if blob[at] == pedal.CHAIN_VOLUME:
+            return blob[at + 1]
+    return None
 
 
 if __name__ == "__main__":
