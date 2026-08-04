@@ -1634,10 +1634,26 @@ int main()
 			//
 			handle_switch_bindings();
 
+			//
 			// Are we in tuner mode?
+			//
+			// The transition out is caught here rather than at
+			// the three places that clear tuner_mode, because
+			// this is the one spot that sees every route out of
+			// it - a footswitch, a CC, or anything added later -
+			// and what is owed on the way out is the same
+			// whichever it was.
+			//
+			static bool was_tuning = false;
+
 			if (tuner_mode) {
+				was_tuning = true;
 				tuner_mode_ui();
 				continue;
+			}
+			if (was_tuning) {
+				was_tuning = false;
+				tuner_silence();
 			}
 
 			update_ui();

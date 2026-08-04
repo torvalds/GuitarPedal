@@ -369,6 +369,31 @@ static const char *const note_names[12] = {
 
 static int prev_note_idx[1 + MAX_STRINGS] = {0};
 
+//
+// Stop everything the tuner has sounding.
+//
+// send_tuner_midi() emits a note-off only when the detected note
+// *changes*, which is right while the tuner is running and wrong the
+// moment it stops: leaving tuner mode simply stops calling it, so
+// whatever was last heard is still held down as far as the host knows.
+// With the web app's synth enabled that is an oscillator left droning.
+//
+// Deliberately the blocking write, unlike almost everything else that
+// yields now.  A dropped status report costs a stale reading until the
+// next one; a dropped note-off is a note that never stops, so this is
+// the one place where waiting is better than missing.  It happens once,
+// on the way out of a mode nobody records audio in.
+//
+static void tuner_silence(void)
+{
+	for (int i = 0; i < ARRAY_SIZE(prev_note_idx); i++) {
+		if (!prev_note_idx[i])
+			continue;
+		send_midi_note_off(i, prev_note_idx[i], 0);
+		prev_note_idx[i] = 0;
+	}
+}
+
 static void send_tuner_midi(const struct tuner_results *results)
 {
 	for (int i = 0; i < results->num_results; i++) {
