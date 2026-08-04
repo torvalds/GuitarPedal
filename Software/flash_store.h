@@ -456,6 +456,27 @@ static inline bool save_commit(uint16_t key)
 		       sizeof(save_staging.tail.hash));
 	}
 
+	//
+	// Saving breaks the USB audio stream, and is allowed to.
+	//
+	// Both of these hold interrupts off for their whole duration, and a
+	// 4kB sector erase is tens of milliseconds on its own.  Nothing on
+	// core 0 runs meanwhile: not tud_task(), not usb_audio_task(), so
+	// the audio endpoint is not fed and whatever is recording through
+	// the pedal gets a hole.  A Save Scene is two commits - the scene
+	// and then the globals - so it is that twice.
+	//
+	// Known and accepted rather than missed.  Interrupts have to be off
+	// for a flash write on this part, and the alternatives all amount to
+	// doing the write somewhere it can be interrupted, which it cannot.
+	//
+	// What makes it tolerable is that the audio *core* is untouched.
+	// check-audio enforces that core 1 makes no flash reads, so XIP
+	// going away does not stall the DSP or the analog path - the guitar
+	// still comes out of the jack. It is core 0 and USB that stop, and
+	// saving a scene is something done while setting a pedal up rather
+	// than while playing through it.
+	//
 	{
 		uint32_t irq = save_and_disable_interrupts();
 		flash_range_erase(offset, SAVE_SLOT_SIZE);
