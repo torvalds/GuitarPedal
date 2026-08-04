@@ -100,6 +100,24 @@ MAX_LAG = audio.RATE // 10
 SETTINGS = None
 TONE = None
 
+#
+# The two notes that decide whether this is a bass problem: the bottom
+# string of a five-string and of a four-string.
+#
+LOW_B, LOW_E = 30.87, 41.20
+
+#
+# A regression guard rather than a target.  The boards measured so far
+# sit between 35 and 44 Hz, and the next generation is expected around
+# 14 to 27 Hz - so this catches a board that got worse without pretending
+# to assert a number nobody has agreed to yet.  Tighten it when there is
+# something to tighten it against.
+#
+CORNER_LIMIT_HZ = 50.0
+
+# Everything measured, for whatever wants to draw it later.
+RESULTS = {"links": []}
+
 
 def level_pot(dbfs):
     return max(0, min(120, int(round((dbfs + 90.0) / 0.75))))
@@ -193,6 +211,8 @@ def main():
     ap.add_argument("--seconds", type=float, default=2.0)
     ap.add_argument("--level", type=float, default=-30.0,
                     help="generator level, dBFS")
+    ap.add_argument("--json", metavar="PATH",
+                    help="write every measurement here, for plotting")
     args = ap.parse_args()
 
     found = pedal.discover()
@@ -222,6 +242,15 @@ def main():
 
     print()
     latency(ring, found, args)
+
+    if args.json:
+        import json
+        RESULTS["pedals"] = [{k: d[k] for k in ("label", "serial", "product")}
+                             for d in found]
+        RESULTS["ring"] = [[a["label"], b["label"]] for a, b in ring]
+        with open(args.json, "w") as f:
+            json.dump(RESULTS, f, indent=1)
+        print("\n  measurements written to %s" % args.json)
 
     print()
     for d in found:
@@ -288,6 +317,29 @@ def topology(found, args):
     if len(edges) != len(found):
         print("  (an incomplete ring - measuring the links that exist)")
     return edges
+
+
+def highpass_db(f, fc):
+    """A single pole, in dB."""
+    return 20.0 * np.log10(f / np.sqrt(f * f + fc * fc))
+
+
+def fit_corner(points, ref_db):
+    """The single-pole corner that best explains a sweep.
+
+    Fitted over the bottom of the range only.  Above a few hundred hertz
+    every candidate curve is flat to a hundredth of a decibel, so those
+    points carry no information about the corner and would only dilute
+    the residual that says whether one pole is the right model at all.
+    """
+    f = np.array([p[0] for p in points])
+    db = np.array([p[1] - ref_db for p in points])
+    m = f <= 1000.0
+    grid = np.arange(1.0, 300.0, 0.05)
+    err = [np.sum((highpass_db(f[m], fc) - db[m]) ** 2) for fc in grid]
+    fc = float(grid[int(np.argmin(err))])
+    resid = float(np.max(np.abs(highpass_db(f[m], fc) - db[m])))
+    return fc, resid
 
 
 def one_edge(src, dst, found, args):
@@ -362,6 +414,34 @@ def one_edge(src, dst, found, args):
     mid = [db - ref for f, db in resp if 100.0 <= f <= 4000.0]
     check("response is flat in the middle", max(mid) - min(mid) < 3.0,
           "%.1f dB across 110 Hz to 3520 Hz" % (max(mid) - min(mid)))
+
+    #
+    # The low end as one number, so a board can be compared with a board.
+    #
+    # It is a single pole because the measurement says so - one coupling
+    # capacitor into the codec's own input impedance dominates, and
+    # everything else in the path is three decades away (issue 91).  The
+    # residual is reported alongside because it is what would say if that
+    # stopped being true.
+    #
+    fc, resid = fit_corner(resp, ref)
+    note("low corner", "%.1f Hz, one pole, worst residual %.2f dB" % (fc, resid))
+    note("what a bass sees",
+         "low B %.2f dB, low E %.2f dB"
+         % (highpass_db(LOW_B, fc), highpass_db(LOW_E, fc)))
+    check("low corner has not regressed", fc < CORNER_LIMIT_HZ,
+          "%.1f Hz against a %.0f Hz limit" % (fc, CORNER_LIMIT_HZ))
+
+    RESULTS["links"].append({
+        "src": src["label"], "dst": dst["label"],
+        "response": [[f, db - ref] for f, db in resp],
+        "corner_hz": fc, "fit_residual_db": resid,
+        "low_b_db": highpass_db(LOW_B, fc), "low_e_db": highpass_db(LOW_E, fc),
+        "link_gain_db": float(np.mean(gains)),
+        "gain_spread_db": spread,
+        "noise_floor_dbfs": nf["noise_dbfs"],
+        "noise_uv_rms": audio.rms(quiet_L) * 1e6,
+    })
 
     pedal.set_pot(src["port"], TONE, TONE_FREQ, FREQ_440_POT)
     stereo(src, dst, found, args)
@@ -478,6 +558,7 @@ def latency(ring, found, args):
     ms = lag * 1000.0 / audio.RATE
     note("ring latency", "%.2f ms round the whole ring of %d, %.0f samples"
          % (ms, len(found), lag))
+    RESULTS["latency"] = {"ms": ms, "samples": float(lag), "pedals": len(found)}
     note("per pedal", "%.2f ms average" % (ms / len(found)))
     check("ring latency is a real delay", 0.05 < ms < 90.0, "%.2f ms" % ms)
 
@@ -503,6 +584,9 @@ def latency(ring, found, args):
     seen = cap[:, 0] * audio.SAMPLE_TO_FLOAT
     breaks = audio.discontinuities(seen, audio.dominant(seen))
     per_s = len(breaks) / (len(seen) / audio.RATE)
+    RESULTS["sysex_breaks"] = {"count": len(breaks), "per_second": per_s,
+                               "seconds": len(seen) / audio.RATE,
+                               "pedal": dst["label"]}
     check("audio survives its own sysex", not breaks,
           "%d breaks in %.1fs (%.1f/s) while %s answered 12 state dumps"
           % (len(breaks), len(seen) / audio.RATE, per_s, dst["label"]))
