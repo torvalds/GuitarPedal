@@ -722,3 +722,25 @@ bool usb_midi_write(const uint8_t packet[4])
 	}
 	return true;
 }
+
+//
+// The same, for a caller that has somewhere to put the packet back.
+//
+// The spin above exists because a single message with nowhere to go had
+// to either wait or be lost, and losing it was worse.  A caller holding a
+// queue has a third option, and it is the right one: leave the packet
+// where it is and come back next time round the main loop.  Nothing is
+// dropped and nothing waits, which is what makes it safe to feed the
+// audio endpoint in between.
+//
+// So this is not "the impatient version" of the above.  It is what the
+// above should have been able to do all along, and could not, because
+// there was nowhere to put a packet that would not fit.
+//
+bool usb_midi_write_nb(const uint8_t packet[4])
+{
+	if (!tud_midi_mounted())
+		return false;
+
+	return tud_midi_packet_write(packet);
+}

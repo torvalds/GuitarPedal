@@ -300,70 +300,51 @@ static void switch_irq(void)
 #include "midi_schema.h"
 
 extern bool usb_midi_write(const uint8_t packet[4]);
+extern bool usb_midi_write_nb(const uint8_t packet[4]);
 
-static uint8_t sysex_pack_buf[3];
-static int sysex_pack_len = 0;
-static bool sysex_pack_active = false;
+#include "midi-tx.h"
 
 //
-// A SysEx message is many packets, and a transmit that gives up part-way
-// through one would leave the rest of it stranded.  So the first failure
-// abandons the whole message: every later write in it turns into a
-// no-op, and no 0xF7 goes out.
+// A reply is built whole and then queued, or it is not queued at all.
 //
-// Abandoning is better than truncating.  Web MIDI only delivers SysEx
-// messages that were terminated, so a message that never ends is one the
-// app simply never sees, and it can ask again.  A truncated message with
-// an 0xF7 stuck on the end would arrive looking complete and be parsed
-// as garbage - half a JSON schema, say.
+// This used to be a packetiser that pushed at USB as it went, and the
+// first packet that would not go abandoned the rest of the message: every
+// later write turned into a no-op and no 0xF7 went out.  Abandoning was
+// better than truncating, because Web MIDI only delivers SysEx messages
+// that were terminated - so a message that never ends is one the app
+// simply never sees and can ask for again, while a truncated one with an
+// 0xF7 stuck on the end arrives looking complete and gets parsed as
+// garbage.  Half a JSON schema, say.
 //
-static bool sysex_tx_failed = false;
-
+// All of that survives, and is now the ordinary case rather than the
+// failure: midi_tx_commit() either publishes the whole reply or rewinds
+// as though it had never been built.  What has gone is the *reason* a
+// reply used to fail, which was a transmit fifo that had no room this
+// millisecond.  That is not a failure, it is a wait, and the queue is
+// somewhere to wait.
+//
 static void sysex_tx_start(void)
 {
-	sysex_tx_failed = false;
-	sysex_pack_active = false;
-	sysex_pack_len = 0;
+	midi_tx_start();
 }
 
-static void sysex_tx_finish(const char *sent)
+//
+// True when the reply is queued, which is the caller's cue to stop asking
+// for it.  False means the queue is busy, not that anything went wrong -
+// leave the request flag set and it will be built again next time round
+// the main loop.
+//
+static bool sysex_tx_finish(const char *sent)
 {
-	report_info(sysex_tx_failed ? "MIDI transmit stalled, message dropped" : sent);
+	if (!midi_tx_commit())
+		return false;
+	report_info(sent);
+	return true;
 }
 
 static void sysex_stream_write(const uint8_t *buffer, size_t len)
 {
-	if (sysex_tx_failed)
-		return;
-
-	for (size_t i = 0; i < len; i++) {
-		uint8_t b = buffer[i];
-		if (b == 0xF0) {
-			sysex_pack_active = true;
-			sysex_pack_len = 0;
-		}
-		if (sysex_pack_active) {
-			sysex_pack_buf[sysex_pack_len++] = b;
-			if (b == 0xF7) {
-				uint8_t packet[4] = { (uint8_t)(0x04 + sysex_pack_len), 0, 0, 0 };
-				for (int j = 0; j < sysex_pack_len; j++) packet[1+j] = sysex_pack_buf[j];
-				sysex_pack_active = false;
-				sysex_pack_len = 0;
-				if (!usb_midi_write(packet)) {
-					sysex_tx_failed = true;
-					return;
-				}
-			} else if (sysex_pack_len == 3) {
-				uint8_t packet[4] = { 0x04, sysex_pack_buf[0], sysex_pack_buf[1], sysex_pack_buf[2] };
-				sysex_pack_len = 0;
-				if (!usb_midi_write(packet)) {
-					sysex_tx_failed = true;
-					sysex_pack_active = false;
-					return;
-				}
-			}
-		}
-	}
+	midi_tx_bytes(buffer, len);
 }
 
 //
@@ -494,7 +475,24 @@ static void sysex_send_identity(void)
 {
 	if (!send_identity_tx)
 		return;
-	send_identity_tx = false;
+
+	//
+	// One reply at a time.
+	//
+	// Not a queue depth limit - it is about the cost of *building*.  A
+	// sender that cannot commit leaves its request flag set and is
+	// called again next pass, and without this it would serialise the
+	// whole reply again every time round the main loop for as long as
+	// the queue stayed busy.  For a state dump that means walking every
+	// effect and both rule tables, hundreds of times, to throw all of
+	// it away.
+	//
+	// It also means the payload ring only ever holds one reply, which
+	// is what lets it be sized for the largest single one rather than
+	// for some guess at how many might pile up.
+	//
+	if (midi_tx_busy())
+		return;
 
 	static const uint8_t sysex_identity_header[] = { 0xF0, 0x7D, 0x0A };
 	static const uint8_t sysex_identity_trailer[] = { 0xF7 };
@@ -554,7 +552,8 @@ static void sysex_send_identity(void)
 	sysex_write_str("}}");
 
 	sysex_stream_write(sysex_identity_trailer, sizeof(sysex_identity_trailer));
-	sysex_tx_finish("Sent identity");
+	if (sysex_tx_finish("Sent identity"))
+		send_identity_tx = false;
 }
 
 //
@@ -610,6 +609,8 @@ static void sysex_send_telemetry(void)
 {
 	if (!send_telemetry_tx)
 		return;
+	if (midi_tx_busy())
+		return;
 	send_telemetry_tx = false;
 
 	static const uint8_t sysex_telemetry_header[] = { 0xF0, 0x7D, 0x0B };
@@ -638,10 +639,16 @@ static void sysex_send_telemetry(void)
 	sysex_stream_write(sysex_telemetry_trailer, sizeof(sysex_telemetry_trailer));
 
 	//
-	// No sysex_tx_finish().  This is polled, so a frame that does not
-	// make it out is replaced by the next one a fifth of a second later,
-	// and saying so would be noise about something that fixed itself.
+	// Committed, but not reported.  This is polled, so a frame that
+	// does not make it out is replaced by the next one a fifth of a
+	// second later, and saying so would be noise about something that
+	// fixed itself.
 	//
+	// Committed all the same.  A transaction that is built and never
+	// committed is rewound by whatever starts the next one, so leaving
+	// this out does not mean "best effort", it means "never sent".
+	//
+	midi_tx_commit();
 }
 
 bool send_schema_tx = false;
@@ -649,16 +656,28 @@ static void sysex_send_schema(void)
 {
 	if (!send_schema_tx)
 		return;
-	send_schema_tx = false;
+	if (midi_tx_busy())
+		return;
 
 	static const uint8_t sysex_schema_header[] = { 0xF0, 0x7D, 0x02 };
 	static const uint8_t sysex_schema_trailer[] = { 0xF7 };
 
+	//
+	// The body is queued where it lies rather than copied.
+	//
+	// It is a static const string in flash and by far the largest
+	// thing the pedal ever says - 15700 bytes, against a state dump's
+	// 140 - so copying it into the payload ring would mean sizing that
+	// ring for the one reply that least needs it.  Three descriptors
+	// and four bytes of RAM instead: a generated header, the flash
+	// body, a generated trailer.
+	//
 	sysex_tx_start();
 	sysex_stream_write(sysex_schema_header, sizeof(sysex_schema_header));
-	sysex_stream_write((const uint8_t *)midi_schema_json, strlen(midi_schema_json));
+	midi_tx_static((const uint8_t *)midi_schema_json, strlen(midi_schema_json));
 	sysex_stream_write(sysex_schema_trailer, sizeof(sysex_schema_trailer));
-	sysex_tx_finish("Sent schema information");
+	if (sysex_tx_finish("Sent schema information"))
+		send_schema_tx = false;
 }
 
 bool send_status_tx = false;
@@ -666,7 +685,8 @@ static void sysex_send_status(void)
 {
 	if (!send_status_tx)
 		return;
-	send_status_tx = false;
+	if (midi_tx_busy())
+		return;
 
 	static const uint8_t sysex_status_header[] = { 0xF0, 0x7D, 0x09 };
 	static const uint8_t sysex_status_trailer[] = { 0xF7 };
@@ -707,7 +727,14 @@ static void sysex_send_status(void)
 	// would report a failed status report as a status report, and start
 	// a conversation with itself.
 	//
-	if (sysex_tx_failed && status)
+	// The window this guards is much narrower now that a full transmit
+	// fifo is a wait rather than a loss - what is left is the queue
+	// itself being full, which is rarer and is still not a reason to
+	// destroy the one message somebody was asking for.
+	//
+	if (midi_tx_commit())
+		send_status_tx = false;
+	else if (status)
 		report_info(status);
 }
 
@@ -853,14 +880,22 @@ static void sysex_send_state_dump(void)
 {
 	if (!state_dump_tx)
 		return;
-	state_dump_tx = false;
+	if (midi_tx_busy())
+		return;
 
-	// Send the global enable state.  A plain CC rather than SysEx,
-	// and if it will not go then nobody is reading and there is no
-	// point starting on the rest.
+	//
+	// Send the global enable state.  A plain CC rather than SysEx, and
+	// if it will not go then there is no point starting on the rest.
+	//
+	// It used to be a probe for "is anybody reading", waiting up to
+	// 20ms to find out.  It no longer has to be: a full transmit fifo
+	// now means the endpoint is busy this instant, which is a reason to
+	// come back next time round the main loop and not a reason to wait.
+	// The request flag stays set, so nothing is lost by leaving.
+	//
 	report_info("Sending global-enable state");
 	uint8_t cc_packet[4] = { 0x0B, 0xB0, MIDI_CC_GLOBAL_ENABLE, disable_all ? 0 : 127 };
-	if (!usb_midi_write(cc_packet))
+	if (!usb_midi_write_nb(cc_packet))
 		return;
 
 	//
@@ -944,7 +979,8 @@ static void sysex_send_state_dump(void)
 	sysex_stream_write(effect_chain, routed_effect_count);
 	sysex_stream_write(sysex_routing_trailer, sizeof(sysex_routing_trailer));
 
-	sysex_tx_finish("Sent state dump");
+	if (sysex_tx_finish("Sent state dump"))
+		state_dump_tx = false;
 }
 
 //
@@ -1500,6 +1536,20 @@ int main()
 		sysex_send_schema();
 		sysex_send_state_dump();
 		sysex_send_status();
+
+		//
+		// Hand the queue whatever USB will take right now.
+		//
+		// Between the senders above and usb_audio_task() below on
+		// purpose.  A sender builds a whole reply into the queue in
+		// one pass, which is what keeps it from reporting a mixture
+		// of before and after; this hands over a few packets of it
+		// and returns the moment the endpoint is full.  So a reply
+		// the size of the schema costs many short passes through
+		// here instead of one long one, and the audio endpoint gets
+		// fed on time in between them.
+		//
+		midi_tx_drain();
 		usb_audio_task();
 
 		// Claim 25Hz screen updates
