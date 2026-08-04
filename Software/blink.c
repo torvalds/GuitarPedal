@@ -41,8 +41,8 @@
 #include "audio/analyze.h"
 #include "tac5112.h"
 
-#include "midi.h"
-#include "uart.h"
+#include "midi/midi.h"
+#include "midi/uart.h"
 #include "tusb.h"
 #include "usb-audio.h"
 #include "switch.h"
@@ -302,7 +302,7 @@ static void switch_irq(void)
 extern bool usb_midi_write(const uint8_t packet[4]);
 extern bool usb_midi_write_nb(const uint8_t packet[4]);
 
-#include "midi-tx.h"
+#include "midi/tx.h"
 
 //
 // A reply is built whole and then queued, or it is not queued at all.

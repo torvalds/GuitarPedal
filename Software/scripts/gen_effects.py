@@ -793,7 +793,8 @@ def generate(audio_dir, out_h, out_js, out_md):
     # a protocol agree right up until they don't, and this file is how
     # the web app learns what the firmware speaks.
     #
-    midi_h = os.path.join(os.path.dirname(os.path.abspath(audio_dir)), "midi.h")
+    midi_h = os.path.join(os.path.dirname(os.path.abspath(audio_dir)),
+                          "midi", "midi.h")
     with open(midi_h) as f:
         midi_src = f.read()
 
