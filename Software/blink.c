@@ -1091,9 +1091,37 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 			uint8_t val = sysex_buf[i + 1];
 
 			if (pot_idx == POT_MIX)
-				set_effect_mix(e, val);
-			else if (pot_idx <= POT_LAST)
-				set_effect_pot(e, pot_idx - 1, val);
+				set_effect_mix(e, val > 120 ? 120 : val);
+			else if (pot_idx <= POT_LAST) {
+				//
+				// Clamped against the same max_pot_val() the
+				// load path validates with, because a value
+				// this stores is a value that has to load
+				// again.
+				//
+				// scene_load_effect() refuses a whole scene
+				// that has a pot past its maximum, and
+				// max_pot_val() is 120 for an ordinary pot,
+				// the last index for an enum, and zero for a
+				// slot the effect does not use.  So a MIDI
+				// value of 121..127, or anything non-zero
+				// written to a pot that is not there, used to
+				// be stored happily and then make that scene
+				// fail to load for good - silently, because
+				// the checksum is computed at save time from
+				// whatever was stored, so the scene looks
+				// intact and simply comes back as defaults.
+				//
+				// Clamped rather than ignored: a controller
+				// sending a full 0..127 sweep is a real thing
+				// to be, and "the pot went to its maximum" is
+				// a better answer to that than "the last part
+				// of the sweep did nothing".
+				//
+				int max = max_pot_val(e, pot_idx - 1);
+				set_effect_pot(e, pot_idx - 1,
+					       val > max ? max : val);
+			}
 			//
 			// Steering is meaningless for an effect that
 			// is not stepped through do_effect_step() at
