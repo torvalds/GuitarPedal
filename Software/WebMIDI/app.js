@@ -552,6 +552,50 @@ let PEDAL_EFFECTS = [];
 let PEDAL_STEERING = null;
 let effectIdMap = new Map();
 
+//
+// One pot value from the pedal, onto whatever draws it.
+//
+// Split out of the PARAM_UPDATE case so that a message carrying several
+// pots applies them the same way it applies one.  Everything here is
+// per-pot; the effect id is the only thing shared across a message.
+//
+function applyPotValue(effId, potIdx, val) {
+    // The pedal telling us its channel changed - on a scene
+    // load, say. Do this before the element update below, which
+    // sets .value from script and so fires nothing.
+    if (midiChannelRef && effId === midiChannelRef.effId &&
+        potIdx === midiChannelRef.pot + 1)
+        setTransmitChannel(val);
+
+    const idx = effectIdMap.get(effId);
+    if (idx === undefined) return;
+
+    const idKey = potIdx === 0 ? `eff-${idx}-mix` : `eff-${idx}-pot-${potIdx-1}`;
+    const el = ccToElementMap.get(idKey);
+    if (!el) return;
+
+    if (el.type === 'checkbox') {
+        el.checked = (val > 0);
+    } else if (el.tagName === 'SELECT') {
+        el.value = val;
+    } else if (el.type === 'range') {
+        el.value = val;
+        const valDisplay = el.parentElement.querySelector('.pot-value');
+        if (valDisplay && el.potDef) {
+            valDisplay.textContent = formatPotValue(el.potDef, val);
+        }
+        if (el.redrawCurve) {
+            el.redrawCurve();
+        }
+        if (activePotDef && activePotCc === idKey) { // activePotCc is now acting as string key
+            const activeSlider = document.getElementById('active-pot-slider');
+            if (activeSlider) activeSlider.value = val;
+            const activeValue = document.getElementById('active-pot-value');
+            if (activeValue) activeValue.textContent = formatPotValue(activePotDef, val);
+        }
+    }
+}
+
 function handleSysex(data) {
     const cmd = data[2];
     console.debug(`[WebMIDI] Received SysEx cmd=0x${cmd.toString(16)}, data=[${Array.from(data).map(b => '0x' + b.toString(16).padStart(2, '0')).join(', ')}]`);
@@ -626,46 +670,20 @@ function handleSysex(data) {
         }
 
         case SYSEX_CMD.PARAM_UPDATE: {
-            // Set Parameter
+            //
+            // Set Parameter: one effect, then as many (pot, value)
+            // pairs as the message carries.
+            //
+            // A message with one pair is byte for byte the message this
+            // used to be, so nothing had to change about what the pedal
+            // sends when a knob moves - only about what a state dump is
+            // allowed to pack into one message.
+            //
             if (data.length < 6) break;
             const effId = data[3];
-            const potIdx = data[4];
-            const val = data[5];
 
-            // The pedal telling us its channel changed - on a scene
-            // load, say. Do this before the element update below, which
-            // sets .value from script and so fires nothing.
-            if (midiChannelRef && effId === midiChannelRef.effId &&
-                potIdx === midiChannelRef.pot + 1)
-                setTransmitChannel(val);
-
-            const idx = effectIdMap.get(effId);
-            if (idx !== undefined) {
-                const idKey = potIdx === 0 ? `eff-${idx}-mix` : `eff-${idx}-pot-${potIdx-1}`;
-                const el = ccToElementMap.get(idKey);
-                if (el) {
-                    if (el.type === 'checkbox') {
-                        el.checked = (val > 0);
-                    } else if (el.tagName === 'SELECT') {
-                        el.value = val;
-                    } else if (el.type === 'range') {
-                        el.value = val;
-                        const valDisplay = el.parentElement.querySelector('.pot-value');
-                        if (valDisplay && el.potDef) {
-                            valDisplay.textContent = formatPotValue(el.potDef, val);
-                        }
-                        if (el.redrawCurve) {
-                            el.redrawCurve();
-                        }
-                        if (activePotDef && activePotCc === idKey) { // activePotCc is now acting as string key
-                            const activeSlider = document.getElementById('active-pot-slider');
-                            if (activeSlider) activeSlider.value = val;
-                            const activeValue = document.getElementById('active-pot-value');
-                            if (activeValue) activeValue.textContent = formatPotValue(activePotDef, val);
-                        }
-                    }
-                }
-            }
+            for (let at = 4; at + 1 < data.length; at += 2)
+                applyPotValue(effId, data[at], data[at + 1]);
             break;
         }
 
