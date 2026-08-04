@@ -213,6 +213,30 @@ def main():
                     help="generator level, dBFS")
     ap.add_argument("--json", metavar="PATH",
                     help="write every measurement here, for plotting")
+    #
+    # The sysex load, as knobs rather than a constant.
+    #
+    # An attempt at the sysex/audio contention once fixed the light case
+    # and made the heavy one worse, and that was only caught because both
+    # happened to get run.  A load that cannot be varied from the command
+    # line is a load that gets measured at one point and argued about
+    # everywhere else.
+    #
+    ap.add_argument("--load", choices=sorted(LOADS), default="dump",
+                    help="which reply to ask for.  'schema' is the big-message "
+                         "case: 15700 bytes in one sysex message, with no "
+                         "message boundary in it to resume from.  'dump' is "
+                         "140 bytes in 8 and is the control")
+    ap.add_argument("--dumps", type=int, default=12,
+                    help="replies to ask for during the capture")
+    ap.add_argument("--dump-interval", type=float, default=0.0,
+                    help="extra seconds between requests; pedal.send() "
+                         "already settles 60ms of its own")
+    ap.add_argument("--note", metavar="TEXT", action="append", default=[],
+                    help="what the bench looked like for this run - cables, "
+                         "what else was plugged in, anything that moved since "
+                         "last time.  Repeatable, stored in the json - "
+                         "nothing else records any of it.")
     args = ap.parse_args()
 
     found = pedal.discover()
@@ -248,9 +272,45 @@ def main():
         RESULTS["pedals"] = [{k: d[k] for k in ("label", "serial", "product")}
                              for d in found]
         RESULTS["ring"] = [[a["label"], b["label"]] for a, b in ring]
+        RESULTS["recorded"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+        RESULTS["operator_notes"] = args.note
+
+        #
+        # Written into every file rather than left in this source, on the
+        # grounds that the file is what somebody will be looking at in
+        # six months and the source is not.  The first of these wants
+        # replacing with a bench block the run fills in for itself, so
+        # that a measurement carries its conditions instead of a warning
+        # that it does not.
+        #
+        RESULTS["caveats"] = [
+            "These are bench measurements, not board specifications. "
+            "Nothing here records the conditions that produced them: which "
+            "cable was on which link and whether it was TS, TRS or a Y "
+            "pair, what else was plugged into the boards, which USB ports "
+            "and hubs they were on, or what the room was radiating.",
+
+            "noise_floor_dbfs and noise_uv_rms are the most "
+            "environment-sensitive numbers in this file. They measure the "
+            "board, the cable, its connectors, the ground path between the "
+            "two boards and the supply feeding both, and they cannot "
+            "separate them. A 12 dB move has already been observed from a "
+            "cable change alone.",
+
+            "A difference between two runs is a hypothesis. Promote it by "
+            "moving the one thing that changed and seeing whether the "
+            "number follows - re-running on an unchanged bench only "
+            "confirms the bench did not move.",
+
+            "corner_hz tracks the receiving board and has so far been "
+            "stable against cabling, so it is the safer number to compare "
+            "across runs. It is still a fit: read fit_residual_db before "
+            "quoting it.",
+        ]
         with open(args.json, "w") as f:
             json.dump(RESULTS, f, indent=1)
         print("\n  measurements written to %s" % args.json)
+        print("  read the 'caveats' in it before comparing runs")
 
     print()
     for d in found:
@@ -374,6 +434,29 @@ def one_edge(src, dst, found, args):
     # cannot be switched off contributes whatever it contributes - 22.7
     # dB of it, measured.  Here the input is terminated by another
     # pedal's output stage, which is what a quiet source looks like.
+    #
+    # ---------------------------------------------------------------
+    # READ THIS BEFORE BELIEVING A CHANGE IN THIS NUMBER.
+    #
+    # This is the most environment-sensitive figure the suite produces,
+    # and the environment is not recorded anywhere.  It measures the
+    # board, the cable, the two connectors at each end of the cable, the
+    # ground path between the boards, the USB supply feeding both, and
+    # whatever the bench is radiating - and it cannot separate them.
+    #
+    # It has already moved 12 dB on a cable change: on 2026-08-04 the
+    # link between the two TAC5242s read 9 uV against 35-36 uV on the
+    # other two links, after that one link was rewired from a pair of
+    # TRS-to-TS Y cables to a single TRS patch cable.  Removing a second
+    # ground path between two boards is a real mechanism for that, and
+    # so is "that board's input is just quieter", and this measurement
+    # cannot tell them apart.
+    #
+    # So a difference here is a hypothesis, not a result.  The way to
+    # promote it is to move the one thing that changed and see whether
+    # the number follows it - not to run this again and get the same
+    # answer, which only says the bench did not move either.
+    # ---------------------------------------------------------------
     #
     nf = audio.noise_floor(quiet_L)
     note("terminated noise floor",
@@ -563,33 +646,180 @@ def latency(ring, found, args):
     check("ring latency is a real delay", 0.05 < ms < 90.0, "%.2f ms" % ms)
 
     #
-    # The one the rig was built for.  A state dump is fifteen kilobytes
-    # in one pass of the main loop, and the audio endpoint is fed at the
-    # end of that same loop, so the pedal's own replies are the heaviest
-    # thing that competes with its audio.  Measuring it needed a stimulus
-    # that could not itself be disturbed by the host, which is what the
-    # far pedal is: not captured from, not asked anything, and unaware
-    # the test is running.
+    # The one the rig was built for.  A reply is turned into four-byte
+    # MIDI packets in a single pass of the main loop, and the audio
+    # endpoint is fed at the end of that same loop, so the pedal's own
+    # replies are the heaviest thing that competes with its audio.
+    # Measuring it needed a stimulus that could not itself be disturbed by
+    # the host, which is what the far pedal is: not captured from, not
+    # asked anything, and unaware the test is running.
     #
-    dst = ring[0][1]
+    sysex_load(src, ring[0][1], args)
+
+
+#
+# The end of a state dump, on the wire.
+#
+# The routing message is sent last and exactly once per dump - the
+# firmware says so and the web app already relies on it - so counting
+# these counts dumps that were actually answered.  Verified by capturing
+# one dump and counting: one 0x08 in it, wherever the rest of the dump
+# happened to be that week.
+#
+# Bytes *of sysex*, which is not the same as bytes seen.  The pedal
+# streams its status CCs the whole time, so a raw count off a capture
+# window includes however much of that stream the window was open for.
+#
+DUMP_END = bytes([0xF0, 0x7D, 0x08])
+
+#
+# The two loads, and why the big one is not a synthetic message.
+#
+# The schema *is* the stress case and always was: 15700 bytes in one
+# single SysEx message, so there is not a message boundary anywhere in it
+# to resume from.  Nothing had to be built to test a big reply, because
+# the pedal already sends the biggest one it will ever send.
+#
+# The state dump is the light load and has become much lighter - 140
+# bytes in 8 messages, from 1184 in 162, once it stopped sending pots for
+# effects that are not routed and started packing an effect's pots into
+# one message.  It no longer breaks any audio at all, which is what makes
+# it useful as the control: a run where *both* loads look clean is a run
+# where something is wrong with the bench rather than right with the
+# pedal.
+#
+LOADS = {
+    # name:     (request opcode, the reply that says one arrived)
+    "dump":     (0x05, bytes([0xF0, 0x7D, 0x08])),
+    "schema":   (0x01, bytes([0xF0, 0x7D, 0x02])),
+}
+
+
+def sysex_load(src, dst, args):
+    """Audio breaks while the pedal is answering its own sysex.
+
+    Reported per *answered* dump rather than per second, and that is the
+    whole point of the shape of this function.
+
+    The load is delivered by asking for state dumps, and the pedal is
+    free to not answer: today it blocks until it has, but the fix this
+    test exists to score gives it a queue, and a queue that is full drops
+    what will not fit.  A test that counted the requests it *sent* would
+    then see the load quietly evaporate and call it a pass - the fix
+    would appear to work by breaking the instrument.  So the denominator
+    is measured on the wire, and a run that got fewer dumps than it asked
+    for says so instead of scoring it.
+
+    The listener runs inside the capture rather than around it: it has to
+    be up before the first request goes out, and audio.capture() calls
+    'during' in a thread once arecord is actually recording, which is the
+    only moment that is true of.
+    """
     generate(src, args.level)
     usb_mode(dst, LR_DRY)
     time.sleep(0.6)
 
-    def hammer():
-        for _ in range(12):
-            pedal.send(dst["port"], 0x05)
+    opcode, marker = LOADS[args.load]
 
-    cap = audio.capture(args.seconds, dst["card"], during=hammer)
-    seen = cap[:, 0] * audio.SAMPLE_TO_FLOAT
-    breaks = audio.discontinuities(seen, audio.dominant(seen))
-    per_s = len(breaks) / (len(seen) / audio.RATE)
-    RESULTS["sysex_breaks"] = {"count": len(breaks), "per_second": per_s,
-                               "seconds": len(seen) / audio.RATE,
-                               "pedal": dst["label"]}
-    check("audio survives its own sysex", not breaks,
-          "%d breaks in %.1fs (%.1f/s) while %s answered 12 state dumps"
-          % (len(breaks), len(seen) / audio.RATE, per_s, dst["label"]))
+    def request_dumps():
+        #
+        # Paced rather than fired in a burst.  pedal.send() already
+        # settles for 60ms of its own, so this is mostly explicit about
+        # something that was happening by accident - but it is the pacing
+        # that makes "requested" and "answered" comparable numbers, so it
+        # should not be an accident.
+        #
+        for i in range(args.dumps):
+            pedal.send(dst["port"], opcode)
+            if args.dump_interval > 0 and i + 1 < args.dumps:
+                time.sleep(args.dump_interval)
+
+    def one_pass(listening):
+        seen_midi = []
+        if listening:
+            def load():
+                seen_midi.extend(pedal.midi_listen(dst["port"], seconds=0.4,
+                                                   during=request_dumps))
+        else:
+            load = request_dumps
+        cap = audio.capture(args.seconds, dst["card"], during=load)
+        x = cap[:, 0] * audio.SAMPLE_TO_FLOAT
+        return (len(audio.discontinuities(x, audio.dominant(x))),
+                bytes(seen_midi).count(marker),
+                len(x) / audio.RATE)
+
+    #
+    # Unread first, then drained, then read.
+    #
+    # In that order because the unread pass leaves a mess: with nothing
+    # reading MIDI IN the replies pile up inside the pedal, and the moment
+    # a listener opens the device the backlog floods out and lands in
+    # whatever is being measured next.  That is not hypothetical - it
+    # showed up as 16 dumps answered against 12 requested.  So the pass
+    # that creates the backlog goes first and the backlog is drained on
+    # purpose before anything is counted.
+    #
+    unread, _, secs = one_pass(listening=False)
+    pedal.midi_listen(dst["port"], seconds=1.5)
+    breaks, answered, secs = one_pass(listening=True)
+
+    RESULTS["sysex_breaks"] = {
+        "count": breaks, "per_second": breaks / secs, "seconds": secs,
+        "pedal": dst["label"],
+        "load": args.load,
+        "dumps_requested": args.dumps,
+        "dumps_answered": answered,
+        "breaks_per_dump": (breaks / answered) if answered else None,
+        "breaks_unread": unread,
+    }
+
+    note("%s replies" % args.load,
+         "%d requested, %d answered" % (args.dumps, answered))
+
+    #
+    # A missing denominator is reported before anything is concluded from
+    # it.  Not a failure on its own - a pedal that legitimately refuses a
+    # request it has no room for is behaving, and the harness firing
+    # faster than the pedal can answer is the harness's fault - but the
+    # breaks number below is being divided by this, so a shortfall has to
+    # be visible next to it rather than inferred later.
+    #
+    if answered < args.dumps:
+        note("dump shortfall",
+             "%d of %d unanswered - the load is smaller than it looks, and "
+             "a low break count here is not yet good news"
+             % (args.dumps - answered, args.dumps))
+
+    if not answered:
+        check("audio survives its own sysex", False,
+              "no dumps answered in %.1fs - nothing was measured, so this "
+              "is a broken instrument rather than a passing pedal" % secs)
+    else:
+        check("audio survives its own sysex", not breaks,
+              "%d breaks in %.1fs (%.2f per dump) while %s answered %d of "
+              "%d state dumps, with the host reading the replies"
+              % (breaks, secs, breaks / answered, dst["label"], answered,
+                 args.dumps))
+
+    #
+    # And the same load with nothing reading the replies.
+    #
+    # Measured separately because it is a different defect wearing the
+    # same number, and it is much the larger of the two: usb_midi_write()
+    # spins on a full transmit fifo for MIDI_TX_TIMEOUT_MS per packet
+    # calling tud_task(), and never usb_audio_task().  A host that is
+    # reading keeps that fifo empty and the spin almost never happens; a
+    # host that is not turns every packet into a timeout.  Measured on one
+    # bench the same afternoon, 12 dumps either way: 12-14 breaks unread
+    # against 1 read.
+    #
+    # It is not a contrived case.  Anything that pokes the pedal over MIDI
+    # and exits - a script, this harness before it grew a listener - is a
+    # host that has stopped reading.
+    #
+    check("audio survives sysex nobody is reading", not unread,
+          "%d breaks in %.1fs while nothing drained the reply endpoint "
+          "(%d read, same load)" % (unread, secs, breaks))
 
 
 if __name__ == "__main__":
