@@ -905,6 +905,7 @@ static void sysex_send_state_dump(void)
 static uint8_t sysex_buf[1 + MAX_RULES * 6];
 static int sysex_len = 0;
 static bool in_sysex = false;
+static bool sysex_over = false;
 
 //
 // Change one pot from core 0.
@@ -1095,14 +1096,32 @@ bool handle_midi_packet(const uint8_t packet[4])
 			if (b == 0xF0) {
 				in_sysex = true;
 				sysex_len = 0;
+				sysex_over = false;
 			} else if (b == 0xF7 && in_sysex) {
 				in_sysex = false;
-				handle_sysex_payload(sysex_buf, sysex_len);
+				//
+				// A message that did not fit is dropped whole
+				// rather than acted on short.
+				//
+				// The bytes past the end used to be discarded
+				// while the rest was handled anyway, which is
+				// only harmless while every message is a fixed
+				// size - a truncated one then fails its length
+				// check and goes nowhere.  It stops being
+				// harmless the moment a message carries a list,
+				// because a short list is a valid shorter list.
+				//
+				if (sysex_over)
+					report_info("MIDI message too long, dropped");
+				else
+					handle_sysex_payload(sysex_buf, sysex_len);
 			} else if (in_sysex) {
 				if (sysex_len == 0 && b == 0x7D) {
 					// Consume header 7D
 				} else if (sysex_len < sizeof(sysex_buf)) {
 					sysex_buf[sysex_len++] = b;
+				} else {
+					sysex_over = true;
 				}
 			}
 			if (code == 0x05 && i == 1) break;
