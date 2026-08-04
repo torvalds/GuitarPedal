@@ -792,6 +792,43 @@ static void pot_batch_send(struct pot_batch *b)
 }
 
 //
+// Tell the host about a pot the pedal moved by itself.
+//
+// A footswitch or an encoder changing a value is the one case where the
+// host's picture goes stale without the host having done anything, so it
+// gets told.  Through the queue rather than straight at USB, for two
+// reasons that are both about it being three packets:
+//
+// Truncation.  A blocking write gives up after 20ms, so the old path
+// could put out 'F0 7D 03' and then not the rest - and Web MIDI only
+// delivers terminated messages, so a half-message is not merely late, it
+// is a parser left waiting.  Committing the whole thing or none of it
+// is exactly what the queue does.
+//
+// And waiting.  Turning a knob against a host that has stopped reading
+// used to cost 60ms of stalled main loop per step, which is audio
+// somebody is listening to being spent on a message nobody is receiving.
+//
+// Dropped when the queue is busy, and that is fine here: the next state
+// dump carries the same value, so the app's picture repairs itself
+// without this having to be reliable.
+//
+static void sysex_echo_pot(int eff, int pot, int val)
+{
+	struct pot_batch batch;
+
+	if (midi_tx_busy())
+		return;
+
+	pot_batch_start(&batch, eff);
+	pot_batch_add(&batch, pot, val);
+
+	sysex_tx_start();
+	pot_batch_send(&batch);
+	midi_tx_commit();
+}
+
+//
 // Say what the physical controls are bound to.
 //
 // The whole table in one message, because the app wants all of it or

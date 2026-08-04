@@ -142,7 +142,7 @@ static void set_target(struct effect *effect, unsigned int eff_id,
 	else
 		set_effect_mix(effect, val);
 
-	send_sysex_set_param(eff_id, pot, val);
+	sysex_echo_pot(eff_id, pot, val);
 }
 
 //
@@ -296,6 +296,29 @@ static void do_pot_action(const struct rule *b)
 //
 static int pending_scene = -1;
 
+//
+// The global-enable CC, remembered until it actually goes out.  -1 for
+// nothing owed.
+//
+// This one is an edge and has no repeat behind it: bypass and tuner mode
+// are toggled by a foot, and if the message saying so is lost the app
+// goes on drawing the old state until something else provokes a state
+// dump.  So it cannot simply be dropped the way the periodic status
+// report can, and it must not block either - a foot going down while the
+// host has stopped reading is a bad moment to spend 20ms.
+//
+// Held instead, and retried on the next tick.  A second edge overwrites
+// the first, which is right: what is owed is the current state, not the
+// history of how it got there.
+//
+static int global_enable_owed = -1;
+
+static void send_global_enable(int val)
+{
+	global_enable_owed = send_midi_cc_nb(MIDI_CC_GLOBAL_ENABLE, val)
+		? -1 : val;
+}
+
 static void do_rule(const struct rule *b)
 {
 	switch (b->action) {
@@ -311,12 +334,12 @@ static void do_rule(const struct rule *b)
 
 	case ACT_BYPASS:
 		disable_all = EFF_ENABLE_STEPS * !disable_all;
-		send_midi_cc(MIDI_CC_GLOBAL_ENABLE, disable_all ? 0 : 127);
+		send_global_enable(disable_all ? 0 : 127);
 		break;
 
 	case ACT_TUNER:
 		tuner_mode = !tuner_mode;
-		send_midi_cc(MIDI_CC_GLOBAL_ENABLE, tuner_mode ? 68 : 69);
+		send_global_enable(tuner_mode ? 68 : 69);
 		break;
 
 	case ACT_SCENE:
@@ -557,6 +580,13 @@ static void show_status(void)
 	// missing until the LED and the app disagreed.
 	//
 	bool quiet = !midi_tx_busy();
+
+	//
+	// Anything owed from a foot going down, first: it is an edge and
+	// the periodic report below is not.
+	//
+	if (quiet && global_enable_owed >= 0)
+		send_global_enable(global_enable_owed);
 
 	if (quiet && (again || global != last_global)) {
 		if (send_midi_cc_nb(MIDI_CC_STATUS_GLOBAL, global))
