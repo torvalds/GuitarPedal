@@ -721,6 +721,59 @@ static void sysex_send_pot_value(int eff, int pot, int value)
 }
 
 //
+// Several of one effect's pots in one message.
+//
+//	F0 7D 03 <eff> [<pot> <val>] ... F7
+//
+// Seven bytes to carry three is four bytes of framing in every message,
+// and the state dump used to send one per pot.  Grouping by effect rather
+// than allowing arbitrary (effect, pot, value) triples is what makes each
+// extra pot two bytes instead of three, and it costs nothing to arrange
+// because the dump already walks effects with their pots inside.
+//
+// The single-pot case is byte for byte the message that was always sent,
+// so this is a superset rather than a change: sysex_send_pot_value()
+// above still emits exactly what it did, and one knob being turned needs
+// no thought at all.
+//
+// Big enough for every pot an effect can have at once: the mix, POT_LAST
+// real ones, and the three steering pots.
+//
+struct pot_batch {
+	uint8_t buf[4 + 2 * (1 + POT_LAST + 3) + 1];
+	unsigned int len;
+};
+
+static void pot_batch_start(struct pot_batch *b, int eff)
+{
+	b->buf[0] = 0xF0;
+	b->buf[1] = 0x7D;
+	b->buf[2] = 0x03;
+	b->buf[3] = eff;
+	b->len = 4;
+}
+
+static void pot_batch_add(struct pot_batch *b, int pot, int value)
+{
+	// Same "should never happen" as the single-pot version.
+	if (value < 0 || value > 120) value = 0;
+
+	if (b->len + 2 > sizeof(b->buf) - 1)
+		return;
+	b->buf[b->len++] = pot;
+	b->buf[b->len++] = value;
+}
+
+static void pot_batch_send(struct pot_batch *b)
+{
+	// Nothing added is nothing to say, not an empty message.
+	if (b->len <= 4)
+		return;
+	b->buf[b->len++] = 0xF7;
+	sysex_stream_write(b->buf, b->len);
+}
+
+//
 // Say what the physical controls are bound to.
 //
 // The whole table in one message, because the app wants all of it or
@@ -848,16 +901,19 @@ static void sysex_send_state_dump(void)
 		struct effect *e = effects[i];
 		const struct pot_descr *desc = e->pots;
 		unsigned char *pot_values = e->pot_values[e->seq & 1];
+		struct pot_batch batch;
 
 		if (!effect_always_runs(i) && !effect_is_routed(e))
 			continue;
 
+		pot_batch_start(&batch, i);
+
 		// We send the mix as "pot 0", and then pots numbered from 1
-		sysex_send_pot_value(i, 0, FLOAT_TO_POT(e->mix_pot));
-		for (int pot = 0; pot < 10; pot++) {
+		pot_batch_add(&batch, POT_MIX, FLOAT_TO_POT(e->mix_pot));
+		for (int pot = 0; pot < POT_LAST; pot++) {
 			if (!desc[pot].label)
 				break;
-			sysex_send_pot_value(i, pot+1, pot_values[pot]);
+			pot_batch_add(&batch, pot+1, pot_values[pot]);
 		}
 
 		//
@@ -867,10 +923,12 @@ static void sysex_send_state_dump(void)
 		// ignores three more of what it was already reading.
 		//
 		if (!e->no_mix) {
-			sysex_send_pot_value(i, POT_CH_IN, CH_IN(e->channels));
-			sysex_send_pot_value(i, POT_CH_OUT, CH_OUT(e->channels));
-			sysex_send_pot_value(i, POT_MERGE, FLOAT_TO_POT(e->merge));
+			pot_batch_add(&batch, POT_CH_IN, CH_IN(e->channels));
+			pot_batch_add(&batch, POT_CH_OUT, CH_OUT(e->channels));
+			pot_batch_add(&batch, POT_MERGE, FLOAT_TO_POT(e->merge));
 		}
+
+		pot_batch_send(&batch);
 	}
 
 	//
@@ -986,14 +1044,25 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 	if (cmd == 0x01) { // Schema Request
 		send_schema_tx = true;
 	} else if (cmd == 0x03 && sysex_len >= 4) { // Set Parameter
+		//
+		// One effect, and then as many (pot, value) pairs as the
+		// message carries - the same shape the state dump sends.
+		//
+		// An odd number of bytes after the effect id is a message
+		// somebody built wrong, and the last half-pair is dropped
+		// rather than guessed at.  A message too long to fit was
+		// already refused whole by the accumulator, so a short
+		// list here is a short list somebody meant to send.
+		//
 		uint8_t eff_id = sysex_buf[1];
-		uint8_t pot_idx = sysex_buf[2];
-		uint8_t val = sysex_buf[3];
 		struct effect *e = NULL;
 		if (eff_id < ARRAY_SIZE(effects)) {
 			e = effects[eff_id];
 		}
-		if (e) {
+		for (size_t i = 2; e && i + 1 < sysex_len; i += 2) {
+			uint8_t pot_idx = sysex_buf[i];
+			uint8_t val = sysex_buf[i + 1];
+
 			if (pot_idx == POT_MIX)
 				set_effect_mix(e, val);
 			else if (pot_idx <= POT_LAST)
@@ -1109,7 +1178,9 @@ bool handle_midi_packet(const uint8_t packet[4])
 				// size - a truncated one then fails its length
 				// check and goes nowhere.  It stops being
 				// harmless the moment a message carries a list,
-				// because a short list is a valid shorter list.
+				// because a short list is a valid shorter list:
+				// half the pots in a batch would be set and the
+				// other half silently ignored.
 				//
 				if (sysex_over)
 					report_info("MIDI message too long, dropped");
