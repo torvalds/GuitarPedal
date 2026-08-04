@@ -608,7 +608,7 @@ static void sysex_send_state_dump(void)
 	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
 		struct effect *e = effects[i];
 		const struct pot_descr *desc = e->pots;
-		unsigned char *pot_values = e->pot_values[e->seq & 1];
+		unsigned char *pot_values = effect_pots(e);
 		struct pot_batch batch;
 
 		if (!effect_always_runs(i) && !effect_is_routed(e))

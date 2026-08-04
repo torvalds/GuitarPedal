@@ -60,7 +60,7 @@ static void reset_effect(struct effect *eff)
 static void unroute_effect(struct effect *eff)
 {
 	unsigned int seq = eff->seq;
-	unsigned char *new_pot = eff->pot_values[!(seq & 1)];
+	unsigned char *new_pot = effect_spare_pots(eff, seq);
 
 	for (int i = 0; i < 10; i++)
 		new_pot[i] = eff->pots[i].def_val;
@@ -79,7 +79,7 @@ static void unroute_effect(struct effect *eff)
 	eff->channels = 0;
 	eff->merge = 1.0f;
 
-	smp_store_release(&eff->seq, seq + 1);
+	effect_publish(eff, seq);
 }
 
 //
@@ -181,12 +181,12 @@ static bool effect_is_routed(const struct effect *e)
 static void set_effect_pot(struct effect *e, unsigned int pot_idx, unsigned char val)
 {
 	unsigned int seq = e->seq;
-	unsigned char *cur_pot = e->pot_values[seq & 1];
-	unsigned char *new_pot = e->pot_values[!(seq & 1)];
+	unsigned char *cur_pot = effect_pots_at(e, seq);
+	unsigned char *new_pot = effect_spare_pots(e, seq);
 
 	memcpy(new_pot, cur_pot, 10);
 	new_pot[pot_idx] = val;
-	smp_store_release(&e->seq, seq + 1);
+	effect_publish(e, seq);
 }
 
 //

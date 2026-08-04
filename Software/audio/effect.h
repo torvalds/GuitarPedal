@@ -146,6 +146,53 @@ struct effect {
 #define EFFECT_POT(...) { __VA_ARGS__ }
 
 //
+// 'seq' does two jobs at once, and that is the point of it.
+//
+// Its low bit says which half of pot_values[] is live.  Its value is what
+// the audio core compares against 'last' to notice that anything changed.
+// One counter doing both is what makes the handover a single store: the
+// write that publishes the new data is the same write that says there is
+// new data, so there is no window where one is true and the other is not,
+// and no second variable to keep in step with this one.
+//
+// The cost is that '& 1' at a call site does not say which of the two
+// jobs is being asked about.  These do.  They are the whole vocabulary:
+//
+//	effect_pots()		what is running now
+//	effect_pots_at()	the same, when the caller already has seq
+//	effect_spare_pots()	the half to fill in
+//	effect_publish()	make the filled half the live one
+//
+static inline unsigned char *effect_pots_at(struct effect *e, unsigned int seq)
+{
+	return e->pot_values[seq & 1];
+}
+
+static inline unsigned char *effect_spare_pots(struct effect *e, unsigned int seq)
+{
+	return e->pot_values[!(seq & 1)];
+}
+
+//
+// Reading 'seq' rather than being handed it, for callers that only want
+// to look.  A writer must latch it once and pass it to all three, or the
+// live half could move between deciding what to copy and saying so.
+//
+static inline unsigned char *effect_pots(struct effect *e)
+{
+	return effect_pots_at(e, e->seq);
+}
+
+//
+// The release is what orders the fill against the publish: core 1 either
+// sees the old set or the new one, never half of each.
+//
+static inline void effect_publish(struct effect *e, unsigned int seq)
+{
+	smp_store_release(&e->seq, seq + 1);
+}
+
+//
 // The largest value this pot can hold.
 //
 // 120 for anything continuous - see POT_TO_FLOAT() - but an enumeration
@@ -576,7 +623,7 @@ static __attribute__((noinline)) void __audio_func(make_one_noise)(void)
 			continue;
 
 		effect->last = seq;
-		effect->init(effect->pot_values[seq & 1]);
+		effect->init(effect_pots_at(effect, seq));
 	}
 
 	static int disable = 0;

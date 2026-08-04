@@ -85,7 +85,7 @@ static int target_value(struct effect *e, unsigned int pot)
 	case POT_CH_OUT:	return CH_OUT(e->channels);
 	case POT_MERGE:		return FLOAT_TO_POT(e->merge);
 	}
-	return e->pot_values[e->seq & 1][pot - 1];
+	return effect_pots(e)[pot - 1];
 }
 
 //
