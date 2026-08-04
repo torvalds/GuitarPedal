@@ -27,10 +27,6 @@
 //
 
 #include "midi_schema.h"
-
-extern bool usb_midi_write(const uint8_t packet[4]);
-extern bool usb_midi_write_nb(const uint8_t packet[4]);
-
 #include "tx.h"
 
 //
