@@ -27,7 +27,7 @@ project(rp2350)
 # initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-add_executable(blink)
+add_executable(pedal)
 
 #
 # What is actually on the board.
@@ -82,7 +82,7 @@ math(EXPR SAVE_AREA_SIZE "${SAVE_SLOT_SIZE} * ${SAVE_SLOT_COUNT}"
 math(EXPR SAVE_AREA_OFFSET "${FLASH_SIZE_BYTES} - ${SAVE_AREA_SIZE}"
 	OUTPUT_FORMAT HEXADECIMAL)
 
-target_compile_definitions(blink PRIVATE
+target_compile_definitions(pedal PRIVATE
 	PICO_FLASH_SIZE_BYTES=${FLASH_SIZE_BYTES}
 	SAVE_SLOT_SIZE=${SAVE_SLOT_SIZE}
 	SAVE_SLOT_COUNT=${SAVE_SLOT_COUNT}
@@ -109,7 +109,7 @@ add_custom_command(
 		"${POW2_STEP_SHIFT}"
 	DEPENDS "${SCRIPT_DIR}/pow2.py"
 )
-target_sources(blink PRIVATE "${POW2_HEADER}")
+target_sources(pedal PRIVATE "${POW2_HEADER}")
 
 set(LOG2_STEP_SHIFT 8)
 set(LOG2_HEADER "${CMAKE_CURRENT_BINARY_DIR}/log2.h")
@@ -120,7 +120,7 @@ add_custom_command(
 		"${LOG2_STEP_SHIFT}"
 	DEPENDS "${SCRIPT_DIR}/log2.py"
 )
-target_sources(blink PRIVATE "${LOG2_HEADER}")
+target_sources(pedal PRIVATE "${LOG2_HEADER}")
 
 set(SINE_STEP_SHIFT 8)
 set(SINE_HEADER "${CMAKE_CURRENT_BINARY_DIR}/quarter_sine.h")
@@ -131,7 +131,7 @@ add_custom_command(
 		"${SINE_STEP_SHIFT}"
 	DEPENDS "${SCRIPT_DIR}/quarter_sine.py"
 )
-target_sources(blink PRIVATE "${SINE_HEADER}")
+target_sources(pedal PRIVATE "${SINE_HEADER}")
 
 set(EQ_W0_HEADER "${CMAKE_CURRENT_BINARY_DIR}/eq-w0.h")
 add_custom_command(
@@ -141,7 +141,7 @@ add_custom_command(
 		"${SAMPLES_PER_SEC}"
 	DEPENDS "${SCRIPT_DIR}/eq-w0.py"
 )
-target_sources(blink PRIVATE "${EQ_W0_HEADER}")
+target_sources(pedal PRIVATE "${EQ_W0_HEADER}")
 
 file(GLOB EFFECT_HEADERS CONFIGURE_DEPENDS "effects/*.h")
 set(EFFECT_MAP_HEADER "${CMAKE_CURRENT_BINARY_DIR}/effect_map.h")
@@ -163,16 +163,16 @@ add_custom_command(
 		${EFFECT_HEADERS}
 	DEPENDS "${SCRIPT_DIR}/gen_effects.py" ${EFFECT_HEADERS}
 )
-target_sources(blink PRIVATE "${EFFECT_MAP_HEADER}")
+target_sources(pedal PRIVATE "${EFFECT_MAP_HEADER}")
 
 set(PIO_DIR "${CMAKE_CURRENT_SOURCE_DIR}/pio")
 
-pico_generate_pio_header(blink ${PIO_DIR}/ws2812.pio)
-pico_generate_pio_header(blink ${PIO_DIR}/debounce.pio)
-pico_generate_pio_header(blink ${PIO_DIR}/rotary.pio)
-pico_generate_pio_header(blink ${PIO_DIR}/i2s.pio)
+pico_generate_pio_header(pedal ${PIO_DIR}/ws2812.pio)
+pico_generate_pio_header(pedal ${PIO_DIR}/debounce.pio)
+pico_generate_pio_header(pedal ${PIO_DIR}/rotary.pio)
+pico_generate_pio_header(pedal ${PIO_DIR}/i2s.pio)
 
-target_compile_definitions(blink PRIVATE
+target_compile_definitions(pedal PRIVATE
 	SYS_CLK_KHZ=153600
 	PLL_SYS_VCO_FREQ_HZ=768000000
 	PLL_SYS_POSTDIV1=5
@@ -196,15 +196,15 @@ target_compile_definitions(blink PRIVATE
 	PICO_ENABLE_USB_RESET_VIA_BAUD_RATE=0
 	PICO_USB_RESET_INCLUDE_DEFAULT_APP_DRIVER_CB=1)
 
-target_sources(blink PRIVATE
-	blink.c
+target_sources(pedal PRIVATE
+	pedal.c
 	"${SINE_HEADER}"
 	tinyusb/src/tusb.c
 	tinyusb/src/common/tusb_fifo.c
 	tinyusb/src/portable/raspberrypi/rp2040/rp2040_usb.c
 )
 
-target_sources(blink PRIVATE
+target_sources(pedal PRIVATE
 	usb-device.c
 	tinyusb/src/device/usbd.c
 	tinyusb/src/class/audio/audio_device.c
@@ -218,7 +218,7 @@ target_sources(blink PRIVATE
 	#
 	pico-sdk/src/rp2_common/pico_usb_reset/usb_reset.c)
 
-target_link_libraries(blink
+target_link_libraries(pedal
 	pico_stdlib
 	pico_multicore
 	hardware_gpio
@@ -231,7 +231,7 @@ target_link_libraries(blink
 	hardware_watchdog
 	pico_sha256)
 
-target_include_directories(blink PRIVATE
+target_include_directories(pedal PRIVATE
 	include
 	tinyusb/src
 	pico-sdk/src/rp2_common/pico_usb_reset/include
@@ -247,38 +247,38 @@ target_include_directories(blink PRIVATE
 # Add -fsingle-precision-constant / -Wdouble-promotion
 # when starting to do FP for audio
 #
-target_compile_options(blink PRIVATE
+target_compile_options(pedal PRIVATE
 	-Wall -O2
 	-ffast-math
 	-fsingle-precision-constant
 	-Wfloat-conversion)
 
 # Our own sources only - we don't get to pick the SDK's warnings
-set_source_files_properties(blink.c usb-device.c PROPERTIES
+set_source_files_properties(pedal.c usb-device.c PROPERTIES
 	COMPILE_OPTIONS -Wdouble-promotion)
 
 # create map/bin/hex/uf2 file in addition to ELF.
-pico_add_extra_outputs(blink)
+pico_add_extra_outputs(pedal)
 
 # Nothing on the audio core is allowed to call out to a library
-add_custom_command(TARGET blink POST_BUILD
+add_custom_command(TARGET pedal POST_BUILD
 	COMMAND "${SCRIPT_DIR}/check-audio.py"
-		"$<TARGET_FILE:blink>.map"
-		"$<TARGET_FILE:blink>"
+		"$<TARGET_FILE:pedal>.map"
+		"$<TARGET_FILE:pedal>"
 		"${CMAKE_OBJDUMP}"
 	VERBATIM)
 
 # ...and nothing anywhere is allowed to use a double
-add_custom_command(TARGET blink POST_BUILD
+add_custom_command(TARGET pedal POST_BUILD
 	COMMAND "${SCRIPT_DIR}/check-float.py"
-		"$<TARGET_FILE:blink>"
+		"$<TARGET_FILE:pedal>"
 		"${CMAKE_NM}"
 	VERBATIM)
 
 # ...and the image is not allowed to grow into the save area
-add_custom_command(TARGET blink POST_BUILD
+add_custom_command(TARGET pedal POST_BUILD
 	COMMAND "${SCRIPT_DIR}/check-flash.py"
-		"$<TARGET_FILE:blink>"
+		"$<TARGET_FILE:pedal>"
 		"${FLASH_SIZE_BYTES}"
 		"${SAVE_AREA_OFFSET}"
 		"${CMAKE_NM}"
