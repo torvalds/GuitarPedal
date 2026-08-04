@@ -480,6 +480,15 @@ static void sysex_write_num(uint32_t val)
 // can be added later without either side agreeing a version first - the
 // same bargain the schema already makes.  Anything *polled* is the other
 // case and should be packed bytes instead.
+//
+// Measured on the wire: 208 bytes, one SysEx message.  So "a couple of
+// hundred" is exactly right, which is worth writing down because a first
+// attempt at measuring it said 1918 - the pedal streams its status CCs
+// continuously, so a capture window long enough to be sure of catching a
+// reply collects a second of those alongside it, and the inflation
+// scales with the window rather than with the reply.  Any figure taken
+// off a raw byte count has that in it.
+//
 bool send_identity_tx = false;
 static void sysex_send_identity(void)
 {
