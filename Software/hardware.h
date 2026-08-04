@@ -220,7 +220,22 @@ static void init_one_pwm_pin(int pin)
 static void init_pwm_pins(void)
 {
 	init_one_pwm_pin(LED_GPIO);
-	pwm_set_gpio_level(LED_GPIO, 0);
+
+	//
+	// Full, not off, and it stays that way until the first UI tick.
+	//
+	// main() lights this pin as a plain GPIO before anything else runs,
+	// and taking it over for PWM would drop it - so the level is put
+	// back up here and the LED stays on across the handover.  What that
+	// buys is a lamp that means "started, not finished yet": it comes on
+	// at the first instruction and goes to its real brightness when
+	// set_led() first runs, which is inside the main loop.
+	//
+	// So a pedal that hangs during boot sits there lit, and a pedal that
+	// never got as far as main() sits there dark.  See the boot comment
+	// in main() for why that distinction is the one worth having.
+	//
+	pwm_set_gpio_level(LED_GPIO, PWM_WRAP);
 }
 
 static void init_i2c_bus(i2c_inst_t *i2c, int kbps, int sda, int scl)

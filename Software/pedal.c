@@ -160,6 +160,33 @@ int main()
 	// magic - so this cannot be tripped by anything asking for a
 	// restart on purpose.
 	//
+	//
+	// The one thing that runs earlier than the watchdog can.
+	//
+	// The guard below is armed *here*, so it cannot catch anything that
+	// happens before it - the bootrom, crt0, the clock and PLL setup,
+	// XIP coming up.  A hang there is invisible to it, and that is not
+	// hypothetical: the sixth occurrence came back as no USB device and
+	// nothing in BOOTSEL, which is what a watchdog that never got armed
+	// looks like from outside.
+	//
+	// So light the LED first, with a plain GPIO write.  PWM wants a
+	// clock configured and this deliberately wants nothing at all -
+	// it is here to run before everything, including the thing that
+	// exists to catch failures.  init_pwm_pins() takes the pin over
+	// later and keeps it lit; the first set_led() in the main loop is
+	// what finally turns it into a status light.
+	//
+	// Which makes the lamp answer a question nothing else can:
+	//
+	//	dark and stays dark	never reached main() at all
+	//	lit and stays lit	reached main(), hung during boot
+	//	lit, then dims		booted; that is the UI taking over
+	//
+	gpio_init(LED_GPIO);
+	gpio_set_dir(LED_GPIO, GPIO_OUT);
+	gpio_put(LED_GPIO, 1);
+
 	if (watchdog_enable_caused_reboot())
 		reset_usb_boot(0, 0);
 
