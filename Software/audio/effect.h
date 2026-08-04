@@ -21,8 +21,6 @@ sample_t get_usb_audio_input(void);
 // so a call site names the pot once and cannot pair the accessor of one
 // with the position of another.
 //
-typedef float (*pot_convert_fn)(const unsigned char *);
-
 //
 // How an effect's wet and dry get mixed together.
 //
@@ -46,7 +44,6 @@ enum mix_law {
 struct pot_descr {
 	const char *label;
 	const char *unit;
-	pot_convert_fn convert;
 	unsigned char def_val;
 	const char *const *enum_names;
 };
@@ -72,7 +69,14 @@ struct pot_descr {
 // EFF_ENABLE_STEPS)
 //
 struct effect {
-	const char *name, *short_name;
+	//
+	// The display name, and only that.  The *short* name is not here:
+	// it is the effect's name in the generated C and what id_hash is
+	// computed from, so it is load-bearing at build time and read by
+	// nothing at run time.  Renaming one still costs that effect its
+	// saved state; storing it cost a pointer per effect for nobody.
+	//
+	const char *name;
 
 	//
 	// What saved state is matched against.  Both are computed by
@@ -135,8 +139,6 @@ struct effect {
 	unsigned char intense, active_pot;
 	unsigned char pot_values[2][10];
 	void (*init)(unsigned char[10]);
-	void (*load)(struct effect *, unsigned char[10]);
-	void (*save)(struct effect *, unsigned char[10]);
 	sample_t (*step)(sample_t);
 	const struct pot_descr pots[10];
 };
