@@ -711,15 +711,6 @@ static void sysex_send_status(void)
 		report_info(status);
 }
 
-static void sysex_send_pot_value(int eff, int pot, int value)
-{
-	// This should never happen. But just in case...
-	if (value < 0 || value > 120) value = 0;
-
-	uint8_t sysex_pot_message[] = { 0xF0, 0x7D, 0x03, eff, pot, value, 0xF7 };
-	sysex_stream_write(sysex_pot_message, sizeof(sysex_pot_message));
-}
-
 //
 // Several of one effect's pots in one message.
 //
@@ -731,10 +722,10 @@ static void sysex_send_pot_value(int eff, int pot, int value)
 // extra pot two bytes instead of three, and it costs nothing to arrange
 // because the dump already walks effects with their pots inside.
 //
-// The single-pot case is byte for byte the message that was always sent,
-// so this is a superset rather than a change: sysex_send_pot_value()
-// above still emits exactly what it did, and one knob being turned needs
-// no thought at all.
+// A message with one pair is byte for byte what was always sent, so this
+// is a superset rather than a change of format.  The pedal's own way of
+// saying one pot moved is send_sysex_set_param() in midi.h, which builds
+// that same message by hand and is untouched by any of this.
 //
 // Big enough for every pot an effect can have at once: the mix, POT_LAST
 // real ones, and the three steering pots.
