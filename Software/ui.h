@@ -473,18 +473,21 @@ _Static_assert(MAX_ROUTED_EFFECTS <= 2 * STATUS_CHAIN_BITS,
 // How often to say it again when nothing has changed.
 //
 // On change alone is not enough, for two reasons that have nothing to do
-// with each other.  usb_midi_write() is best-effort and gives up after
-// 20ms, so a report can simply be dropped - and a host that missed the
-// one message would go on believing the old answer forever, because from
-// here nothing has changed since.  And an app that connects while
-// something is already wrong never gets told at all, for the same
-// reason: it wasn't listening when it changed.
+// with each other.  A report can simply not go out - the endpoint is busy
+// and this yields to anything that is not status - and a host that missed
+// the one message would go on believing the old answer forever, because
+// from here nothing has changed since.  And an app that connects while
+// something is already wrong never gets told at all, for the same reason:
+// it wasn't listening when it changed.
 //
-// Repeating every eighth tick is about nine messages a second, which is
-// nothing next to a SysEx state dump, and makes both cases correct
-// themselves within a third of a second.
+// Every sixteenth tick is about five messages a second.  It used to be
+// every eighth, which was chosen against the cost of a SysEx state dump -
+// and a dump is now 140 bytes rather than 1184, so the thing this was
+// measured as "nothing next to" got twelve times smaller.  Two thirds of
+// a second to correct itself is still well inside the time it takes to
+// look at an LED and wonder.
 //
-#define STATUS_REPEAT_TICKS 8
+#define STATUS_REPEAT_TICKS 16
 
 //
 // Work out what the pedal is doing, and say so - to the LED and to the
@@ -533,17 +536,39 @@ static void show_status(void)
 
 	bool again = (tick++ % STATUS_REPEAT_TICKS) == 0;
 
-	if (again || global != last_global) {
-		send_midi_cc(MIDI_CC_STATUS_GLOBAL, global);
-		last_global = global;
+	//
+	// Status yields to everything else, and never waits for the wire.
+	//
+	// Two rules, and they are the same idea twice.  Nothing goes out
+	// while the pedal has a real reply in flight, because a schema or a
+	// state dump is something somebody asked for and this is not.  And
+	// what does go out uses the non-blocking write, because the
+	// blocking one answers a full transmit fifo by spinning for 20ms -
+	// three of those, eight times a second, was the pedal stalling its
+	// own audio to talk to a host that had stopped listening.  It
+	// measured as four to seven breaks in a two second capture, quite
+	// independently of any SysEx traffic.
+	//
+	// 'last' is only updated when the write is taken, so a report that
+	// does not go out is not remembered as sent and is tried again on
+	// the next tick, forty milliseconds later.  That matters for a
+	// change: the repeat above covers a lost repeat, but only this
+	// covers a lost *edge*, which is the one nobody would notice going
+	// missing until the LED and the app disagreed.
+	//
+	bool quiet = !midi_tx_busy();
+
+	if (quiet && (again || global != last_global)) {
+		if (send_midi_cc_nb(MIDI_CC_STATUS_GLOBAL, global))
+			last_global = global;
 	}
-	if (again || chain[0] != last_chain[0]) {
-		send_midi_cc(MIDI_CC_STATUS_CHAIN_LO, chain[0]);
-		last_chain[0] = chain[0];
+	if (quiet && (again || chain[0] != last_chain[0])) {
+		if (send_midi_cc_nb(MIDI_CC_STATUS_CHAIN_LO, chain[0]))
+			last_chain[0] = chain[0];
 	}
-	if (again || chain[1] != last_chain[1]) {
-		send_midi_cc(MIDI_CC_STATUS_CHAIN_HI, chain[1]);
-		last_chain[1] = chain[1];
+	if (quiet && (again || chain[1] != last_chain[1])) {
+		if (send_midi_cc_nb(MIDI_CC_STATUS_CHAIN_HI, chain[1]))
+			last_chain[1] = chain[1];
 	}
 
 	for (int i = 0; i < ARRAY_SIZE(effects); i++)

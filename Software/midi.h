@@ -126,6 +126,7 @@ static inline uint8_t midi_status_cin(uint8_t status)
 bool handle_midi_packet(const uint8_t packet[4]);
 void usb_midi_poll(void);
 bool usb_midi_write(const uint8_t packet[4]);
+bool usb_midi_write_nb(const uint8_t packet[4]);
 void uart_midi_write(const uint8_t packet[4]);
 
 static inline void send_midi_cc(uint8_t cc, uint8_t val)
@@ -133,6 +134,26 @@ static inline void send_midi_cc(uint8_t cc, uint8_t val)
 	uint8_t packet[4] = { 0x0B, 0xB0, cc, val };
 	usb_midi_write(packet);
 	uart_midi_write(packet);
+}
+
+//
+// The same, for something nobody is waiting on.
+//
+// Returns whether USB took it, so a caller that repeats itself anyway can
+// simply not remember having sent it and say it again next time.  A host
+// that is not reading fills the transmit fifo and every blocking write
+// into it costs MIDI_TX_TIMEOUT_MS, which for anything periodic is a
+// stall the pedal inflicts on itself for no reader's benefit.
+//
+// The UART is written either way and is not part of the answer: it is a
+// ring that drops when full and never waits, so there is nothing to
+// report and nothing to retry.
+//
+static inline bool send_midi_cc_nb(uint8_t cc, uint8_t val)
+{
+	uint8_t packet[4] = { 0x0B, 0xB0, cc, val };
+	uart_midi_write(packet);
+	return usb_midi_write_nb(packet);
 }
 
 static inline void send_sysex_set_param(uint8_t eff_id, uint8_t pot_idx, uint8_t val)
