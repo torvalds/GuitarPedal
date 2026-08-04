@@ -750,9 +750,9 @@ static void sysex_send_status(void)
 // because the dump already walks effects with their pots inside.
 //
 // A message with one pair is byte for byte what was always sent, so this
-// is a superset rather than a change of format.  The pedal's own way of
-// saying one pot moved is send_sysex_set_param() in midi.h, which builds
-// that same message by hand and is untouched by any of this.
+// is a superset rather than a change of format, and sysex_echo_pot()
+// below sends exactly that one-pair form when the pedal moves a pot by
+// itself.
 //
 // Big enough for every pot an effect can have at once: the mix, POT_LAST
 // real ones, and the three steering pots.
