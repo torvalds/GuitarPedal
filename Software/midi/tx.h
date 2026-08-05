@@ -274,8 +274,6 @@ static uint8_t midi_tx_byte(const struct midi_msg *m, uint16_t i)
 	return midi_tx.payload[(m->off + i) & (MIDI_TX_PAYLOAD - 1)];
 }
 
-extern bool usb_midi_write_nb(const uint8_t packet[4]);
-
 static bool midi_tx_push(void)
 {
 	if (!midi_tx.pkt_ready)

@@ -45,7 +45,7 @@ and if you have all the requirements, doing
 	make
 ```
 should get the build going, and you should find the resulting
-`blink.uf2` file in the `build/` subdirectory.  You can just write that
+`pedal.uf2` file in the `build/` subdirectory.  You can just write that
 file to the USB filesystem after you've set the pedal into
 programming mode (see below).
 

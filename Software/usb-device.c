@@ -7,7 +7,7 @@
 #include "tusb.h"
 #include "pico/usb_reset.h"
 
-#include "midi.h"
+#include "midi/midi.h"
 
 #include "usb-audio.h"
 

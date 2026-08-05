@@ -21,8 +21,6 @@ sample_t get_usb_audio_input(void);
 // so a call site names the pot once and cannot pair the accessor of one
 // with the position of another.
 //
-typedef float (*pot_convert_fn)(const unsigned char *);
-
 //
 // How an effect's wet and dry get mixed together.
 //
@@ -46,7 +44,6 @@ enum mix_law {
 struct pot_descr {
 	const char *label;
 	const char *unit;
-	pot_convert_fn convert;
 	unsigned char def_val;
 	const char *const *enum_names;
 };
@@ -72,7 +69,14 @@ struct pot_descr {
 // EFF_ENABLE_STEPS)
 //
 struct effect {
-	const char *name, *short_name;
+	//
+	// The display name, and only that.  The *short* name is not here:
+	// it is the effect's name in the generated C and what id_hash is
+	// computed from, so it is load-bearing at build time and read by
+	// nothing at run time.  Renaming one still costs that effect its
+	// saved state; storing it cost a pointer per effect for nobody.
+	//
+	const char *name;
 
 	//
 	// What saved state is matched against.  Both are computed by
@@ -135,13 +139,58 @@ struct effect {
 	unsigned char intense, active_pot;
 	unsigned char pot_values[2][10];
 	void (*init)(unsigned char[10]);
-	void (*load)(struct effect *, unsigned char[10]);
-	void (*save)(struct effect *, unsigned char[10]);
 	sample_t (*step)(sample_t);
 	const struct pot_descr pots[10];
 };
 
 #define EFFECT_POT(...) { __VA_ARGS__ }
+
+//
+// 'seq' does two jobs at once, and that is the point of it.
+//
+// Its low bit says which half of pot_values[] is live.  Its value is what
+// the audio core compares against 'last' to notice that anything changed.
+// One counter doing both is what makes the handover a single store: the
+// write that publishes the new data is the same write that says there is
+// new data, so there is no window where one is true and the other is not,
+// and no second variable to keep in step with this one.
+//
+// The cost is that '& 1' at a call site does not say which of the two
+// jobs is being asked about.  These do.  They are the whole vocabulary:
+//
+//	effect_pots()		what is running now
+//	effect_pots_at()	the same, when the caller already has seq
+//	effect_spare_pots()	the half to fill in
+//	effect_publish()	make the filled half the live one
+//
+static inline unsigned char *effect_pots_at(struct effect *e, unsigned int seq)
+{
+	return e->pot_values[seq & 1];
+}
+
+static inline unsigned char *effect_spare_pots(struct effect *e, unsigned int seq)
+{
+	return e->pot_values[!(seq & 1)];
+}
+
+//
+// Reading 'seq' rather than being handed it, for callers that only want
+// to look.  A writer must latch it once and pass it to all three, or the
+// live half could move between deciding what to copy and saying so.
+//
+static inline unsigned char *effect_pots(struct effect *e)
+{
+	return effect_pots_at(e, e->seq);
+}
+
+//
+// The release is what orders the fill against the publish: core 1 either
+// sees the old set or the new one, never half of each.
+//
+static inline void effect_publish(struct effect *e, unsigned int seq)
+{
+	smp_store_release(&e->seq, seq + 1);
+}
 
 //
 // The largest value this pot can hold.
@@ -574,7 +623,7 @@ static __attribute__((noinline)) void __audio_func(make_one_noise)(void)
 			continue;
 
 		effect->last = seq;
-		effect->init(effect->pot_values[seq & 1]);
+		effect->init(effect_pots_at(effect, seq));
 	}
 
 	static int disable = 0;

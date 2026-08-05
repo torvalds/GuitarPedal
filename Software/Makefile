@@ -1,12 +1,12 @@
 build:
-	cmake --build build --target blink
+	cmake --build build --target pedal
 
 usb-device:
 	cmake -B build
-	cmake --build build --target blink
+	cmake --build build --target pedal
 
 flash:
-	picotool load build/blink.elf && picotool reboot
+	picotool load build/pedal.elf && picotool reboot
 
 prep:
 	git submodule init

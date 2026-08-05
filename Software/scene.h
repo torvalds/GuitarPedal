@@ -198,13 +198,31 @@ static void scene_load_effect(struct effect *eff, const struct scene_effect *sav
 		eff->init(eff->pot_values[0]);
 }
 
+//
+// Saving reads the *live* half, and reads it without a barrier.
+//
+// Both of those want saying, because everything else that touches
+// pot_values[] is careful and this deliberately is not.
+//
+// The live half is the right one because it is what the pedal is
+// currently making a noise with, and that is what somebody pressing save
+// means.  The spare half is either a copy of it or a write that has not
+// been published yet - neither is the sound in the room.
+//
+// And no barrier is needed because there is no race to lose.  Core 0 is
+// the only writer of pot_values[], and this runs on core 0: the live
+// half cannot change underneath it, because changing it is something
+// this same core would have to do.  Core 1 reads the same bytes at the
+// same time, which is two readers and no writer.
+//
+// What could move is which half is live, if a write landed between
+// reading 'seq' and the memcpy - and it cannot, for the same reason.
+//
 static void scene_save_effect(struct effect *eff, struct scene_effect *out)
 {
-	int seq = eff->seq & 1;
-
 	out->id_hash = eff->id_hash;
 	out->pot_hash = eff->pot_hash;
-	memcpy(out->pots, eff->pot_values[seq], 10);
+	memcpy(out->pots, effect_pots(eff), 10);
 	out->mix = FLOAT_TO_POT(eff->mix_pot);
 	out->channels = eff->channels;
 	out->merge = FLOAT_TO_POT(eff->merge);

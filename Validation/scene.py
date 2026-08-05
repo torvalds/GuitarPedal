@@ -54,12 +54,18 @@ def effects_from_map(path="../Software/build/effect_map.h"):
     """Every effect in the built firmware, in id order."""
     text = open(path).read()
     out = []
+    #
+    # The short name is not here to be matched on: it stopped being
+    # stored on struct effect once nothing read it at run time.  It was
+    # never read here either - by_name() below deliberately matches the
+    # display name, because copies share a short one.
+    #
     for m in re.finditer(
-            r'\.name = "([^"]*)",\s*\n\s*\.short_name = "([^"]*)",\s*\n'
+            r'\.name = "([^"]*)",\s*\n'
             r'\s*\.id_hash = (0x[0-9a-f]+),\s*\n\s*\.pot_hash = (0x[0-9a-f]+),',
             text):
-        out.append({"name": m.group(1), "short": m.group(2),
-                    "id": int(m.group(3), 16), "pot": int(m.group(4), 16),
+        out.append({"name": m.group(1),
+                    "id": int(m.group(2), 16), "pot": int(m.group(3), 16),
                     "pots": [0] * 10, "mix": 120, "channels": 0, "merge": 120})
     if not out:
         sys.exit(f"scene: no effects in {path} - built?")
@@ -67,7 +73,9 @@ def effects_from_map(path="../Software/build/effect_map.h"):
     # The schema defaults, so a scene says what the pedal would have said
     # rather than zeroing every knob it does not mention.
     for eff, block in zip(out, text.split(".pots = {")[1:]):
-        vals = re.findall(r'EFFECT_POT\("[^"]*",[^,]*,[^,]*,\s*(\d+)', block)
+        # EFFECT_POT(label, unit, def_val[, enum]) - the third field
+        # used to be a converting accessor nothing ever called through.
+        vals = re.findall(r'EFFECT_POT\("[^"]*",[^,]*,\s*(\d+)', block)
         for i, v in enumerate(vals[:10]):
             eff["pots"][i] = int(v)
     return out

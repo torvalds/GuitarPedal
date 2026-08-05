@@ -591,9 +591,18 @@ def generate(audio_dir, out_h, out_js, out_md):
                 # once at the call site and there is no second number to
                 # get wrong.
                 #
+                # 'static inline' rather than 'static' because one is
+                # emitted for every pot and only the effect that owns it
+                # knows whether it wants one.  An enum pot usually does
+                # not - the value is the answer - so a plain 'static'
+                # leaves the compiler warning about accessors nobody
+                # asked for.  These used to be kept alive by being stored
+                # in a struct field that nothing ever read, which is not
+                # a reason to keep a struct field.
+                #
                 val = f"pot[{pot['const']}]"
                 args_str = ", ".join(pot['args'])
-                sig = f"static float {fn_name}(const unsigned char pot[10])"
+                sig = f"static inline float {fn_name}(const unsigned char pot[10])"
                 if pot['curve'] == 'RAW' or pot['curve'] == 'ENUM':
                     f.write(f"{sig} {{ return {val}; }}\n")
                 elif pot['curve'] == 'LINEAR':
@@ -704,7 +713,6 @@ def generate(audio_dir, out_h, out_js, out_md):
 
             f.write(f"static struct effect {struct_name} = {{\n")
             f.write(f"\t.name = \"{e_data['full_name']}\",\n")
-            f.write(f"\t.short_name = \"{e_data['short_name']}\",\n")
             f.write(f"\t.id_hash = 0x{effect_id_hash(e_data['short_name'], e_data['copy']):08x},\n")
             f.write(f"\t.pot_hash = 0x{pot_layout_hash(e_data['pots']):08x},\n")
             f.write(f"\t.def_mix = {e_data['def_mix']}f,\n")
@@ -723,7 +731,7 @@ def generate(audio_dir, out_h, out_js, out_md):
 
                 unit_str = f"\"{pot['unit']}\"" if pot['unit'] and pot['unit'] != "none" else "NULL"
                 enum_str = f", {pot['enum_name']}" if 'enum_name' in pot else ""
-                f.write(f"\t\tEFFECT_POT(\"{pot['label']}\", {unit_str}, {pot['fn_name']}, {pot_val}{enum_str}),\n")
+                f.write(f"\t\tEFFECT_POT(\"{pot['label']}\", {unit_str}, {pot_val}{enum_str}),\n")
 
             f.write("\t}\n")
             f.write("};\n\n")
@@ -785,7 +793,8 @@ def generate(audio_dir, out_h, out_js, out_md):
     # a protocol agree right up until they don't, and this file is how
     # the web app learns what the firmware speaks.
     #
-    midi_h = os.path.join(os.path.dirname(os.path.abspath(audio_dir)), "midi.h")
+    midi_h = os.path.join(os.path.dirname(os.path.abspath(audio_dir)),
+                          "midi", "midi.h")
     with open(midi_h) as f:
         midi_src = f.read()
 
