@@ -29,41 +29,14 @@ void uart_midi_write(const uint8_t packet[4])
 bool uart_midi_read(uint8_t packet[4])
 {
 #if MIDI_HW
-	static int expected_bytes = 0;
-	static uint8_t parser_packet[4];
-	static int parser_idx = 0;
+	static struct midi_stream_parser parser;
 
 	while (uart_rx_head != uart_rx_tail) {
 		uint8_t b = uart_rx_buf[uart_rx_tail];
 		uart_rx_tail = (uart_rx_tail + 1) % UART_RX_BUF_SIZE;
 
-		if (b >= 0xF8) {
-			// Real-time message
-			continue;
-		} else if (b >= 0x80) {
-			parser_packet[1] = b;
-			parser_idx = 2;
-			if ((b & 0xF0) == 0xC0 || (b & 0xF0) == 0xD0) {
-				expected_bytes = 1;
-			} else if (b < 0xF0) {
-				expected_bytes = 2;
-			} else {
-				expected_bytes = 0;
-			}
-		} else if (expected_bytes > 0 && parser_idx > 0) {
-			parser_packet[parser_idx++] = b;
-			if (parser_idx - 2 == expected_bytes) {
-				// CIN 0 is reserved: a host is entitled to
-				// ignore it, and ours was emitting nothing
-				// else on this path.
-				packet[0] = midi_status_cin(parser_packet[1]);
-				packet[1] = parser_packet[1];
-				packet[2] = parser_packet[2];
-				packet[3] = parser_packet[3];
-				parser_idx = 2;
-				return true;
-			}
-		}
+		if (midi_stream_read(&parser, b, packet))
+			return true;
 	}
 #endif
 	return false;
