@@ -64,6 +64,30 @@ check-loop:
 check-midi:
 	./test-midi.py
 
+#
+# Cold power cycles on one board, tallied.  Needs a hand on the USB plug
+# - there is no switched hub here - so it is as far from 'check' as a
+# target gets, and it takes a --target because cycling the wrong board
+# yields a number indistinguishable from a real one.
+#
+#	make check-boot TARGET=7989 JSON=boot-A.json
+#
+TARGET ?=
+JSON ?=
+check-boot:
+	./test-boot.py $(if $(TARGET),--target $(TARGET)) \
+		       $(if $(JSON),--json $(JSON)) $(BOOTARGS)
+
+#
+# The same hang, chased unattended through BOOTSEL instead of through the
+# plug.  Cheap enough to leave running, and blind to whatever needs a
+# genuinely cold crystal - a clean run here is not a fixed pedal.  See
+# the header of test-reboot.py before believing a result either way.
+#
+check-reboot:
+	./test-reboot.py $(if $(TARGET),--target $(TARGET)) \
+			 $(if $(JSON),--json $(JSON)) $(BOOTARGS)
+
 check: test-midi-cin
 	./test-midi-cin
 ifeq ($(NODE),)
@@ -81,4 +105,4 @@ else
 	r=$$?; rm -rf $$t; exit $$r
 endif
 
-.PHONY: check check-hw check-loop check-midi check-split
+.PHONY: check check-boot check-hw check-loop check-midi check-reboot check-split
