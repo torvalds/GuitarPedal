@@ -177,6 +177,46 @@ target_compile_definitions(pedal PRIVATE
 	PLL_SYS_VCO_FREQ_HZ=768000000
 	PLL_SYS_POSTDIV1=5
 	PLL_SYS_POSTDIV2=1
+
+	#
+	# Wait longer for the crystal before believing it.
+	#
+	# One board came up dead on roughly a quarter of cold power cycles -
+	# no USB, no BOOTSEL, nothing in the host's log - and was rock solid
+	# once running.  It hangs in pll_init(), spinning on PLL_CS_LOCK,
+	# which is before main() and before any watchdog tick exists, so
+	# nothing in this firmware could see it and no reflash could recover
+	# it.
+	#
+	# The PLL was not the problem; its reference was.  The counter that
+	# gates XOSC_STATUS_STABLE is clocked by the crystal itself, so it
+	# measures oscillation and not amplitude - a crystal that is still
+	# building trips STABLE anyway, and pll_init() gets handed a
+	# reference too poor to lock to.  At the default multiplier of 6 that
+	# is about 6ms.  This makes it about 64ms.
+	#
+	# 20 cold power cycles out of 20 clean afterwards, against about 5 in
+	# 20 before.  The cost is 58ms once per boot, which nobody can see
+	# next to USB enumeration.
+	#
+	# The default is what is wrong here, not the crystal.  The part is
+	# the one the datasheet asks for, with the load caps and the damping
+	# resistor it asks for, and this has been seen on more than one board
+	# - so "that one crystal is marginal" does not survive contact with
+	# the evidence.  Nor does "our layout", entirely: 18 board files in
+	# the SDK override this, from eight different vendors, and 17 of them
+	# pick exactly 64.  Everyone who builds something that is not the
+	# reference design and looks at this raises it.  What none of them
+	# do is leave it at 6 - and pico.h and pico2.h, which never had to
+	# care, are where the 6 comes from.
+	#
+	# What this does NOT do is make a dead crystal start; nothing here
+	# can, and a board whose crystal never oscillates still hangs in
+	# xosc_init() instead.  Surviving that needs a bounded wait in place
+	# of the SDK's two unbounded ones, which means replacing the __weak
+	# runtime_init_clocks() rather than setting anything.
+	#
+	PICO_XOSC_STARTUP_DELAY_MULTIPLIER=64
 	MIDI_HW=$<BOOL:${MIDI_HW}>
 	SAMPLES_PER_SEC=${SAMPLES_PER_SEC}f
 	CFG_TUSB_MCU=OPT_MCU_RP2040
