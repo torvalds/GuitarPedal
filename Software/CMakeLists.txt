@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.13...3.27)
 #
 # What we build for, and how we pass floats around.
 #
-# The part is an RP2354B - an RP2350 with the flash on the die.  The
+# The part is an RP2354A - an RP2350A with the flash on the die.  The
 # default float ABI is softfp, which is a compatibility mode for parts
 # that might not have an FPU.  This one does, and the whole firmware is
 # built around 32-bit floats, so passing them in core registers is pure
@@ -101,7 +101,7 @@ set(SCRIPT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
 # How much flash there actually is.
 #
 # PICO_BOARD is not set, so the SDK defaults it to 'pico2' - a board
-# with 4MB of flash hanging off the QSPI pins.  This is an RP2354B and
+# with 4MB of flash hanging off the QSPI pins.  This is an RP2354A and
 # the 2MB is on the die.  Nothing has cared so far, because nothing has
 # addressed flash by anything but a symbol.
 #
