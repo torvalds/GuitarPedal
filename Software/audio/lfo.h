@@ -23,10 +23,24 @@
 //
 #define F_STEP (TWO_POW_32/SAMPLES_PER_SEC)
 
+//
+// THE THREE SHAPES DO NOT SHARE A RANGE.  Sine and triangle are bipolar,
+// -1 to 1, because that is what a modulator added to a centre value
+// wants.  The sawtooth is 0 to 1, and that is deliberate: it is the raw
+// phase, so it can be handed straight to something that takes a phase in
+// cycles.  tremolo.h feeds it to fastsincos() and gets its rotation for
+// free, with no scaling in between and no wrap to get wrong.
+//
+// The asymmetry earns its keep, so it stays - but it is worth what it
+// costs only if it is known about, and it was not written down anywhere
+// until a test tone read the shape number straight out of this enum and
+// produced a saw with half its level in DC.  An audio waveform wants
+// 2*v - 1; a phase does not.  Ask which one you are asking for.
+//
 enum lfo_type {
-	lfo_sinewave,
-	lfo_triangle,
-	lfo_sawtooth,
+	lfo_sinewave,		// -1 .. 1
+	lfo_triangle,		// -1 .. 1
+	lfo_sawtooth,		//  0 .. 1  - raw phase, see above
 };
 
 struct lfo_state {

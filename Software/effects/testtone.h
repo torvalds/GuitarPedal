@@ -113,5 +113,16 @@ static float testtone_step(float in)
 		return testtone.amp * (2.0f * u32_to_fraction(x) - 1.0f);
 	}
 
-	return testtone.amp * lfo_step(&testtone.lfo, testtone.type);
+	float v = lfo_step(&testtone.lfo, testtone.type);
+
+	//
+	// The saw comes back as 0 to 1 where the other two come back as -1
+	// to 1 - it is the raw phase, which is what makes it useful to the
+	// tremolo and useless to us.  Centring it here rather than in
+	// lfo.h, because that range is the point of it there.
+	//
+	if (testtone.type == lfo_sawtooth)
+		v = 2.0f * v - 1.0f;
+
+	return testtone.amp * v;
 }
