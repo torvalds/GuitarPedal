@@ -107,26 +107,36 @@ static void switch_irq(void)
 	user_interaction = 1;
 }
 //
-// What this firmware is, and what it found itself running on.
+// What this firmware found itself running on.
 //
-// The hardware half is probed once at boot.  A fixed build cannot adapt
-// to the board it lands on and this does not try to - it answers a
-// different question, which has cost an evening more than once: is this
-// the board this firmware was built for at all?
+// Probed once at boot, and the question it answers is not "which board
+// is this" - the pin map already settled that at compile time, and a
+// fixed build cannot adapt to landing on the wrong one anyway.  It is
+// the narrower question of what is on the far end of the FFC, which the
+// build genuinely does not know and must not guess.
 //
-// The early boards carried a TAC5112 codec with its control registers on
-// i2c0, and an SH1106 screen on i2c1.  Neither is supported any more and
-// the code for both is gone, but the parts still answer when addressed.
-// So anything replying there means the firmware is newer than the board,
-// and nothing else in the system is in a position to notice.
+// The audio-jacks board is a separate board joined by a cable, and it
+// comes in two flavours: a TAC5112, which was never wired for stereo,
+// and a TAC5242, which was.  Either can be paired with either MCU board,
+// so which one is present is not a property of the build and cannot be.
+// The TAC5112 needs its control registers set up over i2c0 regardless,
+// so the firmware has to find out - and having found out, it can say so.
 //
-// The eeprom is in the same position now.  It was the scene store, and
-// which part was fitted mattered a great deal - the sizes differ in how
-// many address bytes they take, so a mismatched build wrote to the wrong
-// place and the pedal ran perfectly and forgot everything on reboot.
-// Scenes live in the RP2354's own flash now and nothing reads the part
-// at all, so all that is left is the same statement as the other two:
-// something is answering at 0x50.
+// **Mono against stereo is the difference a person actually notices**,
+// and it is this one.  It is not the codec's doing - both parts are
+// stereo-capable - it is that the older board only ever routed one
+// channel.
+//
+// The SH1106 screen on i2c1 is the same kind of statement: it belonged
+// to a design that is gone, the code for it went with it, and the part
+// still answers when addressed.
+//
+// The eeprom used to be probed here too, and is not any more.  It was
+// the scene store, which now lives in the RP2354's own flash; after that
+// it survived a while as a hint about which board this was, and it was
+// never a good one.  It sat on whichever board happened to carry it
+// across a couple of revisions, so its presence identified nothing, and
+// the reading was not even stable - see the issue list.
 //
 // What gets reported is what was *observed*.  Any inference from it -
 // which board this is, how old - belongs to whoever is reading rather
@@ -134,9 +144,8 @@ static void switch_irq(void)
 // app change and not a protocol one.
 //
 static struct {
-	bool eeprom;		// the old scene store, 0x50
-	bool legacy_codec;	// TAC5112, 0x51 - an early board
-	bool legacy_screen;	// SH1106, 0x3c - ditto
+	bool legacy_codec;	// TAC5112, 0x51 - the mono audio board
+	bool legacy_screen;	// SH1106, 0x3c - a design that is gone
 } hardware;
 
 static bool i2c_probe(i2c_inst_t *i2c, uint8_t addr)
@@ -150,38 +159,28 @@ static bool i2c_probe(i2c_inst_t *i2c, uint8_t addr)
 
 static void probe_hardware(void)
 {
-	hardware.eeprom = i2c_probe(MC24Cxx_I2C);
 	hardware.legacy_codec = i2c_probe(TAC5112_I2C);
 	hardware.legacy_screen = i2c_probe(SH1106_I2C);
 
 	//
-	// The one inference drawn from any of this, and it is drawn here
-	// rather than on the wire.  A name is allowed to guess: nothing
-	// depends on it being right beyond a human reading a port list,
-	// and being wrong costs a rebuild.  The identity reply is not
-	// allowed to, for the reason above - so it keeps reporting that
-	// nothing answered at 0x51, and this says what that means.
+	// Say what we are before USB exists, because the name is part of
+	// how a person tells two pedals apart and the host may already be
+	// attached and waiting.
 	//
-	// It has to be said before init_usb(), which is why probing
-	// happens as early as it does.
+	// The board name is compile-time and the channel count is not, so
+	// this is where the two meet.  Two static strings rather than a
+	// buffer: there is exactly one bit to fold in.
 	//
-	usb_set_product(hardware.legacy_codec ? "TAC5112 Pedal" : "TAC5242 Pedal");
+	usb_set_product(hardware.legacy_codec
+			? PEDAL_BOARD_NAME " mono Pedal"
+			: PEDAL_BOARD_NAME " stereo Pedal");
 
 	//
-	// Worst first, and only one of these arrives: report_status() is a
-	// plain overwrite and get_status() takes the message away as it
-	// reads it, so a chain of ifs would deliver the last thing tested
-	// rather than the thing worth saying.
-	//
 	// An early board is merely old: the TAC5112 wants a little setup,
-	// which it gets, and those boards never routed the second
-	// channel, so they are mono.
-	//
-	// A missing eeprom used to be the thing worth saying, because it
-	// meant nothing would persist.  It says nothing now - scenes are
-	// in the RP2354's flash, which is on the die and cannot be
-	// absent - so the boards built without one have stopped being
-	// useless and stopped needing a warning.
+	// which it gets, and that board never routed the second channel,
+	// so it is mono.  Worth saying rather than fixing - and now that
+	// the product string carries it too, this is the louder half of
+	// the same fact rather than the only place it appears.
 	//
 	if (hardware.legacy_codec || hardware.legacy_screen)
 		report_status("Early board: mono only");

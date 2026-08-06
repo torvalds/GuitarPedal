@@ -164,9 +164,7 @@ static void sysex_send_identity(void)
 	sysex_write_num(populated_scenes());
 	sysex_write_str(",\"midi_hw\":");
 	sysex_write_str(MIDI_HW ? "true" : "false");
-	sysex_write_str(",\"found\":{\"eeprom\":");
-	sysex_write_str(hardware.eeprom ? "true" : "false");
-	sysex_write_str(",\"legacy_codec\":");
+	sysex_write_str(",\"found\":{\"legacy_codec\":");
 	sysex_write_str(hardware.legacy_codec ? "true" : "false");
 	sysex_write_str(",\"legacy_screen\":");
 	sysex_write_str(hardware.legacy_screen ? "true" : "false");
