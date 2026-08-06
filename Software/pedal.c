@@ -16,7 +16,6 @@
 #include "board.h"
 
 #include "status.h"
-#include "ws2812.pio.h"
 #include "debounce.pio.h"
 #include "rotary.pio.h"
 #include "i2s.pio.h"
@@ -24,6 +23,9 @@
 #define PIO0_I2S_TX_SM 0
 #define PIO0_I2S_RX_SM 1
 #define PIO0_WS2812_SM 2
+
+// After the state machine numbering above, which it uses.
+#include "pixels.h"
 
 // PIO1 runs one debounce state machine per switch, and the state
 // machine index is the switch id - see switch.h.  PIO2 has the one
@@ -183,9 +185,20 @@ int main()
 	//	lit and stays lit	reached main(), hung during boot
 	//	lit, then dims		booted; that is the UI taking over
 	//
+	//
+	// ...on a board that has a plain LED on that pin.  The usb-stomp
+	// board does not: LED_GPIO there is the stomp switch, wired
+	// straight to ground with no series resistor, so driving it high
+	// and then standing on the switch is a short.  Those boards have
+	// three WS2812Bs instead, which cannot be lit this early - they
+	// want PIO, DMA and a configured clock, all of which is the thing
+	// this lamp exists to run before.
+	//
+#ifndef WS2812_GPIO
 	gpio_init(LED_GPIO);
 	gpio_set_dir(LED_GPIO, GPIO_OUT);
 	gpio_put(LED_GPIO, 1);
+#endif
 
 	if (watchdog_enable_caused_reboot())
 		reset_usb_boot(0, 0);

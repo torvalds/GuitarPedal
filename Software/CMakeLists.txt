@@ -165,9 +165,26 @@ add_custom_command(
 )
 target_sources(pedal PRIVATE "${EFFECT_MAP_HEADER}")
 
+#
+# The WS2812B waveform, as a 256-entry table.
+#
+# The protocol used to live in ws2812.pio, in delay slots and a branch,
+# with a '.clock_div 18' that quietly meant a different bit rate on
+# every system clock this firmware has run at.  It is a table now, which
+# can be checked with a diff on a machine that has no PIO in it - see
+# pixels.h and pio/bitstream.pio.
+#
+set(WS2812_TABLE "${CMAKE_CURRENT_BINARY_DIR}/ws2812_table.h")
+add_custom_command(
+	OUTPUT "${WS2812_TABLE}"
+	COMMAND "${SCRIPT_DIR}/ws2812_table.py" "${WS2812_TABLE}"
+	DEPENDS "${SCRIPT_DIR}/ws2812_table.py"
+)
+target_sources(pedal PRIVATE "${WS2812_TABLE}")
+
 set(PIO_DIR "${CMAKE_CURRENT_SOURCE_DIR}/pio")
 
-pico_generate_pio_header(pedal ${PIO_DIR}/ws2812.pio)
+pico_generate_pio_header(pedal ${PIO_DIR}/bitstream.pio)
 pico_generate_pio_header(pedal ${PIO_DIR}/debounce.pio)
 pico_generate_pio_header(pedal ${PIO_DIR}/rotary.pio)
 pico_generate_pio_header(pedal ${PIO_DIR}/i2s.pio)

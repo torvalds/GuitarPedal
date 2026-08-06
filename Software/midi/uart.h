@@ -101,18 +101,22 @@ void uart_midi_poll(void)
 static void uart_midi_init(void)
 {
 #if MIDI_HW
-	// On RP2350, function 11 maps GPIO 26/27 to UART1 TX/RX
-	// The normal UART_FUNCSEL_NUM macro can't deal with that
+	// The funcsel is a property of the pins and comes from
+	// board.h.  UART_FUNCSEL_NUM() can't work it out, and the
+	// answer is not the same on both boards: UART1 TX/RX is
+	// function 2 on GPIO 20/21 and function 11 on 26/27,
+	// because 26/27 have CTS/RTS at 2 and the TX/RX pair is
+	// one of the RP2350's extended functions.
 	//
-	// Don't even ask how long it took to debug this: I had
-	// read the datasheet when setting this all up, but I
-	// hadn't connected the dots on UART_FUNCSEL_NUM() not
-	// doing the right thing.
-	//
-	// There is probably some proper way to do this in the
-	// SDK, but whatever.
-	gpio_set_function(MIDI_OUT, 11);
-	gpio_set_function(MIDI_IN, 11);
+	// Don't even ask how long it took to debug this the first
+	// time: I had read the datasheet when setting this all up,
+	// but I hadn't connected the dots on UART_FUNCSEL_NUM() not
+	// doing the right thing.  Then it was hardcoded to 11 here,
+	// which cost a second evening on the board that wants 2 -
+	// the pins silently ended up muxed to a function that does
+	// not exist on them, which is as quiet as a failure gets.
+	gpio_set_function(MIDI_OUT, MIDI_FUNCSEL);
+	gpio_set_function(MIDI_IN, MIDI_FUNCSEL);
 
 	// MIDI idle is +5V, but that is "no current": LED is off,
 	// and the TLP2310 drives the MIDI_IN pin low.

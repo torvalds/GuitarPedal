@@ -65,8 +65,7 @@ static void init_i2s(void)
 static void init_ws2812(void)
 {
 #ifdef WS2812_GPIO
-	uint offset = pio_add_program(pio0, &ws2812_program);
-	ws2812_program_init(pio0, PIO0_WS2812_SM, offset, WS2812_GPIO);
+	pixels_init();
 #endif
 }
 
@@ -207,6 +206,7 @@ static void init_sw_pins(void)
 	irq_set_enabled(PIO1_IRQ_0, true);
 }
 
+#ifndef WS2812_GPIO
 static void init_one_pwm_pin(int pin)
 {
 	unsigned int slice = pwm_gpio_to_slice_num(pin);
@@ -216,9 +216,20 @@ static void init_one_pwm_pin(int pin)
 	pwm_set_gpio_level(pin, 0);
 	pwm_set_enabled(slice, true);
 }
+#endif
 
 static void init_pwm_pins(void)
 {
+#ifdef WS2812_GPIO
+	//
+	// Nothing to dim.  A board with smart LEDs has no PWM one - and on
+	// the usb-stomp board LED_GPIO is not an LED at all, it is the
+	// stomp switch, shorting to ground with no series resistor.  So
+	// this must not run there, and neither must the boot lamp in
+	// main().  Both are left in place for the boards that do have it.
+	//
+	return;
+#else
 	init_one_pwm_pin(LED_GPIO);
 
 	//
@@ -236,6 +247,7 @@ static void init_pwm_pins(void)
 	// in main() for why that distinction is the one worth having.
 	//
 	pwm_set_gpio_level(LED_GPIO, PWM_WRAP);
+#endif
 }
 
 static void init_i2c_bus(i2c_inst_t *i2c, int kbps, int sda, int scl)
