@@ -544,11 +544,20 @@ def stereo(src, dst, found, args):
     Everything but the source is silenced first, so the channel that is
     not being driven is carrying nothing rather than carrying the rest of
     the ring.
+
+    Including the destination - which *is* the rest of the ring when there
+    are only two.  Leaving it in passthrough feeds the source's output back
+    into the source's own input, and the chain's left-over-right copy (56)
+    then puts it on the channel that is supposed to be silent, arriving
+    louder than the driven one because it has been round the link and
+    picked up the gain.  Two correctly wired boards failed this in both
+    directions at -2.9 dB; muting the far end gives 81 dB.  It costs the
+    measurement nothing, because the reading is LR_Dry - what arrives at
+    the jacks, whatever the board does with it afterwards.
     """
     for d in found:
-        if d is not src and d is not dst:
+        if d is not src:
             mute(d)
-    passthrough(dst)
 
     #
     # At the topology frequency and measured only there, for the reason
