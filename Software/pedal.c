@@ -16,7 +16,6 @@
 #include "board.h"
 
 #include "status.h"
-#include "ws2812.pio.h"
 #include "debounce.pio.h"
 #include "rotary.pio.h"
 #include "i2s.pio.h"
@@ -24,6 +23,18 @@
 #define PIO0_I2S_TX_SM 0
 #define PIO0_I2S_RX_SM 1
 #define PIO0_WS2812_SM 2
+
+//
+// After the state machine numbering above, which it uses.
+//
+// Only on a board that has them.  pixels.h is the whole WS2812B driver
+// and is written against NR_LEDS and WS2812_GPIO, so on a board with a
+// plain PWM LED there is nothing here to compile - every caller is
+// already behind the same #ifdef.
+//
+#ifdef WS2812_GPIO
+#include "pixels.h"
+#endif
 
 // PIO1 runs one debounce state machine per switch, and the state
 // machine index is the switch id - see switch.h.  PIO2 has the one
@@ -60,6 +71,7 @@ uint8_t routed_effect_count = 0;
 
 #include "scene.h"
 #include "hardware.h"
+#include "exp.h"
 #include "midi/sysex.h"
 
 #include "ui.h"
@@ -183,9 +195,20 @@ int main()
 	//	lit and stays lit	reached main(), hung during boot
 	//	lit, then dims		booted; that is the UI taking over
 	//
+	//
+	// ...on a board that has a plain LED on that pin.  The usb-stomp
+	// board does not: LED_GPIO there is the stomp switch, wired
+	// straight to ground with no series resistor, so driving it high
+	// and then standing on the switch is a short.  Those boards have
+	// three WS2812Bs instead, which cannot be lit this early - they
+	// want PIO, DMA and a configured clock, all of which is the thing
+	// this lamp exists to run before.
+	//
+#ifndef WS2812_GPIO
 	gpio_init(LED_GPIO);
 	gpio_set_dir(LED_GPIO, GPIO_OUT);
 	gpio_put(LED_GPIO, 1);
+#endif
 
 	if (watchdog_enable_caused_reboot())
 		reset_usb_boot(0, 0);
@@ -199,6 +222,9 @@ int main()
 	init_sw_pins();
 	init_pwm_pins();
 	init_rotary_encoder();
+#ifdef EXP_TIP_GPIO
+	exp_init();
+#endif
 	init_i2c_bus(i2c0, 400, I2C0_SDA, I2C0_SCL);
 	init_i2c_bus(i2c1, 400, I2C1_SDA, I2C1_SCL);
 
@@ -249,6 +275,9 @@ int main()
 
 		sysex_send_identity();
 		sysex_send_telemetry();
+#ifdef EXP_TIP_GPIO
+		sysex_send_exp();
+#endif
 		sysex_send_schema();
 		sysex_send_state_dump();
 		sysex_send_status();

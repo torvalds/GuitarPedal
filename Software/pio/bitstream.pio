@@ -1,0 +1,74 @@
+;
+; A fixed-rate one-bit output engine.
+;
+; This deliberately knows nothing about WS2812Bs, or about any other
+; protocol.  It shifts bits out of the FIFO onto a pin at a constant
+; rate, forever, and that is the entire specification.  Whatever those
+; bits mean is decided by whoever filled the buffer.
+;
+; It replaces a program that encoded the WS2812B waveform itself, in
+; delay slots and a branch.  That version had to be told each colour and
+; could not produce the inter-frame reset gap at all, because the gap is
+; not made of bits and the program only knew how to send bits - so the
+; timing of the gap lived in software, in a different file, enforced by
+; a sleep.  Here the gap is just zeroes in memory like everything else,
+; and there is nothing left in the program that could disagree with the
+; datasheet, because the program no longer contains any claim about it.
+;
+; What that buys, beyond the tidiness: the protocol now lives in a table
+; a script generates, which can be tested on a host that has no PIO in
+; it.  "Is this bit pattern right" is a question you can answer with a
+; diff.  "Is that delay slot 3 or 4" is a question you can only answer
+; with a logic analyser.
+;
+; The one number that still matters here is the rate, and it is a
+; parameter rather than a constant: pass the desired output bit rate to
+; bitstream_program_init() and the divisor is worked out against the
+; system clock at run time.  The program it replaces baked '.clock_div
+; 18' into this file, which quietly meant a different bit rate on every
+; board that chose a different system clock.
+;
+; How many bits make up a word is a parameter, not a constant, because
+; it is not this program's business: it belongs to whatever encoding the
+; buffer holds.  bitstream_program_init() takes it and sets the autopull
+; threshold from it.  The WS2812B wants 32 - four output bits per
+; protocol bit, eight bits to a colour byte - but that is a fact about
+; WS2812Bs and it lives in pixels.h where the rest of them are.
+;
+; Bits leave MSB first, so an encoding fills each word from the top.
+;
+
+.program bitstream
+.out 1 left auto 32
+
+.wrap_target
+	out pins, 1
+.wrap
+
+% c-sdk {
+#include "hardware/clocks.h"
+
+static inline void bitstream_program_init(PIO pio, uint sm, uint offset,
+					  uint pin, float rate_hz, uint bits)
+{
+	pio_gpio_init(pio, pin);
+	pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
+
+	pio_sm_config c = bitstream_program_get_default_config(offset);
+	sm_config_set_out_pins(&c, pin, 1);
+
+	// shift left, autopull on, refill after this many bits
+	sm_config_set_out_shift(&c, false, true, bits);
+
+	//
+	// One instruction, one cycle, one output bit, so the state
+	// machine clock *is* the bit rate.  Derived rather than
+	// asserted: this is the only place left where the hardware
+	// could be silently wrong about the protocol.
+	//
+	sm_config_set_clkdiv(&c, (float)clock_get_hz(clk_sys) / rate_hz);
+
+	pio_sm_init(pio, sm, offset, &c);
+	pio_sm_set_enabled(pio, sm, true);
+}
+%}

@@ -8,34 +8,66 @@
 // rotary and a second stomp that no longer exist.  None of that was
 // visible in the names.
 //
-// The pedal as it stands has one rotary encoder - and most boards do
-// not even populate that - one stomp switch, and one LED.
-//
-
-// The one LED.  Plain PWM brightness; see set_led().
-#define LED_GPIO		0
 
 //
-// The one rotary encoder: A and B are the quadrature pair, SW is the
-// shaft pressing down.
+// Which board this build is for.
 //
-#define ROTARY_A_GPIO		6
-#define ROTARY_B_GPIO		7
-#define ROTARY_SW_GPIO		12
+// PEDAL_BOARD_HEADER comes from cmake, which will not configure without
+// a board named - there is deliberately no default.  Every board is a
+// separate target that is built and named separately, so the answer is
+// picked once in board.local and the artifacts say which is which; see
+// the comment at the top of CMakeLists.txt.
+//
+// **Only the pin map is a build option**, and only two of them exist.
+// Everything else that varies between boards - which codec, whether a
+// rotary or the MIDI jacks are fitted - either does not reach the pins
+// or is discovered at runtime, and a thing the firmware can find out for
+// itself has no business being a build option.
+//
+// The pin map is not in that category and cannot be.  The unified board
+// and the split boards share four GPIOs out of the lot, and a wrong map
+// does not look like a wrong map: on unified GPIO0 is the stomp switch,
+// shorting to ground with no series resistor, and the split map drives
+// it as an LED output.  The symptom that actually found it was stranger
+// still - GPIO13 is the encoder's B line on unified and the split map
+// reads it as the stomp, so wherever the knob was parked the firmware
+// saw a switch held down for ever, fired pot actions for ever, and every
+// LED sat white at the attention brightness.
+//
+// So the build is named and the binary carries the name, in the image
+// for picotool and in the USB product string for everything else - see
+// usb-device.c.
+//
+#include PEDAL_BOARD_HEADER
 
-// The one stomp switch.  Internal pull-up, closing to GND.
-#define STOMP_GPIO		13
+//
+// Everything below is common to every board and has been through every
+// generation unchanged.
+//
 
 #define I2S_BCLK		8
 #define I2S_FSYNC		9
 #define I2S_DIN			10
 #define I2S_DOUT		11
 
-// Hardware MIDI TRS, on the pins the second rotary encoder used to have
+//
+// Hardware MIDI is on uart1 on every board - which is not obvious, and
+// getting it wrong costs an evening, so the funcsel is spelled out with
+// the pins in each board file rather than assumed in the code that uses
+// them.
+//
+// The RP2350 offers UART1 TX/RX on 20/21 at function *2* and on 26/27
+// at function *11*, because 26/27 have UART1 CTS/RTS at 2 and the TX/RX
+// pair is one of the extended functions.  So the number is a property
+// of the pins, not of the UART, and it lives with them.
+//
+// 2 is what GPIO_FUNC_UART is, so 20/21 want nothing special at all -
+// which was the point of moving to them.  The 11 for 26/27 is the magic
+// the SDK has no name for, and hardcoding it in uart.h is what stopped
+// the simpler pins from being simpler.
+//
 #if MIDI_HW
-  #define MIDI_OUT		26
-  #define MIDI_IN		27
-  #define MIDI_UART		uart1
+#define MIDI_UART		uart1
 #endif
 
 #define I2C0_SDA		4
@@ -46,23 +78,3 @@
 #define MC24Cxx_I2C		i2c0, 0x50
 #define TAC5112_I2C		i2c0, 0x51
 #define SH1106_I2C		i2c1, 0x3c
-
-//
-// Not all boards have this.  It is the next generation's LED - a smart
-// one where there is currently a plain one - and it wants GPIO1, which
-// is free precisely because the second LED that used to be there is
-// gone.
-//
-#if 0
-#define WS2812_GPIO		1
-#endif
-
-//
-// Pins that used to be something and no longer are, recorded so nobody
-// has to go through the git history to find out why there are gaps:
-//
-//	GPIO 1		second LED (now WS2812_GPIO, above)
-//	GPIO 26/27	second rotary's quadrature pair (now hardware MIDI)
-//	GPIO 28		second rotary's shaft switch
-//	GPIO 29		second stomp switch
-//

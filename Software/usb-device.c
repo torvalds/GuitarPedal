@@ -2,6 +2,7 @@
 #include "pico.h"
 #include "pico/unique_id.h"
 #include "pico/bootrom.h"
+#include "pico/binary_info.h"
 
 #include "board.h"
 #include "tusb.h"
@@ -331,19 +332,36 @@ uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
 
 
 //
+// Which board this image was built for, in the binary itself.
+//
+// picotool reads this out of a .uf2 on disk as well as out of a board that
+// is running, which is the half no amount of runtime reporting can cover:
+// the moment worth catching is the one before the wrong file is flashed.
+//
+// The program name already happens to say it, because the cmake target is
+// named per board and the SDK derives one from the other.  That is an
+// accident of naming and this is not, which is the point of stating it.
+//
+bi_decl(bi_program_feature("board: " PEDAL_BOARD_NAME));
+
+//
 // What this pedal calls itself.
 //
-// Neither of these is known at build time.  The product string names the
-// codec, and which codec is fitted is something probe_hardware() works out
-// on the i2c bus; the serial is the chip's own unique id.  Both are here
-// because two pedals on one desk otherwise enumerate identically, and then
-// lsusb, the sequencer port list, the ALSA card list and the app's port
-// selector are all unable to say which one you are looking at.
+// Two pedals on one desk otherwise enumerate identically, and then lsusb,
+// the sequencer port list, the ALSA card list and the app's port selector
+// are all unable to say which one you are looking at.  The serial is the
+// chip's own unique id and settles that; the product string is for the
+// question a person is actually asking, which is what this thing *is*.
 //
-// The default is what a pedal says before anything has told it otherwise,
-// which is the truthful answer for the moment before the bus is probed.
+// It carries both halves of that, because they come from different places.
+// The board name is compile-time - it is the pin map, and the whole point
+// of naming it is that a build cannot discover it.  Mono against stereo is
+// the opposite: the audio-jacks board is on the far end of an FFC, either
+// flavour pairs with either MCU board, and the firmware has to probe for
+// it anyway.  So the default here is what is true before the bus has been
+// looked at, and probe_hardware() replaces it with the whole answer.
 //
-static const char *usb_product = "Pedal";
+static const char *usb_product = PEDAL_BOARD_NAME " Pedal";
 static char usb_serial[2 * PICO_UNIQUE_BOARD_ID_SIZE_BYTES + 1] = "0";
 
 void usb_set_product(const char *name)

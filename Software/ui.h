@@ -444,11 +444,19 @@ static void handle_switch_bindings(void)
 // typically driving the LED at the lower range
 // of the current range
 //
-// Random map from 0..1 to 0..4096 that works
-// for the LED I have happened to pick
-static int led_pwm_mapping(float pwm)
+//
+// Random map from 0..1 to 0..full that works for the LED I have
+// happened to pick.
+//
+// The full-scale value is a parameter because the smart LEDs want 255
+// where the PWM one wants 4096, and the *curve* is the part that has to
+// be shared.  Applying the setting linearly instead makes 10% come out
+// at 10% rather than at 3.2%, which is three times the light and looks
+// like the driver is broken.
+//
+static int led_pwm_mapping(float pwm, int full)
 {
-	return lrintf(pwm * sqrtf(pwm) * PWM_WRAP);
+	return lrintf(pwm * sqrtf(pwm) * full);
 }
 
 //
@@ -474,19 +482,69 @@ static int led_pwm_mapping(float pwm)
 //  - the attention preview counts because it *is* the thing being set;
 //    see status.h.
 //
-static void set_led(int pin, bool on, uint8_t global, unsigned int chain)
+//
+// No pin argument: which LED this drives is a property of the board and
+// not of the caller, and on a board with smart LEDs there is no single
+// pin to name.  LED_GPIO does not even exist there.
+//
+static void set_led(bool on, uint8_t global, unsigned int chain)
 {
 	bool fault = global & (STATUS_DROPPED_MASK | STATUS_CLIPPED);
 	bool activity = (global & STATUS_FRONT_ATTN) || chain;
-	bool intense = fault || attention_preview || (on && activity);
-	int level = 0;
 
-	if (on || intense) {
-		float pwm = intense ? settings.led_intense : settings.led_pwm;
-		level = led_pwm_mapping(pwm);
+	bool intense = fault || attention_preview || (on && activity);
+	float pwm = intense ? settings.led_intense : settings.led_pwm;
+
+#ifdef WS2812_GPIO
+	//
+	// A board with these has no plain LED to dim - the one it does
+	// have is across +5V and is a power indicator - so the PWM path
+	// below is not merely unnecessary here, it would drive a pin that
+	// is the stomp switch on this board.
+	//
+	// Same setting and same curve as the plain LED, because it is the
+	// same question and the pot for it already exists.
+	//
+	pixel_brightness = led_pwm_mapping(pwm, 255);
+
+	//
+	// Three LEDs, three jobs, chosen to match where they sit: the
+	// chain runs left, centre-back, right, and the centre one is
+	// directly behind the stomp switch.
+	//
+	//	centre	in circuit or bypassed - the pedal LED
+	//	left	something is wrong, and which
+	//	right	the chain is doing something
+	//
+	// The attention preview is the exception: it is not a status, it
+	// is the pedal showing you how bright "intense" is so you can set
+	// it.  That needs one LED lit at that brightness and nothing more
+	// - three of them in white is all nine channels at once, which is
+	// three times the light and unpleasant to sit next to.  So it is
+	// the centre one, in amber, and the others go dark.
+	//
+	unsigned int dropped = global & STATUS_DROPPED_MASK;
+
+	if (attention_preview) {
+		pixels_set(0, 0);
+		pixels_set(1, RGB(255, 120, 0));
+		pixels_set(2, 0);
+	} else {
+		pixels_set(0, global & STATUS_CLIPPED ? RGB(255, 0, 0)
+			    : dropped                 ? RGB(255, 96, 0)
+						      : 0);
+		pixels_set(1, on ? RGB(0, 255, 0) : 0);
+		pixels_set(2, on && activity ? RGB(0, 64, 255) : 0);
 	}
 
-	pwm_set_gpio_level(pin, level);
+#else
+	int level = 0;
+
+	if (on || intense)
+		level = led_pwm_mapping(pwm, PWM_WRAP);
+
+	pwm_set_gpio_level(LED_GPIO, level);
+#endif
 }
 
 _Static_assert(MAX_ROUTED_EFFECTS <= 2 * STATUS_CHAIN_BITS,
@@ -547,7 +605,7 @@ static void show_status(void)
 			attn |= 1u << i;
 	}
 
-	set_led(LED_GPIO, !disable_all, global, attn);
+	set_led(!disable_all, global, attn);
 
 	// A CC value is seven bits, so the chain needs two of them
 	uint8_t chain[2] = { attn & ((1u << STATUS_CHAIN_BITS) - 1),

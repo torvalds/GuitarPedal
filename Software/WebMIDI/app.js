@@ -1973,13 +1973,6 @@ function handleIdentity(id) {
                `, hardware MIDI ${id.midi_hw ? 'on' : 'off'}.`);
 
     //
-    // A fault is something that will not work. A missing eeprom is the
-    // only one of these: nothing persists, and nothing else would say so.
-    //
-    if (!found.eeprom)
-        wrong.push('No eeprom answered, so scenes will not persist.');
-
-    //
     // An early board is not a fault. Those play: the pedal sets the
     // TAC5112 up over i2c, and the eeprom geometry is worked out rather
     // than compiled in, so one scene on a 2kbit part saves and loads.
