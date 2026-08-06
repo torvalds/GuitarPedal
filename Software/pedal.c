@@ -62,6 +62,7 @@ uint8_t routed_effect_count = 0;
 
 #include "scene.h"
 #include "hardware.h"
+#include "exp.h"
 #include "midi/sysex.h"
 
 #include "ui.h"
@@ -212,6 +213,9 @@ int main()
 	init_sw_pins();
 	init_pwm_pins();
 	init_rotary_encoder();
+#ifdef EXP_TIP_GPIO
+	exp_init();
+#endif
 	init_i2c_bus(i2c0, 400, I2C0_SDA, I2C0_SCL);
 	init_i2c_bus(i2c1, 400, I2C1_SDA, I2C1_SCL);
 
@@ -262,6 +266,9 @@ int main()
 
 		sysex_send_identity();
 		sysex_send_telemetry();
+#ifdef EXP_TIP_GPIO
+		sysex_send_exp();
+#endif
 		sysex_send_schema();
 		sysex_send_state_dump();
 		sysex_send_status();

@@ -249,6 +249,45 @@ static uint8_t fraction_to_byte(float f)
 	return v;
 }
 
+//
+// The expression jack probe's answer.  Bringup only - see exp.h.
+//
+// Twelve bits will not fit in a SysEx data byte, so each reading goes
+// out as seven bits of high and seven of low.  Not a packing scheme,
+// just the only shape available.
+//
+#ifdef EXP_TIP_GPIO
+bool send_exp_tx = false;
+static void sysex_send_exp(void)
+{
+	if (!send_exp_tx)
+		return;
+	if (midi_tx_busy())
+		return;
+	send_exp_tx = false;
+
+	static const uint8_t hdr[] = { 0xF0, 0x7D, 0x0E };
+	static const uint8_t trailer[] = { 0xF7 };
+
+	uint16_t reading[EXP_NR_READINGS];
+	uint8_t body[1 + 2 * EXP_NR_READINGS];
+
+	exp_probe(reading);
+
+	body[0] = 1;				// layout version
+	for (int i = 0; i < EXP_NR_READINGS; i++) {
+		body[1 + 2 * i] = (reading[i] >> 7) & 0x7f;
+		body[2 + 2 * i] = reading[i] & 0x7f;
+	}
+
+	sysex_tx_start();
+	sysex_stream_write(hdr, sizeof(hdr));
+	sysex_stream_write(body, sizeof(body));
+	sysex_stream_write(trailer, sizeof(trailer));
+	midi_tx_commit();
+}
+#endif
+
 bool send_telemetry_tx = false;
 static void sysex_send_telemetry(void)
 {
@@ -764,6 +803,12 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 	} else if (cmd == 0x0b) { // Telemetry Request
 
 		send_telemetry_tx = true;
+
+#ifdef EXP_TIP_GPIO
+	} else if (cmd == 0x0e) { // Expression jack probe - bringup only
+
+		send_exp_tx = true;
+#endif
 
 	} else if (cmd == 0x05) { // State Dump Request
 

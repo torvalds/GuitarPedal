@@ -282,6 +282,7 @@ target_link_libraries(pedal
 	hardware_pwm
 	hardware_pio
 	hardware_i2c
+	hardware_adc
 	hardware_dma
 	hardware_flash
 	pico_unique_id

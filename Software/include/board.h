@@ -95,6 +95,32 @@
   #define MIDI_UART		uart1
 #endif
 
+//
+// The expression jack (usb-stomp only - the older boards spend these two
+// pins on hardware MIDI, which is why this cannot be unconditional).
+//
+// A TRS jack, and both signal contacts reach the chip the same way:
+//
+//	J103.T --- R107 1k --- GPIO27/ADC1 --- C108 22nF --- GND
+//	J103.R --- R106 1k --- GPIO26/ADC0 --- C105 22nF --- GND
+//	J103.S, J103.TN, J103.RN --- GND
+//
+// The 1k in series is what makes it safe to drive either pin as an
+// output: everything a guitarist can plug in here shorts one of them to
+// ground sooner or later, and 3.3mA is not a fault.  A BAT54S on each
+// clamps to the rails.
+//
+// Both normalling contacts are grounded, so an *empty* jack reads as two
+// pins held at zero - the same thing a closed footswitch reads as.  That
+// is a real ambiguity and not an oversight of the wiring; see exp.h.
+//
+#if BOARD_USB_STOMP
+#define EXP_TIP_GPIO		27
+#define EXP_RING_GPIO		26
+#define EXP_TIP_ADC		1
+#define EXP_RING_ADC		0
+#endif
+
 #define I2C0_SDA		4
 #define I2C0_SCL		5
 #define I2C1_SDA		2
