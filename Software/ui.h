@@ -543,7 +543,7 @@ static void set_led(bool on, uint8_t global, unsigned int chain)
 	if (on || intense)
 		level = led_pwm_mapping(pwm, PWM_WRAP);
 
-	pwm_set_gpio_level(pin, level);
+	pwm_set_gpio_level(LED_GPIO, level);
 #endif
 }
 

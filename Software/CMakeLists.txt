@@ -27,21 +27,72 @@ project(rp2350)
 # initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-add_executable(pedal)
+#
+# Which boards exist, and which one this tree is currently about.
+#
+# Every board is built as its own target with its own name, all of them
+# at once, because they differ in ways that a single binary cannot paper
+# over: the unified board shares four GPIOs with the split map and needs
+# the ADC pins for its expression jack.  There is no "the" firmware any
+# more, so there is no build/pedal.elf either - an artifact whose name
+# does not say what it is for is exactly what goes on the wrong board.
+#
+# What is configured is only which one is the *default*: what a plain
+# 'make' builds and what 'make flash' flashes.  Any other board is one
+# explicit target away ('make split', 'make flash-split')
+# without disturbing that, and 'make all-boards' builds the lot, which
+# is how a change to shared code stops silently breaking a board nobody
+# has selected for a month.
+#
+# There are only two, and the line between them is the only one that
+# needs a build.  The split family has two MCU boards - one with a rotary
+# encoder, one with MIDI jacks - whose pins do not clash, so one binary
+# drives either.  Its audio boards differ too, mono against stereo, and
+# that difference is discovered at runtime because the older codec needs
+# i2c setup anyway.  Neither is a reason to compile twice.
+#
+# What is left is the pin map, which the unified board shares four GPIOs
+# of and no more.  That is the whole of the build-time question.
+#
+set(PEDAL_BOARDS split unified)
+
+# ...and the same list as prose, for the messages below.
+list(JOIN PEDAL_BOARDS " " PEDAL_BOARDS_PRETTY)
 
 #
-# What is actually on the board.
+# Set and forget, in a file rather than in the cache.
 #
-# Both of these describe hardware rather than taste, so they default to
-# the boards being built now and stay options only so that the older
-# ones can still be built.  Getting one wrong is quiet: a 64kbit eeprom
-# addressed as a 2kbit one takes the write and puts it somewhere else,
-# so the pedal runs perfectly and just forgets everything on reboot.
+# A cmake cache variable is set-and-forget right up until somebody
+# deletes build/, and that is not hypothetical: reconfiguring silently
+# reset the eeprom size option once and the pedal ran perfectly and
+# forgot every scene across a reboot.  board.local survives 'rm -rf
+# build', is not tracked, and is read again whenever it changes.
 #
-# The MIDI pins used to be shared with a second rotary encoder, which is
-# why this was ever off; there is no second rotary any more.
+# There is deliberately no default.  A wrong board should be a configure
+# error you fix once, not a working build for hardware you do not have.
 #
-set(MIDI_HW ON CACHE BOOL "Enable MIDI HW (not just MIDI over USB-C) support")
+set(BOARD_LOCAL "${CMAKE_CURRENT_SOURCE_DIR}/board.local")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${BOARD_LOCAL}")
+
+if (EXISTS "${BOARD_LOCAL}")
+	file(STRINGS "${BOARD_LOCAL}" PEDAL_BOARD LIMIT_COUNT 1)
+	string(STRIP "${PEDAL_BOARD}" PEDAL_BOARD)
+endif()
+
+if (NOT PEDAL_BOARD)
+	message(FATAL_ERROR
+		"No board selected.  Say which one this tree is about:\n"
+		"    echo unified > ${BOARD_LOCAL}\n"
+		"Known boards: ${PEDAL_BOARDS_PRETTY}")
+endif()
+
+if (NOT PEDAL_BOARD IN_LIST PEDAL_BOARDS)
+	message(FATAL_ERROR
+		"'${PEDAL_BOARD}' in ${BOARD_LOCAL} is not a board.\n"
+		"Known boards: ${PEDAL_BOARDS_PRETTY}")
+endif()
+
+message("Default board: ${PEDAL_BOARD}")
 
 set(SAMPLES_PER_SEC 48000.0)
 set(SCRIPT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
@@ -82,12 +133,6 @@ math(EXPR SAVE_AREA_SIZE "${SAVE_SLOT_SIZE} * ${SAVE_SLOT_COUNT}"
 math(EXPR SAVE_AREA_OFFSET "${FLASH_SIZE_BYTES} - ${SAVE_AREA_SIZE}"
 	OUTPUT_FORMAT HEXADECIMAL)
 
-target_compile_definitions(pedal PRIVATE
-	PICO_FLASH_SIZE_BYTES=${FLASH_SIZE_BYTES}
-	SAVE_SLOT_SIZE=${SAVE_SLOT_SIZE}
-	SAVE_SLOT_COUNT=${SAVE_SLOT_COUNT}
-	SAVE_AREA_OFFSET=${SAVE_AREA_OFFSET})
-
 #
 # Only the audio core runs from RAM: everything marked with
 # __audio_func() lands in a '.time_critical.audio_*' section, which the
@@ -109,7 +154,7 @@ add_custom_command(
 		"${POW2_STEP_SHIFT}"
 	DEPENDS "${SCRIPT_DIR}/pow2.py"
 )
-target_sources(pedal PRIVATE "${POW2_HEADER}")
+list(APPEND PEDAL_GENERATED "${POW2_HEADER}")
 
 set(LOG2_STEP_SHIFT 8)
 set(LOG2_HEADER "${CMAKE_CURRENT_BINARY_DIR}/log2.h")
@@ -120,7 +165,7 @@ add_custom_command(
 		"${LOG2_STEP_SHIFT}"
 	DEPENDS "${SCRIPT_DIR}/log2.py"
 )
-target_sources(pedal PRIVATE "${LOG2_HEADER}")
+list(APPEND PEDAL_GENERATED "${LOG2_HEADER}")
 
 set(SINE_STEP_SHIFT 8)
 set(SINE_HEADER "${CMAKE_CURRENT_BINARY_DIR}/quarter_sine.h")
@@ -131,7 +176,7 @@ add_custom_command(
 		"${SINE_STEP_SHIFT}"
 	DEPENDS "${SCRIPT_DIR}/quarter_sine.py"
 )
-target_sources(pedal PRIVATE "${SINE_HEADER}")
+list(APPEND PEDAL_GENERATED "${SINE_HEADER}")
 
 set(EQ_W0_HEADER "${CMAKE_CURRENT_BINARY_DIR}/eq-w0.h")
 add_custom_command(
@@ -141,7 +186,7 @@ add_custom_command(
 		"${SAMPLES_PER_SEC}"
 	DEPENDS "${SCRIPT_DIR}/eq-w0.py"
 )
-target_sources(pedal PRIVATE "${EQ_W0_HEADER}")
+list(APPEND PEDAL_GENERATED "${EQ_W0_HEADER}")
 
 file(GLOB EFFECT_HEADERS CONFIGURE_DEPENDS "effects/*.h")
 set(EFFECT_MAP_HEADER "${CMAKE_CURRENT_BINARY_DIR}/effect_map.h")
@@ -163,7 +208,7 @@ add_custom_command(
 		${EFFECT_HEADERS}
 	DEPENDS "${SCRIPT_DIR}/gen_effects.py" ${EFFECT_HEADERS}
 )
-target_sources(pedal PRIVATE "${EFFECT_MAP_HEADER}")
+list(APPEND PEDAL_GENERATED "${EFFECT_MAP_HEADER}")
 
 #
 # The WS2812B waveform, as a 256-entry table.
@@ -180,16 +225,85 @@ add_custom_command(
 	COMMAND "${SCRIPT_DIR}/ws2812_table.py" "${WS2812_TABLE}"
 	DEPENDS "${SCRIPT_DIR}/ws2812_table.py"
 )
-target_sources(pedal PRIVATE "${WS2812_TABLE}")
+list(APPEND PEDAL_GENERATED "${WS2812_TABLE}")
+
+#
+# Everything above is generated once and shared by every board: none of
+# it depends on which pins anything is on.
+#
+# It hangs off one target rather than being listed in each board's
+# sources, which matters with more than one of them - two targets naming
+# the same generated file can run its rule twice under 'make -j', and
+# gen_effects.py writes into the source tree (effects.js, MIDI_CC_MAP.md)
+# where doing that twice at once is a race with a real loser.
+#
+add_custom_target(pedal_generated DEPENDS ${PEDAL_GENERATED})
+
+#
+# The PIO programs are shared for the same reason - a .pio says what the
+# state machine does, and which pin it does it on arrives at runtime in
+# *_program_init().
+#
+# They go through an INTERFACE library because pico_generate_pio_header()
+# writes to one fixed path per .pio file: calling it once per board would
+# declare three rules for the same output and cmake refuses that outright.
+# The SDK's own function has a branch for INTERFACE targets, so this is
+# the supported way round rather than a trick.
+#
+# Our own sources only - we don't get to pick the SDK's warnings
+set_source_files_properties(pedal.c usb-device.c PROPERTIES
+	COMPILE_OPTIONS -Wdouble-promotion)
 
 set(PIO_DIR "${CMAKE_CURRENT_SOURCE_DIR}/pio")
 
-pico_generate_pio_header(pedal ${PIO_DIR}/bitstream.pio)
-pico_generate_pio_header(pedal ${PIO_DIR}/debounce.pio)
-pico_generate_pio_header(pedal ${PIO_DIR}/rotary.pio)
-pico_generate_pio_header(pedal ${PIO_DIR}/i2s.pio)
+add_library(pedal_pio INTERFACE)
+pico_generate_pio_header(pedal_pio ${PIO_DIR}/bitstream.pio)
+pico_generate_pio_header(pedal_pio ${PIO_DIR}/debounce.pio)
+pico_generate_pio_header(pedal_pio ${PIO_DIR}/rotary.pio)
+pico_generate_pio_header(pedal_pio ${PIO_DIR}/i2s.pio)
 
-target_compile_definitions(pedal PRIVATE
+#
+# ...and the header-generating targets it made, named after it, which
+# each board depends on explicitly.  Linking an INTERFACE library does
+# not reliably carry its add_dependencies() across, and "the header is
+# not there yet" is not a failure worth debugging twice.
+#
+set(PEDAL_PIO_TARGETS
+	pedal_pio_bitstream_pio_h
+	pedal_pio_debounce_pio_h
+	pedal_pio_rotary_pio_h
+	pedal_pio_i2s_pio_h)
+
+#
+# One board, one target, one name.  Everything below here is per-board;
+# everything above it is not.
+#
+function(add_pedal_board board)
+
+set(tgt "pedal-${board}")
+
+add_executable(${tgt})
+
+add_dependencies(${tgt} pedal_generated ${PEDAL_PIO_TARGETS})
+target_link_libraries(${tgt} pedal_pio)
+
+#
+# Which board this is, in the three places it has to be true at once:
+# the pin map the compiler sees, the name the binary carries so picotool
+# can answer for a file on disk, and the name the firmware can compare
+# against what actually answers on the i2c bus.
+#
+target_compile_definitions(${tgt} PRIVATE
+	PEDAL_BOARD_HEADER="boards/${board}.h"
+	PEDAL_BOARD_NAME="${board}")
+
+target_compile_definitions(${tgt} PRIVATE
+	PICO_FLASH_SIZE_BYTES=${FLASH_SIZE_BYTES}
+	SAVE_SLOT_SIZE=${SAVE_SLOT_SIZE}
+	SAVE_SLOT_COUNT=${SAVE_SLOT_COUNT}
+	SAVE_AREA_OFFSET=${SAVE_AREA_OFFSET})
+
+target_compile_definitions(${tgt} PRIVATE
 	SYS_CLK_KHZ=153600
 	PLL_SYS_VCO_FREQ_HZ=768000000
 	PLL_SYS_POSTDIV1=5
@@ -234,7 +348,6 @@ target_compile_definitions(pedal PRIVATE
 	# runtime_init_clocks() rather than setting anything.
 	#
 	PICO_XOSC_STARTUP_DELAY_MULTIPLIER=64
-	MIDI_HW=$<BOOL:${MIDI_HW}>
 	SAMPLES_PER_SEC=${SAMPLES_PER_SEC}f
 	CFG_TUSB_MCU=OPT_MCU_RP2040
 	CFG_TUSB_OS=OPT_OS_PICO
@@ -253,7 +366,7 @@ target_compile_definitions(pedal PRIVATE
 	PICO_ENABLE_USB_RESET_VIA_BAUD_RATE=0
 	PICO_USB_RESET_INCLUDE_DEFAULT_APP_DRIVER_CB=1)
 
-target_sources(pedal PRIVATE
+target_sources(${tgt} PRIVATE
 	pedal.c
 	"${SINE_HEADER}"
 	tinyusb/src/tusb.c
@@ -261,7 +374,7 @@ target_sources(pedal PRIVATE
 	tinyusb/src/portable/raspberrypi/rp2040/rp2040_usb.c
 )
 
-target_sources(pedal PRIVATE
+target_sources(${tgt} PRIVATE
 	usb-device.c
 	tinyusb/src/device/usbd.c
 	tinyusb/src/class/audio/audio_device.c
@@ -275,7 +388,7 @@ target_sources(pedal PRIVATE
 	#
 	pico-sdk/src/rp2_common/pico_usb_reset/usb_reset.c)
 
-target_link_libraries(pedal
+target_link_libraries(${tgt}
 	pico_stdlib
 	pico_multicore
 	hardware_gpio
@@ -289,7 +402,7 @@ target_link_libraries(pedal
 	hardware_watchdog
 	pico_sha256)
 
-target_include_directories(pedal PRIVATE
+target_include_directories(${tgt} PRIVATE
 	include
 	tinyusb/src
 	pico-sdk/src/rp2_common/pico_usb_reset/include
@@ -305,40 +418,59 @@ target_include_directories(pedal PRIVATE
 # Add -fsingle-precision-constant / -Wdouble-promotion
 # when starting to do FP for audio
 #
-target_compile_options(pedal PRIVATE
+target_compile_options(${tgt} PRIVATE
 	-Wall -O2
 	-ffast-math
 	-fsingle-precision-constant
 	-Wfloat-conversion)
 
-# Our own sources only - we don't get to pick the SDK's warnings
-set_source_files_properties(pedal.c usb-device.c PROPERTIES
-	COMPILE_OPTIONS -Wdouble-promotion)
-
 # create map/bin/hex/uf2 file in addition to ELF.
-pico_add_extra_outputs(pedal)
+pico_add_extra_outputs(${tgt})
 
 # Nothing on the audio core is allowed to call out to a library
-add_custom_command(TARGET pedal POST_BUILD
+add_custom_command(TARGET ${tgt} POST_BUILD
 	COMMAND "${SCRIPT_DIR}/check-audio.py"
-		"$<TARGET_FILE:pedal>.map"
-		"$<TARGET_FILE:pedal>"
+		"$<TARGET_FILE:${tgt}>.map"
+		"$<TARGET_FILE:${tgt}>"
 		"${CMAKE_OBJDUMP}"
 	VERBATIM)
 
 # ...and nothing anywhere is allowed to use a double
-add_custom_command(TARGET pedal POST_BUILD
+add_custom_command(TARGET ${tgt} POST_BUILD
 	COMMAND "${SCRIPT_DIR}/check-float.py"
-		"$<TARGET_FILE:pedal>"
+		"$<TARGET_FILE:${tgt}>"
 		"${CMAKE_NM}"
 	VERBATIM)
 
 # ...and the image is not allowed to grow into the save area
-add_custom_command(TARGET pedal POST_BUILD
+add_custom_command(TARGET ${tgt} POST_BUILD
 	COMMAND "${SCRIPT_DIR}/check-flash.py"
-		"$<TARGET_FILE:pedal>"
+		"$<TARGET_FILE:${tgt}>"
 		"${FLASH_SIZE_BYTES}"
 		"${SAVE_AREA_OFFSET}"
 		"${CMAKE_NM}"
 	VERBATIM)
 
+
+#
+# Only the default board is in 'all', so a plain 'make' builds the one
+# thing this tree is currently about.  The others are a named target
+# away and cost nothing until asked for.
+#
+if (NOT board STREQUAL PEDAL_BOARD)
+	set_target_properties(${tgt} PROPERTIES EXCLUDE_FROM_ALL TRUE)
+endif()
+
+endfunction()
+
+foreach(board ${PEDAL_BOARDS})
+	add_pedal_board(${board})
+	list(APPEND PEDAL_BOARD_TARGETS "pedal-${board}")
+endforeach()
+
+#
+# Build every board.  Nothing needs this to develop, and that is the
+# point of having it: a change to shared code that breaks a board nobody
+# has selected in a month is otherwise found by flashing it.
+#
+add_custom_target(all-boards DEPENDS ${PEDAL_BOARD_TARGETS})
