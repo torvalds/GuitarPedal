@@ -178,16 +178,6 @@ add_custom_command(
 )
 list(APPEND PEDAL_GENERATED "${SINE_HEADER}")
 
-set(EQ_W0_HEADER "${CMAKE_CURRENT_BINARY_DIR}/eq-w0.h")
-add_custom_command(
-	OUTPUT "${EQ_W0_HEADER}"
-	COMMAND "${SCRIPT_DIR}/eq-w0.py"
-		"${EQ_W0_HEADER}"
-		"${SAMPLES_PER_SEC}"
-	DEPENDS "${SCRIPT_DIR}/eq-w0.py"
-)
-list(APPEND PEDAL_GENERATED "${EQ_W0_HEADER}")
-
 file(GLOB EFFECT_HEADERS CONFIGURE_DEPENDS "effects/*.h")
 set(EFFECT_MAP_HEADER "${CMAKE_CURRENT_BINARY_DIR}/effect_map.h")
 set(EFFECT_JS "${CMAKE_CURRENT_SOURCE_DIR}/WebMIDI/effects.js")
