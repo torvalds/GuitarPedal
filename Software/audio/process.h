@@ -75,6 +75,34 @@ static struct {
 // remaining 2% is inside a bench generator's own accuracy and is
 // not worth chasing further.
 //
+// Swept with the same generator, 500mVpp, and the whole input is one
+// high-pass and nothing else:
+//
+//	  20 Hz	 -2.73 dB	 4000 Hz  -0.04 dB
+//	  40 Hz	 -0.93 dB	10000 Hz  -0.09 dB
+//	 160 Hz	 -0.08 dB	16000 Hz  -0.05 dB
+//	 440 Hz	  0.00 dB
+//	1000 Hz	 +0.02 dB
+//
+// A single pole at 18.6Hz fits all eight points with an rms error of
+// 0.036dB, and a two-pole fit is twice as bad and biased - so whichever
+// of the board's coupling cap and the codec's own AC coupling is
+// higher, the other is far enough down to be invisible.  From 160Hz to
+// 16kHz the spread is 0.109dB peak to peak, which is the repeatability
+// of the measurement rather than anything the pedal is doing: there is
+// no high-frequency rolloff below Nyquist at all.
+//
+// What that says about the low end, which was the open question: -0.22dB
+// at a guitar's low E, -0.81dB at a bass low E, -1.35dB at a five-string
+// low B.  The corner is below the bottom of hearing.
+//
+// The scale holds at a second amplitude: 2Vpp at 440Hz implies 1.0218
+// Vrms against 500mVpp's 1.0202, the same to 0.014dB across a 4x change.
+// That rules out a generator offset and any nonlinearity, and does not
+// rule out a proportional generator error - a bench source reading 2%
+// low everywhere looks exactly like this, and separating the two wants a
+// meter on the generator rather than more captures.
+//
 // It also accounts for the round trip.  The DAC and the ADC are
 // specified alike but measure 2% apart, so sending a signal out and
 // reading it back loses that 2% - which is the -0.226dB
