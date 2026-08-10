@@ -61,6 +61,26 @@ static struct {
 // all, since 2.828 x 1.2198 is 3.45.  The datasheet picks between
 // them, and picks the second.
 //
+// Measured directly once the multiplier was gone, which is when the
+// question stops being degenerate: with this at 1.0 the captured
+// value *is* Vpeak/Vfs_peak, so a known input reads the full scale
+// off.  A 500mVpp 440Hz sine from a signal generator:
+//
+//	reads			-15.22 dBFS
+//	implied full scale	2.8855Vpp = 1.0202Vrms
+//	datasheet		1.0000Vrms	(+0.17dB)
+//
+// and the old 3.45Vpp figure would have put that same input at
+// -16.78 dBFS, which is 1.55dB from where it actually landed.  The
+// remaining 2% is inside a bench generator's own accuracy and is
+// not worth chasing further.
+//
+// It also accounts for the round trip.  The DAC and the ADC are
+// specified alike but measure 2% apart, so sending a signal out and
+// reading it back loses that 2% - which is the -0.226dB
+// test-analog.py reports, leaving the cable itself essentially
+// lossless rather than the -0.23dB being a cable at all.
+//
 #define SAMPLE_TO_FLOAT_MULTIPLIER (1.0 / 0x80000000)
 
 static inline sample_t process_input(raw_sample_t sample)
