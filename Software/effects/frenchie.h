@@ -21,9 +21,16 @@
 
 // This is almost certainly not the right frequency to filter at
 // but unlike the Klon, I don't know what the right values are
+//
+// Built once in frenchie_init() rather than inline: the coefficient
+// costs a pow2() now (see audio/single-pole.h) and this is called twice
+// a sample, from the triode and from the power amp.  One coefficient
+// serves both, because they share the frequency and not the state.
+static struct single_pole_coeff frenchie_dc_c;
+
 static inline float frenchie_dc_step(struct single_pole_state *state, float x)
 {
-	return single_pole_hpf(x, state, single_pole_freq(20.0));
+	return single_pole_hpf(x, state, frenchie_dc_c);
 }
 
 /* ================================================================== */
@@ -396,6 +403,8 @@ static inline void frenchie_init(unsigned char pot[10])
 		frenchie.psu.voltage = 1.0f;
 		frenchie.initialized = 1;
 	}
+
+	frenchie_dc_c = single_pole_freq(20.0f);
 
 	biquad_lpf(&frenchie.rf_filter, 10000.0f, 0.5f);
 	frenchie_input_stage_init(&frenchie.input_stage);
