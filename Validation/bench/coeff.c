@@ -36,7 +36,7 @@
 //
 static const struct {
 	const char *name;
-	void (*fn)(struct biquad_coeff *, const struct sincos, float);
+	void (*fn)(struct biquad_coeff *, float, float);
 } plain[] = {
 	{ "lpf",	_biquad_lpf },
 	{ "hpf",	_biquad_hpf },
@@ -48,7 +48,7 @@ static const struct {
 
 static const struct {
 	const char *name;
-	void (*fn)(struct biquad_coeff *, const struct sincos, float, float);
+	void (*fn)(struct biquad_coeff *, float, float, float);
 } gained[] = {
 	{ "peaking",	_biquad_peaking },
 	{ "loshelf",	_biquad_loshelf },
@@ -67,13 +67,13 @@ int main(void)
 		for (unsigned i = 0; i < ARRAY_SIZE(plain); i++) {
 			if (strcmp(plain[i].name, type))
 				continue;
-			plain[i].fn(&c, _w0((float)freq), (float)q);
+			plain[i].fn(&c, (float)freq, (float)q);
 			done = true;
 		}
 		for (unsigned i = 0; i < ARRAY_SIZE(gained); i++) {
 			if (strcmp(gained[i].name, type))
 				continue;
-			gained[i].fn(&c, _w0((float)freq), (float)q,
+			gained[i].fn(&c, (float)freq, (float)q,
 				     db_to_A((float)db));
 			done = true;
 		}
