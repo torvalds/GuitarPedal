@@ -16,7 +16,17 @@
 // DAMP starts at 0.1 rather than 0: a fully undamped tail is rarely useful and
 // makes the low end of the pot dead.
 //
-// scalewet (1.5) and scaledry (1.0) give unity dry gain at 0% wet.
+// This returns the wet signal and nothing else, which is what 'MIX: POWER' up
+// there is for.  Stock Freeverb carries its own wet/dry and a scaledry to go
+// with it, and that is what was converted from - but a wet level of its own is
+// a second mix control in front of the pedal's, and the one it had was never
+// connected to anything.  It read a 'wet_level' that nothing ever wrote, so the
+// blend came out 0% wet: eight combs and four allpasses ran every sample and
+// the answer was multiplied away.  The whole effect was a wire, from the day it
+// was converted until it was measured.
+//
+// scalewet (1.5) is what is left of that, and stays: it is the gain that makes
+// a fully wet tail sit at a sensible level against the dry it replaces.
 //
 
 #define REVERB_COMB_SIZE  2048   // must be > max comb delay (1760) + mod depth (6)
@@ -25,7 +35,6 @@
 #define REVERB_AP_MASK    ((unsigned)(REVERB_AP_SIZE - 1))
 #define REVERB_FIXEDGAIN  0.015f  // stock Freeverb value for 8 combs
 #define REVERB_SCALEWET   1.5f
-#define REVERB_SCALEDRY   1.0f
 #define REVERB_MOD_DEPTH  6.0f   // +-6 samples (~0.125 ms) comb read modulation
 
 // Canonical Freeverb 44100 Hz comb delays scaled to 48000 Hz.
@@ -60,7 +69,6 @@ static struct {
 	struct reverb_comb    combs[8];
 	struct reverb_allpass allpasses[4];
 	struct reverb_lfo     lfo[4];
-	float wet_level;
 	float damp;               // LP pole in [0.1, 0.5]
 	float g;                  // feedback gain shared by all combs
 } reverb_state;
@@ -116,6 +124,5 @@ static float reverb_step(float in)
 		wet = buf - wet;
 	}
 
-	float w = reverb_state.wet_level;
-	return w * REVERB_SCALEWET * wet + (1.0f - w) * REVERB_SCALEDRY * in;
+	return wet * REVERB_SCALEWET;
 }
