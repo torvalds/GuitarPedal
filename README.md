@@ -240,133 +240,48 @@ between scenes with no computer in sight.
 
 ## Audio effects
 
-The current effects are:
+Seventeen of them, plus two that are always there and can't be unrouted:
+the **Signal Chain** at the front, which is the input trim, the noise
+gate and the master volume, and the **Settings** at the back, which is
+USB audio routing, MIDI channel, LED brightness and what the tuner is
+tuning to.
 
- - Noise gate
+They're listed in the order they run in by default.  This is an overview
+and not documentation - the app is the reference, because it gets the
+ranges, the units and the hover text from the pedal itself rather than
+from anything I typed here.
 
-This one is fairly simple.  Depending on how noisy your guitar
-environment is, you may or may not need this one.  But particularly if
-you use the boost effect very aggressively, you probably want it even if
-you don't have a lot of 50Hz / 60Hz hum.
-
-The default level is -70dBV, which is pretty quiet.
-
-Anyway, 0dBV is very loud - most guitar levels are roughly in the -20dB
-range (0.14V peak, aka 280mV peak-to-peak voltage).
-
--40dB is a "quiet sound" (14mV peak voltage), and -60dB is pretty much
-silence.  So a -70dB noise gate *should* be a good starting point for a
-good low-noise pickup.
-
-That noise gate allows going down all the way to a -100dB noise floor,
-which is ridiculously border-line for what the hardware can actually do.
-But my environment and guitar is actually quiet enough that I
-*can* go down to -85dB, and it will glow brightly to show that the gate
-is on and the signal is smaller than that.
-
-I'm actually pretty happy with that, in that it's about a 0.1mV
-peak-to-peak signal.  It's not just that my guitar isn't picking up a
-lot of noise from the environment, it also means that the pedal itself
-is not noisy.
-
-Alternatively, it just means that I got all the math wrong, and it's
-lying to me.
-
-There's also attack/release values that can tune just how the size of
-the envelope is calculated, and how quickly it reacts to noise (and
-how quickly it goes back to gating).
-
- - Compressor
-
-This does what a compressor does.  Like a noise gate, there's a
-attack/release to tune how the signal envelope is tracked.  It has a
-"boost" setting to allow it to just boost the signal in general, but the
-"level" is then the level at which it starts compressing.
-
-The "ratio" is how aggressively it compresses signals that go over the
-level (but the attack is also very relevant: the attack is about hoq
-*quickly* - or slowly - it reacts to signals that go over the level).
-So the "attack" basically says how quickly it starts reacting to a
-signal that goes over, and then the ratio is how aggressive it is once
-it starts reacting to it.
-
- - Boost (w/ distortion)
-
-I like this one.  Others may not.
-
-It can be used as just a clean boost - but so can the compressor.  But
-what I like doing with it is to set it to some ridiculously high boost
-value (like +20dB), and then set the *level* down to something fairly
-low (like -20dB).
-
-A +20dB signal boost is basically increasing the voltage level by 10x,
-but then the "-20dB level" means that the "level" is set to 0.14V.
-
-And what that boost effect does is that when the signal hits the voltage
-level, it "folds" it down (or up, if it hit the negative level).  So the
-+20dB boost will first make the signal much bigger, but then the level
-folding will limit the end result to sane levels, but instead of just
-clipping at that level, the signal folds down and you get higher
-harmonics.
-
-I think it sounds more interesting than the typical soft- or
-hard-clipping effects.
-
- - phaser
- - flanger
-
-Nothing particular about these.  They are very simple effects.
-
- - echo
-
-This is the Echo King effect from Cleveland Music Co, converted from the
-Hothouse example effects to this pedal.  All credit for it goes to Ricky
-Sheaves, except if I screwed up in the conversion, in which case you get
-to blame me.
-
-It's a DSP model of the Maestro Echoplex family of tape delay.
-
- - pitch shifter
-
-This one is almost certainly not useful, but it's fun.  It's a pitch
-shifter, but it's *not* the smart kind of "do an FFT, shift frequencies
-up or down".
-
-Instead it's based on a delay loop, and walking the delay either faster
-than realtime (shifting the pitch up) or slower than real-time (shifting
-it down).  And then to avoid the sudden discontinuities when you have to
-jump backwards (or forwards), it actually walks the delays in two
-phases, and multiplies by a function that goes down to zero at the
-discontinuity point (the function happens to be sine/cosine for the two
-phases, but it could be something else).
-
-End result: it does shift the pitch, but it also has a delay due to how
-it's done.
-
-*And* to make it sound even more complex, it has a feedback thing, so
-it can feed back its own pitch-shifted signal into the delay loop, and
-you get another pitch shifting (with an extra delay). So you can kind
-of think of it as a short echo with a pitch shift.
-
-It tends to sound most natural - which isn't saying much - with a +1
-octave shift, but it isn't limited to whole octaves.  You can shift the
-pitch up by random fractions.  Play around with it.
-
- - 10-band EQ
-
-This is the most complicated from an actual algorithmic standpoint, and
-also has the fanciest display.
-
-Each band goes +-20dB (so 0.1 .. 10x). At the extremes, it will tend
-to distort the signal - all the math is done in 32-bit
-single-precision float, I won't guarantee it's entirely stable or
-smooth.
-
- - "USB"
-
-This doesn't affect the sound, but it turns the USB audio interface
-logic on and off, and you can pick whether you want the stereo signal
-to be either all dry, all wet, or "left channel wet, right channel
-dry".
-
-It's a work-in-progress. It works, but not entirely reliably.
+ - **Tone** - bass, mid and treble, with the corner frequencies
+   adjustable and the mid's Q as well.  There are two of them, so one
+   can go in front of a distortion and one behind it.
+ - **Preamp** - a two-stage 12AX7 model, class-A biased with the
+   asymmetry left in, and a JFET stage after it.
+ - **Compressor** - level, ratio, attack, release, and a boost, so it
+   can also just be a clean boost when that's what you want.
+ - **Boost**, with distortion.  I like this one.  Others may not.  Set
+   the boost stupidly high and the level low, and instead of clipping at
+   the level the signal *folds* back down, which gives you harmonics
+   that a soft or hard clipper doesn't.
+ - **Klonlike** - the obvious model: 18V charge pump for headroom,
+   germanium diodes, and the clean/dirty blend that tracks the gain
+   knob.  Originally by Bryan Leavelle.
+ - **Phaser**, **Flanger** and **Vibrato** - the modulation three.  All
+   simple, all a delay line and an LFO wearing different hats.
+ - **Tape Echo** - the Echo King from Cleveland Music Co, a model of the
+   Maestro Echoplex tape delays, converted from the Hothouse examples.
+   All credit to Ricky Sheaves, and blame me for the conversion.
+ - **Reverb** - comb filters into allpasses, the traditional way.
+ - **Pitch** - not the clever FFT kind.  It walks a delay line faster or
+   slower than real time in two phases, crossfaded with a sine so the
+   wrap doesn't click.  So it shifts *and* delays, and it feeds back into
+   itself, which makes it a short echo that shifts again on every repeat.
+   Most natural an octave up, but it does fractions.
+ - **Tremolo** - amplitude modulation, several shapes.
+ - **Parametric EQ** - five bands, two shelves and three peaks, every one
+   of them tunable across the whole range.
+ - **Frenchie Amp** - a small amp: triode, tone stack, power amp.
+ - **Test Tone** - sine, triangle, saw or noise at a known level and
+   frequency.  It replaces the input rather than adding to it, which is
+   what lets the pedal measure itself.
+ - **Cab Sim** - a speaker cabinet: resonance, presence, where the mic is
+   pointed, and some cone breakup.

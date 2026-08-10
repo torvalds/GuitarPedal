@@ -441,6 +441,22 @@ add_custom_command(TARGET ${tgt} POST_BUILD
 		"${CMAKE_NM}"
 	VERBATIM)
 
+#
+# ...and the README is supposed to know which effects exist.
+#
+# The odd one out here: it looks at no build artifact, and it warns
+# rather than failing.  It is here anyway because this is the moment it
+# is useful - you changed an effect header, so the build ran - and
+# because a check nobody runs catches nothing.  The README's list is
+# hand-written by choice and it drifted to eight of seventeen; this is
+# the cheap backstop for that and nothing more.
+#
+add_custom_command(TARGET ${tgt} POST_BUILD
+	COMMAND "${SCRIPT_DIR}/check-readme.py"
+		"${CMAKE_CURRENT_SOURCE_DIR}/effects"
+		"${CMAKE_CURRENT_SOURCE_DIR}/../README.md"
+	VERBATIM)
+
 
 #
 # Only the default board is in 'all', so a plain 'make' builds the one
