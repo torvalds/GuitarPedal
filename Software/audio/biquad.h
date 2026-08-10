@@ -175,7 +175,40 @@ static inline void _biquad_hishelf(struct biquad_coeff *res, const struct sincos
 static inline float biquad_step(struct biquad *bq, float x0)
 { return _biquad_step(&bq->coeff, &bq->state, x0); }
 
-#define _w0(f) fastsincos((f)/SAMPLES_PER_SEC)
+//
+// Every constructor above places its poles and zeros with -2*cos(w0), so
+// what it needs from the sine table is an *angle*, and cos is the worst
+// possible way to ask for one down here.
+//
+// fastsincos() interpolates 256 entries a quarter linearly.  Near zero
+// phase the sine is straight and the chord is nearly exact; the cosine
+// is at its maximum, where the chord sits furthest under the arc.  And
+// d(cos)/dw = -sin(w0), which vanishes exactly where that error is
+// worst, so the angle recovered from the cosine is off by err/sin(w0).
+// Asking for 20Hz got a filter at 30.7Hz, and 60Hz got 63.6Hz.
+//
+// So take the half angle, whose sine is the well-behaved one, and come
+// back with the double-angle identities.  Both come out of the one table
+// lookup that was being done anyway.  cos(w) is now built from a squared
+// sine, which is the whole point: it carries the angle where cos does
+// not.  sin(w) is not fussy - it ends up in alpha, where it sets the
+// bandwidth rather than the frequency - so the table's own cosine is
+// good enough for that half.
+//
+// single-pole.h asks for the same half angle for its own reasons.
+//
+static inline struct sincos biquad_w0(float freq)
+{
+	struct sincos h = fastsincos(0.5f * freq / SAMPLES_PER_SEC);
+	struct sincos w0;
+
+	w0.sin = 2 * h.sin * h.cos;
+	w0.cos = 1 - 2 * h.sin * h.sin;
+
+	return w0;
+}
+
+#define _w0(f) biquad_w0(f)
 
 #define biquad_lpf(bq,f,Q) _biquad_lpf(&(bq)->coeff,_w0(f),Q)
 #define biquad_hpf(bq,f,Q) _biquad_hpf(&(bq)->coeff,_w0(f),Q)

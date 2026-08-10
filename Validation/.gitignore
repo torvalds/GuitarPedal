@@ -2,4 +2,5 @@ test-fft
 __pycache__
 test-midi-cin
 bench/bench
+bench/coeff
 bench/gen
