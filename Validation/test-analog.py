@@ -26,7 +26,14 @@
 # and another converter.
 #
 # The two are not in the same units - see the note at the top of
-# audio.py - so the right one is scaled by SAMPLE_TO_FLOAT first.
+# audio.py - so the right one is scaled by SAMPLE_TO_FLOAT first.  That
+# constant mirrors the firmware's, and mirroring it is exactly what
+# makes this measurement able to lie: scale the raw channel by the same
+# factor process_input() applies and the two cancel, so a pedal with
+# 1.7dB of gain built into its conversion reads perfectly flat.  That
+# happened here.  The number below is the pedal's analog gain only
+# because the two constants agree; test-audio.py's "input/output
+# scaling" check is what enforces that they do.
 #
 # The analog path is then a gain and a delay, and both are removed
 # before anything is called a residual.  The delay is solved from the

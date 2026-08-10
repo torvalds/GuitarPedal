@@ -43,17 +43,26 @@ FULL_SCALE_VRMS = 1.0
 # What the two USB channels are actually in.
 #
 # 'Wet/Dry' puts the processed signal on the left and the raw ADC sample
-# on the right, and those are not in the same units.  process_input()
-# scales a full-scale sample to 1.2198 and convert_output() scales 1.0
-# back to full scale, so the two are deliberately not inverse - that
-# asymmetry is precisely what makes the peak of the internal float equal
-# the RMS volts of a sine, which is what "0dBFS is 1Vrms" means.
+# on the right.  The left one has been through convert_output() and the
+# right one has been through nothing at all, so this is what turns the
+# right one into the same units - it mirrors process_input()'s
+# SAMPLE_TO_FLOAT_MULTIPLIER and has to be kept in step with it.
 #
-# So the left channel already *is* the internal float, and the right one
-# has to be multiplied by this to be compared with it.  Getting that
-# wrong makes a perfectly transparent pedal look 1.7dB off.
+# It is 1.0, and that is the answer rather than a placeholder: the codec
+# is 1Vrms single-ended at both ends, so a full-scale sample already
+# peaks at the RMS volts of a 1Vrms sine and there is nothing to correct.
 #
-SAMPLE_TO_FLOAT = 3.45 / 2.82843
+# It used to be 3.45/2.82843, on the belief that the input reached full
+# scale at 3.45Vpp while the output produced 2.828Vpp.  That was wrong -
+# see the comment on SAMPLE_TO_FLOAT_MULTIPLIER in audio/process.h - and
+# it is worth knowing that the error was invisible from here: a test
+# that scales the raw channel by the same factor the firmware applies
+# will measure the two cancelling and report a perfectly flat pedal that
+# is in fact 1.7dB hot.  test-audio.py's "input/output scaling" check is
+# the one that compares this constant against the firmware's, and is
+# what stops the pair drifting together into agreeing about nothing.
+#
+SAMPLE_TO_FLOAT = 1.0
 
 
 def find_cards(match=""):
