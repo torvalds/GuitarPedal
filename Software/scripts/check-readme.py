@@ -62,6 +62,23 @@ def named_in(readme):
     return set(re.findall(r"\*\*([^*]+)\*\*", m.group(1)))
 
 
+def dead_links(readme):
+    """Relative links in the effect list that point at nothing.
+
+    An effect gets a link once it has a measured page under
+    Documentation/effects, and a link on the front page of the
+    repository that 404s is worse than no link at all.  Only relative
+    ones: an http link is somebody else's to keep alive.
+    """
+    text = Path(readme).read_text()
+    m = re.search(r"^## Audio effects$(.*)", text, re.M | re.S)
+    if not m:
+        return []
+    root = Path(readme).resolve().parent
+    return [t for t in re.findall(r"\]\(([^)#:]+)\)", m.group(1))
+            if not (root / t).exists()]
+
+
 def main():
     if len(sys.argv) != 3:
         sys.exit("usage: check-readme.py <effects-dir> <readme>")
@@ -78,6 +95,11 @@ def main():
 
     missing = sorted(have - described)
     extra = sorted(described - have)
+    dead = dead_links(sys.argv[2])
+
+    for target in dead:
+        print(f"check-readme: WARNING - the README links to {target}, "
+              f"which does not exist")
 
     if not missing and not extra:
         #

@@ -24,10 +24,11 @@ import bench as B
 KLON = "Klonlike"
 
 #
-# Third-octave centres from 20Hz, which is what the mermaid x-axis in the
-# page wants: it has no logarithmic mode, so log-spaced labels are how a
-# log axis gets drawn.  Trimmed to whole cycles in the analysis window by
-# B.tone(), so these are the nominal names and bin_of() picks the bin.
+# Octave centres from 20Hz.  Mermaid has no logarithmic axis, so evenly
+# spaced points with log-spaced labels are how a log axis gets drawn -
+# which also means the point count is the label count, and eleven is
+# about what fits.  Trimmed to whole cycles in the analysis window, so
+# these are the nominal names and B.tone() picks the exact bin.
 #
 def octaves(lo, hi, per_octave=1):
     out, f = [], float(lo)
@@ -35,6 +36,22 @@ def octaves(lo, hi, per_octave=1):
         out.append(round(f / B.FS * B.WINDOW) * B.FS / B.WINDOW)
         f *= 2 ** (1.0 / per_octave)
     return out
+
+
+#
+# Axis labels, short enough to sit side by side.  Mermaid ties one
+# x-axis category to one data point and silently collapses duplicates -
+# two points with the same label land on the same x and the line doubles
+# back - so every label has to be distinct, which rules out blanking the
+# ones between.  Fewer points is the answer rather than fewer labels.
+#
+def hz_label(f):
+    f = round(f)
+    if f < 1000:
+        return str(f)
+    if f < 10000:
+        return f"{f / 1000:.1f}k"
+    return f"{round(f / 1000)}k"
 
 
 def pots(gain, treble, output):
@@ -82,7 +99,7 @@ def main():
     #
     freqs = octaves(20, 20480, per_octave=1)
     print("\n## small-signal response, Gain 0.5, Treble 0.0 and 1.0\n")
-    print("x-axis " + str([int(round(f)) for f in freqs]))
+    print("x-axis " + str([hz_label(f) for f in freqs]))
     for t in (0.0, 1.0):
         r = response(0.5, t, freqs)
         print(f"Treble {t:.1f} " + str([round(v, 2) for v in r]))
@@ -91,17 +108,25 @@ def main():
     # 3. The thing 147 is about: the clean path skips the input filters,
     #    so the response depends on the gain knob.  Measured at both ends.
     #
-    # Normalised to 640Hz, because the point is the *shape* against the
-    # gain knob and the two settings are 30dB apart in level.  Done here
-    # rather than by hand into the page: a number worked out in someone's
-    # head is exactly the kind that goes stale unnoticed.
+    # Normalised, because the point is the *shape* against the gain knob
+    # and the two settings are 30dB apart in level.  Done here rather
+    # than by hand into the page: a number worked out in someone's head
+    # is exactly the kind that goes stale unnoticed.
     print("\n## small-signal response, Treble 0.5, Gain 0.0 and 1.0\n")
-    print("x-axis " + str([int(round(f)) for f in freqs]))
-    mid = freqs.index(next(f for f in freqs if abs(f - 640) < 40))
+    print("x-axis " + str([hz_label(f) for f in freqs]))
+    #
+    # Nearest measured point to midband rather than a named frequency:
+    # the spacing is a parameter, so naming 640Hz breaks the moment it
+    # changes - which it did.  The reference is printed because the page
+    # has to label its axis with whichever one this picked.
+    #
+    mid = min(range(len(freqs)),
+              key=lambda i: abs(math.log2(freqs[i] / 320.0)))
+    print(f"reference {int(round(freqs[mid]))}Hz")
     for g in (0.0, 1.0):
         r = response(g, 0.5, freqs)
         print(f"Gain {g:.1f} " + str(r))
-        print(f"Gain {g:.1f} rel 640Hz " +
+        print(f"Gain {g:.1f} rel " +
               str([round(v - r[mid], 2) for v in r]))
 
     #
