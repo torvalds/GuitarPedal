@@ -1,0 +1,200 @@
+Biquads in single precision
+===========================
+
+Everything in this pedal is float32, because the FPU on an RP2354A is
+single precision only and a double costs hundreds of cycles in software
+helpers.  For most of the DSP that is not even close to a constraint.
+For a biquad at the bottom of the audio range it is the whole story, and
+this is an account of where exactly it hurts, taken from measurements
+rather than from reasoning about ulps.
+
+The short version: **three separate errors, of wildly different sizes,
+in a part of the code small enough that they all look like one.**  Two
+are fixed; the third is a floor.
+
+	angle recovered from a cosine    53 %      at 20 Hz   - fixed
+	float32 coefficient storage      0.4 %     at 20 Hz   - floor
+	1-cos cancellation in the LPF    0.87 %    at 20 Hz   - fixed
+
+They are not the same kind of thing.  The first was a defect and was
+audible.  The second cannot be removed without changing what a
+'struct biquad_coeff' is.  The third is a classic and turns out to be
+worth almost nothing here, which is itself worth knowing.
+
+
+1. The angle, which was the real bug
+------------------------------------
+
+Every cookbook constructor places its poles and zeros with -2*cos(w0).
+So what it needs out of the sine table is an *angle*, and it asks for it
+by way of a cosine.
+
+fastsincos() is 256 entries a quarter, linearly interpolated.  Near zero
+phase the sine is straight, so the chord and the arc agree - the error at
+30 Hz measures 1.4e-08.  The cosine at the same place is at its maximum,
+where the chord sits furthest under the arc, and the error is 3.8e-06.
+
+That would be a rounding error if cos were being used as a number.  It is
+being used as an angle, and
+
+	d(cos)/dw = -sin(w0)
+
+vanishes exactly where the error is worst.  So the angle that comes back
+is wrong by err/sin(w0), which grows without limit as the frequency
+falls:
+
+	asked      built      error
+	   20    30.68 Hz     +53 %
+	   30    37.49 Hz     +25 %
+	   60    63.58 Hz      +6 %
+	  100   101.27 Hz    +1.3 %
+	 4000  4000.06 Hz   0.001 %
+
+**This is not a Q-dependent error, and that is the thing most easily got
+wrong about it.**  The band lands in the wrong place by the same
+percentage whatever its Q; a sweep of nine constructors at six Q values
+found the same 53 % at 20 Hz in every column.  What Q changes is how much
+a given misplacement costs in dB, because a narrow filter has a steeper
+skirt to be wrong on.
+
+Measured at real note frequencies, for filters the pedal actually builds,
+the error before the fix was:
+
+	                                     B0     E1     A1     E2
+	                                     31     41     55     82 Hz
+	boost Basscut HPF Q.707 @30Hz      0.48   0.70   0.92   0.56
+	boost Basscut HPF Q.707 @10Hz      3.34   1.94   1.08   0.48
+	tone Bass LOSHELF Q.707 @20Hz      4.47   0.74   1.34   1.15
+	tone Mid PEAKING Q4 @50Hz          0.17   0.82   1.66   0.07
+
+Note that the worst row is a Q of 0.707 and the Q of 4 is not
+particularly bad.  Frequency is the variable, not Q.  A dedicated hum
+notch at Q 20 is where it becomes total - the notch misses the hum
+entirely and attenuates 60 Hz by 0.7 dB instead of 37 - but nothing in
+the pedal asks for that yet, which is why this survived so long.
+
+The fix is to take the *half* angle, whose sine is the well-behaved one,
+and come back with the double-angle identities:
+
+	cos(w) = 1 - 2 sin(w/2)^2
+	sin(w) = 2 sin(w/2) cos(w/2)
+
+Both fall out of the one table lookup that was happening anyway.
+cos(w) is now built out of a squared sine, which is the entire point: a
+squared sine carries the angle, and a cosine near 1.0 does not.
+
+
+2. The floor, which is the coefficients themselves
+--------------------------------------------------
+
+With the angle fixed, what is left is float32.
+
+A biquad's pole angle is carried in a1, which for a low-frequency
+section is a number near -2.  One ulp there is 1.19e-07, and the angle
+is recovered from it through the same vanishing derivative as before, so
+the placement cannot be better than about ulp/(2 sin w).
+
+Swept every semitone with a peaking section at Q 1, comparing against
+the same filter built in double:
+
+	band          f64 coeffs      f32 coeffs, exact w0    as built
+	              max     rms      max        rms         max     rms
+	  20- 80 Hz   0 %     0 %      0.43 %     0.15 %      0.86 %  0.23 %
+	  80-320 Hz   0 %     0 %      0.025 %    0.008 %     0.020 % 0.008 %
+	 320-1280     0 %     0 %      0.002 %    0.001 %     0.002 % 0.001 %
+
+So below 80 Hz there is a floor around 0.4 % that belongs to the storage
+format, and the path used to get there costs about a factor of two on
+top of it, from rounding cos to float32 near 1.0 on the way past.
+
+**Restructuring the arithmetic does not recover that factor of two.**
+Handing the constructors (1-cos) directly, so that a value near 1.0 is
+never formed, measures identically to the current code - because a1 has
+to end up near -2 whatever route it took, and that final store is where
+the information goes.  Getting past this needs a different coefficient
+set or a different topology, not a cleverer way to compute the same five
+floats.  It is 0.4 % at 20 Hz, a third of a semitone, and the frequency
+pots step by a whole semitone, so nothing is waiting on it.
+
+
+3. The cancellation, which is famous and barely matters
+-------------------------------------------------------
+
+	static inline void _biquad_lpf(..., float freq, float Q)
+	{
+		...
+		float b1 = (1 - w0.cos) * a0_inv;
+
+cos(20 Hz) is 0.99999657, so (1 - w0.cos) is the textbook case of
+subtracting two nearly equal numbers: the result is 3.4e-06 with about
+two significant figures left of the eight that went in.
+
+This is the one place in the file where that happens.  The high-pass
+wants (1 + cos), which is near 2 at the bottom of the range and only
+degenerates approaching Nyquist, where the loss is a factor of seven and
+worth nothing.  The shelves and the peaking sections never form either
+quantity.  **One line, one filter type, one end of the range.**
+
+What makes it disappear is that cos is no longer an independent input.
+With biquad_w0() inlined into the constructor, the compiler sees
+
+	1 - (1 - 2*s*s)
+
+and -ffast-math folds it to 2*s*s.  The 1.0 never appears, and the small
+quantity is computed at full relative precision.  On the target that is
+two instructions:
+
+	vmul.f32  s15, s0, s0        ; s*s
+	vadd.f32  s15, s15, s15      ; 2*s*s   = 1 - cos
+
+and the cosine is materialised separately, only for the pole
+coefficient, where a value near 1.0 is what is actually wanted:
+
+	vsub.f32  s14, s12, s15      ; 1 - 2s^2  = cos
+	vmul.f32  s14, s14, s9       ; * -2
+
+**This only works if the constructor can see where cos came from**,
+which is why biquad_w0() is called inside the constructors rather than
+by the caller.  Measured across 1440 coefficient sets through
+bench/coeff - which calls the constructors through a function pointer
+and so cannot inline them - moving the computation inside changed 200 of
+them, every one a low-pass numerator:
+
+	20 Hz  0.87 %      440 Hz  0.0017 %
+	30 Hz  0.28 %     1000 Hz  0.0002 %
+	60 Hz  0.086 %
+
+In the firmware itself this had already been happening, because there is
+one translation unit and the constructors inlined into their callers.
+The point of moving it is that the precision no longer depends on the
+optimiser making that choice.
+
+And the size of it: 0.87 % of a low-pass numerator is 0.075 dB of
+passband gain.  It is worth having because it is free.  It was never the
+audible problem, and anyone reading (1 - w0.cos) and reaching for the
+smelling salts - which is the natural reaction, and was the first guess
+here - should measure it before rewriting anything around it.
+
+
+What to take away
+-----------------
+
+- A cosine is a bad way to carry a small angle, and the giveaway is that
+  the error is divided by sin(w0) on the way out.  If a quantity is
+  going to be used as an angle, keep it as one.
+
+- Which of three co-located errors dominates is not obvious by reading,
+  and here the famous one was the smallest by a factor of sixty.  The
+  53 % was invisible in the source and the 0.87 % was written in a form
+  that draws the eye.
+
+- An interface that takes a derived quantity invites somebody to derive
+  it differently.  parametric_eq.h did exactly that and built its filters
+  the old way for a day after the fix landed, because it called the
+  constructors directly instead of through the macros that knew about
+  _w0().  Taking the frequency removes the choice.
+
+- 'make check-biquad' sweeps the constructors and did not catch that,
+  because bench/coeff.c called _w0() too.  A test that shares the
+  harness's idea of the right way to call something tests the primitive
+  and not its adoption; see the note on measurement in ISSUES.md 140.

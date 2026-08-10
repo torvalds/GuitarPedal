@@ -9,7 +9,7 @@
 //
 // This exists because the external EEPROM ran out.  The oldest boards
 // carry a 2kbit part - 256 bytes, one scene - and the control bindings
-// alone want more than that.  The RP2354B has 2MB of flash on the die
+// alone want more than that.  The RP2354A has 2MB of flash on the die
 // and the firmware occupies 84kB of it, so the answer was never going
 // to be a bigger EEPROM.
 //

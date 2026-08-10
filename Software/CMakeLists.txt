@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.13...3.27)
 #
 # What we build for, and how we pass floats around.
 #
-# The part is an RP2354B - an RP2350 with the flash on the die.  The
+# The part is an RP2354A - an RP2350A with the flash on the die.  The
 # default float ABI is softfp, which is a compatibility mode for parts
 # that might not have an FPU.  This one does, and the whole firmware is
 # built around 32-bit floats, so passing them in core registers is pure
@@ -101,7 +101,7 @@ set(SCRIPT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
 # How much flash there actually is.
 #
 # PICO_BOARD is not set, so the SDK defaults it to 'pico2' - a board
-# with 4MB of flash hanging off the QSPI pins.  This is an RP2354B and
+# with 4MB of flash hanging off the QSPI pins.  This is an RP2354A and
 # the 2MB is on the die.  Nothing has cared so far, because nothing has
 # addressed flash by anything but a symbol.
 #
@@ -177,16 +177,6 @@ add_custom_command(
 	DEPENDS "${SCRIPT_DIR}/quarter_sine.py"
 )
 list(APPEND PEDAL_GENERATED "${SINE_HEADER}")
-
-set(EQ_W0_HEADER "${CMAKE_CURRENT_BINARY_DIR}/eq-w0.h")
-add_custom_command(
-	OUTPUT "${EQ_W0_HEADER}"
-	COMMAND "${SCRIPT_DIR}/eq-w0.py"
-		"${EQ_W0_HEADER}"
-		"${SAMPLES_PER_SEC}"
-	DEPENDS "${SCRIPT_DIR}/eq-w0.py"
-)
-list(APPEND PEDAL_GENERATED "${EQ_W0_HEADER}")
 
 file(GLOB EFFECT_HEADERS CONFIGURE_DEPENDS "effects/*.h")
 set(EFFECT_MAP_HEADER "${CMAKE_CURRENT_BINARY_DIR}/effect_map.h")
@@ -449,6 +439,22 @@ add_custom_command(TARGET ${tgt} POST_BUILD
 		"${FLASH_SIZE_BYTES}"
 		"${SAVE_AREA_OFFSET}"
 		"${CMAKE_NM}"
+	VERBATIM)
+
+#
+# ...and the README is supposed to know which effects exist.
+#
+# The odd one out here: it looks at no build artifact, and it warns
+# rather than failing.  It is here anyway because this is the moment it
+# is useful - you changed an effect header, so the build ran - and
+# because a check nobody runs catches nothing.  The README's list is
+# hand-written by choice and it drifted to eight of seventeen; this is
+# the cheap backstop for that and nothing more.
+#
+add_custom_command(TARGET ${tgt} POST_BUILD
+	COMMAND "${SCRIPT_DIR}/check-readme.py"
+		"${CMAKE_CURRENT_SOURCE_DIR}/effects"
+		"${CMAKE_CURRENT_SOURCE_DIR}/../README.md"
 	VERBATIM)
 
 

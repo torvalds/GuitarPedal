@@ -28,7 +28,7 @@ float phaser_step(float in)
 	float freq = pow2(lfo*phaser.octaves) * phaser.center_f;
 	float out;
 
-	_biquad_allpass_filter(&phaser.coeff, _w0(freq), phaser.Q);
+	_biquad_allpass_filter(&phaser.coeff, freq, phaser.Q);
 
 	out = in + phaser.feedback * phaser.s3[0];
 	out = biquad_step_df1(&phaser.coeff, out, phaser.s0, phaser.s1);

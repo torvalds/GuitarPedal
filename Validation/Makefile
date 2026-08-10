@@ -59,7 +59,15 @@ bench/bench: bench/bench.c $(BENCH_HDRS) \
 	     ../Software/status.h
 	$(CC) $(BENCH_CFLAGS) -o $@ $< -lm
 
-bench: bench/bench
+#
+# The same headers, without the audio path: just the biquad
+# constructors, so a filter can be asked where it landed.
+#
+bench/coeff: bench/coeff.c $(BENCH_GEN)/quarter_sine.h \
+	     $(wildcard bench/shim/*/*.h) $(wildcard ../Software/audio/*.h)
+	$(CC) $(BENCH_CFLAGS) -o $@ $< -lm
+
+bench: bench/bench bench/coeff
 
 #
 # What the bench is for is looking at one effect, which is a
@@ -71,6 +79,14 @@ bench: bench/bench
 #
 check-effects: bench/bench
 	./test-effects.py
+
+#
+# Where every biquad in the pedal actually lands, swept across the range
+# the pots offer.  Host arithmetic only, so it needs no hardware and is
+# part of 'check'.
+#
+check-biquad: bench/coeff
+	./test-biquad.py
 
 #
 # The other half of the bench: whether it agrees with a real pedal.
@@ -176,8 +192,9 @@ check-reboot:
 	./test-reboot.py $(if $(TARGET),--target $(TARGET)) \
 			 $(if $(JSON),--json $(JSON)) $(BOOTARGS)
 
-check: test-midi-cin
+check: test-midi-cin bench/coeff
 	./test-midi-cin
+	./test-biquad.py
 ifeq ($(NODE),)
 	@echo "test-webmidi: SKIPPED - no node in PATH"
 else
@@ -193,6 +210,6 @@ else
 	r=$$?; rm -rf $$t; exit $$r
 endif
 
-.PHONY: bench check check-analog check-bench check-boot check-effects
-.PHONY: check-hw check-loop
+.PHONY: bench check check-analog check-bench check-biquad check-boot
+.PHONY: check-effects check-hw check-loop
 .PHONY: check-midi check-reboot check-split

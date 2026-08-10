@@ -44,8 +44,42 @@ static inline float _biquad_step(const struct biquad_coeff *c, struct biquad_sta
 	return biquad_step_df1(c, x0, s->x, s->y);
 }
 
-static inline void _biquad_lpf(struct biquad_coeff *res, const struct sincos w0, float Q)
+//
+// Every constructor below places its poles and zeros with -2*cos(w0), so
+// what it needs from the sine table is an *angle*, and cos is the worst
+// possible way to ask for one down here.
+//
+// fastsincos() interpolates 256 entries a quarter linearly.  Near zero
+// phase the sine is straight and the chord is nearly exact; the cosine
+// is at its maximum, where the chord sits furthest under the arc.  And
+// d(cos)/dw = -sin(w0), which vanishes exactly where that error is
+// worst, so the angle recovered from the cosine is off by err/sin(w0).
+// Asking for 20Hz got a filter at 30.7Hz, and 60Hz got 63.6Hz.
+//
+// So take the half angle, whose sine is the well-behaved one, and come
+// back with the double-angle identities.  Both come out of the one table
+// lookup that was being done anyway.  cos(w) is now built from a squared
+// sine, which is the whole point: it carries the angle where cos does
+// not.  sin(w) is not fussy - it ends up in alpha, where it sets the
+// bandwidth rather than the frequency - so the table's own cosine is
+// good enough for that half.
+//
+// single-pole.h asks for the same half angle for its own reasons.
+//
+static inline struct sincos biquad_w0(float freq)
 {
+	struct sincos h = fastsincos(0.5f * freq / SAMPLES_PER_SEC);
+	struct sincos w0;
+
+	w0.sin = 2 * h.sin * h.cos;
+	w0.cos = 1 - 2 * h.sin * h.sin;
+
+	return w0;
+}
+
+static inline void _biquad_lpf(struct biquad_coeff *res, float freq, float Q)
+{
+	const struct sincos w0 = biquad_w0(freq);
 	float alpha = w0.sin/(2*Q);
 	float a0_inv = 1/(1 + alpha);
 	float b1 = (1 - w0.cos) * a0_inv;
@@ -57,8 +91,9 @@ static inline void _biquad_lpf(struct biquad_coeff *res, const struct sincos w0,
 	res->a2 = (1 - alpha)	* a0_inv;
 }
 
-static inline void _biquad_hpf(struct biquad_coeff *res, const struct sincos w0, float Q)
+static inline void _biquad_hpf(struct biquad_coeff *res, float freq, float Q)
 {
+	const struct sincos w0 = biquad_w0(freq);
 	float alpha = w0.sin/(2*Q);
 	float a0_inv = 1/(1 + alpha);
 	float b1 = (1 + w0.cos) * a0_inv;
@@ -70,8 +105,9 @@ static inline void _biquad_hpf(struct biquad_coeff *res, const struct sincos w0,
 	res->a2 = (1 - alpha)	* a0_inv;
 }
 
-static inline void _biquad_notch_filter(struct biquad_coeff *res, const struct sincos w0, float Q)
+static inline void _biquad_notch_filter(struct biquad_coeff *res, float freq, float Q)
 {
+	const struct sincos w0 = biquad_w0(freq);
 	float alpha = w0.sin/(2*Q);
 	float a0_inv = 1/(1 + alpha);
 
@@ -82,8 +118,9 @@ static inline void _biquad_notch_filter(struct biquad_coeff *res, const struct s
 	res->a2 = (1 - alpha)	* a0_inv;
 }
 
-static inline void _biquad_bpf_peak(struct biquad_coeff *res, const struct sincos w0, float Q)
+static inline void _biquad_bpf_peak(struct biquad_coeff *res, float freq, float Q)
 {
+	const struct sincos w0 = biquad_w0(freq);
 	float alpha = w0.sin/(2*Q);
 	float a0_inv = 1/(1 + alpha);
 
@@ -94,8 +131,9 @@ static inline void _biquad_bpf_peak(struct biquad_coeff *res, const struct sinco
 	res->a2 = (1 - alpha)	* a0_inv;
 }
 
-static inline void _biquad_bpf(struct biquad_coeff *res, const struct sincos w0, float Q)
+static inline void _biquad_bpf(struct biquad_coeff *res, float freq, float Q)
 {
+	const struct sincos w0 = biquad_w0(freq);
 	float alpha = w0.sin/(2*Q);
 	float a0_inv = 1/(1 + alpha);
 
@@ -106,8 +144,9 @@ static inline void _biquad_bpf(struct biquad_coeff *res, const struct sincos w0,
 	res->a2 = (1 - alpha)	* a0_inv;
 }
 
-static inline void _biquad_allpass_filter(struct biquad_coeff *res, const struct sincos w0, float Q)
+static inline void _biquad_allpass_filter(struct biquad_coeff *res, float freq, float Q)
 {
+	const struct sincos w0 = biquad_w0(freq);
 	float alpha = w0.sin/(2*Q);
 	float a0_inv = 1/(1 + alpha);
 
@@ -128,8 +167,9 @@ static inline void _biquad_allpass_filter(struct biquad_coeff *res, const struct
 // - the app's copy of these same formulas takes A - and two call sites
 // had grown fudge factors from guessing which, in opposite directions.
 //
-static inline void _biquad_peaking(struct biquad_coeff *res, const struct sincos w0, float Q, float A)
+static inline void _biquad_peaking(struct biquad_coeff *res, float freq, float Q, float A)
 {
+	const struct sincos w0 = biquad_w0(freq);
 	float alpha = w0.sin/(2*Q);
 	float a0_inv = 1 / (1 + alpha/A);
 
@@ -140,8 +180,9 @@ static inline void _biquad_peaking(struct biquad_coeff *res, const struct sincos
 	res->a2 = (1 - alpha/A)		* a0_inv;
 }
 
-static inline void _biquad_loshelf(struct biquad_coeff *res, const struct sincos w0, float Q, float A)
+static inline void _biquad_loshelf(struct biquad_coeff *res, float freq, float Q, float A)
 {
+	const struct sincos w0 = biquad_w0(freq);
 	float alpha = w0.sin/(2*Q);
 
 	float ap1 = A + 1;
@@ -156,8 +197,9 @@ static inline void _biquad_loshelf(struct biquad_coeff *res, const struct sincos
 	res->a2 =      (ap1 + am1*w0.cos - sqAmin2)	* a0_inv;
 }
 
-static inline void _biquad_hishelf(struct biquad_coeff *res, const struct sincos w0, float Q, float A)
+static inline void _biquad_hishelf(struct biquad_coeff *res, float freq, float Q, float A)
 {
+	const struct sincos w0 = biquad_w0(freq);
 	float alpha = w0.sin/(2*Q);
 
 	float ap1 = A + 1;
@@ -175,14 +217,12 @@ static inline void _biquad_hishelf(struct biquad_coeff *res, const struct sincos
 static inline float biquad_step(struct biquad *bq, float x0)
 { return _biquad_step(&bq->coeff, &bq->state, x0); }
 
-#define _w0(f) fastsincos((f)/SAMPLES_PER_SEC)
-
-#define biquad_lpf(bq,f,Q) _biquad_lpf(&(bq)->coeff,_w0(f),Q)
-#define biquad_hpf(bq,f,Q) _biquad_hpf(&(bq)->coeff,_w0(f),Q)
-#define biquad_notch_filter(bq,f,Q) _biquad_notch_filter(&(bq)->coeff,_w0(f),Q)
-#define biquad_bpf_peak(bq,f,Q) _biquad_bpf_peak(&(bq)->coeff,_w0(f),Q)
-#define biquad_bpf(bq,f,Q) _biquad_bpf(&(bq)->coeff,_w0(f),Q)
-#define biquad_allpass_filter(bq,f,Q) _biquad_allpass_filter(&(bq)->coeff,_w0(f),Q)
-#define biquad_peaking(bq,f,Q,A) _biquad_peaking(&(bq)->coeff,_w0(f),Q,A)
-#define biquad_lowshelf(bq,f,Q,A) _biquad_loshelf(&(bq)->coeff,_w0(f),Q,A)
-#define biquad_highshelf(bq,f,Q,A) _biquad_hishelf(&(bq)->coeff,_w0(f),Q,A)
+#define biquad_lpf(bq,f,Q) _biquad_lpf(&(bq)->coeff,f,Q)
+#define biquad_hpf(bq,f,Q) _biquad_hpf(&(bq)->coeff,f,Q)
+#define biquad_notch_filter(bq,f,Q) _biquad_notch_filter(&(bq)->coeff,f,Q)
+#define biquad_bpf_peak(bq,f,Q) _biquad_bpf_peak(&(bq)->coeff,f,Q)
+#define biquad_bpf(bq,f,Q) _biquad_bpf(&(bq)->coeff,f,Q)
+#define biquad_allpass_filter(bq,f,Q) _biquad_allpass_filter(&(bq)->coeff,f,Q)
+#define biquad_peaking(bq,f,Q,A) _biquad_peaking(&(bq)->coeff,f,Q,A)
+#define biquad_lowshelf(bq,f,Q,A) _biquad_loshelf(&(bq)->coeff,f,Q,A)
+#define biquad_highshelf(bq,f,Q,A) _biquad_hishelf(&(bq)->coeff,f,Q,A)
