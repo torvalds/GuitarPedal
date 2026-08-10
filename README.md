@@ -1,20 +1,25 @@
 ## Resurrected random guitar pedal project
 
-This is a resurrected version of my old guitar pedal project, except
-this time with a screen and a few rotary encoders instead of the old
-horrid analog potentiometers.
+This is a resurrected version of my old guitar pedal project: a digital
+guitar pedal built around an RP2354A and a TI audio codec, with all the
+effects done in software on a core of its own.
 
-There's a 'Hardware' directory with the kicad files.
+It went through a phase with a little OLED screen and a couple of rotary
+encoders on it, and that's gone now.  Editing eighteen effects through a
+128x128 screen and two knobs was never going to be pleasant, and I'm not
+exactly known for my mad UI designing skillz, so the pedal itself is down
+to one knob and one stomp switch and the deep editing happens somewhere
+that already has a screen: there's a web app that talks to it over USB
+MIDI from a browser.
 
-There's a 'Software' directory that contains the firmware to make it do
-something.
+So what's in here:
 
-And there's a 'Documentation' directory, which is a very optimistic
-thing for this project.
-
-Anyway, with the update to have a screen and proper rotary encores, the
-thing can now have multiple effects and a sane-ish UI to them.  Except
-I'm not exactly known for my mad UI designing skillz.  So...
+ - `Hardware` has the kicad files.
+ - `Software` has the firmware that makes it do something, and
+   `Software/WebMIDI` is the web app that edits it.
+ - `Validation` is the test suite.  Some of it runs on your machine and
+   some of it wants a pedal plugged in.
+ - `Documentation` remains a very optimistic name for a directory.
 
 ## Firmware
 
@@ -36,22 +41,75 @@ something like
  - arm-none-eabi-gcc-cs
  - arm-none-eabi-newlib
 
-and if you have all the requirements, doing
+There's more than one board this can be built for, and the build won't
+guess.  You say which one this tree is about once, in
+`Software/board.local`, and it stays said - it's a file rather than a
+cmake cache variable specifically so that blowing away `build/` doesn't
+silently change your mind for you.  So:
 ```
 	git clone https://github.com/torvalds/GuitarPedal.git
 	cd GuitarPedal
 	cd Software
+	echo unified > board.local
 	make prep
 	make
 ```
-should get the build going, and you should find the resulting
-`pedal.uf2` file in the `build/` subdirectory.  You can just write that
-file to the USB filesystem after you've set the pedal into
-programming mode (see below).
+`unified` is the current one-board pedal.  The other is `split`, which is
+the older modular pair of boards.  If you forget this step the configure
+will stop and tell you, which is the intended behaviour - a wrong board
+should be an error you fix once, not a working build for hardware you
+don't have.
+
+That gets you `build/pedal-unified.uf2` (and `.elf`, and `.bin`).  Every
+artifact is named for the board it's for, so there is deliberately no
+`pedal.uf2` to grab by mistake.  You can build the other board without
+changing what the tree is about - ``make split`` - or both with ``make
+all-boards``.
+
+To get the `.uf2` onto the pedal you need it in BOOTSEL mode, and there
+are two ways.  If it's running and plugged in, send it MIDI CC 20 with
+value 126 and it will reboot into BOOTSEL on its own:
+```
+	amidi -l                          # find which card the pedal is
+	amidi -p hw:5,0 -S "B0 14 7E"     # ...and that 5 is mine, not yours
+```
+Otherwise, hold the knob in while you plug it in.  The rotary encoder's
+switch doubles as BOOTSEL on this board - through a Schottky, so that
+QSPI traffic can't fake pulling it low - and that's the route that still
+works on a pedal too broken to enumerate.  The older boards had a proper
+BOOTSEL button, but it was on the little MCU daughtercard, which is fine
+on a bench and useless the moment the thing is screwed into a box.
+
+Either way a USB mass storage device shows up and you copy the file to
+it.
 
 If you have installed picotool with USB support (the pico-sdk build only
-builds a cut-down version without it), you can also just do ``make
-flash`` to flash the image that way.
+builds a cut-down version without it), you can skip all that and just do
+``make flash``, which builds and flashes the board in `board.local`.
+``make flash-split`` does the other one.
+
+### Testing
+
+`Validation` has the test suite, and it's split by what it needs.
+
+``make check`` runs the part that needs no hardware at all: the MIDI
+packetiser, whether the web app still loads and still draws the right
+conclusions, and a sweep that asks every biquad in the pedal where it
+actually landed.  ``make check-biquad`` is that last one on its own, and
+``make check-effects`` puts signals through the effects themselves.
+
+That last one works because of `Validation/bench`, which builds the
+pedal's actual audio core - the same `single_sample()`, the same effect
+headers, the same compiler flags - as a program on your machine that
+takes float samples on stdin and hands them back on stdout.  It is not a
+model of the signal path.  It's the signal path, with the two register
+blocks the audio core touches replaced by ordinary memory.
+
+Then there are the ones that want hardware: ``make check-hw`` with a
+signal generator, ``make check-analog`` with a patch cable from the
+pedal's output back to its own input, ``make check-bench`` to ask whether
+a real board agrees with the host build, and ``make check-loop`` if you
+have two pedals to patch into each other.
 
 ## Hardware
 
