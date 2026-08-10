@@ -68,11 +68,11 @@ static void eq_init(unsigned char pot[10])
 
 	eq_graph_q(q, pot);
 
-	_biquad_loshelf(c+0, fastsincos(eq_ls_freq_pot(pot) / SAMPLES_PER_SEC), q[0], db_to_A(eq_ls_gain_pot(pot)));
-	_biquad_peaking(c+1, fastsincos(eq_p1_freq_pot(pot) / SAMPLES_PER_SEC), q[1], db_to_A(eq_p1_gain_pot(pot)));
-	_biquad_peaking(c+2, fastsincos(eq_p2_freq_pot(pot) / SAMPLES_PER_SEC), q[2], db_to_A(eq_p2_gain_pot(pot)));
-	_biquad_peaking(c+3, fastsincos(eq_p3_freq_pot(pot) / SAMPLES_PER_SEC), q[3], db_to_A(eq_p3_gain_pot(pot)));
-	_biquad_hishelf(c+4, fastsincos(eq_hs_freq_pot(pot) / SAMPLES_PER_SEC), q[4], db_to_A(eq_hs_gain_pot(pot)));
+	_biquad_loshelf(c+0, _w0(eq_ls_freq_pot(pot)), q[0], db_to_A(eq_ls_gain_pot(pot)));
+	_biquad_peaking(c+1, _w0(eq_p1_freq_pot(pot)), q[1], db_to_A(eq_p1_gain_pot(pot)));
+	_biquad_peaking(c+2, _w0(eq_p2_freq_pot(pot)), q[2], db_to_A(eq_p2_gain_pot(pot)));
+	_biquad_peaking(c+3, _w0(eq_p3_freq_pot(pot)), q[3], db_to_A(eq_p3_gain_pot(pot)));
+	_biquad_hishelf(c+4, _w0(eq_hs_freq_pot(pot)), q[4], db_to_A(eq_hs_gain_pot(pot)));
 }
 
 static float eq_step(float in)
