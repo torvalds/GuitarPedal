@@ -32,20 +32,27 @@
 // frequencies that it doesn't matter at all and we'll just use this
 // for both cases
 
-static inline float klon_dc_step(struct single_pole_state *state, float x)
-{
-	return single_pole_hpf(x, state, single_pole_rc(1e6, 100e-9));
-}
-
 struct {
 	float drive, treble, level;
 	struct single_pole_state dc_in;			/* DC blocking at input */
 	struct single_pole_state dc_out;		/* DC blocking at output */
 	struct single_pole_state in_hp;			/* 30Hz coupling cap */
 	struct single_pole_state pre_lp;		/* 15kHz input bandwidth */
+	//
+	// Built in klon_init() rather than inline in the step.  They are
+	// constants, but the coefficient for one is a pow2() now - see
+	// audio/single-pole.h - so an inline call would be four real
+	// function calls a sample rather than four folded constants.
+	//
+	struct single_pole_coeff dc_c, in_hp_c, pre_lp_c;
 	struct biquad tone_hs;      			/* treble control — hi shelf @ 2kHz */
 	struct biquad pres_pk;      			/* presence peak @ 1.7kHz */
 } klon;
+
+static inline float klon_dc_step(struct single_pole_state *state, float x)
+{
+	return single_pole_hpf(x, state, klon.dc_c);
+}
 
 void klon_init(unsigned char pot[10])
 {
@@ -56,8 +63,12 @@ void klon_init(unsigned char pot[10])
 	float hs_db = (klon.treble - 0.5f) * 12.0f;	// -6 to +6 dB
 	float peaking_db = klon.treble * 6.0;		//  0 to +6 dB (original effectively doubled the boost)
 
-	// Single-pole RC filters for coupling and bandwidth
-	// initialized implicitly to 0 by static allocation, no init needed here
+	// Single-pole RC filters for coupling and bandwidth.  The state is
+	// implicitly zero from static allocation; the coefficients are not,
+	// and are built here because they cost a pow2() each.
+	klon.dc_c = single_pole_rc(1e6, 100e-9);
+	klon.in_hp_c = single_pole_freq(30.0);		/* coupling cap */
+	klon.pre_lp_c = single_pole_freq(15000.0);	/* input bandwidth */
 
 	biquad_highshelf(&klon.tone_hs, 2000.0, 0.7, db_to_A(hs_db));
 	biquad_peaking(&klon.pres_pk, 1700.0, 1.5, db_to_A(peaking_db));
@@ -72,8 +83,8 @@ float klon_step(float in)
 	/* Input conditioning */
 	pre = klon_dc_step(&klon.dc_in, in);
 
-	pre = single_pole_hpf(pre, &klon.in_hp, single_pole_freq(30.0));	/* coupling cap */
-	pre = single_pole_lpf(pre, &klon.pre_lp, single_pole_freq(15000.0));	/* input bandwidth */
+	pre = single_pole_hpf(pre, &klon.in_hp, klon.in_hp_c);		/* coupling cap */
+	pre = single_pole_lpf(pre, &klon.pre_lp, klon.pre_lp_c);	/* input bandwidth */
 
 	/* Op-amp gain — 18V charge pump gives ~2x headroom vs 9V pedals */
 	boost = 1.0f + drive * drive * 55.0f;

@@ -10,6 +10,94 @@ test-fft: test-fft.c
 test-midi-cin: test-midi-cin.c
 
 #
+# The effect bench: the pedal's own audio core, built for the host.
+#
+# Everything it needs is generated here rather than taken from
+# ../Software/build, so it does not need the firmware to have been built
+# and never writes into the source tree.  The three math tables carry
+# the shift values from Software/CMakeLists.txt; if those move, these
+# have to move with them, and the bench will be measuring a different
+# pedal until they do.
+#
+# The include paths want a word.  effect_map.h is generated into gen/
+# and reaches its effects with '#include "../effects/x.h"', which is
+# relative to wherever effect_map.h ends up - so ../Software/audio is on
+# the path purely so that ../Software/audio/../effects resolves.  A
+# symlink would be the other way to do it and would be a file in the
+# tree pretending to be a directory.
+#
+BENCH_GEN = bench/gen
+BENCH_HDRS = $(BENCH_GEN)/effect_map.h $(BENCH_GEN)/pow2.h \
+	     $(BENCH_GEN)/log2.h $(BENCH_GEN)/quarter_sine.h
+BENCH_CFLAGS = -Wall -Wno-unused-function -O2 \
+	       -ffast-math -fsingle-precision-constant -Wfloat-conversion \
+	       -DSAMPLES_PER_SEC=48000.0f \
+	       -Ibench/shim -I$(BENCH_GEN) -I../Software -I../Software/audio
+
+$(BENCH_GEN)/effect_map.h: $(wildcard ../Software/effects/*.h) \
+			   ../Software/scripts/gen_effects.py
+	@mkdir -p $(BENCH_GEN)
+	python3 ../Software/scripts/gen_effects.py ../Software/effects/ \
+		$(BENCH_GEN)/effect_map.h $(BENCH_GEN)/effects.js \
+		$(BENCH_GEN)/dummy_map.md
+
+$(BENCH_GEN)/pow2.h: ../Software/scripts/pow2.py
+	@mkdir -p $(BENCH_GEN)
+	python3 $< $@ 8
+
+$(BENCH_GEN)/log2.h: ../Software/scripts/log2.py
+	@mkdir -p $(BENCH_GEN)
+	python3 $< $@ 8
+
+$(BENCH_GEN)/quarter_sine.h: ../Software/scripts/quarter_sine.py
+	@mkdir -p $(BENCH_GEN)
+	python3 $< $@ 8
+
+bench/bench: bench/bench.c $(BENCH_HDRS) \
+	     $(wildcard bench/shim/*/*.h bench/shim/*/*/*.h) \
+	     $(wildcard ../Software/audio/*.h) ../Software/effect-state.h \
+	     ../Software/status.h
+	$(CC) $(BENCH_CFLAGS) -o $@ $< -lm
+
+bench: bench/bench
+
+#
+# What the bench is for is looking at one effect, which is a
+# conversation and not a target.  What belongs in 'check' is only the
+# part that has a right answer: the two controls that say whether the
+# instrument is working at all.  A bench that passes these and an effect
+# that then reads strangely is a finding; a bench that fails these makes
+# every other number in the session worthless.
+#
+check-effects: bench/bench
+	./test-effects.py
+
+#
+# The other half of the bench: whether it agrees with a real pedal.
+#
+# Separate from check-effects because it needs hardware, and separate
+# from check-hw because it needs no signal generator - the stimulus is
+# [TESTTONE] and the capture is the pedal's own USB audio, so the path
+# is digital end to end.  Skips when there is no pedal plugged in.
+#
+check-bench: bench/bench
+	./test-bench.py
+
+#
+# The analog half, which needs a patch cable from the pedal's output
+# back to its own input and nothing else.  One board, one cable, so the
+# DAC and the ADC are the same codec on the same clock and there is no
+# drift to chase.
+#
+# Reports and never fails.  What it measures is a converter and a cable
+# rather than any code of ours, and 95 is the issue about a bench
+# measurement that carries no record of the bench - so this prints
+# numbers and lets a person decide whether the cable moved.
+#
+check-analog:
+	./test-analog.py
+
+#
 # The web app gets checked too, which needs node.
 #
 # Skipped rather than fatal when node isn't installed: it is the only
@@ -105,4 +193,6 @@ else
 	r=$$?; rm -rf $$t; exit $$r
 endif
 
-.PHONY: check check-boot check-hw check-loop check-midi check-reboot check-split
+.PHONY: bench check check-analog check-bench check-boot check-effects
+.PHONY: check-hw check-loop
+.PHONY: check-midi check-reboot check-split

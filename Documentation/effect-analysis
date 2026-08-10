@@ -1,0 +1,958 @@
+Reading the effects
+===================
+
+A pass over every file in Software/effects/, plus the primitives in
+Software/audio/ that they share.  Two things are wanted from it: defects
+found by reading, and - for each effect - the pot settings that are
+worth putting a signal through.  The second half is the input to the
+measurement work.
+
+Pot values below are the raw 0..120 the firmware stores, because that is
+what a scene holds and what set_effect_pot() takes.  The engineering
+value each one works out to is in brackets.
+
+The settings are prose here and ought not to stay that way: every other
+fact about an effect lives in the effect's own header, parsed out of a
+structured comment by gen_effects.py, and a table of pot values kept
+somewhere else will drift the first time a range moves.  They want to be
+TEST: lines.  That has not been done - see 129.
+
+**Sections marked MEASURED have been through the bench; the rest is
+still reading.**  That distinction is the whole point of the file, and
+two of the things reading was confident about turned out to be wrong
+when measured - the compressor's release and the tanh clamp - so it is
+kept visible rather than tidied away once a thing is settled.
+
+
+The shared primitives
+---------------------
+
+Three findings live below the effects, in code that many of them call.
+They are first because they explain things that would otherwise look
+like separate bugs in five different files.
+
+1. single_pole_freq() is a long way off above a few kHz.
+
+   audio/single-pole.h maps a corner frequency to a coefficient with
+
+	omega = 2*pi*freq/fs;  alpha = omega / (1 + omega)
+
+   which is the first term of the series for the exact 1 - exp(-omega).
+   The file says it is a "standard fast approximation when far away from
+   Nyquist", and that is true; the trouble is what counts as far away.
+   Solving for where the resulting one-pole is actually -3dB:
+
+	asked       alpha    real -3dB     error
+	   30     0.00391       29.9 Hz     -0.2%
+	  150     0.01926      148.6 Hz     -1.0%
+	 1000     0.11575      940.9 Hz     -5.9%
+	 3000     0.28197     2554.0 Hz    -14.9%
+	 5000     0.39559     3930.4 Hz    -21.4%
+	 9000     0.54088     6273.0 Hz    -30.3%
+	15000     0.66256     9272.2 Hz    -38.2%
+	20000     0.72360    11596.4 Hz    -42.0%
+
+   Two call sites are well inside the bad region.  klon.h asks for a
+   15kHz input bandwidth and gets 9.3kHz.  frenchie.h's tone control
+   sweeps 1500..20000Hz and actually sweeps 1373..11596Hz, so the top
+   half of the knob's travel is spent on the difference between two dull
+   settings.  cabsim.h's only use is at 150Hz and is fine.
+
+   The exact form costs one pow2() at init and is already written down
+   three times elsewhere in the tree: echo.h's echo_onepole_set_cutoff(),
+   preamp.h's preamp_onepole_set(), and inline in tremolo.h.  All three
+   are the same line - pow2(-9.06472028f * fc / fs) - and none of them
+   is single-pole.h.  So there are two conventions and four copies.
+
+2. tanhf()'s clamp is a repair, not a defect.  MEASURED.
+
+   audio/util.h is a [5/4] Pade approximant with
+
+	if (d < abs_n) d = abs_n;
+
+   to hold the result inside +-1.  The Pade overshoots: it reaches 1.0
+   at x = 3.6467 and keeps climbing (1.00165 at x=4, 1.00744 at x=5), so
+   from the knee upwards the output is exactly 1.0 and flat while true
+   tanh still has a slope of 0.0027.  That is a slope discontinuity, and
+   the first version of this document called it a corner and left it at
+   that.  Measuring it says something better.
+
+   A sine of amplitude A through three curves - true tanh in float64,
+   the bare rational with no clamp, and what the pedal ships - taken
+   through 'bench --map tanh', so the middle column is the
+   approximation's own error and the right-hand one is the clamp's:
+
+	  A  THD(true)    pade-true   pedal-pade   pedal-true
+	0.10   -61.6 dB   -319.7 dB    -147.0 dB    -147.0 dB
+	0.30   -42.7 dB   -249.6 dB    -146.6 dB    -146.6 dB
+	1.00   -23.5 dB   -149.2 dB    -145.0 dB    -143.3 dB
+	2.00   -15.2 dB    -98.6 dB    -144.6 dB     -98.6 dB
+	3.00   -12.0 dB    -73.6 dB    -144.3 dB     -73.6 dB
+	3.65   -10.9 dB    -62.9 dB    -113.4 dB     -62.9 dB
+	4.00   -10.4 dB    -58.3 dB     -63.3 dB     -63.5 dB
+	6.00    -8.9 dB    -40.5 dB     -40.6 dB     -68.4 dB
+       10.00    -7.8 dB    -24.0 dB     -24.0 dB     -71.5 dB
+       25.00    -6.9 dB     -5.3 dB      -5.3 dB     -75.9 dB
+
+   Three things fall out of that table.
+
+   **In the range a guitar actually lives in the question is empty.**
+   The pedal's internal scale runs -1.0..1.0 and a played note sits
+   around 0.1, where tanh's *intended* distortion is -61.6 dB and the
+   approximation contributes -147 dB - and -147 dB is not the
+   approximation, it is the float32 round trip, since the Pade there is
+   exact to -320 dB and the clamp cannot engage at all.  At A=0.03 the
+   figures are -82.5 dB intended and -147.6 dB from everything else.
+
+   **Below the knee the approximation error is the larger of the two,
+   by 40 to 70 dB.**  At A=3 the rational is 73.6 dB off true tanh and
+   the clamp contributes nothing.  Anyone worrying about the corner is
+   worrying about the smaller term.
+
+   **Above the knee the clamp makes the answer better, not worse.**  The
+   last column is what matters and it stays around -70 dB while the
+   unclamped rational runs away - at A=25 the bare Pade is 5.3 dB from
+   the truth and the shipped function is 75.9 dB from it.  That is the
+   whole point of the clamp: the [5/4] Pade diverges like x/15, so
+   without it "tanh" would grow without bound instead of saturating.
+
+   And reaching the knee at all means |x| >= 3.65 on a scale where full
+   scale is 1.0, so anything that gets there is already square: THD at
+   the knee is -10.9 dB.  klon at full gain does get there - its op-amp
+   stage reaches 56x - and measured across -30 to -6 dBFS in, nothing at
+   the -17 dBFS where the clamp starts biting separates from the
+   saturation around it.
+
+   So: not a bug, and worth writing down precisely because it looked
+   like one.  What the table does suggest is that anyone wanting a
+   cleaner saturator should improve the rational rather than the clamp.
+
+2a. The sine table is better than it needs to be.  MEASURED.
+
+   Every LFO, every biquad coefficient and the test tone come from a
+   256-entry quarter table (SINE_STEP_SHIFT 8, so 1024 points a cycle)
+   with linear interpolation.  testtone.h says "the tone is exactly as
+   clean as the vibrato is", which is honest and is not a number.
+
+   fastsincos() over one cycle of phase, against float64:
+
+	peak absolute error        4.687e-06   (-106.6 dBFS)
+	THD of the sine it makes      -141.9 dB
+	total non-fundamental         -109.3 dB
+
+   The interesting part is that those last two disagree by 32 dB, and
+   the reason is that **the error is almost entirely not distortion**.
+   The loudest error component sits at the fundamental itself, -110 dB
+   down: linear interpolation puts the chord under the arc, everywhere
+   and always, so the reconstructed sine is uniformly a hair small.
+   That is a gain error of about 3 parts per million, not a harmonic.
+   What is left is a pair of inharmonic spurs near 18.1 and 19.0 kHz at
+   -120 dB, which are the table-rate ripple folded back.
+
+   The tone the pedal actually generates, [TESTTONE] measured through
+   the whole audio path rather than the function alone, agrees: -141.6
+   dB THD.  Its frequency is right to **60 parts per billion** - the
+   accumulator step for 440 Hz works out to 439.999969 Hz - and the
+   +-4 Hz skirts in the capture are that offset leaking in the window,
+   not anything the generator did.
+
+   For scale: the quietest noise floor either board has measured is
+   -102.4 dBFS (see 95), and the codec is 24-bit.  So the generator's
+   worst artefact is around 20 dB under the noise it is measured
+   against, and its harmonic distortion is 40 dB under that again.  It
+   is not the limiting factor in anything, and now there is a number
+   saying so instead of a comparison to the vibrato.
+
+3. Reverb's LFOs wind down and stop.
+
+   reverb.h rotates a quadrature pair (s,c) by a fixed (ds,dc) each
+   sample instead of calling sincos, and never renormalises.  The
+   rotation constants come from fastsincos(), whose linear interpolation
+   between table entries always lands slightly inside the unit circle, so
+   the magnitude is under 1 and the pair spirals in:
+
+	rate      per-sample     after 1s   after 60s   after 10min
+	0.21 Hz   0.999999916      0.9960      0.7852        0.0891
+	0.31 Hz   0.999999876      0.9941      0.7004        0.0284
+	0.46 Hz   0.999999817      0.9913      0.5905        0.0052
+	0.67 Hz   0.999999735      0.9874      0.4659        0.0005
+
+   The modulation is the Lexicon trick for breaking up fixed resonant
+   peaks in a long tail, so what this costs is that the reverb slowly
+   turns into the unmodulated version of itself over a few minutes of
+   being switched on, and comes back when a pot is touched (which calls
+   reverb_init() and re-seeds the rotators).  A cheap fix is one
+   reciprocal-square-root every few thousand samples, or just calling
+   fastsincos() on a phase accumulator like every other LFO here does.
+
+
+2b. The rest of the helpers.  MEASURED.
+
+   Asked through 'bench --map', which maps one float to one float
+   through a single function with no audio path around it.  The accuracy
+   question turns out to be settled and the domain question does not.
+
+   Accuracy, over the ranges these are actually used across:
+
+	pow2          -31..+31       1.66e-06 rel    0.000014 dB
+	db_to_level   -100..+40 dB   1.99e-06 rel    0.000017 dB
+	db_to_A       -100..+40 dB   1.47e-06 rel    0.000013 dB
+	expf          -20..+20       2.77e-06 rel
+	log2f         1e-30..1e30    9.55e-06 absolute
+	time_constant 0.1..5000 ms   0.15% worst, on the resulting
+	                             time constant rather than the coefficient
+
+   That is a hair inside single precision everywhere, which is what the
+   author expected and had checked by comparing absolute errors.  The
+   one systematic effect worth naming is that pow2() reads 6.1e-07 high
+   on average, because linear interpolation of a convex curve always
+   overshoots - five parts in ten million, mentioned so nobody
+   rediscovers it and thinks it is a bug.
+
+   The domains are the other story, and there are three findings there:
+
+   - **time_constant(0) was undefined behaviour and [CHAIN]'s Attack pot
+     could ask for it** - LINEAR(0.0 10.0), so pot 0 is exactly zero
+     milliseconds.  It divided by zero, handed pow2() an infinity, and
+     the result then depended on which way the float-to-int conversion
+     saturates.  ARM saturates toward the sign, so the pedal got
+     INT_MIN, the 'exp < -31' guard fired, and an attack coefficient of
+     zero meant an instantaneous attack - the right answer.  x86
+     saturates the other way, missed the guard, and segfaulted.  So no
+     pedal ever crashed on it and one might have.  FIXED: zero is now
+     answered directly, which is the value ARM was arriving at anyway.
+     Issue 133.
+
+   - **pow2() was guarded below -31 and not above +31**, where the shift
+     wraps: pow2(32) came back as 1 and pow2(40) as 256, a tiny number
+     for a huge one.  The source said "we'll return random values, don't
+     do it", which was true and was not a guard.  FIXED: it saturates at
+     both ends now, to 2^31 rather than to FLT_MAX because FLT_MAX times
+     almost anything is the infinity the guard is there to avoid.
+     Issue 134.
+
+   - **log2f() did not mask the sign bit out of the exponent**, so
+     log2f(-1) was +256 rather than NaN.  A large finite positive is the
+     worst possible wrong answer, because the one place the two compose
+     - the compressor's mypow() - would have fed it straight into
+     pow2()'s unguarded end, and two plausible-looking numbers make a
+     plausible-looking result.  FIXED: x <= 0 returns -127.0f, which is
+     what zero already returned by accident, so only the negative case
+     changes.  Issue 134.
+
+   None of the three was reachable with a bad argument except the first,
+   and all three are one comparison in functions that are on the audio
+   core.  check-audio still reports no calls out and the accuracy table
+   above is unchanged to every digit.
+
+   Two smaller things, recorded so they are not rediscovered:
+   single_pole_time() is +10% at 0.1 ms and +1% at 1 ms, the same
+   approximation family as single_pole_freq() above, but its only
+   pot-fed use is klon's 100 ms coupling cap where it is 0.01% out; and
+   u32_to_fraction() converts through float32, so an LFO's phase
+   resolution is 2^-24 of a cycle rather than the 2^-32 the accumulator
+   carries.  Still 16.7 million points per cycle against a 1024-point
+   table, so it is not the limit on anything.
+
+2c. FREQUENCY() is a cubic, and the bottom of it is dead.  MEASURED.
+
+   frequency_pot() is linear(p*p*p, a, b).  Across the 121 pot steps the
+   output step size runs 5.79e-07 at the bottom to 2.48e-02 at the top,
+   a ratio of 42841:1.  Pot 60 - the middle of the travel - is 12.5% of
+   the way up the range, and the first 26 steps cover the bottom 1%.
+
+   On vibrato's Rate FREQUENCY(0.1 8.0) that means the first quarter of
+   the knob moves the rate from 0.100 to about 0.16 Hz while the last
+   few steps jump by 0.2 Hz each.
+
+   parametric_eq.h already worked this out and moved to EXPONENTIAL,
+   with a comment explaining why and a range of 20480 chosen so that ten
+   octaves over 120 steps is exactly a semitone a step.  The same
+   argument applies unchanged to every FREQUENCY() pot left: boost's
+   Basscut and Highcut, phaser's LFO and Freq, tremolo's Rate and
+   vibrato's Rate.  Issue 135.
+
+
+The effects, one at a time
+--------------------------
+
+[CHAIN] - signal_chain.h - trim, gate, master volume
+
+  Not an effect: it is the two ends of the chain, called by name from
+  single_sample().  Trim and Volume are slewed gains, the gate is an
+  envelope follower against a threshold in dBFS.
+
+  The gate multiplier snaps rather than arriving:
+
+	if (mult > 0.99f) mult = 1.0f;
+	...
+	if (mult < 0.01f) mult = 0.0f;
+
+  so a gate opening steps the last 1% of its gain in one sample, and a
+  gate closing steps the last 1% likewise.  A 1% step in gain is about
+  -40dB of click relative to the signal, once per gate transition.
+  Whether that is audible is exactly what the next pass is for.
+
+  The envelope is deliberately measured before trim, and the comment
+  explaining why is correct and worth keeping.
+
+  Worth testing:
+    - Trim=60 [0dB] Volume=80 [0dB] Gate=0 [off]  - the transparent
+      case, and the negative control for the whole bench.  Anything
+      other than "identical to the input" here is the instrument's
+      fault, not the effect's.
+    - Trim=120 [+20dB] Volume=80 [0dB] Gate=0     - gain accuracy
+    - Trim=0 [-20dB] Volume=120 [+20dB] Gate=0    - and back again
+    - Gate=60 [-70dB] Attack=18 [1.5ms] Release=27 [151ms] with a tone
+      stepped either side of the threshold - where the knee actually is
+
+  MEASURED, on the Attack pot, and worth recording because the obvious
+  test of it gives the wrong impression.  With a tone 6 dB above a
+  -76 dBFS threshold, where the envelope's rise time is what decides
+  when the threshold gets crossed:
+
+	Attack pot   declared    gate opens after
+	    0          0.00 ms       3.50 ms
+	   18          1.50 ms       6.00 ms
+	   60          5.00 ms      10.50 ms
+	  120         10.00 ms      17.50 ms
+
+  The 3.5 ms floor is chain_step()'s own linear(0.01f, mult, 1.0f)
+  opening ramp, which is fixed and is not the pot's business.  Run the
+  same test with the tone 64 dB above the threshold and all four
+  settings collapse onto that floor and the pot looks dead - which is
+  what an envelope follower against a threshold is supposed to do, and
+  is a badly chosen stimulus rather than a defect.
+
+[TONE] - tone.h - low shelf, peaking mid, high shelf (two copies)
+
+  Clean.  Three RBJ sections in series, Q from the GRAPH: declaration so
+  the app draws what the filter is.  A shelf at 0dB is exactly
+  transparent rather than approximately so, which the header says and
+  the algebra confirms.  This is one of the two effects whose expected
+  answer can be computed rather than recorded, so it is what validates
+  the frequency-response half of the bench.
+
+  Worth testing:
+    - all flat (Bass=60, Mid=60, Treble=60) [0dB each] - must be a
+      bit-exact no-op
+    - Bass=120 [+15dB] alone, then Treble=120, then Mid=120 - one
+      section at a time against the biquad computed in numpy
+    - Mid=120 [+15dB] Mid Q=120 [4.0] - the narrow case, where a
+      numerical error in the coefficients would show first
+    - Bass=0 [-15dB] Treble=0 [-15dB] - shelves down as well as up
+
+[EQ] - parametric_eq.h - five bands
+
+  Clean, and the same story as [TONE] with more sections.  Uses
+  _biquad_peaking_step() for the three peaks, which is valid exactly
+  because _biquad_peaking() guarantees a1 == b1; the pairing is right.
+
+  Worth testing:
+    - all gains at 60 [0dB] - transparent
+    - P2 Gain=120 [+20dB] alone at P2 Freq=68 [1016Hz] - one peak
+    - LS Gain=0 [-20dB] and HS Gain=120 [+20dB] - a tilt
+    - all five bands at +20dB - the cascade, where clipping would show
+
+[BOOST] - boost.h - gain, bandpass, wavefolder
+
+  The reference for "deliberately not smooth".  fold() reflects
+  everything past the level about the level, repeatedly, so the transfer
+  curve is continuous in value and reverses slope at the fold point.
+  That is a textbook slope discontinuity and it is the point of the
+  effect.  It is the positive control for the smoothness metric: if the
+  measurement does not flag this, the measurement is broken.
+
+  Worth testing:
+    - Boost=0 [0dB] Level=120 [0dB] - clean, nothing folds
+    - Boost=90 [+30dB] Level=40 [-26.7dB] - folding hard
+    - Boost=60 [+20dB] Level=80 [-13.3dB] - folding on peaks only,
+      which is where the level sweep should find the knee
+
+[PREAMP] - preamp.h - two-stage triode or JFET waveshaper
+
+  Uses the correct exponential one-pole rather than single_pole_freq(),
+  so its stated corners are its real corners.  DC blockers between
+  stages, precomputed tanhf() of the bias offsets so the static DC is
+  removed rather than accumulating.  The normalisation constants
+  (PREAMP_TUBE_NORM, PREAMP_JFET_NORM) are hand-fitted to give about
+  1.05 small-signal gain, which is a claim worth checking with a very
+  quiet tone.
+
+  Worth testing:
+    - Sat=24 [1.2x] Level=60 [0dB] Voice=0 [Tube] at -60dBFS - the
+      small-signal gain, against the claimed 1.05
+    - the same at -6dBFS - where the tanh actually bends
+    - Sat=120 [4.0x] Level=60 Voice=0 - past the tanhf knee
+    - Voice=1 [JFET] at the same three, since it is a different path
+
+[COMPRESSOR] - compressor.h
+
+  A reading here was wrong, and the measurement is why it is written
+  down rather than quietly deleted.
+
+  The claim was that the Attack and Release pots do not control the
+  attack and release of the gain, because the gain is slewed by a
+  hard-coded coefficient after the envelope has already decided:
+
+	compressor.compression = linear(0.01f, compressor.compression, target);
+
+  0.01 a sample at 48kHz is a time constant of 100 samples, 2.08ms.
+  That much is true; the inference from it was backwards.  2ms is much
+  *faster* than anything the Release pot asks for (50..500ms), so it is
+  not a limit on the release at all - it just smooths the detector's
+  decision.  It would only swamp the pot if it were slower than the pot's
+  range, and it is nowhere near.
+
+  Measured, with a -6dBFS tone dropped to -46dBFS and the recovery timed
+  to within 1dB of its final value:
+
+	Release pot    declared   measured recovery
+	    0            50 ms         135 ms
+	   60           275 ms         418 ms
+	  120           500 ms         388 ms
+
+  So the knob works.  What it does not do is mean what it says: three
+  times the declared time at the bottom of the travel, and the top two
+  settings land the wrong way round.  Some of that last part is the
+  crudeness of a "within 1dB" threshold against an exponential tail, and
+  the honest summary is that the pot is real, monotonic over most of its
+  range and not calibrated in milliseconds.
+
+  mypow() is pow2(log2f(a)*b) over the fast table pair, so the knee
+  shape carries whatever those two tables' interpolation error is.  pow2
+  measures good to 0.000008 dB across 2^-3..2^3, so this is not it.
+
+  Worth testing:
+    - Level=60 [-20dB] Ratio=60 [10.5x] Attack=0 [2ms] Release=0 [50ms]
+    - the same with Release=120 [500ms] - these two should differ and
+      the claim here is that they barely will
+    - Ratio=0 [1.0x] - ratio 1 is no compression; compressor.ratio
+      becomes 0 and target becomes pow(x,0)=1, so this should be a clean
+      pass-through at Boost gain
+    - Boost=120 [24dB] with Level=0 - makeup gain alone
+
+[KLON] - klon.h
+
+  Two things.  The 15kHz input bandwidth is really 9.3kHz, per the
+  single_pole_freq() finding above.  And the clean half of the
+  clean/dirty blend is taken from the raw input:
+
+	mixed = in * clean_amt + ge_clip * dirty_amt;
+
+  where ge_clip descends from `pre`, which has been through the DC
+  blocker, the 30Hz coupling filter and the input bandwidth filter, and
+  `in` has been through none of them.  So the two halves of the blend
+  are not phase-aligned, and at intermediate Gain settings they will
+  partially cancel somewhere in the top octave.  It may well sound fine
+  - the dirty path dominates wherever it matters - but it is not what
+  the comment describes, and the fix is one character.
+
+  Also: single_pole_freq() and single_pole_rc() are called inside
+  klon_step(), once per sample, on constant arguments.  single-pole.h
+  explicitly invites this ("it's much better to just do them as part of
+  the step function, since that will allow the compiler to just fold all
+  the computations"), and single_pole_freq is simple enough to fold.
+  single_pole_rc() ends in a divide; worth checking the disassembly
+  rather than assuming.
+
+  Worth testing:
+    - Gain=0 [0.0] Output=48 [0.4] - fully clean, where the raw-`in`
+      path is the *whole* signal and the filters are bypassed entirely
+    - Gain=120 [1.0] Output=48 - fully dirty, no clean path at all
+    - Gain=60 [0.5] Output=48 - the blend, where the phase mismatch
+      lives.  Sweep frequency here rather than level.
+    - Treble=0 and Treble=120 at Gain=24 - the shelf and presence peak
+
+[FRENCHIE] - frenchie.h - Champ-style amp
+
+  The most code and the most to say about.
+
+  Four parameters of frenchie_triode_step() are dead.  It takes
+  pos_hard, neg_hard, pos_ceil and neg_ceil and uses none of them; the
+  body was replaced with a single offset tanh ("Replaced piecewise tanh
+  with a single offset tanh...") and the parameters were left in the
+  signature.  The call site still passes values for them, and one of
+  those values carries a comment claiming it was tuned:
+
+	1.1f, 0.935f /* FIX: was 0.9f, 0.935 matches positive slope
+	                (1.1 * 0.85) */, 0.85f, 1.0f,
+
+  That FIX changed nothing.  Worth deleting the parameters, and worth
+  remembering as a case of a comment that documents an effect the code
+  does not have.
+
+  The tone control asks for up to 20kHz through single_pole_freq() and
+  therefore tops out at 11.6kHz - the same primitive bug as klon, and
+  more visible here because it is a knob the player turns.
+
+  Three places step discontinuously:
+
+    - the output is clamp(mono * out_level, -0.95f, 0.95f), a hard
+      clamp, and out_level goes to 2.0.  A hard clamp is a slope
+      discontinuity, unlike every other limiter in this codebase.
+    - grid conduction, in both the input stage and the triode, is
+      continuous in value at the threshold and not in slope: below it
+      the slope is 1, above it is (1 + intensity*3) * (0.05 +
+      intensity*0.15), which at the default intensity is 0.31.  A
+      three-to-one slope change is a corner.
+    - the transformer saturation block is skipped entirely when
+      xfmr_sat <= 0.05 and applied at full strength when it crosses,
+      and the one-pole inside it only integrates while the branch is
+      taken, so its state is stale each time the branch re-enters.
+
+  frenchie_gate_step() is the counter-example and is done properly:
+  smoothstep t*t*(3-2t) between the thresholds, which has zero slope at
+  both ends and so joins the flat regions smoothly.  Whoever wrote that
+  one knew exactly what the other three are missing.
+
+  Worth testing:
+    - Gain=60 Tone=60 Input=60 Sag=60 Level=15 [0.25] - the defaults
+    - Level=120 [2.0] with a loud tone - the output clamp, guaranteed
+    - Input=0 [0.0] vs Input=120 [1.0] at -6dBFS - the grid-conduction
+      corner, which should appear and disappear with intensity
+    - Tone=0 and Tone=120 - the frequency response the knob claims
+    - Gain=120 Sag=120 with a tone burst - the PSU sag envelope
+
+[CAB] - cabsim.h
+
+  A cascade of biquads with two envelope-driven modulations on top.
+  The filters are fine.  Two things to look at:
+
+    - the breakup waveshaper is skipped entirely when Breakup is 0 and
+      applied with drive_gain = 1 + amt*40 as soon as it is not, so the
+      bottom of that knob's travel steps in.  Value-continuous (at
+      amt=0 the branch is a no-op and the expression reduces to
+      identity) but the *derivative with respect to the knob* jumps.
+      That is a control smoothness question rather than a waveform one.
+    - the Chug compression multiplies the envelope by a hard-coded 25.0
+      "since guitar signals are typically ~0.1 peak", then clamps the
+      result at 0.  A hard clamp again, and a magic constant that
+      assumes a signal level.
+
+  Worth testing:
+    - Resonance=60 Presence=60 Axis=60 Breakup=0 Chug=0 - the plain
+      filter cascade, computable against biquad.h
+    - Axis=0 vs Axis=120 - the 3.5kHz/6kHz high cut
+    - Breakup=120 at -6dBFS - the waveshaper, past the tanhf knee
+    - Chug=120 with a tone burst - the envelope-driven resonance duck
+
+[ECHO] - echo.h - Echoplex model
+
+  The most carefully written file here, and the one place where an
+  effect having its own internal wet/dry blend is clearly deliberate
+  rather than accidental: Blend is the Echoplex's own control, the dry
+  it blends is the *preamp output* rather than the input, and the
+  header explains why.  Compare phaser and flanger below.
+
+  The delay line is int16_t, so the wet path carries about -96dB of
+  quantisation floor.  Presumably a tape-character decision; nothing
+  says so, and it is worth a sentence in the header either way.
+
+  echo_init() sets last_blend = -1.0f to force the blend gains to be
+  recomputed on the first step, and does not do the same for last_tone.
+  It works out - tone glides up from 0 and crosses the 0.001 threshold
+  within a few samples - but the asymmetry is the kind that survives
+  until someone changes the glide.
+
+  Sustain goes to 1.1 and is multiplied by max_feedback 1.05, so the
+  loop gain reaches 1.155 and is bounded only by the tanhf on the write.
+  That is self-oscillation and appears intentional.
+
+  Note for whoever measures this: delay_smooth is 0.00012, a time
+  constant of 8333 samples, and echo.delay_s starts at zero.  The delay
+  takes roughly a second to glide to its setting after an init, so a
+  capture taken too early measures the glide.
+
+  Worth testing:
+    - Blend=120 [1.0] Sustain=0 [0.0] Time=60 [183ms] Record=25
+      [0.5] Tone=120 WowFlut=0 - one clean repeat, no feedback, no
+      modulation: the delay time is then measurable by correlation
+    - the same at Time=0 [50ms] and Time=120 [672ms] - does the pot
+      mean what it says
+    - Sustain=90 [0.825] - the tail, and how fast it darkens
+    - WowFlut=120 [1.0] - the modulation depth, and whether the
+      interpolated read is smooth while it moves
+    - Mode=1 [SOS] - the indefinite loop
+
+[REVERB] - reverb.h - Freeverb          FIXED, and it works
+
+  This is now repaired in the tree.  The history is kept because the
+  shape of the mistake is the useful part.
+
+  reverb_state.wet_level was declared, read once, and never written
+  anywhere in the tree:
+
+	float w = reverb_state.wet_level;
+	return w * REVERB_SCALEWET * wet + (1.0f - w) * REVERB_SCALEDRY * in;
+
+  With w = 0 that is `return in`.  The eight comb filters and four
+  allpasses run every sample and their output is multiplied by zero.
+  So the reverb is a pass-through that costs about a hundred operations
+  a sample, and the DEFAULT_MIX of 0.18 mixes 18% of the dry signal
+  with 82% of the dry signal.
+
+  The header's own comment said "scalewet (1.5) and scaledry (1.0) give
+  unity dry gain at 0% wet", which describes a control that was never
+  connected.  Freeverb has a wet/dry of its own and this pedal has
+  do_effect_step(); the wet_level line was the former surviving a
+  conversion to the latter.
+
+  The fix is to delete the internal blend and return
+  `wet * REVERB_SCALEWET`, letting MIX: POWER do the job it was declared
+  for.  Measured after that change, an impulse sent once the enable fade
+  has finished:
+
+	response peak 0.0169 from an impulse of 0.5, 54 ms in
+	  -10 dB after  199 ms
+	  -20 dB after  438 ms
+	  -30 dB after  695 ms
+	  -60 dB after 1565 ms
+
+  So it is a reverb: a dense build to a peak 54 ms after the strike and
+  a 1.6-second RT60 at Room=0.84.  Sustained level against the dry it
+  replaces is -4.24 dB at full wet.
+
+  Two things worth knowing now that there is something to hear.  The
+  mix sweep dips - 0.00, -5.70, -4.24 dB at mix 0, 60 and 120 - which is
+  not the equal-power law failing but the wet simply being 4 dB quieter
+  than the dry, so filling the hole between two unequal levels leaves
+  one.  And this changes what every stored scene sounds like, from no
+  reverb to reverb, which is a thing to say out loud rather than let
+  people discover.
+
+  Separately, the comb read pointers are modulated and then truncated:
+
+	unsigned id = (unsigned)((float)c->delay + mod * REVERB_MOD_DEPTH);
+
+  No interpolation.  The read position jumps a whole sample at a time
+  as the LFO sweeps +-6 samples, so each comb emits a step
+  discontinuity on every crossing.  A step is the worst kind of corner
+  - broadband, harmonics falling off only as 1/n - and there are eight
+  of them.  This is a strong candidate for an audible defect once the
+  wet path is connected at all.
+
+  And the LFOs decay to nothing over minutes, per the primitives
+  section above.
+
+  Worth testing (all of which currently measure a wire):
+    - Room=60 [0.84] Damp=60 [0.3] with an impulse - the tail, its
+      length, and whether it is a tail at all
+    - Room=120 [0.98] - the longest tail, where the comb modulation
+      has the most time to be heard
+    - a steady tone for several minutes - the LFO decay
+
+[PITCH] - pitch.h
+
+  Two delay taps walking at different rates, crossfaded by sin and cos
+  so the discontinuities land where each tap's weight is zero.  The
+  header argues that sin^2 + cos^2 = 1 makes it unity power gain, and
+  that argument holds only while the two taps are uncorrelated.
+
+  At Octave = 60 the pot maps to exactly 0.0, pow2(0) is exactly 1.0
+  and pitch.step is exactly 0.0.  Then delay is 1 for both taps, both
+  reads return the same sample, and the output is
+
+	tap * (sin + cos) = tap * sqrt(2) * sin(theta + pi/4)
+
+  which is the input multiplied by a factor sweeping between -1.414 and
+  +1.414 at 5.86Hz (the 8192-sample phase period).  So the setting that
+  reads as "no shift" is a ring modulator that inverts twice a cycle,
+  not a bypass.  Every other setting decorrelates the taps and the
+  header's argument applies.
+
+  Worth testing:
+    - Octave=60 [0.0] - the degenerate case above
+    - Octave=90 [1.0, the default] Feedback=0 - one octave up, measured
+      as the ratio of output to input frequency
+    - Octave=30 [-1.0] Feedback=0 - one octave down
+    - Octave=90 Feedback=120 [1.0] - the regeneration
+
+[VIB] - vibrato.h
+
+  Small and correct.  A single modulated tap around a 6ms centre, pure
+  wet out, MIX: POWER to blend it - which is exactly right for a
+  modulated delay and is the shape phaser and flanger should have had.
+  Buffer arithmetic checks out: 6ms + 5ms is 528 samples into a 1024
+  buffer.
+
+  The one thing to measure is the interpolated read.  sample_array_read()
+  is linear, so as the fractional delay sweeps it introduces a
+  frequency-dependent amplitude ripple and a slope discontinuity every
+  time it crosses an integer sample.  Vibrato sweeps continuously and so
+  crosses constantly.  This is the cleanest place to measure that
+  artefact, because there is nothing else in the effect.
+
+  Worth testing:
+    - Rate=75 [2.03Hz] Depth=21 [0.875ms] - the default
+    - Rate=0 [0.1Hz] Depth=120 [5ms] - slow and deep, so the
+      interpolation artefact is spread out and easy to localise
+    - Rate=120 [8Hz] Depth=0 [0ms] - zero depth, which should be a
+      fixed 6ms delay and nothing else
+
+[FLANGER] - flanger.h
+
+  Returns (in + out) / 2 - it mixes its own dry in, and halves
+  everything.  Then do_effect_step() mixes dry again, on a LINEAR law,
+  because the header carries no MIX: line.  So at the default mix the
+  dry signal arrives twice by two different routes and the wet arrives
+  6dB down.
+
+  Compare vibrato, which is the same kind of effect written the other
+  way and is right.
+
+  Worth testing:
+    - Freq=60 [2.5Hz] Delay=60 [2ms] Depth=60 [0.5] Feedback=60 [0.5]
+      at mix 120 and at mix 60 - the double-dry, which shows as the
+      notches not reaching as deep as they should
+    - Depth=0 - a fixed comb filter, whose notch spacing is computable
+    - Feedback=120 [1.0] - where tanhf is in the loop
+
+[PHASER] - phaser.h
+
+  Returns tanhf(in + out) where out is the allpass cascade - so the dry
+  is inside the wet, and then mixed again by do_effect_step() on the
+  default LINEAR law.  At mix 0.5 that is 1.5 dry.  Same defect as
+  flanger, differently spelled.
+
+  The tanhf() on the output is applied to a signal that is nominally
+  twice the input amplitude, which puts it closer to the Pade knee than
+  anything else that is not a distortion effect.
+
+  _biquad_allpass_filter() is recomputed every sample - four
+  multiplies, a divide, and a fastsincos() through _w0() - because the
+  centre frequency is swept by the LFO.  That is the honest way to
+  sweep a filter and it is also the most expensive per-sample thing in
+  the tree.  Worth a load measurement rather than a rewrite.
+
+  Worth testing:
+    - LFO=60 Feedback=60 Freq=60 Q=60 at mix 120 and mix 60 - the
+      double-dry
+    - Feedback=0 - the plain four-stage allpass, whose notches are
+      computable
+    - Feedback=120 [0.75] - resonant, and where the output tanh bites
+
+[TREM] - tremolo.h
+
+  The one MIX: STEREO effect.  NORM is a complex multiply - a rotation
+  of (l + i*r) - which is equal-power by construction and needs no mix
+  law to arrange it, and the header explains that properly.  HARM is
+  two one-pole branches modulated in anti-phase, using the correct
+  exponential coefficient rather than single_pole_freq().
+
+  Nothing looks wrong.  What is worth measuring is the claim: at
+  Depth=120 the magnitude |out| should equal |in| exactly for a mono
+  input, and the two channels should be in quadrature.
+
+  Worth testing:
+    - Rate=75 [2.52Hz] Depth=60 [0.5] Mode=0 [NORM] - the default
+    - Depth=120 [1.0] Mode=0 - the equal-power claim, and the phase
+      inversion at the half-cycle the header admits to
+    - Depth=0 - must be exactly transparent
+    - Mode=1 [HARM] at Depth=120 - the anti-phase branches, and the
+      claimed unity gain at zero depth
+
+[TESTTONE] - testtone.h
+
+  The generator, and therefore the first thing to measure rather than
+  the last.  Its sine is lfo_step()'s quarter table: 256 entries per
+  quarter, so 1024 points per cycle, linearly interpolated.  The header
+  says "the tone is exactly as clean as the vibrato is", which is
+  honest and is not a number.  Chord-versus-arc arithmetic puts the
+  interpolation error near -106dB, and that wants confirming before any
+  measurement is quoted against it.
+
+  Freq is one semitone per pot step - 13.75 * 2^(p/12) - so pot 60 is
+  exactly 440Hz and the generator can only produce equal-tempered
+  frequencies.  That is worth knowing before designing a test around a
+  round number.
+
+  Worth testing:
+    - Level=96 [-18dBFS] Freq=60 [440Hz] Shape=0 [Sine] - the
+      calibration case, against a numpy sine
+    - Freq=0 [13.75Hz] and Freq=120 [14080Hz] - the ends, where table
+      interpolation error is worst relative to the period
+    - Shape=1,2 [Triangle, Saw] - which are corners on purpose
+    - Level=0 - must be exact digital silence, not a very quiet tone
+
+[SETTINGS] - settings.h
+
+  MIX: NONE, no step function, not routable.  Nothing to measure.
+
+
+Does the pedal agree?
+---------------------
+
+All of the above is a workstation doing arithmetic.  Two runs on the
+real board say whether that was worth anything, and both are in
+Validation/ as targets rather than as a story: 'make check-bench' and
+'make check-analog'.
+
+THE DIGITAL PATH.  [TESTTONE] at 440 Hz -18 dBFS into [BOOST] with
+fold() engaged, captured over USB - no generator, no cable, no second
+board, so the whole path is digital and a disagreement would be a real
+one.  fold() is the sharpest thing in the tree, which is the point: two
+implementations of one arithmetic diverge there if they diverge at all.
+
+	harmonic 1   pedal  -32.91   bench  -32.91   diff +0.00 dB
+	harmonic 3   pedal  -50.09   bench  -50.09   diff -0.00 dB
+	harmonic 5   pedal  -34.37   bench  -34.37   diff +0.00 dB
+	harmonic 7   pedal  -57.29   bench  -57.29   diff +0.00 dB
+	harmonic 9   pedal  -38.44   bench  -38.44   diff -0.00 dB
+	non-harmonic pedal  -42.46   bench  -42.43   diff -0.04 dB
+
+Every harmonic a symmetric wavefolder makes, to 0.00 dB, and the
+aliasing - the hardest thing to get to agree, since it is what came back
+over Nyquist - to 0.04 dB.  The even harmonics sit at -135 dBFS and are
+skipped: they are two roundings of zero.
+
+The clean control is not a null test either, which makes it worth more
+than one: the 200 Hz basscut takes 0.18 dB out of a 440 Hz tone and both
+sides agree about that too.
+
+THE ANALOG PATH.  A patch cable from the output back to the input, so
+the DAC and the ADC are the same codec on the same clock and there is no
+drift to chase.  'Wet/Dry' puts what was sent and what came back side by
+side in one capture.
+
+	sent    returned    gain      THD       noise
+	-63.0     -61.50    1.50    -73.8    -103.0 dBFS
+	-45.0     -43.50    1.50    -93.4    -103.0 dBFS
+	-27.0     -25.50    1.50    -82.5    -102.4 dBFS
+	-18.0     -16.50    1.50    -90.1    -100.0 dBFS
+	 -9.0      -7.50    1.50    -89.2     -93.2 dBFS
+	 -4.5      -3.00    1.50    -84.7     -89.0 dBFS
+
+**The gain is constant to 0.001 dB across 58 dB of level.**  That is the
+headline: the converter pair is a straight line, and the +1.50 dB is a
+fixed property of the analog design rather than anything that varies.
+It is also the same +1.5 dB of link gain per pedal that 95 records from
+the two-board ring, arrived at independently.
+
+Nulled at -18 dBFS, after removing that gain and the delay:
+
+	delay              52.0645 samples = 1.0847 ms
+	gain               +1.4991 dB
+	residual             -84.9 dB below the signal = 0.0057%
+	  harmonics 2..12    -90.2 dB   converter distortion
+	  everything else    -86.4 dB   noise, -102.9 dBFS absolute
+
+So the analog round trip reproduces the signal to about six parts in a
+hundred thousand, and what is left is second-harmonic-dominated
+converter distortion at -90 dB over a -102.9 dBFS noise floor.  That
+floor is the one 95 has been quoting at -102.4 dBFS, measured a
+different way and landing in the same place.
+
+Two things worth knowing before reading those numbers again.
+
+**The delay must be solved, not searched.**  At 440 Hz one sample is 3.3
+degrees, so a null that hunts for the lag on a 0.01-sample grid leaves
+0.03 degrees of phase behind - which is -65 dB of residual fundamental,
+larger than the distortion being measured.  The first run here did
+exactly that and reported -71.0 dB, with the residual's loudest
+component sitting at the fundamental, which is the giveaway.  Taking the
+lag from the phase of the fundamental instead drops the residual
+fundamental to -304 dB and the answer to -84.9.
+
+**The two delay measurements disagree by 0.9 samples** - 52.06 from the
+phase at 440 Hz, 52.96 from correlating broadband noise.  They are not
+the same quantity: one is the phase delay at a single frequency and the
+other is a broadband group delay, and a converter's decimation and
+interpolation filters have no reason to make those equal.  Neither has
+been checked against the other and the difference is not yet explained.
+
+WHAT THIS DOES NOT COVER.  One board, one cable, one afternoon, one
+temperature.  95 is the issue about a bench measurement carrying no
+record of the bench, and it applies here: the 1.50 dB and the -102.9
+dBFS belong to this board with this cable, and stay hypotheses about
+anything else until the cable has been moved and the number followed it.
+
+
+What the bench then said
+------------------------
+
+Validation/bench builds the pedal's own audio core for the host and
+Validation/bench.py drives it - see the header of each.  A 440Hz sine at
+an exact 110 cycles in a 12000-sample window, so every harmonic lands on
+a bin with no leakage, and 48000/440 is deliberately not an integer so
+that aliased harmonics fall off the harmonic grid and can be told apart
+from honest distortion.
+
+The instrument's own floor, measured on a transparent chain: a gain
+error of -0.000265 dB and noise 144.7 dB down.  The gain error is not
+the bench's - it is exactly eps(1.0)/2 * 512, which is where a 1/512
+slew stalls against float32 rounding, so every slewed gain in the pedal
+lands that far short of its target and stops.  Inaudible, and worth
+knowing before reading anything finer.
+
+  CONFIRMED, AND FIXED - reverb was a wire.  Routed at full mix, the
+  output differed from no reverb at all by 1.9e-6, which is that same
+  slew residual.  An impulse produced a tail of exactly zero energy.
+  Eight combs and four allpasses ran every sample into a multiply by an
+  uninitialised zero.  Repaired by deleting the internal blend; it now
+  measures a 1.57-second RT60 peaking 54 ms after the strike.  Verified
+  on the board after reflashing: routed at full mix it is no longer
+  bit-identical to no reverb at all, energy away from the 440 Hz grid
+  goes from -120 to -50 dBFS, and switching the tone off mid-capture
+  leaves a tail that decays 30 dB in 930 ms.
+
+  CONFIRMED - pitch at Octave=60 is a ring modulator.  The pot reads as
+  no shift; the output peak is 1.414 times the input peak, to three
+  figures, and the envelope swings 0.078..0.178 at 5.86Hz, inverting
+  twice a cycle.  Every other Octave setting decorrelates the two taps
+  and comes out within 0.6 dB of unity, so the header's equal-power
+  argument is right everywhere except at the one setting that looks
+  like a bypass.
+
+  CONFIRMED - the flanger's mix knob cannot reach the effect.  With
+  Depth and Feedback at zero it is a fixed comb, so its notch should
+  null.  Measured at 248Hz:
+
+	mix    30      60      90     120
+	notch  -2.5   -6.0   -12.0   -34.0 dB
+
+  Three quarters of the travel does almost nothing and the notch only
+  arrives at the very top, because the effect returns (in+out)/2 and
+  then do_effect_step() mixes dry in again on a LINEAR law.  Vibrato,
+  the same primitive written the other way round - pure wet, MIX: POWER
+  - sweeps properly: -25.5 dB at mix 60 and 0.0 dB at mix 120, dry
+  through cancellation to the effect alone.
+
+  NOT CONFIRMED - the compressor's release.  See above; the reading was
+  wrong and the pot works.
+
+  NOT A DEFECT - the tanhf() clamp, and not observable either.  Asked
+  directly through 'bench --map tanh' rather than through an effect, it
+  turns out to be the thing that keeps the approximation bounded, and to
+  be the smaller of the two error terms everywhere below the knee.  See
+  the primitives section above for the table.  Klon at full gain drives
+  the waveshaper past the knee at every input level from -30dBFS up and
+  the corner never separates from the saturation around it: sharpness
+  15..21, THD -22..-7 dB, no feature at the -17dBFS where the clamp
+  starts biting.
+
+  NOT A DEFECT - the sine table, measured for the first time at -141.9
+  dB THD, with its real error being a -110 dB gain reduction rather than
+  distortion.  Again see above.  Both of these were on the suspect list
+  from reading and both come off it; that is as useful an outcome as
+  finding a bug, and cheaper to act on.
+
+Still unmeasured, and each one wants a stimulus this pass did not build:
+
+    - single_pole_freq() at 5kHz and above (klon, frenchie) - a sweep,
+      which is the frequency-response pass rather than this one
+    - reverb's uninterpolated comb modulation, which cannot be heard
+      until the wet path is connected at all
+    - reverb's LFOs decaying over minutes - a very long capture
+    - frenchie's output clamp, grid conduction and transformer branch,
+      which showed as a corner (sharpness 4.8 at -12dBFS) without
+      saying which of the three it was
+    - the gate's 1% snap, which needs a burst across the threshold
+    - linear interpolation in the modulated delay lines, which the
+      cycle-fold metric cannot separate from the modulation itself
+
+The last of those is a limit of the instrument rather than of the
+effect.  Folding a capture onto its repeat assumes the output is
+periodic, and a swept delay is not; every modulated effect therefore
+reads as "corner" and "alias" on this metric whatever it is doing.  They
+want the LFO held still, or a metric that does not assume periodicity.

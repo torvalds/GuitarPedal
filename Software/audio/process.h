@@ -21,44 +21,95 @@ static struct {
 } usb_output;
 
 //
-// The audio board with the TAC5112 seems to return -1.0..1.0
-// for a -1.75V .. +1.75V signal swing (3.5V peak-to-peak)
+// The internal scale: 1.0 is one volt RMS of sine.
 //
-// But then the *output* for a -1.0..1.0 signal is the
-// expected 1Vrms: -1.41 .. +1.41V (2.828V peak-to-peak)
+// The codec's full scale is what sets this, and it is the same at
+// both ends.  tac5112.h puts VREF at 2.75V (register 0x4d) and
+// runs everything single-ended, and at that VREF the TAC5242 is
+// 2Vrms differential, so 1Vrms single-ended - in and out alike.
 //
-// I may be doing something wrong on the analog board, or I'm
-// possibly missing some TAC5112 setup detail.
+// So a full-scale sample is a 1Vrms sine, which peaks at 1.4142V,
+// and 'raw / 2^31' is already the internal float we want: its peak
+// equals the RMS volts of a sine.  A 1Vrms sine peaks at 1.0
+// internally, which is what "0dBFS = 1Vrms" means and what
+// level_to_dbfs() reports against.  No correction factor.
 //
-// In the meantime, this strange SAMPLE_TO_FLOAT_MULTIPLIER
-// exists to correct for whatever I'm doing wrong.
+// It used to have one:
 //
-// The intent here is that all our internal audio processing
-// is based on a 1Vrms voltage scale.
+//	#define SAMPLE_TO_FLOAT_MULTIPLIER (3.45 / 2.82843 / 0x80000000)
 //
-// Which works out as follows, and is worth writing down because
-// every dB the pedal reports is relative to it:
+// on the grounds that the input reached full scale at 3.45Vpp while
+// the output produced 2.828Vpp, and the comment here said outright
+// that it existed "to correct for whatever I'm doing wrong".  The
+// two ends really are symmetric, so there was nothing to correct
+// and the correction was itself the error: it put 1.725dB of gain
+// between the input and the output, which is a pedal that is not
+// unity gain even bypassed.
 //
-//	full scale (2^31) x this multiplier	= 1.2198
-//	full scale is 3.45Vpp			= 1.725V peak
-//	so float = volts x 1.2198/1.725	= volts x 0.7071
+// Measured, output patched back to input on one board: the round
+// trip read +1.499dB before this and -0.226dB after, and the
+// remainder is real analog loss rather than arithmetic.  See
+// Validation/test-analog.py.
 //
-// 0.7071 is 1/sqrt(2), so the *peak* of the internal float
-// equals the RMS volts of a sine wave.  A 1Vrms sine peaks at
-// 1.0 internally, which is what "0dBFS = 1Vrms" means, and
-// what level_to_dbfs() in blink.c is reporting against.
+// The observation that constant was justified with is still true
+// and is worth keeping: a 90mVpp 110Hz sine is 31.8mVrms and reads
+// -30dBFS, on an early TAC5112 board and a current TAC5242 one
+// alike.  It was the *inference* that was wrong.  That reading says
+// the internal peak equals the input's RMS volts, which is one
+// equation in two unknowns - it is satisfied by 3.45Vpp full scale
+// with a 1.2198 multiplier and by 2.828Vpp with no multiplier at
+// all, since 2.828 x 1.2198 is 3.45.  The datasheet picks between
+// them, and picks the second.
 //
-// Checked against a signal generator: 90mVpp at 110Hz is
-// 31.8mVrms, and the pedal reports -30dBFS.  20*log10(0.0318)
-// is -29.95.
+// Measured directly once the multiplier was gone, which is when the
+// question stops being degenerate: with this at 1.0 the captured
+// value *is* Vpeak/Vfs_peak, so a known input reads the full scale
+// off.  A 500mVpp 440Hz sine from a signal generator:
 //
-// Checked on two boards, which matters more than it sounds:
-// an early TAC5112 one and a current TAC5242 one both read
-// -30dBFS on that signal, so the analog front ends agree and
-// this multiplier is not secretly a calibration for one of
-// them.  Their noise floors differ by 5dB; their gains do not.
-
-#define SAMPLE_TO_FLOAT_MULTIPLIER (3.45 / 2.82843 / 0x80000000)
+//	reads			-15.22 dBFS
+//	implied full scale	2.8855Vpp = 1.0202Vrms
+//	datasheet		1.0000Vrms	(+0.17dB)
+//
+// and the old 3.45Vpp figure would have put that same input at
+// -16.78 dBFS, which is 1.55dB from where it actually landed.  The
+// remaining 2% is inside a bench generator's own accuracy and is
+// not worth chasing further.
+//
+// Swept with the same generator, 500mVpp, and the whole input is one
+// high-pass and nothing else:
+//
+//	  20 Hz	 -2.73 dB	 4000 Hz  -0.04 dB
+//	  40 Hz	 -0.93 dB	10000 Hz  -0.09 dB
+//	 160 Hz	 -0.08 dB	16000 Hz  -0.05 dB
+//	 440 Hz	  0.00 dB
+//	1000 Hz	 +0.02 dB
+//
+// A single pole at 18.6Hz fits all eight points with an rms error of
+// 0.036dB, and a two-pole fit is twice as bad and biased - so whichever
+// of the board's coupling cap and the codec's own AC coupling is
+// higher, the other is far enough down to be invisible.  From 160Hz to
+// 16kHz the spread is 0.109dB peak to peak, which is the repeatability
+// of the measurement rather than anything the pedal is doing: there is
+// no high-frequency rolloff below Nyquist at all.
+//
+// What that says about the low end, which was the open question: -0.22dB
+// at a guitar's low E, -0.81dB at a bass low E, -1.35dB at a five-string
+// low B.  The corner is below the bottom of hearing.
+//
+// The scale holds at a second amplitude: 2Vpp at 440Hz implies 1.0218
+// Vrms against 500mVpp's 1.0202, the same to 0.014dB across a 4x change.
+// That rules out a generator offset and any nonlinearity, and does not
+// rule out a proportional generator error - a bench source reading 2%
+// low everywhere looks exactly like this, and separating the two wants a
+// meter on the generator rather than more captures.
+//
+// It also accounts for the round trip.  The DAC and the ADC are
+// specified alike but measure 2% apart, so sending a signal out and
+// reading it back loses that 2% - which is the -0.226dB
+// test-analog.py reports, leaving the cable itself essentially
+// lossless rather than the -0.23dB being a cable at all.
+//
+#define SAMPLE_TO_FLOAT_MULTIPLIER (1.0 / 0x80000000)
 
 static inline sample_t process_input(raw_sample_t sample)
 {

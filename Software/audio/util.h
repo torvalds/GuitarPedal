@@ -122,6 +122,23 @@ float __audio_func(log2f)(float x)
 {
 	union { float f; unsigned int i; } u = { x };
 
+	//
+	// Nothing here wants the logarithm of a negative number, and there
+	// is no answer to give if it did.  The guard is not about the
+	// caller being right, it is about being wrong *quietly*: the shift
+	// below does not mask off the sign bit, so a negative argument used
+	// to come back as a large finite positive - log2f(-1) was +256 -
+	// and +256 handed to pow2() lands past its own top end.  Two
+	// plausible-looking numbers make a plausible-looking answer.
+	//
+	// -127 is what zero already returned by accident, and it is the
+	// right floor to keep: 2^-127 is under the smallest normal float,
+	// and it composes safely, since pow2() of anything that negative
+	// saturates to zero.
+	//
+	if (x <= 0.0f)
+		return -127.0f;
+
 	// Extract exponent and set it to zero (127)
 	int exp = (u.i >> 23) - 127;
 	u.i = 0x3f800000 | (u.i & 0x7fffff);
@@ -145,11 +162,28 @@ float __audio_func(pow2)(float x)
 	int exp = (int)floorf(x);
 	x -= exp;
 
+	//
+	// Saturate at both ends rather than wrapping at one of them.
+	//
+	// The low guard was always here and is exact enough: 2^-31 is
+	// already under anything this is asked for.  The high end used to
+	// be a comment saying "we'll return random values, don't do it",
+	// which was true - '1u << exp' shifts by exp & 31, so pow2(32) came
+	// back as 1 and pow2(40) as 256, a tiny number for a huge one.
+	//
+	// Neither end is reachable from any pot today.  Both are one
+	// comparison, which is cheaper than continuing to wonder, and this
+	// is the function every dB in the pedal goes through.
+	//
+	// Saturating to 2^31 rather than to FLT_MAX on purpose: FLT_MAX
+	// times almost anything is the infinity this is here to avoid, and
+	// -ffast-math has already promised the compiler there aren't any.
+	// 2^31 is the top of what this function claims to cover and has
+	// room to be multiplied by.
 	if (exp < -31)
 		return 0.0;
-
-	// If exp is > 31, we'll return random values.
-	// Don't do it.
+	if (exp > 31)
+		return 2147483648.0f;
 
 	// Lookup table index and fraction
 	x *= POW2_STEPS;
@@ -212,8 +246,30 @@ struct sincos __audio_func(fastsincos)(float phase)
 
 // Half-time coefficient calculation:
 //	= exp( -1 / (ms * SAMPLES_PER_MSEC) )
+//
+// Zero is answered directly rather than computed.  It is a reachable
+// setting - [CHAIN]'s Attack is LINEAR(0.0 10.0), so the bottom of that
+// pot is exactly zero milliseconds - and computing it divides by zero,
+// which hands pow2() an infinity and leaves the result depending on
+// which way the float-to-int conversion saturates.  ARM saturates
+// toward the sign, so the pedal got INT_MIN, pow2()'s 'exp < -31' guard
+// fired and the answer came out 0.0 anyway; x86 saturates the other
+// way, misses the guard and indexes pow2_table[] with garbage.  Same
+// source, same -ffast-math, one of them segfaults.
+//
+// So the value here was never in doubt - zero is what an instant attack
+// wants, since linear(0, curr, prev) is curr - only whether we were
+// entitled to it.  -ffast-math implies -ffinite-math-only, which is a
+// promise that no infinity ever appears, and this was quietly breaking
+// that promise on a value a MIDI CC can set.
+//
+// Negative is folded in with it.  Nothing generates one, and if
+// something did the computed coefficient would be greater than 1 and
+// the envelope would run away rather than follow anything.
 static inline float time_constant(float ms)
 {
+	if (ms <= 0.0f)
+		return 0.0f;
 	return expf(-1 / SAMPLES_PER_MSEC / ms);
 }
 
