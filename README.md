@@ -5,7 +5,7 @@ guitar pedal built around an RP2354A and a TI audio codec, with all the
 effects done in software on a core of its own.
 
 It went through a phase with a little OLED screen and a couple of rotary
-encoders on it, and that's gone now.  Editing eighteen effects through a
+encoders on it, and that's gone now.  Editing seventeen effects through a
 128x128 screen and two knobs was never going to be pleasant, and I'm not
 exactly known for my mad UI designing skillz, so the pedal itself is down
 to one knob and one stomp switch and the deep editing happens somewhere
@@ -180,51 +180,63 @@ The bare `usb-stomp` board, powered up.
 
 ## Basic UI
 
-The pedal has a 128x128 monochrome OLED screen and two rotary encoders
-you can turn, and both of them also have switches so you can press down
-on them to do things.  There are also two stomp-switches.
+There's no screen.  The pedal has one knob, one footswitch and three
+LEDs, and everything else happens in a browser.
 
-The top rotary is the "value" rotary, which changes the values when you
-rotate it, and switches to the next value in the list when you press it
-(you can also *hold* the rotary and rotate it at the same time, which
-allows for moving back and forth in the effect value list, but most of
-the time it's easier to just click forward).
+### On the pedal
 
-The rotary below it is the "effect" rotary, which walks through the
-effects in order when you rotate it.  You can also enable/disable each
-effect by pressing it.
+Out of the box the footswitch is bypass - tap for in-circuit or not, hold
+it for the tuner - and the knob is the master volume, with either kind of
+press on it putting the volume back where it started.  That last one
+sounds trivial and isn't: it's the way back when you can't see anything.
 
-The left stomp switch is _also_ a "enable/disable current effect"
-switch, but for your feet.  You do not want to stomp on the rotary
-switches.
+But none of that is compiled in.  There are five gestures - turn the
+knob, tap it, hold it, tap the switch, hold the switch - and what each
+one means is a table the pedal looks up and the app writes.  You can
+point the knob at any parameter of any effect, or make a single press
+take one effect's mix up while it takes another's down.  A pedal with no
+screen can't tell you what its knob is for, so that has to be settable
+from something that can.
 
-The right stomp switch is a "disable/enable the whole pedal" switch.
+The three LEDs, left to right: something is wrong (red for clipping,
+amber for dropped samples), in circuit or bypassed, and the chain is
+busy - where "busy" means whatever the effect thinks it means, so the
+gate lights it while it's gating and the compressor while it's
+compressing.
 
-There are also two status LED's associated with the stomp switches: the
-left one shows the "currently selected effect status", and the right one
-shows "global status".
+### In the browser
 
-*Mostly* those status LEDs are just about on/off, but some effects will
-also indicate whether they are in an active state by making the LED glow
-more brightly.  For example, the noise gate will glow more brightly when
-the signal is gated, and the compressor effect will glow more brightly
-when it's compressing.
+`Software/WebMIDI` is a static web page that talks to the pedal over USB
+MIDI.  There's nothing to install and it runs off a phone.
 
-The "global status" LED can also glow more brightly, but it will do so
-when things are bad: if the signal is hard-clipping past the range of
-the output.  You typically wouldn't want that, but hey, maybe you really
-want an insane boost with hard clipping that drives the amplifier to do
-nasty things.
+It doesn't know what the effects are.  It asks.  The pedal describes
+every effect it has - every pot, the ranges, the units, the hover text -
+and the app builds itself out of that, so it can't drift out of step with
+the firmware, and adding an effect to the pedal makes it show up in the
+app without touching the app.
 
-Finally, there is also a special 'reset sequence" - if you press and
-hold *both* rotary switches, that is a reset signal, and if you are
-connected to a computer over USB, the pedal will go into programming
-mode.
+What you actually do there is *route*.  There are seventeen effects and
+none of them are in your signal path until you say so: routing picks
+which ones run, and in what order, and the order is yours, because a
+boost in front of a delay is a different pedal from a delay in front of a
+boost.  Whatever you don't route costs nothing.
 
-If the pedal is powered on, but not connected over USB (so either using
-the 9V guitar pedal power, or using USB from just a charger), the reset
-sequence will reset all the effects - turn them off, and reset them to
-default values.
+Pots are mostly just numbers, except where they aren't - the tone stacks,
+the parametric EQ and the cab sim draw their actual frequency response,
+so you can see the curve instead of inferring it from three knob
+positions.
+
+<img src="Images/WebMIDI-screenshot.png" width="420"
+     alt="The WebMIDI app with a tone control and a tape echo routed">
+
+A tone stack with a 10dB mid bump at 810Hz and a tape echo behind it, and
+the fifteen effects that aren't routed sitting at the bottom waiting to
+be.  The faint grey line is the phase response.
+
+Eight scenes fit in the pedal's own flash.  A scene is a routing plus
+everything set inside it, and a MIDI program change recalls one, which is
+half of what those MIDI jacks are for: a cheap footswitch can step
+between scenes with no computer in sight.
 
 ## Audio effects
 
