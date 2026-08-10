@@ -59,39 +59,66 @@ The kicad design files (and some supporting infrastructure, like the 3D
 printed insert and the enclosure drill rules) are in the ``Hardware``
 subdirectory.
 
-The board files are perhaps somewhat strange, in that there are two
-modular boards for the "core" hardware: the RP2354 microcontroller
-(`Hardware/rp2354`) and the TI TAC5112 codec (`Hardware/codec`)
-respectively.
+These days it's just the one board.  `Hardware/usb-stomp` has the RP2354A
+and the TI TAC5242 codec sitting directly on it, and that's the whole
+pedal: no cable, no daughtercards, no connectors in between.
 
-Then there are boards for the audio and 9V DC power jacks
-(`Hardware/audio-jacks`) with a connector for the codec board, and a
-main board (`Hardware/pedal-board`) for the pedal IO (i2c connector for
-the screen, USB-C programming port, rotary encoders, pin header for
-stomp switches) which then has the connector for the rp2354
-microcontroller board.
+What's on it:
 
-I'm using the nice HiRose BM28 series connectors on the modular boards.
+ - a 1/4" input jack and a 1/4" output jack
+ - a third 1/4" jack for an expression pedal or a remote stomp switch
+ - MIDI in and out, on 3.5mm "Type A" TRS jacks (out through a 5V
+   buffer, in through an optocoupler, like MIDI has always wanted)
+ - USB-C, and the usual 9V guitar pedal power jack
+ - one rotary encoder with a switch under it, and one stomp switch
+ - three addressable WS2812B LEDs
+
+The MIDI jacks and the expression jack are the genuinely new things.  The
+older boards had nowhere to put them - the expression jack in particular
+wants two ADC pins, and those are exactly the pins the old MCU board was
+spending on hardware MIDI, so it could not have existed there at all.
+
+Fair warning on that expression jack, though: the hardware is done and
+the firmware can read it, but only when the host asks it to over SysEx.
+Right now it's a probe for figuring out what people actually plug in
+there - expression pedals don't even agree on which contact is the wiper
+- and nothing is wired up to *do* anything with the result yet.
+
+### How it used to be
+
+It used to be modular, and those board files are all still here.  There
+were two little daughtercards for the "core" hardware - the RP2354
+microcontroller (`Hardware/rp2354`) and the TI TAC5112 codec
+(`Hardware/codec`) - plus a board for the audio and 9V DC power jacks
+(`Hardware/audio-jacks`), and a main board (`Hardware/pedal-board`) for
+the pedal IO: i2c connector for the screen, USB-C programming port,
+rotary encoders, pin header for stomp switches.  The two halves were
+joined by a 12P 0.5mm FFC cable carrying power and data lines (i2c for
+control, i2s for audio).
+
+That was mostly so I could try out different form factors.  It let me lay
+the two halves out independently, and it was flexible enough to cram a
+125B enclosure full of jacks, rotaries and the screen all in one top
+area.  There was also a worry about noise isolation, which in the end
+never had to be tested.
+
+I used the nice HiRose BM28 series connectors on the modular boards.
 They are absolutely tiny, which makes for a great board footprint but
 admittedly also makes for a slightly more complicated board due to the
 tiny 0.35mm pitch.  I'm not a fan of the traditional pin headers simply
 because they make it so hard to do compact form factors.
 
-The inter-board connector is a 12P 0.5mm FFC cable that carries power
-and data lines (i2c for control, i2s for audio).
-
-This modular design is purely so that I could try out different form
-factors, and if you know what you want you should just put the TAC5112
-directly on the audio jack board and the rp2354 on the IO board. The
-modular setup makes for more complicated boards (the core boards have
-components on both sides due to the connector, for example), but allowed
-me to separate out the more complex and slightly more expensive boards
-from the "let's try this layout" boards.
+Those boards are finished and they still work - the firmware builds for
+them, and they're still useful for testing.  But what this section used
+to say was that if you know what you want, you should just put the codec
+directly on the audio jack board and the rp2354 on the IO board.  Which,
+yes.  That's the board above.
 
 ### Images
 
-![Front](Images/front.jpg)
-![Inside](Images/inside.jpg)
+![The unified board](Images/unified.jpg)
+
+The bare `usb-stomp` board, powered up.
 
 ## Basic UI
 
