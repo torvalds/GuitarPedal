@@ -3,7 +3,7 @@
 // POT: "Level" LINEAR(-60.0 -10.0) = -35.0 dB
 // POT: "Attack" LINEAR(2.0 100.0) = 15.0 ms
 // POT: "Release" LINEAR(50.0 500.0) = 150.0 ms
-// POT: "Ratio" LINEAR(1.0 20.0) = 4.8 x
+// POT: "Ratio" EXPONENTIAL(1.0 20.0) = 4.8 x
 // POT: "Boost" LINEAR(0.0 24.0) = 6.0 dB
 //
 // Compressor Effect

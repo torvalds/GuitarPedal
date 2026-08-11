@@ -40,6 +40,7 @@ import numpy as np
 
 sys.path.insert(0, ".")
 import bench as B
+import pots as P
 
 COMP = "Compressor"
 INPUT = "Inputs/BassForLinus.mp3"
@@ -59,19 +60,20 @@ def decode(path):
         return np.fromfile(f.name, dtype=np.float32)
 
 
-def pot_value(name, db, lo, hi):
-    """A LINEAR(lo hi) pot, as the 0..120 the firmware stores."""
-    return ["--pot", f"{COMP}:{name}={round((db - lo) / (hi - lo) * 120)}"]
-
-
-def routed(level_db=-20.0, attack_ms=15.0, release_ms=150.0,
+#
+# Ranges and curves come from pots.py, which reads the POT: lines and
+# checks its own arithmetic against the generator.  Writing them out
+# here is how three measurements in one afternoon got taken at settings
+# nobody asked for: a range moved and the script did not.
+#
+def routed(level_db=-35.0, attack_ms=15.0, release_ms=150.0,
            ratio=4.8, boost_db=6.0):
     return (["--pot", "Signal Chain:Gate=0", "--route", COMP]
-            + pot_value("Level", level_db, -60.0, -10.0)
-            + pot_value("Attack", attack_ms, 2.0, 100.0)
-            + pot_value("Release", release_ms, 50.0, 500.0)
-            + pot_value("Ratio", ratio, 1.0, 20.0)
-            + pot_value("Boost", boost_db, 0.0, 24.0))
+            + P.arg(COMP, "Level", level_db)
+            + P.arg(COMP, "Attack", attack_ms)
+            + P.arg(COMP, "Release", release_ms)
+            + P.arg(COMP, "Ratio", ratio)
+            + P.arg(COMP, "Boost", boost_db))
 
 
 def squeeze(x, window, **kw):
