@@ -263,7 +263,9 @@ from anything I typed here.
  - **Preamp** - a two-stage 12AX7 model, class-A biased with the
    asymmetry left in, and a JFET stage after it.
  - **Compressor** - level, ratio, attack, release, and a boost, so it
-   can also just be a clean boost when that's what you want.
+   can also just be a clean boost when that's what you want - which at
+   the default threshold is most of what it does.
+   [Measured](Documentation/effects/compressor.md).
  - **Boost**, with distortion.  I like this one.  Others may not.  Set
    the boost stupidly high and the level low, and instead of clipping at
    the level the signal *folds* back down, which gives you harmonics
