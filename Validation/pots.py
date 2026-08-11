@@ -86,6 +86,28 @@ def to_pot(effect, label, value):
     return max(0, min(120, round(p * 120)))
 
 
+def value(effect, label, pot):
+    """The other way: what a raw 0..120 setting reads as on the knob.
+
+    A sweep is written in raw steps, because that is the thing with a
+    hundred and twenty-one of them and no rounding in it, and then has
+    to say in its table what each step meant.  Doing that by hand is the
+    same mistake as doing to_pot() by hand, from the same direction.
+    """
+    spec = _DECLARED.get((effect, label))
+    if spec is None:
+        raise KeyError(f"no POT: line for {effect}:{label}")
+    curve, lo, hi, _ = spec
+    p = pot / 120.0
+    if curve == "LINEAR":
+        return lo + p * (hi - lo)
+    if curve == "EXPONENTIAL":
+        return lo * (hi / lo) ** p
+    raise NotImplementedError(
+        f"{effect}:{label} is {curve}; pots.py only does LINEAR and "
+        f"EXPONENTIAL, and guessing at the rest would be inventing one")
+
+
 def arg(effect, label, value):
     """...as the --pot argument the bench wants."""
     return ["--pot", f"{effect}:{label}={to_pot(effect, label, value)}"]
