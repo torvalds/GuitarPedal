@@ -64,15 +64,16 @@ struct bench_timer bench_timer_regs;
 #include "audio/analyze.h"
 
 //
-// pedal.c defines these three between switch.h and audio/effect.h.
-// Only the first is reachable from the audio path - process_input()
-// diverts the whole signal into the tuner when it is set - and it is
-// held at zero here for the same reason the tuner is not built: a bench
-// measuring an effect is not measuring the tuner.
+// Two of the things audio/effect.h expects to already exist - see the
+// contract at the top of it.  Only tuner_mode is reachable from the
+// audio path, and process_input() diverts the whole signal into the
+// tuner when it is set, so it is held at zero here for the same reason
+// the tuner is not built: a bench measuring an effect is not measuring
+// the tuner.  user_interaction is written by hardware.h and read by
+// nothing on this side.
 //
 static int tuner_mode = 0;
 static volatile int user_interaction = 0;
-static volatile int next_state_seq = 1;
 
 #include "audio/effect.h"
 

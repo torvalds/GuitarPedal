@@ -60,7 +60,6 @@
 
 static int tuner_mode = 0;
 static volatile int user_interaction = 0;
-static volatile int next_state_seq = 1;
 
 #include "audio/effect.h"
 
