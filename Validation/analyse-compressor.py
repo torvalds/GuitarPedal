@@ -67,7 +67,7 @@ def pot_value(name, db, lo, hi):
 def routed(level_db=-20.0, attack_ms=15.0, release_ms=150.0,
            ratio=4.8, boost_db=6.0):
     return (["--pot", "Signal Chain:Gate=0", "--route", COMP]
-            + pot_value("Level", level_db, -40.0, 0.0)
+            + pot_value("Level", level_db, -60.0, -10.0)
             + pot_value("Attack", attack_ms, 2.0, 100.0)
             + pot_value("Release", release_ms, 50.0, 500.0)
             + pot_value("Ratio", ratio, 1.0, 20.0)
@@ -191,6 +191,23 @@ def main():
         print(f"peak {peak:.0f} " +
               str([round(squeeze(y, window, level_db=float(t)), 1)
                    for t in thresholds]))
+
+    #
+    # What the default does to the instrument somebody actually plugs
+    # in, with no trim and nothing in front of it - which is the only
+    # case a default can be chosen for.  Peak-to-peak volts convert to
+    # the internal scale through process.h: a sample is the instantaneous
+    # volts over sqrt(2), because 1.0 is a 1Vrms sine peaking at 1.4142V.
+    #
+    print("\n## dB removed at the default, by pickup, no trim or preamp\n")
+    pickups = [("280mVpp typical", -20.1), ("500mVpp hot", -15.1),
+               ("1Vpp humbucker", -9.0), ("2Vpp active bass", -3.0)]
+    cands = [-30, -33, -35, -37, -40, -45]
+    print("x-axis " + str(cands))
+    for name, pkdb in pickups:
+        y = (raw * (10 ** (pkdb / 20) / peak_of)).astype(np.float32)
+        print(f"{name} " + str([round(squeeze(y, window, level_db=float(c)), 1)
+                                for c in cands]))
 
     #
     # Attack and release cost distortion on low notes, because a fast

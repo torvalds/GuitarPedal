@@ -1,8 +1,8 @@
 # Compressor `[COMPRESSOR]`
 
-Five controls: **Level** (−40..0 dB, the threshold), **Attack** (2..100 ms),
+Five controls: **Level** (−60..−10 dB, the threshold), **Attack** (2..100 ms),
 **Release** (50..500 ms), **Ratio** (1..20×) and **Boost** (0..24 dB, makeup
-gain). Defaults are −20 dB, 15 ms, 150 ms, 4.8× and 6 dB.
+gain). Defaults are −35 dB, 15 ms, 150 ms, 4.8× and 6 dB.
 
 The arithmetic is short enough to state. An envelope follower tracks the
 rectified input with those attack and release times; above the threshold the
@@ -71,9 +71,10 @@ The silences are the exception and they are correct: where the input drops to
 to compress and the makeup gain is unconditional. A compressor lifts the noise
 floor between notes; this one is honest about it.
 
-## What it does at its defaults, which is mostly nothing
+## What the threshold is worth
 
-The same recording, gain plotted against how loud the playing was:
+The same recording, gain plotted against how loud the playing was, at two
+threshold settings:
 
 ```mermaid
 %%{init: {'themeVariables': {'xyChart': {'plotColorPalette': '#0072b2, #d55e00'}}}}%%
@@ -85,17 +86,17 @@ xychart-beta
     line [6.0, 6.0, 5.87, 5.47, 4.23, 1.35, -1.29, -3.5]
 ```
 
-**At the default Level of −20 dB the compressor is a 6 dB boost.** Across the
-whole take it never applies less than +3.0 dB and never more than +6.0 — the
-blue line is flat until the loudest few seconds and then bends slightly. The
-orange line, one setting down, is what a compressor's transfer curve is
-supposed to look like: +6 dB on the quiet passages falling to −3.5 dB on the
-loud ones, about 10 dB of range squeezed out of the performance.
+At −20 dB, against this recording at this level, the effect never applies less
+than +3.0 dB and never more than +6.0 — the blue line is flat until the loudest
+few seconds and then bends slightly, which is a boost with a hint of
+compression on top. The orange line, ten decibels down, is what a compressor's
+transfer curve is supposed to look like: +6 dB on the quiet passages falling to
+−3.5 dB on the loud ones, about 10 dB of range squeezed out of the performance.
 
-So the Level control has to come down to around −30 before the effect earns
-its name at instrument level. Whether the default is wrong or merely gentle is
-a matter of taste, but it is worth knowing that the pot arrives most of the
-way to "off".
+Neither is right or wrong. Which one you get depends on how loud the signal
+arriving is, and that is a thing the player sets — with Trim, with a boost, or
+with whatever pedal is in front. What the threshold does is fix the distance
+between the two.
 
 **A caution about reading the two transfer curves together**: they do not
 share an x-axis. The static one is the peak amplitude of a sine; this one is
@@ -159,22 +160,49 @@ is not.
 Ratio is nearly free above about 8: at Level −30 it buys 8.8 dB of squeeze at
 8:1 and 9.4 dB at 20:1, against 8.2 dB at the default 4.8.
 
-## What the defaults probably should be
+## What the defaults are, and why
 
-**These defaults were never analysed** — they were picked when the effect was
-written. On this evidence the only one that is clearly wrong is Level, and it
-is wrong in the way that matters: at −20 dB the effect is inaudible on a
-guitar, so the pedal ships with its compressor switched off in all but name.
+**These were made up.** The controls were given plausible-sounding numbers when
+the effect was written and had never been measured. The ranges too.
 
-Something around **−35 dB** would give roughly 7 dB of range reduction at
-instrument level, which is a compressor doing its job without squashing the
-performance. That is close enough to the bottom of the pot's range to suggest
-the **range** wants moving too — `LINEAR(-40 0)` spends its top half on
-signals no guitar produces.
+Measuring changed one of them. Because the response is a pure translation, the
+end of the pot is a wall: with the old `LINEAR(-40 0)`, a guitar arriving at
+about −20 dBFS peak could not get more than roughly 5 dB of compression at any
+setting, simply because the knob stopped. The range is now `LINEAR(-60 -10)`,
+which costs 0.42 dB per step against 0.33 and forecloses nothing.
 
-The rest hold up. Ratio 4.8 is in the useful part of its curve, attack 15 ms
-is a cheap middle, release 150 ms is right for guitar. Boost is makeup gain
-and 6 dB pairs sensibly with the reduction a working threshold would produce.
+With that room, here is what each candidate default does to the instrument
+somebody actually plugs in — no trim, nothing in front:
+
+```mermaid
+%%{init: {'themeVariables': {'xyChart': {'plotColorPalette': '#0072b2, #d55e00, #009e73, #666666'}}}}%%
+xychart-beta
+    title "dB removed by pickup. 280mVpp blue, 500mVpp orange, 1Vpp green, 2Vpp grey"
+    x-axis "Level, dB" [-30, -33, -35, -37, -40, -45]
+    y-axis "dB of range removed" -1 --> 21
+    line [-0.0, 0.4, 1.4, 2.9, 5.1, 8.8]
+    line [1.4, 3.5, 5.1, 6.6, 8.8, 12.6]
+    line [5.9, 8.1, 9.7, 11.3, 13.5, 17.0]
+    line [10.4, 12.7, 14.3, 15.8, 17.6, 20.4]
+```
+
+Peak-to-peak volts convert through `process.h`: a sample is the instantaneous
+volts over √2, because 1.0 is a 1 Vrms sine peaking at 1.414 V. So the README's
+"typical" 280 mVpp is −20.1 dBFS peak, and a hot pickup at 500 mVpp is −15.1.
+
+**−35 dB** is the default, and two things pick it. It gives 5.1 dB of reduction
+on a hot pickup and 9.7 dB on a humbucker — a compressor doing something the
+moment you switch it on, which is presumably why you switched it on. And it
+sits at exactly mid-travel on the new range, so the knob's centre is the
+sensible setting and both directions mean something.
+
+It is deliberately gentle on a quiet single-coil, 1.4 dB. That is what the 25 dB
+of travel below it is for.
+
+The other four hold up. Ratio is in the useful part of its curve at 4.8 and
+nearly free above 8. Attack costs 5 dB of THD across its whole range while
+changing the squeeze by more than twice that. Release is right for guitar and
+marginal an octave below.
 
 ## Reproducing this
 
