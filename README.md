@@ -248,9 +248,9 @@ between scenes with no computer in sight.
 
 Seventeen of them, plus two that are always there and can't be unrouted:
 the **Signal Chain** at the front, which is the input trim, the noise
-gate and the master volume, and the **Settings** at the back, which is
-USB audio routing, MIDI channel, LED brightness and what the tuner is
-tuning to.
+gate and the master volume ([measured](Documentation/effects/signal-chain.md)),
+and the **Settings** at the back, which is USB audio routing, MIDI
+channel, LED brightness and what the tuner is tuning to.
 
 They're listed in the order they run in by default.  This is an overview
 and not documentation - the app is the reference, because it gets the

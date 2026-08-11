@@ -67,6 +67,23 @@
 //
 // But the attack/release values are probably different.
 //
+// A bigger doubt about the same code, written down because it is the
+// kind of thing that is otherwise only ever in somebody's head: the
+// gate is a *binary* decision on the envelope, and the ramp in
+// chain_step() exists to smooth that decision.  It could instead have
+// been a multiplier that follows the envelope directly and clamps at
+// unity above the threshold, with no decision and no ramp in it - and
+// then Attack and Release would genuinely be the fade times rather
+// than the detector's.
+//
+// What has kept it binary is a worry about amplitude modulation: a
+// gain that tracks the envelope closely moves at the signal's own
+// frequency, and that is distortion.  The compressor measures exactly
+// that happening, and it falls about 11dB per octave, so it is a bass
+// problem long before it is a guitar one.  A fixed ramp cannot do it
+// at all, because its shape does not depend on the level.  Untested
+// either way; this is the cautious side of the trade.
+//
 
 static struct {
 	struct envelope envelope;
@@ -193,7 +210,26 @@ static inline sample_t chain_step(sample_t in)
 	if (chain.active) {
 		float mult = chain.mult;
 
-		// Ramp up fairly quickly, ramp down slowly
+		//
+		// Ramp up fairly quickly, ramp down slowly.
+		//
+		// These two constants are the whole of the gate's fade and
+		// no control reaches them: 9.5ms to open and 95.9ms to
+		// close, at every setting of Attack and Release.  Those two
+		// are the *detector's* time constants and decide when the
+		// comparison above flips, not how fast anything moves
+		// afterwards.  Measured both ways in
+		// Documentation/effects/signal-chain.md.
+		//
+		// The ramp is here so the gate does not pop, and the
+		// asymmetry was set by ear.  Open quickly, because losing
+		// the front of a note when you start playing is the thing
+		// you notice.  Close ten times more slowly, because a long
+		// drawn-out decay suddenly going away is far more
+		// noticeable than the same time spent opening.  Whether
+		// these are the *right* numbers has never been tested
+		// against anything; they are two values that sounded right.
+		//
 		if (env >= chain.level) {
 			mult = linear(0.01f, mult, 1.0f);
 			if (mult > 0.99f)
