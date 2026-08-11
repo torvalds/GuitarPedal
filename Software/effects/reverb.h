@@ -61,6 +61,13 @@ static const unsigned reverb_ap_L[4]   = {  605,  480,  371,  245 };
 // after seventeen, where the cast to unsigned is undefined behaviour.
 // An accumulator cannot drift at all - it wraps, which is what a phase
 // is for.
+//
+// Through lfo_step_X() rather than lfo_step(), because a fifth of a
+// hertz does not need describing forty-eight thousand times a second.
+// The real lookup happens once every 32 frames and a straight line
+// joins them, which at these rates is 120dB below the modulation's own
+// amplitude.  See lfo.h; it is most of what the per-sample version of
+// this cost.
 
 // In RAM rather than flash: reverb_init() runs on the audio core, which
 // keeps playing while core 0 has XIP switched off to write flash.
@@ -83,7 +90,7 @@ struct reverb_allpass {
 static struct {
 	struct reverb_comb    combs[8];
 	struct reverb_allpass allpasses[4];
-	struct lfo_state      lfo[4];
+	struct lfo_slow       lfo[4];
 	float damp;               // LP pole in [0.1, 0.5]
 	float g;                  // feedback gain shared by all combs
 } reverb_state;
@@ -100,8 +107,9 @@ static void reverb_init(unsigned char pot[10])
 	for (int i = 0; i < 4; i++)
 		reverb_state.allpasses[i].delay = reverb_ap_L[i];
 	for (int i = 0; i < 4; i++) {
-		set_lfo_freq(&reverb_state.lfo[i], reverb_lfo_rates[i]);
-		reverb_state.lfo[i].idx = fraction_to_u32(reverb_lfo_phases[i]);
+		set_lfo_freq_X(&reverb_state.lfo[i], reverb_lfo_rates[i]);
+		reverb_state.lfo[i].lfo.idx =
+			fraction_to_u32(reverb_lfo_phases[i]);
 	}
 }
 
@@ -115,7 +123,7 @@ static float reverb_step(float in)
 	// All four advance every sample, whichever combs read them.
 	float lfo[4];
 	for (int i = 0; i < 4; i++)
-		lfo[i] = lfo_step(&reverb_state.lfo[i], lfo_sinewave);
+		lfo[i] = lfo_step_X(&reverb_state.lfo[i], lfo_sinewave);
 
 	for (int i = 0; i < 8; i++) {
 		struct reverb_comb *c = &reverb_state.combs[i];
