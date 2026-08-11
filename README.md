@@ -280,6 +280,7 @@ from anything I typed here.
    Maestro Echoplex tape delays, converted from the Hothouse examples.
    All credit to Ricky Sheaves, and blame me for the conversion.
  - **Reverb** - comb filters into allpasses, the traditional way.
+   [Measured](Documentation/effects/reverb.md).
  - **Pitch** - not the clever FFT kind.  It walks a delay line faster or
    slower than real time in two phases, crossfaded with a sine so the
    wrap doesn't click.  So it shifts *and* delays, and it feeds back into

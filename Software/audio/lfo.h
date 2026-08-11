@@ -108,3 +108,83 @@ float __audio_func(lfo_step)(struct lfo_state *lfo, enum lfo_type type)
 		val = -val;
 	return val;
 }
+
+//
+// SLOW LFOs, WHICH ARE MOST OF THEM
+//
+// Running the quarter-sine lookup 48000 times a second to describe
+// something whose period is a couple of seconds is silly, and it is
+// measurably expensive: on the RP2354 the reverb's four LFOs cost about
+// 11% of the whole effect.  That expense is exactly why the reverb
+// arrived here carrying its own hand-rolled rotator instead, which then
+// spent thirteen hours walking out of its buffer.
+//
+// So: do the real thing every LFO_X samples, and walk a straight line
+// between those points.  The error is the sagitta of a sine over the
+// span and grows as LFO_X squared - at 32 it is 120dB down for the
+// reverb's 0.67Hz, 73dB down at a 10Hz tremolo and 49dB down for the
+// fastest thing here, a 40Hz phaser.
+//
+// WHY 32, AND WHY IT IS NOT A PARAMETER
+//
+// Per-sample work is one add plus 1/X of the real computation, so the
+// cost falls towards the cost of that one add and then stops.  32 is
+// already there: measured on hardware, X=256 came out 0.64 telemetry
+// steps cheaper than X=32, which is inside the noise, while costing
+// 36dB of accuracy.  Past the knee, so a knob for it would only be a
+// way to get it wrong.
+//
+// WHICH LFOs THIS IS NOT FOR
+//
+// testtone.h drives lfo_step() up to 14kHz on purpose - the shapes are
+// the LFO's, at audio rate, and set_lfo_freq() is deliberately
+// unclamped.  Chording that would be nonsense.  Hence a separate call
+// rather than a change to lfo_step(): the fast path stays exact and
+// asking for the cheap one is a decision at the call site.
+//
+// THE COUNTER IS THE CHAIN'S, NOT THE EFFECT'S
+//
+// single_sample() increments this once a frame and nothing else touches
+// it.  Having one counter rather than one per LFO is what lets the
+// compiler see that four lfo_step_X() calls in a row share a test, and
+// it means an effect cannot get its own phase wrong.  It is allowed to
+// wrap; only the low bits are ever read.
+//
+unsigned audio_sample_count;
+
+#define LFO_X_BITS	5
+#define LFO_X		(1u << LFO_X_BITS)
+#define LFO_X_MASK	(LFO_X - 1)
+
+struct lfo_slow {
+	struct lfo_state lfo;
+	float value, slope;
+};
+
+//
+// The step is LFO_X times bigger because it is applied LFO_X times less
+// often.  Same accumulator, same wrap, same everything else.
+//
+static inline void set_lfo_freq_X(struct lfo_slow *s, float freq)
+{
+	set_lfo_step(&s->lfo, freq * F_STEP * LFO_X);
+}
+
+//
+// A new frequency takes effect at the next recalculation rather than at
+// once, which is a property of the model rather than a wart in it: the
+// value is mid-chord and the chord it is on was costed before the knob
+// moved.  Worst case is LFO_X samples of the old rate, which is 667us.
+//
+// Nothing is seeded here or at init.  value and slope start at zero, so
+// the first block walks from zero up to wherever the LFO actually is -
+// a 667us fade in on a modulator, which is not worth code to avoid.
+//
+static inline float lfo_step_X(struct lfo_slow *s, enum lfo_type type)
+{
+	if (!(audio_sample_count & LFO_X_MASK)) {
+		float next = lfo_step(&s->lfo, type);
+		s->slope = (next - s->value) * (1.0f / LFO_X);
+	}
+	return (s->value += s->slope);
+}

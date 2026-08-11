@@ -468,6 +468,17 @@ static inline void __audio_func(single_sample)(float mix)
 	cpu_idx = (cpu_idx + 1) & 15;
 
 	//
+	// The chain's own frame counter, and the only place it moves.
+	//
+	// lfo_step_X() reads its low bits to decide when to do the real
+	// work - see lfo.h.  It lives here rather than in the LFOs so that
+	// every slow LFO in the chain recalculates on the same frame,
+	// which is what lets the compiler hoist one test out of four
+	// calls, and so that an effect cannot forget to advance it.
+	//
+	audio_sample_count++;
+
+	//
 	// Wait for RX DMA to produce the sample.
 	//
 	// This loop is the idle time, by definition: per sample period the
