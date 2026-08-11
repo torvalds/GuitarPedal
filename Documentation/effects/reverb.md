@@ -156,6 +156,14 @@ So one reverb is a fifth of the audio budget, which makes it comfortably the
 most expensive effect here and the one to think about before stacking things
 behind it.
 
+**Those four figures were taken with the load meter as it was**, timing the
+audio loop's idle spin with a 1 MHz timer — one tick of which is 4.8% of a
+sample period, so each of them is a rounding of that. The meter counts cpu
+cycles now, and re-measured it puts the reverb at **22.1%**, which is inside
+the old instrument's resolution and does not move anything said here. The
+before-and-after rows have not been re-measured, because doing so means
+reflashing three superseded builds to correct figures by a few tenths.
+
 The middle row is the honest cost of correctness: fixing the drifting LFOs and
 interpolating the comb reads added 28.3%. Running the LFOs at control rate —
 exact once every 32 frames, a straight line between — gave most of that back,
