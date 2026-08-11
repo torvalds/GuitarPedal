@@ -55,26 +55,27 @@ struct bench_timer bench_timer_regs;
 //
 #include "status.h"
 
-#include "audio/types.h"
-#include "audio/util.h"
-#include "audio/envelope.h"
-#include "audio/single-pole.h"
-#include "audio/biquad.h"
-#include "audio/fft.h"
-#include "audio/analyze.h"
+#include "Audio/types.h"
+#include "Audio/util.h"
+#include "Audio/envelope.h"
+#include "Audio/single-pole.h"
+#include "Audio/biquad.h"
+#include "Audio/fft.h"
+#include "Audio/analyze.h"
 
 //
-// pedal.c defines these three between switch.h and audio/effect.h.
-// Only the first is reachable from the audio path - process_input()
-// diverts the whole signal into the tuner when it is set - and it is
-// held at zero here for the same reason the tuner is not built: a bench
-// measuring an effect is not measuring the tuner.
+// Two of the things audio/effect.h expects to already exist - see the
+// contract at the top of it.  Only tuner_mode is reachable from the
+// audio path, and process_input() diverts the whole signal into the
+// tuner when it is set, so it is held at zero here for the same reason
+// the tuner is not built: a bench measuring an effect is not measuring
+// the tuner.  user_interaction is written by hardware.h and read by
+// nothing on this side.
 //
 static int tuner_mode = 0;
 static volatile int user_interaction = 0;
-static volatile int next_state_seq = 1;
 
-#include "audio/effect.h"
+#include "Audio/effect.h"
 
 uint8_t effect_chain[MAX_ROUTED_EFFECTS];
 uint8_t routed_effect_count = 0;

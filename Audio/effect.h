@@ -1,4 +1,48 @@
+//
+// The audio core: the effect machinery, and the loop that runs it.
+//
+// WHAT THIS FILE EXPECTS FROM WHOEVER INCLUDES IT
+//
+// It has two consumers - pedal.c on the hardware and
+// Validation/bench/bench.c on a workstation - and it is not
+// self-contained for either.  That is deliberate, and the contract is
+// written here rather than only in the consumers, because it is this
+// file imposing it:
+//
+//   status.h              included first.  meter_in, meter_out,
+//                         meter_floor, meter_load and samples_dropped
+//                         all live there and are written from
+//                         single_sample().
+//
+//   int tuner_mode        defined before this is included.  process.h
+//                         reads it and diverts the whole signal into
+//                         the tuner when it is set, so it has to exist
+//                         by the time process.h is pulled in below.
+//
+//   effect_chain[]        declared extern here, defined by the
+//   routed_effect_count   includer, because the routing is the
+//                         includer's to own - a scene loads it on the
+//                         pedal and the bench sets it from argv.
+//
+//   get_usb_audio_input() declared here, defined by the includer.
+//   sample_t              usb-device.c on the pedal; silence on the
+//                         bench, since what an effect does to a signal
+//                         is not a question about USB.
+//
+// The i2s DMA is *not* in that list even though the buffer and the two
+// pointer helpers are defined below.  The bench drives them itself
+// through a shim - it writes i2s_dma_buf and moves fake DMA registers
+// around single_sample() - which is the whole point of the arrangement:
+// what gets measured on a workstation is the pedal's own single_sample()
+// and not a second implementation of it.  So single_sample() belongs
+// here rather than beside the hardware, and hardware.h owns the actual
+// bring-up.
+//
+// Include order is program order in this project (see pedal.c), so
+// "before" above means literally earlier in the file.
+//
 #include "lfo.h"
+#include "Audio/cycles.h"
 
 //
 // How long an effect takes to fade in or out, in samples - a tenth of a
@@ -455,20 +499,13 @@ static inline raw_sample_t *i2s_dma_rx_ptr(void)
 //
 static struct envelope meter_in_env, meter_floor_env, meter_out_env;
 
-//
-// The M33's cycle counter, at the architectural addresses rather than
-// through CMSIS, which buries them in a PPB struct.  It is per-core, so
-// this has to be done from the core that reads it - init_meters() runs
-// inside audio_processing(), which is core 1 and is the whole point.
-//
-#define DWT_DEMCR	(*(volatile uint32_t *)0xE000EDFCu)
-#define DWT_CTRL	(*(volatile uint32_t *)0xE0001000u)
-#define DWT_CYCCNT	(*(volatile uint32_t *)0xE0001004u)
-
 static void init_meters(void)
 {
-	DWT_DEMCR |= 1u << 24;		// TRCENA: the DWT is off until this
-	DWT_CTRL  |= 1u << 0;		// CYCCNTENA
+	//
+	// Here rather than at startup because the counter is per-core and
+	// this runs inside audio_processing(), on the core that reads it.
+	//
+	cycle_counter_init();
 
 	envelope_init(&meter_in_env, 0.1f, 300.0f);
 	envelope_init(&meter_floor_env, 5000.0f, 100.0f);
@@ -505,7 +542,7 @@ static inline void __audio_func(single_sample)(float mix)
 	//
 	static unsigned int meter_phase;
 	bool timed = !(++meter_phase & 15);
-	uint32_t spin_start = timed ? DWT_CYCCNT : 0;
+	uint32_t spin_start = timed ? cycle_count() : 0;
 
 	while (cpu_ptr == i2s_dma_rx_ptr())
 		tight_loop_contents();
@@ -529,7 +566,7 @@ static inline void __audio_func(single_sample)(float mix)
 		// overclock - all of it just works.
 		//
 		static uint32_t meter_prev;
-		uint32_t now = DWT_CYCCNT;
+		uint32_t now = cycle_count();
 		uint32_t spin = now - spin_start;
 		uint32_t span = now - meter_prev;
 

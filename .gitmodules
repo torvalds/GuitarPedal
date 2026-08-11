@@ -1,6 +1,6 @@
-[submodule "Software/pico-sdk"]
-	path = Software/pico-sdk
+[submodule "Firmware/pico-sdk"]
+	path = Firmware/pico-sdk
 	url = https://github.com/raspberrypi/pico-sdk.git
-[submodule "Software/tinyusb"]
-	path = Software/tinyusb
+[submodule "Firmware/tinyusb"]
+	path = Firmware/tinyusb
 	url = https://github.com/hathach/tinyusb

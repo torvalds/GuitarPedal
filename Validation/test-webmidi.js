@@ -27,7 +27,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const WEB = path.join(__dirname, '..', 'Software', 'WebMIDI');
+const WEB = path.join(__dirname, '..', 'WebMIDI');
 const effectsJs = process.argv[2] || path.join(WEB, 'effects.js');
 
 let failures = 0;
@@ -258,7 +258,7 @@ app.renderAttention();
 // next to effects.js, so it is wherever that was found.
 //
 const schemaPath = path.join(path.dirname(path.resolve(effectsJs)), 'midi_schema.h');
-const fallback = path.join(__dirname, '..', 'Software', 'build', 'midi_schema.h');
+const fallback = path.join(__dirname, '..', 'build', 'midi_schema.h');
 const schemaFile = fs.existsSync(schemaPath) ? schemaPath
                  : (fs.existsSync(fallback) ? fallback : null);
 
@@ -369,6 +369,12 @@ check('and puts just that one back in the pool',
 // short frame from older firmware and the long one from newer - neither is
 // an error, and a missing field is absent rather than zero.
 //
+// The load is the field that grew: layout 2 puts a 14-bit value across
+// bytes 5 and 6, where layout 1 had seven bits in byte 5 alone.  Both
+// have to read, and which one arrived is decided by whether byte 6 is
+// there rather than by the version, because that is how every other
+// field here is handled.
+//
 const meters = document.getElementById('signal-chain-meters');
 const frame = (...body) => [0xF0, 0x7D, 0x0B, ...body, 0xF7];
 
@@ -378,8 +384,12 @@ check('a full frame reads out', /in −38 dB/.test(meters.textContent)
       && /out −18 dB/.test(meters.textContent), meters.textContent);
 check('an open gate says so', /gate open/.test(meters.textContent),
       meters.textContent);
-check('cpu is a percentage', /cpu 33%/.test(meters.textContent),
+check('cpu is a percentage', /cpu 33\.1%/.test(meters.textContent),
       meters.textContent);
+
+app.handleTelemetry(frame(2, 40, 60, 20, 127, 42, 65));
+check('a 14-bit load reads finer than a whole percent',
+      /cpu 33\.2%/.test(meters.textContent), meters.textContent);
 
 app.handleTelemetry(frame(1, 0, 127, 0, 0, 127));
 check('silence is not a number', /floor −∞ dB/.test(meters.textContent),
@@ -400,10 +410,12 @@ check('a short frame keeps what it has', /in −40 dB/.test(meters.textContent)
 check('and does not invent the rest', !/out/.test(meters.textContent)
       && !/cpu/.test(meters.textContent), meters.textContent);
 
-// Newer firmware: extra fields at the end, which must simply be ignored
-app.handleTelemetry(frame(1, 12, 34, 56, 127, 64, 99, 98, 97));
+// Newer firmware: extra fields at the end, which must simply be ignored.
+// Byte 6 is the load's LSB and is understood; 98 and 97 are not.
+app.handleTelemetry(frame(2, 12, 34, 56, 127, 64, 99, 98, 97));
 check('a long frame is read as far as we understand it',
-      /in −12 dB/.test(meters.textContent) && /cpu 50%/.test(meters.textContent),
+      /in −12 dB/.test(meters.textContent)
+      && /cpu 50\.6%/.test(meters.textContent),
       meters.textContent);
 
 // A frame with nothing in it at all must not throw or print rubbish

@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "audio/types.h"
+#include "Audio/types.h"
 
 int init_usb(void);
 void usb_audio_task(void);

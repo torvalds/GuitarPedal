@@ -12,7 +12,7 @@
 # the one thing a stored scene must not be wrong about.
 #
 # The layout is the other half of the _Static_asserts in
-# Software/scene.h.  Those exist because two of the offsets here are not
+# Firmware/scene.h.  Those exist because two of the offsets here are not
 # visible in the C declaration: a scene_effect is 22 bytes of fields in
 # a 24-byte slot, and the array of them is 4-aligned so it starts at 24
 # rather than 22.  Both were wrong here first time round.
@@ -50,7 +50,7 @@ def channels(ch_in=IN_LEFT, ch_out=OUT_BOTH):
     return ch_in | (ch_out << 2)
 
 
-def effects_from_map(path="../Software/build/effect_map.h"):
+def effects_from_map(path="../build/effect_map.h"):
     """Every effect in the built firmware, in id order."""
     text = open(path).read()
     out = []

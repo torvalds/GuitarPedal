@@ -674,7 +674,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             # is shared.
             #
             f.write(f"#define EFFECT_SELF {self_name}\n")
-            f.write(f"#include \"../effects/{base}.h\"\n")
+            f.write(f"#include \"Effects/{base}.h\"\n")
             f.write("#undef EFFECT_SELF\n")
 
             # The wrapper the chain calls - see do_effect_step().
@@ -793,8 +793,11 @@ def generate(audio_dir, out_h, out_js, out_md):
     # a protocol agree right up until they don't, and this file is how
     # the web app learns what the firmware speaks.
     #
+    # Effects/ and Firmware/ are siblings at the top of the tree, so
+    # this walks up out of the effects directory and back down into the
+    # firmware rather than assuming the two are nested.
     midi_h = os.path.join(os.path.dirname(os.path.abspath(audio_dir)),
-                          "midi", "midi.h")
+                          "Firmware", "midi", "midi.h")
     with open(midi_h) as f:
         midi_src = f.read()
 

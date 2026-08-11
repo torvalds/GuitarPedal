@@ -1893,7 +1893,7 @@ function handleTelemetry(data) {
         return;
 
     const inPeak = at(1), floor = at(2), out = at(3);
-    const gate = at(4), load = at(5);
+    const gate = at(4), loadHi = at(5), loadLo = at(6);
     const bits = [];
 
     if (inPeak !== undefined) bits.push(`in ${formatDbfs(inPeak)} dB`);
@@ -1913,8 +1913,28 @@ function handleTelemetry(data) {
         else
             bits.push(`gate \u2212${Math.round(-20 * Math.log10(gate / 127))} dB`);
     }
-    if (load !== undefined)
-        bits.push(`cpu ${Math.round((load / 127) * 100)}%`);
+    //
+    // The audio core's share of the sample period, which is the one
+    // number here with a hard ceiling: at 100% there is no idle left and
+    // the pedal starts dropping samples.
+    //
+    // Fourteen bits from layout 2 - an MSB where the seven-bit value
+    // used to be, an LSB after it - and taken by presence rather than by
+    // version, which is how every field on this line is read.  Older
+    // firmware simply has no LSB and gets the coarse reading.
+    //
+    // The decimal place is worth having and was not before.  One
+    // seven-bit step is 0.8% of the sample period while a whole reverb
+    // is about 22%, so rounding to a percent threw away a tenth of the
+    // most expensive effect the pedal has - and the headroom left is
+    // exactly what somebody stacking effects is looking at this for.
+    //
+    if (loadHi !== undefined) {
+        const load = loadLo === undefined
+                   ? loadHi / 127
+                   : ((loadHi << 7) | loadLo) / 16383;
+        bits.push(`cpu ${(load * 100).toFixed(1)}%`);
+    }
 
     const el = document.getElementById('signal-chain-meters');
     if (el) el.textContent = bits.join('  \u00b7  ');

@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -O2 -I../Software -I../Software/build/ \
+CFLAGS = -Wall -O2 -I.. -I../Firmware -I../build/ \
 	 -ffast-math -fsingle-precision-constant -Wfloat-conversion
 
 visualize: test-fft
@@ -13,18 +13,20 @@ test-midi-cin: test-midi-cin.c
 # The effect bench: the pedal's own audio core, built for the host.
 #
 # Everything it needs is generated here rather than taken from
-# ../Software/build, so it does not need the firmware to have been built
+# ../build, so it does not need the firmware to have been built
 # and never writes into the source tree.  The three math tables carry
-# the shift values from Software/CMakeLists.txt; if those move, these
+# the shift values from CMakeLists.txt; if those move, these
 # have to move with them, and the bench will be measuring a different
 # pedal until they do.
 #
-# The include paths want a word.  effect_map.h is generated into gen/
-# and reaches its effects with '#include "../effects/x.h"', which is
-# relative to wherever effect_map.h ends up - so ../Software/audio is on
-# the path purely so that ../Software/audio/../effects resolves.  A
-# symlink would be the other way to do it and would be a file in the
-# tree pretending to be a directory.
+# The include paths want a word.  Three of the four are the top-level
+# directories the bench compiles against - the repository root so that
+# "Audio/x.h" and the generated map's "Effects/y.h" resolve from
+# wherever they are included, ../Firmware for the pedal-side headers the
+# audio core reaches for (status.h, effect-state.h), and ../Audio
+# because the files in there include each other by bare name.  The
+# fourth, bench/shim, has to come first: it is how a workstation gets
+# past the things that only exist on an M33.
 #
 BENCH_GEN = bench/gen
 BENCH_HDRS = $(BENCH_GEN)/effect_map.h $(BENCH_GEN)/pow2.h \
@@ -32,39 +34,47 @@ BENCH_HDRS = $(BENCH_GEN)/effect_map.h $(BENCH_GEN)/pow2.h \
 BENCH_CFLAGS = -Wall -Wno-unused-function -O2 \
 	       -ffast-math -fsingle-precision-constant -Wfloat-conversion \
 	       -DSAMPLES_PER_SEC=48000.0f \
-	       -Ibench/shim -I$(BENCH_GEN) -I../Software -I../Software/audio
+	       -Ibench/shim -I$(BENCH_GEN) -I.. -I../Firmware -I../Audio
 
-$(BENCH_GEN)/effect_map.h: $(wildcard ../Software/effects/*.h) \
-			   ../Software/scripts/gen_effects.py
+$(BENCH_GEN)/effect_map.h: $(wildcard ../Effects/*.h) \
+			   ../scripts/gen_effects.py
 	@mkdir -p $(BENCH_GEN)
-	python3 ../Software/scripts/gen_effects.py ../Software/effects/ \
+	python3 ../scripts/gen_effects.py ../Effects/ \
 		$(BENCH_GEN)/effect_map.h $(BENCH_GEN)/effects.js \
 		$(BENCH_GEN)/dummy_map.md
 
-$(BENCH_GEN)/pow2.h: ../Software/scripts/pow2.py
+$(BENCH_GEN)/pow2.h: ../scripts/pow2.py
 	@mkdir -p $(BENCH_GEN)
 	python3 $< $@ 8
 
-$(BENCH_GEN)/log2.h: ../Software/scripts/log2.py
+$(BENCH_GEN)/log2.h: ../scripts/log2.py
 	@mkdir -p $(BENCH_GEN)
 	python3 $< $@ 8
 
-$(BENCH_GEN)/quarter_sine.h: ../Software/scripts/quarter_sine.py
+$(BENCH_GEN)/quarter_sine.h: ../scripts/quarter_sine.py
 	@mkdir -p $(BENCH_GEN)
 	python3 $< $@ 8
 
 bench/bench: bench/bench.c $(BENCH_HDRS) \
 	     $(wildcard bench/shim/*/*.h bench/shim/*/*/*.h) \
-	     $(wildcard ../Software/audio/*.h) ../Software/effect-state.h \
-	     ../Software/status.h
+	     $(wildcard ../Audio/*.h) ../Firmware/effect-state.h \
+	     ../Firmware/status.h
 	$(CC) $(BENCH_CFLAGS) -o $@ $< -lm
 
 #
 # The same headers, without the audio path: just the biquad
 # constructors, so a filter can be asked where it landed.
 #
+#
+# All three math tables, not just the sine: Audio/util.h includes pow2.h
+# and log2.h too, and coeff.c reaches util.h through biquad.h.  Only the
+# sine was listed, which worked for as long as nobody built this target
+# with an empty gen/ - 'make bench' builds bench/bench first and that
+# generates all three, so the gap stayed hidden.
+#
 bench/coeff: bench/coeff.c $(BENCH_GEN)/quarter_sine.h \
-	     $(wildcard bench/shim/*/*.h) $(wildcard ../Software/audio/*.h)
+	     $(BENCH_GEN)/pow2.h $(BENCH_GEN)/log2.h \
+	     $(wildcard bench/shim/*/*.h) $(wildcard ../Audio/*.h)
 	$(CC) $(BENCH_CFLAGS) -o $@ $< -lm
 
 bench: bench/bench bench/coeff
@@ -222,7 +232,7 @@ else
 	@# this way it doesn't matter whether the firmware has been built.
 	@#
 	@t=`mktemp -d` && \
-	python3 ../Software/scripts/gen_effects.py ../Software/effects/ \
+	python3 ../scripts/gen_effects.py ../Effects/ \
 		$$t/dummy_map.h $$t/effects.js $$t/dummy_map.md && \
 	$(NODE) test-webmidi.js $$t/effects.js; \
 	r=$$?; rm -rf $$t; exit $$r
