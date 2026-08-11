@@ -27,7 +27,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const WEB = path.join(__dirname, '..', 'Software', 'WebMIDI');
+const WEB = path.join(__dirname, '..', 'WebMIDI');
 const effectsJs = process.argv[2] || path.join(WEB, 'effects.js');
 
 let failures = 0;
@@ -258,7 +258,7 @@ app.renderAttention();
 // next to effects.js, so it is wherever that was found.
 //
 const schemaPath = path.join(path.dirname(path.resolve(effectsJs)), 'midi_schema.h');
-const fallback = path.join(__dirname, '..', 'Software', 'build', 'midi_schema.h');
+const fallback = path.join(__dirname, '..', 'build', 'midi_schema.h');
 const schemaFile = fs.existsSync(schemaPath) ? schemaPath
                  : (fs.existsSync(fallback) ? fallback : null);
 

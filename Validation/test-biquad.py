@@ -2,7 +2,7 @@
 #
 # Where does a biquad actually land?
 #
-# Every cookbook constructor in Software/audio/biquad.h takes a frequency
+# Every cookbook constructor in Audio/biquad.h takes a frequency
 # and builds a filter that is supposed to be characteristic at it.  This
 # asks each of them, right across the audio range, whether it did.
 #

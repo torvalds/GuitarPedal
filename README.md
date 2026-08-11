@@ -15,8 +15,19 @@ MIDI from a browser.
 So what's in here:
 
  - `Hardware` has the kicad files.
- - `Software` has the firmware that makes it do something, and
-   `Software/WebMIDI` is the web app that edits it.
+ - `Effects` has the seventeen effects, one file each.  They are up here
+   rather than inside the firmware because three different things are
+   built from them: the firmware, the test bench, and the web app's
+   controls.
+ - `Audio` has the DSP the effects are built out of - biquads, envelope
+   followers, LFOs - and the audio loop itself.  The bench compiles the
+   same files, so what gets measured is the pedal's own arithmetic.
+ - `Firmware` is the rest of what runs on the pedal: USB, MIDI, scenes,
+   the board pin maps.
+ - `WebMIDI` is the web app that edits it.
+ - `scripts` is what the build runs - the effect generator, the math
+   tables, and the checks that refuse a firmware image doing something
+   the audio core shouldn't.
  - `Validation` is the test suite.  Some of it runs on your machine and
    some of it wants a pedal plugged in.
  - `Documentation` remains a very optimistic name for a directory.
@@ -43,13 +54,12 @@ something like
 
 There's more than one board this can be built for, and the build won't
 guess.  You say which one this tree is about once, in
-`Software/board.local`, and it stays said - it's a file rather than a
+`board.local`, and it stays said - it's a file rather than a
 cmake cache variable specifically so that blowing away `build/` doesn't
 silently change your mind for you.  So:
 ```
 	git clone https://github.com/torvalds/GuitarPedal.git
 	cd GuitarPedal
-	cd Software
 	echo unified > board.local
 	make prep
 	make
@@ -212,7 +222,7 @@ compressing.
 
 ### In the browser
 
-`Software/WebMIDI` is a static web page that talks to the pedal over USB
+`WebMIDI` is a static web page that talks to the pedal over USB
 MIDI.  There's nothing to install and it runs off a phone.
 
 It doesn't know what the effects are.  It asks.  The pedal describes

@@ -1,8 +1,8 @@
 Reading the effects
 ===================
 
-A pass over every file in Software/effects/, plus the primitives in
-Software/audio/ that they share.  Two things are wanted from it: defects
+A pass over every file in Effects/, plus the primitives in
+Audio/ that they share.  Two things are wanted from it: defects
 found by reading, and - for each effect - the pot settings that are
 worth putting a signal through.  The second half is the input to the
 measurement work.

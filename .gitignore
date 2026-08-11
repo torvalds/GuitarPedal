@@ -6,4 +6,4 @@ build/
 # and deliberately not the same answer for everybody.
 board.local
 WebMIDI/effects.js
-MIDI_CC_MAP.md
+Documentation/MIDI_CC_MAP.md

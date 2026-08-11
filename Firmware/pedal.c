@@ -43,13 +43,13 @@
 
 #define PWM_WRAP 4096	// Entirely arbitrary
 
-#include "audio/types.h"
-#include "audio/util.h"
-#include "audio/envelope.h"
-#include "audio/single-pole.h"
-#include "audio/biquad.h"
-#include "audio/fft.h"
-#include "audio/analyze.h"
+#include "Audio/types.h"
+#include "Audio/util.h"
+#include "Audio/envelope.h"
+#include "Audio/single-pole.h"
+#include "Audio/biquad.h"
+#include "Audio/fft.h"
+#include "Audio/analyze.h"
 #include "tac5112.h"
 
 #include "midi/midi.h"
@@ -61,7 +61,7 @@
 static int tuner_mode = 0;
 static volatile int user_interaction = 0;
 
-#include "audio/effect.h"
+#include "Audio/effect.h"
 
 uint8_t effect_chain[MAX_ROUTED_EFFECTS];
 uint8_t routed_effect_count = 0;

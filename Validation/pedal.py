@@ -485,7 +485,7 @@ def wet_dry(p, settings_effect):
     set_pot(p, settings_effect, SETTINGS_USB_OUT, USB_OUT_WET_DRY)
 
 
-def effect_count(map_h="../Software/build/effect_map.h"):
+def effect_count(map_h="../build/effect_map.h"):
     """How many effects this firmware has, so 'the last one' has a number."""
     try:
         text = open(map_h).read()

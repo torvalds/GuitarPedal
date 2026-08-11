@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-EFFECTS = HERE.parent / "Software" / "effects"
+EFFECTS = HERE.parent / "Effects"
 MAP = HERE / "bench" / "gen" / "effect_map.h"
 
 POT_RE = re.compile(

@@ -26,9 +26,9 @@
 
 #include "pico/stdlib.h"
 
-#include "audio/types.h"
-#include "audio/util.h"
-#include "audio/biquad.h"
+#include "Audio/types.h"
+#include "Audio/util.h"
+#include "Audio/biquad.h"
 
 //
 // db_to_A() lives in util.h and is what every caller of the three gain

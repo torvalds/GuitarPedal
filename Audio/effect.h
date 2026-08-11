@@ -42,7 +42,7 @@
 // "before" above means literally earlier in the file.
 //
 #include "lfo.h"
-#include "audio/cycles.h"
+#include "Audio/cycles.h"
 
 //
 // How long an effect takes to fade in or out, in samples - a tenth of a

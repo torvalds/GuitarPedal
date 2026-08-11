@@ -20,7 +20,7 @@ set(PICO_HARD_FLOAT_ABI 1)
 
 # initialize the SDK based on PICO_SDK_PATH
 # note: this must happen before project()
-include(pico-sdk/pico_sdk_init.cmake)
+include(Firmware/pico-sdk/pico_sdk_init.cmake)
 
 project(rp2350)
 
@@ -178,10 +178,10 @@ add_custom_command(
 )
 list(APPEND PEDAL_GENERATED "${SINE_HEADER}")
 
-file(GLOB EFFECT_HEADERS CONFIGURE_DEPENDS "effects/*.h")
+file(GLOB EFFECT_HEADERS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Effects/*.h")
 set(EFFECT_MAP_HEADER "${CMAKE_CURRENT_BINARY_DIR}/effect_map.h")
 set(EFFECT_JS "${CMAKE_CURRENT_SOURCE_DIR}/WebMIDI/effects.js")
-set(EFFECT_MD "${CMAKE_CURRENT_SOURCE_DIR}/MIDI_CC_MAP.md")
+set(EFFECT_MD "${CMAKE_CURRENT_SOURCE_DIR}/Documentation/MIDI_CC_MAP.md")
 
 # Written alongside effect_map.h rather than named on the command line -
 # the generator puts it next to it - but it is still an output, and the
@@ -191,7 +191,7 @@ set(EFFECT_SCHEMA "${CMAKE_CURRENT_BINARY_DIR}/midi_schema.h")
 add_custom_command(
 	OUTPUT "${EFFECT_MAP_HEADER}" "${EFFECT_SCHEMA}" "${EFFECT_JS}" "${EFFECT_MD}"
 	COMMAND "${SCRIPT_DIR}/gen_effects.py"
-		"${CMAKE_CURRENT_SOURCE_DIR}/effects"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Effects"
 		"${EFFECT_MAP_HEADER}"
 		"${EFFECT_JS}"
 		"${EFFECT_MD}"
@@ -241,10 +241,10 @@ add_custom_target(pedal_generated DEPENDS ${PEDAL_GENERATED})
 # the supported way round rather than a trick.
 #
 # Our own sources only - we don't get to pick the SDK's warnings
-set_source_files_properties(pedal.c usb-device.c PROPERTIES
+set_source_files_properties(Firmware/pedal.c Firmware/usb-device.c PROPERTIES
 	COMPILE_OPTIONS -Wdouble-promotion)
 
-set(PIO_DIR "${CMAKE_CURRENT_SOURCE_DIR}/pio")
+set(PIO_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Firmware/pio")
 
 add_library(pedal_pio INTERFACE)
 pico_generate_pio_header(pedal_pio ${PIO_DIR}/bitstream.pio)
@@ -357,26 +357,26 @@ target_compile_definitions(${tgt} PRIVATE
 	PICO_USB_RESET_INCLUDE_DEFAULT_APP_DRIVER_CB=1)
 
 target_sources(${tgt} PRIVATE
-	pedal.c
+	Firmware/pedal.c
 	"${SINE_HEADER}"
-	tinyusb/src/tusb.c
-	tinyusb/src/common/tusb_fifo.c
-	tinyusb/src/portable/raspberrypi/rp2040/rp2040_usb.c
+	Firmware/tinyusb/src/tusb.c
+	Firmware/tinyusb/src/common/tusb_fifo.c
+	Firmware/tinyusb/src/portable/raspberrypi/rp2040/rp2040_usb.c
 )
 
 target_sources(${tgt} PRIVATE
-	usb-device.c
-	tinyusb/src/device/usbd.c
-	tinyusb/src/class/audio/audio_device.c
-	tinyusb/src/class/midi/midi_device.c
-	tinyusb/src/portable/raspberrypi/rp2040/dcd_rp2040.c
+	Firmware/usb-device.c
+	Firmware/tinyusb/src/device/usbd.c
+	Firmware/tinyusb/src/class/audio/audio_device.c
+	Firmware/tinyusb/src/class/midi/midi_device.c
+	Firmware/tinyusb/src/portable/raspberrypi/rp2040/dcd_rp2040.c
 	#
 	# Compiled in rather than linked as pico_usb_reset, which would
 	# drag in the sdk's own tinyusb alongside the submodule this
 	# builds against.  The file includes "tusb.h" and gets whichever
 	# one is on the path.
 	#
-	pico-sdk/src/rp2_common/pico_usb_reset/usb_reset.c)
+	Firmware/pico-sdk/src/rp2_common/pico_usb_reset/usb_reset.c)
 
 target_link_libraries(${tgt}
 	pico_stdlib
@@ -394,17 +394,18 @@ target_link_libraries(${tgt}
 
 target_include_directories(${tgt} PRIVATE
 	#
-	# The tree root, so that a header can say "audio/foo.h" and mean
-	# it.  pedal.c gets away without this because a quoted include
-	# searches the including file's own directory first, and pedal.c
-	# sits here - but audio/effect.h does not, and it needs to reach
-	# audio/cycles.h by a path the bench can shim.  See that file.
+	# The repository root, so that a header says "Audio/foo.h" and the
+	# generated effect map says "Effects/bar.h", and both mean it from
+	# wherever they are included.  Those two are top-level rather than
+	# under Firmware/ because Validation's bench compiles the same
+	# files and WebMIDI is generated from them.
 	#
 	.
-	include
-	tinyusb/src
-	pico-sdk/src/rp2_common/pico_usb_reset/include
-	pico-sdk/src/common/pico_usb_reset_interface_headers/include
+	Firmware
+	Firmware/include
+	Firmware/tinyusb/src
+	Firmware/pico-sdk/src/rp2_common/pico_usb_reset/include
+	Firmware/pico-sdk/src/common/pico_usb_reset_interface_headers/include
 	"${CMAKE_CURRENT_BINARY_DIR}")
 
 #
@@ -461,8 +462,8 @@ add_custom_command(TARGET ${tgt} POST_BUILD
 #
 add_custom_command(TARGET ${tgt} POST_BUILD
 	COMMAND "${SCRIPT_DIR}/check-readme.py"
-		"${CMAKE_CURRENT_SOURCE_DIR}/effects"
-		"${CMAKE_CURRENT_SOURCE_DIR}/../README.md"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Effects"
+		"${CMAKE_CURRENT_SOURCE_DIR}/README.md"
 	VERBATIM)
 
 

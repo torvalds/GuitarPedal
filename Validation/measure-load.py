@@ -65,7 +65,7 @@ STEP_PCT = 100.0 / 16383   # what one telemetry step is worth, 14-bit
 COARSE = 128               # ...and how many of them the old 7-bit step was
 
 
-def effect_names(map_h="../Software/build/effect_map.h"):
+def effect_names(map_h="../build/effect_map.h"):
     try:
         text = open(map_h).read()
     except OSError:
