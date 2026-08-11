@@ -89,6 +89,24 @@ check-biquad: bench/coeff
 	./test-biquad.py
 
 #
+# Do the pages in Documentation/effects still describe the effects, and
+# do their charts still draw?
+#
+# Not slow - three seconds for a page, because bench.py parallelises the
+# sweeps and mmdc takes the whole markdown file in one browser start.
+# It is out of 'check' for the other reason: drawing the charts wants
+# node and a headless browser, fetched through npx the first time, and
+# 'check' should stay runnable with nothing but python and a compiler.
+# It says so rather than skipping quietly when it cannot draw them.
+#
+# This is the target to run after changing an effect, which is exactly
+# when a page goes stale - the last analysis was wrong from the moment
+# single_pole_freq() was fixed under it, and nothing said so for a day.
+#
+check-analysis: bench/bench
+	./check-analysis.py
+
+#
 # The other half of the bench: whether it agrees with a real pedal.
 #
 # Separate from check-effects because it needs hardware, and separate
@@ -210,6 +228,6 @@ else
 	r=$$?; rm -rf $$t; exit $$r
 endif
 
-.PHONY: bench check check-analog check-bench check-biquad check-boot
-.PHONY: check-effects check-hw check-loop
+.PHONY: bench check check-analog check-analysis check-bench check-biquad
+.PHONY: check-boot check-effects check-hw check-loop
 .PHONY: check-midi check-reboot check-split

@@ -21,6 +21,12 @@ audible.  The second cannot be removed without changing what a
 'struct biquad_coeff' is.  The third is a classic and turns out to be
 worth almost nothing here, which is itself worth knowing.
 
+A fourth thing sits underneath the first, and is section 4: the sine
+table's own interpolation, which is where the 53 % actually came from
+and which has since been fixed at source.  That does not make the half
+angle in section 1 redundant, but it does change what it is for - see
+the end of section 3.
+
 
 1. The angle, which was the real bug
 ------------------------------------
@@ -116,6 +122,20 @@ set or a different topology, not a cleverer way to compute the same five
 floats.  It is 0.4 % at 20 Hz, a third of a semitone, and the frequency
 pots step by a whole semitone, so nothing is waiting on it.
 
+**Nor does fixing the sine table**, which is the more interesting of the
+two, because it was predicted to.  Once section 4 is in, the plain
+cos(w0) route and the half-angle route measure the same thing:
+
+	half angle, corrected table    worst 20-80 Hz   0.855 %
+	plain cos,  corrected table    worst 20-80 Hz   0.855 %
+
+both through bench/coeff, both real code.  A model said the plain route
+would come out at 0.43 % and it does not, for a reason the model left
+out: 'struct sincos' holds floats, so the plain route stores cos(w0) as
+a float32 near 1.0 exactly as the half-angle route stores 1 - 2s^2.  The
+last rounding before the coefficient is the same rounding either way,
+and it is the one that sets the floor.
+
 
 3. The cancellation, which is famous and barely matters
 -------------------------------------------------------
@@ -175,6 +195,76 @@ audible problem, and anyone reading (1 - w0.cos) and reaching for the
 smelling salts - which is the natural reaction, and was the first guess
 here - should measure it before rewriting anything around it.
 
+**This is what the half angle is for now.**  Section 4 removes the
+reason it was introduced: with the table corrected, asking for cos(w0)
+directly is no longer the bad question, and the two routes place a
+filter identically.  What the half angle still buys is this fold, which
+the plain route cannot have - cos straight out of the table is not
+algebraically 1 - 2s^2, so there is nothing for the compiler to cancel:
+
+	numerator b0     plain cos      half angle
+	  20 Hz        1.695593e-06   1.708975e-06    +0.783 %
+	  30 Hz        3.863572e-06   3.884833e-06    +0.547 %
+	  60 Hz        1.532269e-05   1.535918e-05    +0.238 %
+
+So it stays, having swapped jobs: it was protection against the table
+and is now the thing that keeps one line of _biquad_lpf exact.
+
+
+4. The chord, which was under all of it
+---------------------------------------
+
+Section 1 fixed the biquads by not asking the table the question it was
+bad at.  This is the same problem attacked at the other end: making the
+question safe to ask.
+
+fastsincos() interpolates linearly, and **a chord under an arc is always
+nearer zero than the function it approximates**.  So the error is not
+noise - it has a sign, and the table reads uniformly small.  That signed
+part is what matters, because it does not average out: it is what made
+the test tone come out 3 ppm quiet, and it is what got divided by
+sin(w0) and became 53 %.
+
+Linear interpolation misses by (h^2/2)*t*(1-t)*f''.  For a sinusoid f''
+is -f, so **the miss is proportional to the value the chord just
+produced** - which makes the correction a pure relative scale, one
+multiply-add each:
+
+	float defect = QUARTER_SINE_DEFECT * phase * (1.0f - phase);
+	x += defect * x;
+	y += defect * y;
+
+Being proportional is what makes it hold over the whole quarter rather
+than only in the middle: at a zero crossing the correction vanishes
+exactly as the error does.  Measured over 16384 points through the
+function itself:
+
+	worst error   4.74e-06 -> 1.32e-07     (about two float32 ulp)
+	mean bias    -2.00e-06 -> -3.24e-09
+
+Nine instructions, 41 to 50, of which eight are floating point.  The
+constant is h^2/2 and is emitted by quarter_sine.py, which is what knows
+h - written beside the user it would go stale the first time the table
+size moved, with nothing to say so.
+
+Cubic Hermite was measured and rejected.  Its slopes are the *other*
+output's endpoints, so it needs no new table reads, and its mathematical
+error is h^4/384 = 3.7e-12 - but it measures 3.4e-08, because at that
+point it is measuring float32 and not interpolation.  It costs 26
+instructions instead of nine to buy 1.8x of pure rounding noise.
+
+**Nothing audible changed.**  The generated sine's worst spur goes from
+-120 dB to about -169 dB, against a best-case board noise floor of
+-102 dBFS.  What changed is that the plain, obvious way to ask this
+table for a small angle now works: with this in, the original
+formulation of biquad_w0() passes the whole check-biquad sweep on its
+own.  The half angle went from being the fix to being an optimisation.
+
+analyze.h's Hann window and lfo.h's sine walk the same table and do not
+get the correction, deliberately.  Neither is ever asked for an angle,
+so the chord is good enough - which is the same "good enough until it
+isn't" as the biquads, in the two places where it stays good enough.
+
 
 What to take away
 -----------------
@@ -182,6 +272,20 @@ What to take away
 - A cosine is a bad way to carry a small angle, and the giveaway is that
   the error is divided by sin(w0) on the way out.  If a quantity is
   going to be used as an angle, keep it as one.
+
+- **The code that hit this was not wrong.**  It asked for a cosine and
+  expected the table's advertised precision, which is what anyone would
+  do, and nothing in the interface said that cosine-near-zero is the one
+  place that expectation fails.  A primitive with a quiet exception in
+  it will be walked into again, by somebody who has no reason to
+  suspect it - so an approximation is better fixed than documented.
+
+- **Measure the real thing, not a model of it.**  Three times in one day
+  a numpy model of this arithmetic disagreed with bench/coeff, and every
+  time the model was the optimistic one.  Twice it was a sampling
+  artifact and once - the 0.43 % in section 2 - it was leaving out a
+  float32 store that the real struct performs.  The model is for
+  deciding what to measure.
 
 - Which of three co-located errors dominates is not obvious by reading,
   and here the famous one was the smallest by a factor of sixty.  The

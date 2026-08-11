@@ -105,6 +105,12 @@ takes float samples on stdin and hands them back on stdout.  It is not a
 model of the signal path.  It's the signal path, with the two register
 blocks the audio core touches replaced by ordinary memory.
 
+``make check-analysis`` is the other host-only one, and it is what keeps
+the per-effect pages under `Documentation/effects` honest: every curve on
+those pages is a measurement, and this re-measures and says when one has
+stopped being true.  It is separate from ``check`` because it re-runs
+every sweep on every page, which is slow.
+
 Then there are the ones that want hardware: ``make check-hw`` with a
 signal generator, ``make check-analog`` with a patch cable from the
 pedal's output back to its own input, ``make check-bench`` to ask whether
@@ -265,6 +271,7 @@ from anything I typed here.
  - **Klonlike** - the obvious model: 18V charge pump for headroom,
    germanium diodes, and the clean/dirty blend that tracks the gain
    knob.  Originally by Bryan Leavelle.
+   [Measured](Documentation/effects/klon.md).
  - **Phaser**, **Flanger** and **Vibrato** - the modulation three.  All
    simple, all a delay line and an LFO wearing different hats.
  - **Tape Echo** - the Echo King from Cleveland Music Co, a model of the
