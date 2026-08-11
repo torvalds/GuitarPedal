@@ -103,6 +103,79 @@ half-second RMS of a bass. Those differ by the crest factor, which for plucked
 bass is a good 12 dB, so the knee appears in a different place on each and
 neither is wrong.
 
+## What the knobs are worth
+
+The threshold is compared against an envelope of the input, so how much any
+setting does depends entirely on how hot the instrument is. That makes "is
+this default any good" a question with three different answers:
+
+```mermaid
+%%{init: {'themeVariables': {'xyChart': {'plotColorPalette': '#0072b2, #d55e00, #009e73'}}}}%%
+xychart-beta
+    title "Dynamic range removed. Input peaking -6 blue, -12 orange, -20 green"
+    x-axis "Level, dB" -40 --> -15
+    y-axis "dB of range removed" -1 --> 17
+    line [15.7, 12.0, 8.2, 4.4, 0.9, -0.0]
+    line [11.2, 7.4, 3.6, 0.5, -0.0, -0.0]
+    line [5.2, 1.5, -0.0, -0.0, -0.0, -0.0]
+```
+
+**At a realistic instrument level the default threshold does nothing at all.**
+A guitar around 0.1 V RMS lands near −12 dBFS peak once its crest factor is
+allowed for, and on that middle line the default −20 dB removes 0.0 dB of
+dynamic range. You have to be at −35 before it takes out a useful 7 dB, and
+−35 is most of the way to the bottom of a pot that stops at −40.
+
+The top half of the Level control — everything above about −25 — does nothing
+for any input a guitar produces.
+
+## Attack and release cost low notes
+
+A fast envelope follows the waveform rather than the note, and modulating the
+gain at the note's own frequency is distortion. It is a bass problem far more
+than a guitar one: the penalty falls about 11 dB per octave.
+
+```mermaid
+%%{init: {'themeVariables': {'xyChart': {'plotColorPalette': '#0072b2, #d55e00, #009e73'}}}}%%
+xychart-beta
+    title "THD by note. Release 50ms blue, 150ms orange, 500ms green"
+    x-axis "Hz" [40, 80, 160, 320, 640]
+    y-axis "THD, dB" -105 --> -35
+    line [-40.5, -50.6, -62.0, -73.9, -85.8]
+    line [-48.4, -58.5, -70.0, -81.8, -93.8]
+    line [-57.6, -67.8, -79.3, -91.1, -103.1]
+```
+
+At the default 150 ms, a guitar's low E measures −58.5 dB and a bass low E
+−48.4 dB. So the default is comfortable for the instrument this pedal is for
+and marginal for the one an octave below it. Dropping to 50 ms costs 8 dB
+everywhere and takes bass low E to −40.5 dB, which is audible.
+
+Attack barely matters here by comparison — the whole 2 ms to 100 ms range
+moves THD by 5 dB — while it does change how much gets squeezed, from 9.9 dB
+at 2 ms to 4.3 dB at 100 ms. So attack is close to a free control and release
+is not.
+
+Ratio is nearly free above about 8: at Level −30 it buys 8.8 dB of squeeze at
+8:1 and 9.4 dB at 20:1, against 8.2 dB at the default 4.8.
+
+## What the defaults probably should be
+
+**These defaults were never analysed** — they were picked when the effect was
+written. On this evidence the only one that is clearly wrong is Level, and it
+is wrong in the way that matters: at −20 dB the effect is inaudible on a
+guitar, so the pedal ships with its compressor switched off in all but name.
+
+Something around **−35 dB** would give roughly 7 dB of range reduction at
+instrument level, which is a compressor doing its job without squashing the
+performance. That is close enough to the bottom of the pot's range to suggest
+the **range** wants moving too — `LINEAR(-40 0)` spends its top half on
+signals no guitar produces.
+
+The rest hold up. Ratio 4.8 is in the useful part of its curve, attack 15 ms
+is a cheap middle, release 150 ms is right for guitar. Boost is makeup gain
+and 6 dB pairs sensibly with the reduction a working threshold would produce.
+
 ## Reproducing this
 
 ```

@@ -64,9 +64,31 @@ def pot_value(name, db, lo, hi):
     return ["--pot", f"{COMP}:{name}={round((db - lo) / (hi - lo) * 120)}"]
 
 
-def routed(level_db=-20.0):
+def routed(level_db=-20.0, attack_ms=15.0, release_ms=150.0,
+           ratio=4.8, boost_db=6.0):
     return (["--pot", "Signal Chain:Gate=0", "--route", COMP]
-            + pot_value("Level", level_db, -40.0, 0.0))
+            + pot_value("Level", level_db, -40.0, 0.0)
+            + pot_value("Attack", attack_ms, 2.0, 100.0)
+            + pot_value("Release", release_ms, 50.0, 500.0)
+            + pot_value("Ratio", ratio, 1.0, 20.0)
+            + pot_value("Boost", boost_db, 0.0, 24.0))
+
+
+def squeeze(x, window, **kw):
+    """How many dB of dynamic range a setting takes out of a performance.
+
+    The p5..p95 spread of the output's half-second levels against the
+    input's.  Not the peak reduction, which any limiter wins on, and not
+    the mean gain, which is mostly the makeup: the question a compressor
+    is bought to answer is whether the quiet and the loud ended up
+    closer together.
+    """
+    dry, _, _ = B.run(["--pot", "Signal Chain:Gate=0"], x, warmup=B.settle())
+    di = levels(np.asarray(dry), window)
+    wet, _, _ = B.run(routed(**kw), x, warmup=B.settle())
+    wo = levels(np.asarray(wet), window)
+    spread = lambda v: float(np.percentile(v, 95) - np.percentile(v, 5))
+    return spread(di) - spread(wo)
 
 
 def levels(y, window):
@@ -77,8 +99,9 @@ def levels(y, window):
 
 def main():
     raw = decode(INPUT)
-    peak = float(np.abs(raw).max())
-    x = (raw * (10 ** (PEAK_DBFS / 20) / peak)).astype(np.float32)
+    peak_of = float(np.abs(raw).max())
+    peak = peak_of
+    x = (raw * (10 ** (PEAK_DBFS / 20) / peak_of)).astype(np.float32)
     rms = 20 * math.log10(float(np.sqrt((x.astype(np.float64) ** 2).mean())))
 
     print("# measured by analyse-compressor.py - paste into "
@@ -151,6 +174,40 @@ def main():
         print("x-axis " + str(centres))
         print("gain " + str(row))
         print("windows " + str(counts))
+
+    #
+    # What the knobs are worth, and at what input level.
+    #
+    # The threshold is compared against an envelope of the input, so how
+    # much any setting does depends entirely on how hot the instrument
+    # is.  Three levels rather than one, because the answer to "is this
+    # default any good" turned out to be different at each.
+    #
+    print("\n## dynamic range removed, by threshold and input level\n")
+    thresholds = list(range(-40, -14, 5))
+    print("x-axis " + str(thresholds))
+    for peak in (-6.0, -12.0, -20.0):
+        y = (raw * (10 ** (peak / 20) / peak_of)).astype(np.float32)
+        print(f"peak {peak:.0f} " +
+              str([round(squeeze(y, window, level_db=float(t)), 1)
+                   for t in thresholds]))
+
+    #
+    # Attack and release cost distortion on low notes, because a fast
+    # envelope follows the waveform rather than the note.  Measured up
+    # the neck as well, since this is a guitar pedal and the bass low E
+    # is the worst case rather than the usual one.
+    #
+    for name, values, kw in (("release", [50, 100, 150, 300, 500], "release_ms"),
+                             ("attack", [2, 5, 15, 30, 60, 100], "attack_ms")):
+        print(f"\n## THD against {name}, driven 18 dB over threshold\n")
+        notes = [40, 80, 160, 320, 640]
+        print("x-axis " + str(notes))
+        for v in values:
+            row = [round(float(B.measure(routed(level_db=-30.0, **{kw: float(v)}),
+                                         f0=float(f), dbfs=-12.0)["thd_db"]), 1)
+                   for f in notes]
+            print(f"{name} {v} " + str(row))
 
     return 0
 
