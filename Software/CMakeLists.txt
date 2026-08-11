@@ -393,6 +393,14 @@ target_link_libraries(${tgt}
 	pico_sha256)
 
 target_include_directories(${tgt} PRIVATE
+	#
+	# The tree root, so that a header can say "audio/foo.h" and mean
+	# it.  pedal.c gets away without this because a quoted include
+	# searches the including file's own directory first, and pedal.c
+	# sits here - but audio/effect.h does not, and it needs to reach
+	# audio/cycles.h by a path the bench can shim.  See that file.
+	#
+	.
 	include
 	tinyusb/src
 	pico-sdk/src/rp2_common/pico_usb_reset/include
