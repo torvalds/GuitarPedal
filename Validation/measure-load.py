@@ -10,36 +10,27 @@
 # is the idle fraction exactly and 1 - idle is the load.  Nothing is
 # estimated and nothing is a model; it is the audio loop timing itself.
 #
-# Telemetry sends it through fraction_to_byte(), so it arrives as 7 bits:
-# 0.787% of the sample period per step.
+# Two things make that worth reading finely.  The firmware times the
+# spin in cpu cycles, so a tick is 0.03% of the sample period rather
+# than the 4.8% a 1MHz timer gives; and telemetry carries the result at
+# fourteen bits - an MSB where the old seven-bit byte was, an LSB after
+# it - so 0.006% a step rather than 0.787%.  Neither is much use without
+# the other.
 #
-# WHICH NUMBER TO BELIEVE, WHICH IS THE WHOLE POINT OF THIS FILE
+# Measured across four boots, which is what that buys:
 #
-# The obvious statistic is (routed - empty), and it is the bad one.
-# Measured across five reboots of identical firmware:
+#   empty chain      9.577 .. 9.614 %
+#   reverb routed   31.624 .. 31.691 %     std 0.014 %
 #
-#   boot   empty         reverb   difference
-#      1   13            38       25.00
-#      2   12            38       26.00
-#      3   11, 12        38       26.75
-#      4   11            38       27.00
-#      5   11, 12, 13    38       26.00
+# So (routed - empty) from a single reading is meaningful, and -b N is
+# for confidence rather than for averaging anything away.  The empty
+# reading is printed beside it because a baseline that has moved is the
+# first sign that something outside this has changed.
 #
-# The routed reading never moved.  The *empty* one wandered over three
-# steps and dithered within a single boot.  So the noise is all in the
-# baseline, and subtracting it does not cancel - it imports it, and the
-# spread it imports is the same size as the difference a change to one
-# effect makes.
-#
-# Why the idle case is the noisy one is not established here.  A
-# plausible half is that get_usb_audio_input() takes a different path
-# depending on whether the host happens to be streaming, and whether
-# pipewire has the pedal open varies across re-enumeration - but that is
-# a guess and is not what this reports.
-#
-# So the number this reports is the **routed absolute load**, and
-# comparing two firmwares means comparing that.  The empty reading is
-# printed for context, with its spread, and never subtracted.
+# Numbers taken before either change are not comparable at this
+# precision: with a microsecond timer the idle reading sat in one of two
+# states 1.2% apart and held one for a whole boot, which is the
+# instrument and not the pedal.
 #
 # WHY AN IDLE PEDAL IS A VALID PLACE TO MEASURE
 #
@@ -70,7 +61,8 @@ import pedal
 
 SETTLE = 1.0            # effect fades are 100 ms, the load meter 21 ms
 DEFAULT = [11]          # Reverb
-STEP_PCT = 100.0 / 127  # what one telemetry step is worth
+STEP_PCT = 100.0 / 16383   # what one telemetry step is worth, 14-bit
+COARSE = 128               # ...and how many of them the old 7-bit step was
 
 
 def effect_names(map_h="../Software/build/effect_map.h"):
@@ -81,12 +73,44 @@ def effect_names(map_h="../Software/build/effect_map.h"):
     return {i: n for i, n in enumerate(re.findall(r'\.name = "([^"]*)"', text))}
 
 
-def sample_loads(p, n, gap=0.25):
-    """n telemetry frames, one aseqdump for the lot.
+def _frames(text):
+    """Every telemetry body in a blob of hex, as a load value."""
+    out = []
+    for m in re.finditer(r"F0 7D 0B((?: [0-9A-F]{2})+?) F7", text.upper()):
+        body = [int(v, 16) for v in m.group(1).split()]
+        #
+        # 14 bits where the firmware sends them, and the old 7-bit byte
+        # scaled up where it does not, so an older build stays
+        # comparable with a newer one.
+        #
+        if len(body) >= 7:
+            out.append((body[5] << 7) | body[6])
+        elif len(body) >= 6:
+            out.append(body[5] * COARSE)
+    return out
 
-    telemetry() in pedal.py starts and stops a dump per call, which is
-    both slow and lossy - the reply can land after the dump is killed.
-    One dump held open across every request loses nothing.
+
+def _via_amidi(dev, n, dump_s):
+    """One invocation per reading: sends and dumps in about half a second."""
+    out = []
+    for _ in range(n):
+        r = subprocess.run(["amidi", "-p", dev, "-S", "F0 7D 0B F7",
+                            "-d", "-t", str(dump_s)],
+                           capture_output=True, text=True)
+        if r.returncode:
+            return None
+        out += _frames(" ".join(r.stdout.split()))
+    return out
+
+
+def _via_seq(p, n, gap=0.25):
+    """The sequencer, for when something else holds the raw device.
+
+    Slower - holding aseqdump open is itself what makes the raw device
+    busy, so pedal.send() drops to aplaymidi at two seconds a call - and
+    the extra traffic is not nothing when the thing being measured is
+    the audio core's spare time.  Correct, though, and available when
+    the fast path is not.
     """
     dump = subprocess.Popen(["aseqdump", "-p", p], stdout=subprocess.PIPE,
                             stderr=subprocess.DEVNULL, text=True)
@@ -101,21 +125,42 @@ def sample_loads(p, n, gap=0.25):
         text = dump.stdout.read()
         dump.wait()
 
-    blob = bytes.fromhex("".join(
-        re.findall(r"System exclusive\s+((?:[0-9A-Fa-f]{2} ?)+)", text)
-    ).replace(" ", ""))
+    hexed = " ".join(re.findall(r"System exclusive\s+((?:[0-9A-Fa-f]{2} ?)+)",
+                                text))
+    return _frames(" ".join(hexed.split()))
 
-    out, i = [], 0
-    while True:
-        i = blob.find(bytes([0xF0, 0x7D, 0x0B]), i)
-        if i < 0:
-            break
-        end = blob.find(0xF7, i)
-        body = blob[i + 3:end]
-        if len(body) >= 6:
-            out.append(body[5])
-        i = end + 1 if end > 0 else i + 3
-    return out
+
+_slow_warned = []
+
+
+def sample_loads(p, n, dump_s=0.4):
+    """n telemetry frames, by whichever transport is available.
+
+    amidi is preferred and costs about half a second a reading.  Whether
+    it can be had depends on what else has the MIDI port open, and the
+    ordinary case is the WebMIDI app in a browser tab - which also polls
+    telemetry five times a second while it is there.  So being refused
+    is a condition rather than an error, exactly as pedal.py's _play()
+    already assumes, and the fallback is not a rare path.
+    """
+    dev = pedal.rawmidi(p)
+    if dev:
+        got = _via_amidi(dev, n, dump_s)
+        if got is not None:
+            return got
+    if not _slow_warned:
+        print("  (raw MIDI device busy - using the sequencer, four times "
+              "slower and noisier)")
+        _slow_warned.append(True)
+    return _via_seq(p, n)
+
+
+def fmt(vals):
+    """A reading as a percentage range, however many bits it arrived in."""
+    if not vals:
+        return "-"
+    lo, hi = min(vals) * STEP_PCT, max(vals) * STEP_PCT
+    return "%.3f" % lo if lo == hi else "%.3f..%.3f" % (lo, hi)
 
 
 def reboot(p):
@@ -160,17 +205,17 @@ def main():
             print("  %4d   no reply" % (k + 1))
             continue
         routed_all += routed
-        print("  %4d   %-16s  %-14s  %6.3f %%"
-              % (k + 1, sorted(set(empty)) or "-", sorted(set(routed)),
+        print("  %4d   %-16s  %-16s  %6.3f %%"
+              % (k + 1, fmt(empty), fmt(routed),
                  statistics.mean(routed) * STEP_PCT))
 
     if routed_all:
         m = statistics.mean(routed_all)
-        print("\n  %s routed: %.2f/127 = %.3f %% of the sample period"
-              % (label, m, m * STEP_PCT))
+        print("\n  %s routed: %.3f %% of the sample period" % (label, m * STEP_PCT))
         if len(set(routed_all)) > 1:
-            print("  spread %d..%d steps across every reading"
-                  % (min(routed_all), max(routed_all)))
+            print("  spread %.3f %% across every reading, %.3f %% std"
+                  % ((max(routed_all) - min(routed_all)) * STEP_PCT,
+                     statistics.pstdev(routed_all) * STEP_PCT))
 
     pedal.program_change(p, 0)
     print("  scene 0 reloaded")

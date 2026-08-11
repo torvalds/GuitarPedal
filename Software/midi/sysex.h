@@ -248,6 +248,27 @@ static uint8_t fraction_to_byte(float f)
 }
 
 //
+// The same, where seven bits are not enough.
+//
+// One step of fraction_to_byte() is 0.787% of whatever is being
+// reported, and for the load meter that is coarse enough to be the
+// measurement rather than the thing measured: a whole reverb is 26
+// steps, so a change worth a couple of percent of one effect is a step
+// or two and cannot be told from the quantiser. Sent MIDI's way, as a
+// 7-bit MSB and a 7-bit LSB.
+//
+static uint16_t fraction_to_14bit(float f)
+{
+	int v = (int)(f * 16383.0f + 0.5f);
+
+	if (v < 0)
+		v = 0;
+	if (v > 16383)
+		v = 16383;
+	return v;
+}
+
+//
 // The expression jack probe's answer.  Bringup only - see exp.h.
 //
 // Twelve bits will not fit in a SysEx data byte, so each reading goes
@@ -306,13 +327,35 @@ static void sysex_send_telemetry(void)
 	//
 	float gate = chain.active ? chain.mult : 1.0f;
 
+	//
+	// The load goes out at fourteen bits, as an MSB where the seven-bit
+	// version always was and an LSB appended after it.
+	//
+	// Appending is safe and is how this layout is meant to grow: a
+	// reader takes fields while they last and treats a missing one as
+	// absent rather than as zero, which is what lets old firmware and
+	// new talk to old apps and new in any combination.  WebMIDI's
+	// handleTelemetry() is written that way and test-webmidi.js tests
+	// both directions.
+	//
+	// What is *not* pure addition is the byte that was already there:
+	// it now carries the top seven bits of a fourteen-bit number rather
+	// than a seven-bit rounding of the same quantity, which moves it by
+	// at most one step.  A reader that only knows the old layout shows
+	// a percentage, so that is at most one percent on a meter - hence
+	// the version byte going to 2 rather than this being pretended to
+	// be an addition.
+	//
+	uint16_t load = fraction_to_14bit(meter_load);
+
 	const uint8_t body[] = {
-		1,				// layout version
+		2,				// layout version
 		level_to_dbfs(meter_in),	// input peak, before Trim
 		level_to_dbfs(meter_floor),	// the quiet level under it
 		level_to_dbfs(meter_out),	// output peak, after Volume
 		fraction_to_byte(gate),		// 127 open, 0 fully closed
-		fraction_to_byte(meter_load),	// share of the sample period used
+		load >> 7,			// share of the sample period used
+		load & 127,			// ...and the bits under it
 	};
 
 	sysex_tx_start();

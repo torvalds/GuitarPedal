@@ -455,8 +455,21 @@ static inline raw_sample_t *i2s_dma_rx_ptr(void)
 //
 static struct envelope meter_in_env, meter_floor_env, meter_out_env;
 
+//
+// The M33's cycle counter, at the architectural addresses rather than
+// through CMSIS, which buries them in a PPB struct.  It is per-core, so
+// this has to be done from the core that reads it - init_meters() runs
+// inside audio_processing(), which is core 1 and is the whole point.
+//
+#define DWT_DEMCR	(*(volatile uint32_t *)0xE000EDFCu)
+#define DWT_CTRL	(*(volatile uint32_t *)0xE0001000u)
+#define DWT_CYCCNT	(*(volatile uint32_t *)0xE0001004u)
+
 static void init_meters(void)
 {
+	DWT_DEMCR |= 1u << 24;		// TRCENA: the DWT is off until this
+	DWT_CTRL  |= 1u << 0;		// CYCCNTENA
+
 	envelope_init(&meter_in_env, 0.1f, 300.0f);
 	envelope_init(&meter_floor_env, 5000.0f, 100.0f);
 	envelope_init(&meter_out_env, 0.1f, 300.0f);
@@ -492,18 +505,43 @@ static inline void __audio_func(single_sample)(float mix)
 	//
 	static unsigned int meter_phase;
 	bool timed = !(++meter_phase & 15);
-	uint32_t spin_start = timed ? timer_hw->timerawl : 0;
+	uint32_t spin_start = timed ? DWT_CYCCNT : 0;
 
 	while (cpu_ptr == i2s_dma_rx_ptr())
 		tight_loop_contents();
 
 	if (timed) {
 		//
-		// 20.83us per sample at 48kHz.  Idle longer than that means
-		// the previous sample finished early and this one had not
-		// arrived yet, which is still idle.
+		// Cycles, not microseconds.  timer_hw->timerawl is 1MHz,
+		// and one tick of it is 4.8% of a 20.83us sample period -
+		// so timing the spin that way makes every answer a
+		// rounding of something coarser than most of the effects
+		// being measured, and a fraction of a tick's worth of bias
+		// is enough to invent a difference that is not there.  A
+		// cycle at 153.6MHz is 0.03% of the period instead.
 		//
-		float idle = (timer_hw->timerawl - spin_start) * (SAMPLES_PER_SEC / 1000000.0f);
+		// Self-calibrating, which is the second thing this buys.
+		// 'span' is exactly sixteen sample periods, because both
+		// ends of it are the moment the DMA delivered a sample, so
+		// the load comes out as a ratio of two measured intervals
+		// and neither the sample rate nor the system clock has to
+		// be known or assumed.  96kHz, a different clock, an
+		// overclock - all of it just works.
+		//
+		static uint32_t meter_prev;
+		uint32_t now = DWT_CYCCNT;
+		uint32_t spin = now - spin_start;
+		uint32_t span = now - meter_prev;
+
+		meter_prev = now;
+
+		//
+		// The first time round, meter_prev is meaningless and span
+		// is nonsense.  It costs one bad sample that the one-pole
+		// below swallows in about 21ms of a machine that has just
+		// started up, so it is not worth a flag to avoid.
+		//
+		float idle = span ? (float)spin * 16.0f / (float)span : 1.0f;
 		float load = idle < 1.0f ? 1.0f - idle : 0.0f;
 
 		meter_load += (load - meter_load) * (1.0f / 64);
