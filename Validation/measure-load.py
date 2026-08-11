@@ -32,6 +32,24 @@
 # states 1.2% apart and held one for a whole boot, which is the
 # instrument and not the pedal.
 #
+# THE BASELINE IS A SETTING, NOT JUST A BUILD
+#
+# process_output() returns immediately when "USB L/R Out" is None and
+# otherwise stores a frame into a ring with a release barrier every
+# sample, on the audio core, whether or not a host is listening.
+# Measured, that is +0.306% of the sample period for the default Dry,
+# and +0.348% for Wet/Dry.
+#
+# Which is small and was still large enough to be mistaken for
+# something else: two runs an hour apart differed by 0.37% and got as
+# far as an issue blaming the measurement, when what had changed was
+# that this setting had been moved in the web app in between.  A
+# difference of two effects cancels it, an absolute load does not.
+#
+# So a run pins it to None and lets the closing program change put the
+# scene back.  The number this prints is therefore what the *chain*
+# costs, with the USB tap excluded on purpose.
+#
 # WHY AN IDLE PEDAL IS A VALID PLACE TO MEASURE
 #
 # Nothing need be plugged in.  The reverb runs eight combs and four
@@ -61,6 +79,16 @@ import pedal
 
 SETTLE = 1.0            # effect fades are 100 ms, the load meter 21 ms
 DEFAULT = [11]          # Reverb
+
+#
+# The settings pseudo-effect is last in effects[], and its first pot is
+# "USB L/R Out".  Pinned to None for the duration of a run - see the note
+# on the baseline below - and put back by the program change at the end,
+# the same way the routing is.
+#
+SETTINGS = 18
+USB_OUT_POT = 1
+USB_OUT_NONE = 0
 STEP_PCT = 100.0 / 16383   # what one telemetry step is worth, 14-bit
 COARSE = 128               # ...and how many of them the old 7-bit step was
 
@@ -171,6 +199,7 @@ def reboot(p):
 
 
 def one_pass(p, ids, n=6):
+    pedal.set_pot(p, SETTINGS, USB_OUT_POT, USB_OUT_NONE)
     pedal.set_routing(p)
     time.sleep(SETTLE)
     empty = sample_loads(p, n)
@@ -192,7 +221,8 @@ def main():
     names = effect_names()
     label = " + ".join(names.get(i, "effect %d" % i) for i in ids)
     p = pedal.port()
-    print("pedal on %s, %s, %d boot(s)\n" % (p, label, boots))
+    print("pedal on %s, %s, %d boot(s)" % (p, label, boots))
+    print("USB L/R Out pinned to None; the scene goes back at the end\n")
     print("  boot   empty (noisy)     routed          routed load")
 
     routed_all = []
