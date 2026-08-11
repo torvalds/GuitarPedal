@@ -42,10 +42,25 @@ static const unsigned reverb_comb_L[8] = { 1215, 1293, 1390, 1476, 1548, 1623, 1
 // Canonical Freeverb 44100 Hz allpass delays scaled to 48000 Hz.
 static const unsigned reverb_ap_L[4]   = {  605,  480,  371,  245 };
 
-// Quadrature phasor: (s,c) rotated each sample by (ds,dc) -- no sincos at
-// runtime.  4 LFOs round-robin across 8 combs; rates ~3:2 spaced to avoid
-// beating; phases staggered 90 degrees to decorrelate at startup.
-struct reverb_lfo { float s, c, ds, dc; };
+// 4 LFOs round-robin across 8 combs; rates ~3:2 spaced to avoid beating;
+// phases staggered 90 degrees to decorrelate at startup.
+//
+// Phase accumulators through lfo_step(), like every other modulated
+// effect here.  They used to be quadrature phasors - an (s,c) pair
+// rotated by a fixed (ds,dc) every sample, which is cheaper and has no
+// table in it - but nothing renormalised the pair, so its magnitude
+// went wherever float32 took it, and which way depended on the rate.
+// At 0.21, 0.31 and 0.46 Hz the rotation's cosine rounds to exactly
+// 1.0f, so the magnitude is 1 + ds*ds and the pair spirals outwards; at
+// 0.67 Hz the cosine landed one ulp below one and the pair decayed to a
+// tenth of its amplitude in ten minutes.
+//
+// The outward direction is the worse of the two.  'mod' scales
+// REVERB_MOD_DEPTH, so a growing phasor walks the comb read pointer out
+// of its 2048-sample buffer after about thirteen hours and past zero
+// after seventeen, where the cast to unsigned is undefined behaviour.
+// An accumulator cannot drift at all - it wraps, which is what a phase
+// is for.
 
 // In RAM rather than flash: reverb_init() runs on the audio core, which
 // keeps playing while core 0 has XIP switched off to write flash.
@@ -68,7 +83,7 @@ struct reverb_allpass {
 static struct {
 	struct reverb_comb    combs[8];
 	struct reverb_allpass allpasses[4];
-	struct reverb_lfo     lfo[4];
+	struct lfo_state      lfo[4];
 	float damp;               // LP pole in [0.1, 0.5]
 	float g;                  // feedback gain shared by all combs
 } reverb_state;
@@ -85,9 +100,8 @@ static void reverb_init(unsigned char pot[10])
 	for (int i = 0; i < 4; i++)
 		reverb_state.allpasses[i].delay = reverb_ap_L[i];
 	for (int i = 0; i < 4; i++) {
-		struct sincos ph  = fastsincos(reverb_lfo_phases[i]);
-		struct sincos rot = fastsincos(reverb_lfo_rates[i] / SAMPLES_PER_SEC);
-		reverb_state.lfo[i] = (struct reverb_lfo){ ph.sin, ph.cos, rot.sin, rot.cos };
+		set_lfo_freq(&reverb_state.lfo[i], reverb_lfo_rates[i]);
+		reverb_state.lfo[i].idx = fraction_to_u32(reverb_lfo_phases[i]);
 	}
 }
 
@@ -98,17 +112,14 @@ static float reverb_step(float in)
 	float g     = reverb_state.g;
 	float wet   = 0.0f;
 
-	// Complex multiply rotates each LFO (s,c) by one step.
-	for (int i = 0; i < 4; i++) {
-		struct reverb_lfo *lfo = &reverb_state.lfo[i];
-		float new_c = lfo->c * lfo->dc - lfo->s * lfo->ds;
-		lfo->s = lfo->s * lfo->dc + lfo->c * lfo->ds;
-		lfo->c = new_c;
-	}
+	// All four advance every sample, whichever combs read them.
+	float lfo[4];
+	for (int i = 0; i < 4; i++)
+		lfo[i] = lfo_step(&reverb_state.lfo[i], lfo_sinewave);
 
 	for (int i = 0; i < 8; i++) {
 		struct reverb_comb *c = &reverb_state.combs[i];
-		float mod   = reverb_state.lfo[i % 4].s;
+		float mod   = lfo[i % 4];
 		unsigned id = (unsigned)((float)c->delay + mod * REVERB_MOD_DEPTH);
 		float out   = c->buf[(c->idx - id) & REVERB_COMB_MASK];
 		c->filterstore = out + damp * (c->filterstore - out);
