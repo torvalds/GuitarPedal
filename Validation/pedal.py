@@ -454,8 +454,17 @@ def telemetry(p, in_port=None, wait=1.5):
     body = blob[i + 3:blob.find(0xF7, i)]
     if len(body) < 6:
         return None
-    return {"version": body[0], "in_dbfs": -body[1], "floor_dbfs": -body[2],
-            "out_dbfs": -body[3], "gate": body[4], "load": body[5]}
+    out = {"version": body[0], "in_dbfs": -body[1], "floor_dbfs": -body[2],
+           "out_dbfs": -body[3], "gate": body[4], "load": body[5]}
+    #
+    # From layout 2 the load carries an LSB after it, so it is really a
+    # 14-bit number whose top seven bits sit where the old one did.
+    # Taken by presence rather than by version, which is the rule the
+    # whole layout is read by - see handleTelemetry() in the app.
+    #
+    if len(body) >= 7:
+        out["load14"] = (body[5] << 7) | body[6]
+    return out
 
 
 def set_pot(p, effect, pot, value):
