@@ -4397,16 +4397,6 @@
 				(hide yes)
 			)
 		)
-		(property "JLCPCB" "C222197"
-			(at 151.13 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C222197"
 			(at 152.4 109.22 0)
 			(effects
@@ -5304,15 +5294,6 @@
 				(hide yes)
 			)
 		)
-		(property "JLCPCB" "C25900"
-			(at 212.09 116.84 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C25900"
 			(at 212.09 116.84 90)
 			(effects
@@ -5769,15 +5750,6 @@
 				(hide yes)
 			)
 		)
-		(property "JLCPCB" "C25900"
-			(at 212.09 113.03 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C25900"
 			(at 212.09 113.03 90)
 			(effects
@@ -5915,15 +5887,6 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 63.5 143.51 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" "C25900"
 			(at 63.5 143.51 0)
 			(effects
 				(font
@@ -6088,79 +6051,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 209.55 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 209.55 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 209.55 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 209.55 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 209.55 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 209.55 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 209.55 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 209.55 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
 			(at 209.55 73.66 0)
 			(effects
 				(font
@@ -6179,24 +6070,6 @@
 			)
 		)
 		(property "Sim.Pins" ""
-			(at 209.55 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "SnapEDA_Link" ""
-			(at 209.55 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
 			(at 209.55 73.66 0)
 			(effects
 				(font

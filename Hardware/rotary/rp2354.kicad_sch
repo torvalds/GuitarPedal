@@ -5441,17 +5441,6 @@
 				)
 			)
 		)
-		(property "LSCS PN" ""
-			(at 170.18 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
 		(pin "1"
 			(uuid "10504978-2ae4-4b75-b20f-30dc13378930")
 		)
@@ -5544,17 +5533,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 181.61 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LSCS PN" ""
 			(at 181.61 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -5667,17 +5645,6 @@
 				)
 			)
 		)
-		(property "LSCS PN" ""
-			(at 193.04 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
 		(pin "1"
 			(uuid "c8f3bad6-8352-4653-9de3-4c2be02cc87b")
 		)
@@ -5770,17 +5737,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 204.47 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LSCS PN" ""
 			(at 204.47 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -5893,17 +5849,6 @@
 				)
 			)
 		)
-		(property "LSCS PN" ""
-			(at 215.9 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
 		(pin "1"
 			(uuid "6195ca3c-f306-438a-bc57-aa1092e3e238")
 		)
@@ -5996,17 +5941,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 147.32 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LSCS PN" ""
 			(at 147.32 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -6273,17 +6207,6 @@
 				)
 			)
 		)
-		(property "LSCS PN" ""
-			(at 91.44 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
 		(pin "1"
 			(uuid "b78ca939-293b-4904-bc91-c0f37b04d3a5")
 		)
@@ -6442,95 +6365,7 @@
 				)
 			)
 		)
-		(property "Availability" ""
-			(at 85.09 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Check_prices" ""
-			(at 85.09 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description_1" ""
-			(at 85.09 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
 		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 85.09 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MF" ""
-			(at 85.09 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MP" ""
-			(at 85.09 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 85.09 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Package" ""
-			(at 85.09 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Price" ""
 			(at 85.09 82.55 0)
 			(hide yes)
 			(show_name no)
@@ -6563,28 +6398,6 @@
 				)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 85.09 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "VENDOR" ""
-			(at 85.09 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
 		(property "LCSC PN" "C270365"
 			(at 85.09 82.55 90)
 			(hide yes)
@@ -6597,17 +6410,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 85.09 82.55 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LSCS PN" ""
 			(at 85.09 82.55 90)
 			(hide yes)
 			(show_name no)
@@ -6949,17 +6751,6 @@
 				)
 			)
 		)
-		(property "LSCS PN" ""
-			(at 162.56 60.96 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
 		(pin "1"
 			(uuid "94dbf8a7-22c9-4de8-b9c0-6297bb7a9476")
 		)
@@ -7052,17 +6843,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 67.31 49.53 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LSCS PN" ""
 			(at 67.31 49.53 0)
 			(hide yes)
 			(show_name no)
@@ -7166,17 +6946,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 33.02 67.31 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LSCS PN" ""
 			(at 33.02 67.31 0)
 			(hide yes)
 			(show_name no)
@@ -7440,17 +7209,6 @@
 				)
 			)
 		)
-		(property "LSCS PN" ""
-			(at 224.79 114.3 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
 		(pin "1"
 			(uuid "a439b685-086e-40b0-ba50-e067bfacc7a9")
 		)
@@ -7554,17 +7312,6 @@
 				)
 			)
 		)
-		(property "LSCS PN" ""
-			(at 44.45 67.31 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
 		(pin "1"
 			(uuid "7c92b7ce-0038-4e2b-bcde-67fb16ce106f")
 		)
@@ -7657,17 +7404,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 80.01 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LSCS PN" ""
 			(at 80.01 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -7781,17 +7517,6 @@
 				)
 			)
 		)
-		(property "LSCS PN" ""
-			(at 78.74 54.61 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
 		(pin "1"
 			(uuid "873c0c87-f126-458d-9e51-9475f15f7a9c")
 		)
@@ -7886,17 +7611,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 123.19 87.63 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LSCS PN" ""
 			(at 123.19 87.63 0)
 			(hide yes)
 			(show_name no)
@@ -8186,17 +7900,6 @@
 				)
 			)
 		)
-		(property "LSCS PN" ""
-			(at 210.82 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
 		(pin "1"
 			(uuid "643b6d48-010b-4315-a00e-613d78986c20")
 		)
@@ -8289,17 +7992,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 222.25 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LSCS PN" ""
 			(at 222.25 58.42 0)
 			(hide yes)
 			(show_name no)
@@ -8641,17 +8333,6 @@
 				)
 			)
 		)
-		(property "LSCS PN" ""
-			(at 245.11 114.3 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
 		(pin "1"
 			(uuid "010a173d-90f1-406a-b06a-7a6c409276d2")
 		)
@@ -8822,17 +8503,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 162.56 63.5 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LSCS PN" ""
 			(at 162.56 63.5 90)
 			(hide yes)
 			(show_name no)
@@ -9021,17 +8691,6 @@
 				)
 			)
 		)
-		(property "LSCS PN" ""
-			(at 68.58 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
 		(pin "1"
 			(uuid "764f9665-9e39-4812-863e-2ea17f6c8f2d")
 		)
@@ -9112,95 +8771,7 @@
 				)
 			)
 		)
-		(property "Availability" ""
-			(at 85.09 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Check_prices" ""
-			(at 85.09 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description_1" ""
-			(at 85.09 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
 		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 85.09 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MF" ""
-			(at 85.09 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MP" ""
-			(at 85.09 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 85.09 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Package" ""
-			(at 85.09 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Price" ""
 			(at 85.09 124.46 0)
 			(hide yes)
 			(show_name no)
@@ -9233,28 +8804,6 @@
 				)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 85.09 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "VENDOR" ""
-			(at 85.09 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
 		(property "LCSC PN" "C270365"
 			(at 85.09 124.46 90)
 			(hide yes)
@@ -9267,17 +8816,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 85.09 124.46 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LSCS PN" ""
 			(at 85.09 124.46 90)
 			(hide yes)
 			(show_name no)
@@ -9390,17 +8928,6 @@
 				)
 			)
 		)
-		(property "LSCS PN" ""
-			(at 55.88 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
 		(pin "1"
 			(uuid "36ee9a73-693e-4964-a393-de9bdb0dd3b5")
 		)
@@ -9503,17 +9030,6 @@
 				)
 			)
 		)
-		(property "LSCS PN" ""
-			(at 158.75 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
 		(pin "1"
 			(uuid "6cd7c922-9416-487c-a756-ef58f4a86068")
 		)
@@ -9606,17 +9122,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 245.11 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LSCS PN" ""
 			(at 245.11 58.42 0)
 			(hide yes)
 			(show_name no)
@@ -9807,17 +9312,6 @@
 				)
 			)
 		)
-		(property "LSCS PN" ""
-			(at 233.68 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
 		(pin "1"
 			(uuid "59acaf1a-b482-44bc-9d9b-2cce41bcc455")
 		)
@@ -9910,17 +9404,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 199.39 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LSCS PN" ""
 			(at 199.39 58.42 0)
 			(hide yes)
 			(show_name no)
@@ -10025,17 +9508,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 59.69 67.31 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LSCS PN" ""
 			(at 59.69 67.31 0)
 			(hide yes)
 			(show_name no)
@@ -10214,17 +9686,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 234.95 109.22 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LSCS PN" ""
 			(at 234.95 109.22 90)
 			(hide yes)
 			(show_name no)
@@ -10487,17 +9948,6 @@
 		)
 		(property "Sim.Params" ""
 			(at 224.79 104.14 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LSCS PN" ""
-			(at 224.79 104.14 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
