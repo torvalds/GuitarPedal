@@ -64,9 +64,13 @@
 # untouched, and the run ends with a program change that reloads the
 # scene.  Unplugging would do the same.
 #
-# Called as:  ./measure-load.py [-b N] [effect-id ...]
-#             -b N   re-measure across N reboots (default 1)
-#             ids    default 11, the Reverb
+# Called as:  ./measure-load.py [-b N] [-t WHICH] [effect-id ...]
+#             -b N      re-measure across N reboots (default 1)
+#             -t WHICH  serial, label or product substring naming one
+#                       pedal; required once more than one is attached,
+#                       because guessing is how a run reports on the
+#                       board nobody asked about
+#             ids       default 11, the Reverb
 #
 import re
 import statistics
@@ -212,16 +216,40 @@ def one_pass(p, ids, n=6):
 
 def main():
     args = sys.argv[1:]
-    boots = 1
-    if args and args[0] == "-b":
-        boots = int(args[1])
+    boots, target = 1, None
+    while args and args[0] in ("-b", "-t"):
+        if args[0] == "-b":
+            boots = int(args[1])
+        else:
+            target = args[1]
         args = args[2:]
     ids = [int(a) for a in args] or DEFAULT
 
     names = effect_names()
     label = " + ".join(names.get(i, "effect %d" % i) for i in ids)
-    p = pedal.port()
-    print("pedal on %s, %s, %d boot(s)" % (p, label, boots))
+
+    #
+    # Refusing to guess, for the same reason pedal.find() does: two
+    # boards of one revision differ only in their serial, and answering
+    # either is how a run reports on the board nobody asked about.
+    #
+    found = pedal.discover()
+    if not found:
+        sys.exit("measure-load: no pedal on the USB")
+    if target:
+        d = pedal.find(target, among=found)
+        if not d:
+            sys.exit("measure-load: '%s' names none or several of the %d "
+                     "pedals here: %s"
+                     % (target, len(found),
+                        ", ".join(x["label"] for x in found)))
+    elif len(found) > 1:
+        sys.exit("measure-load: %d pedals and no -t; this wants exactly one "
+                 "(%s)" % (len(found), ", ".join(x["label"] for x in found)))
+    else:
+        d = found[0]
+    p = d["port"]
+    print("%s on %s, %s, %d boot(s)" % (d["label"], p, label, boots))
     print("USB L/R Out pinned to None; the scene goes back at the end\n")
     print("  boot   empty (noisy)     routed          routed load")
 

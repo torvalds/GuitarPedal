@@ -125,7 +125,7 @@ check-analysis: bench/bench
 # is digital end to end.  Skips when there is no pedal plugged in.
 #
 check-bench: bench/bench
-	./test-bench.py
+	./test-bench.py $(if $(TARGET),--target $(TARGET))
 
 #
 # The analog half, which needs a patch cable from the pedal's output
@@ -139,7 +139,7 @@ check-bench: bench/bench
 # numbers and lets a person decide whether the cable moved.
 #
 check-analog:
-	./test-analog.py
+	./test-analog.py $(if $(TARGET),--target $(TARGET))
 
 #
 # The web app gets checked too, which needs node.
@@ -162,7 +162,7 @@ NODE := $(shell command -v node 2>/dev/null)
 # what was declared.
 #
 check-hw:
-	./test-audio.py --ptp 0.100 --freq 440
+	./test-audio.py --ptp 0.100 --freq 440 $(if $(TARGET),--target $(TARGET))
 
 #
 # Separate from check-hw because it reflashes: planting a scene with
