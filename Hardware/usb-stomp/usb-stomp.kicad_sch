@@ -7900,6 +7900,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM188Z71E225KE43D"
+			(at 248.92 39.37 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Library" ""
 			(at 248.92 39.37 0)
 			(hide yes)
@@ -8246,7 +8257,7 @@
 				)
 			)
 		)
-		(property "Part" "LRC LMBR130T1G"
+		(property "MANUFACTURER_PART_NUMBER" "1N5819WS"
 			(at 210.82 53.34 0)
 			(hide yes)
 			(show_name no)
@@ -8340,6 +8351,17 @@
 			)
 		)
 		(property "LCSC PN" "C3901090"
+			(at 120.65 184.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 120.65 184.15 0)
 			(hide yes)
 			(show_name no)
@@ -8755,6 +8777,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "0402B223K500NT"
+			(at 220.98 144.78 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "e4356f8d-d7cc-4695-a29f-b1bbd4dc4dd3")
 		)
@@ -8915,6 +8948,17 @@
 			)
 		)
 		(property "LCSC PN" "C222104"
+			(at 138.43 184.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "M24C64-FMH6TG"
 			(at 138.43 184.15 0)
 			(hide yes)
 			(show_name no)
@@ -9093,6 +9137,17 @@
 			)
 		)
 		(property "LCSC PN" "C25905"
+			(at 161.29 181.61 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "0402WGF5101TCE"
 			(at 161.29 181.61 90)
 			(hide yes)
 			(show_name no)
@@ -9418,7 +9473,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "RT0402FRE071KL"
 			(at 215.9 139.7 0)
 			(hide yes)
 			(show_name no)
@@ -9886,7 +9941,7 @@
 				)
 			)
 		)
-		(property "Part" "LRC LMBR130T1G"
+		(property "MANUFACTURER_PART_NUMBER" "1N5819WS"
 			(at 171.45 38.1 0)
 			(hide yes)
 			(show_name no)
@@ -9980,6 +10035,17 @@
 			)
 		)
 		(property "LCSC PN" "C1532"
+			(at 186.69 144.78 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "0402B223K500NT"
 			(at 186.69 144.78 0)
 			(hide yes)
 			(show_name no)
@@ -10455,7 +10521,7 @@
 				)
 			)
 		)
-		(property "Part" "LRC LMBR130T1G"
+		(property "MANUFACTURER_PART_NUMBER" "1N5819WS"
 			(at 104.14 36.83 0)
 			(hide yes)
 			(show_name no)
@@ -10625,6 +10691,17 @@
 			)
 		)
 		(property "LCSC PN" "C415535"
+			(at 274.32 39.37 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM188Z71E225KE43D"
 			(at 274.32 39.37 0)
 			(hide yes)
 			(show_name no)
@@ -10965,7 +11042,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 267.97 109.22 0)
 			(hide yes)
 			(show_name no)
@@ -11447,6 +11524,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "LTST-C281KGKT"
+			(at 111.76 50.8 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Library" ""
 			(at 111.76 50.8 90)
 			(hide yes)
@@ -11727,6 +11815,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "0402WGF5101TCE"
+			(at 62.23 40.64 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "348cbc4f-921a-4312-a3a1-68d365a0139d")
 		)
@@ -11893,6 +11992,17 @@
 			)
 		)
 		(property "LCSC PN" "C15999"
+			(at 67.31 64.77 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "USBLC6-2P6"
 			(at 67.31 64.77 0)
 			(hide yes)
 			(show_name no)
@@ -12082,6 +12192,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "TLV76733DRVR"
+			(at 261.62 36.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Library" ""
 			(at 261.62 36.83 0)
 			(hide yes)
@@ -12200,6 +12321,17 @@
 			)
 		)
 		(property "LCSC PN" "C25741"
+			(at 222.25 27.94 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "0402WGF1003TCE"
 			(at 222.25 27.94 90)
 			(hide yes)
 			(show_name no)
@@ -12369,6 +12501,17 @@
 			)
 		)
 		(property "LCSC PN" "C25905"
+			(at 62.23 38.1 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "0402WGF5101TCE"
 			(at 62.23 38.1 90)
 			(hide yes)
 			(show_name no)
@@ -12626,7 +12769,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "Samsung CL32B226KAJNNNE"
+		(property "MANUFACTURER_PART_NUMBER" "CL32B226KAJNNNE"
 			(at 203.2 58.42 0)
 			(hide yes)
 			(show_name no)
@@ -12807,6 +12950,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "BAT54SW"
+			(at 245.11 139.7 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "82216eaf-2065-4bef-be77-903d60187df1")
 		)
@@ -12893,6 +13047,17 @@
 			)
 		)
 		(property "LCSC PN" "C22466373"
+			(at 267.97 139.7 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "BAT54SW"
 			(at 267.97 139.7 90)
 			(hide yes)
 			(show_name no)
@@ -13301,7 +13466,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 90.17 43.18 0)
 			(hide yes)
 			(show_name no)
@@ -13425,6 +13590,17 @@
 			)
 		)
 		(property "LCSC PN" "C25905"
+			(at 161.29 184.15 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "0402WGF5101TCE"
 			(at 161.29 184.15 90)
 			(hide yes)
 			(show_name no)
@@ -13686,7 +13862,7 @@
 				)
 			)
 		)
-		(property "Part" "LRC LMBR130T1G"
+		(property "MANUFACTURER_PART_NUMBER" "1N5819WS"
 			(at 255.27 95.25 0)
 			(hide yes)
 			(show_name no)
@@ -14246,7 +14422,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "RT0402FRE071KL"
 			(at 260.35 105.41 0)
 			(hide yes)
 			(show_name no)
@@ -14462,6 +14638,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "TPS62153RGTR"
+			(at 180.34 58.42 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "072ddfb0-ffe9-4aa8-9f54-b548c141cae9")
 		)
@@ -14599,6 +14786,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM188Z71E225KE43D"
+			(at 260.35 63.5 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Library" ""
 			(at 260.35 63.5 0)
 			(hide yes)
@@ -14702,7 +14900,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "RT0402FRE071KL"
 			(at 111.76 43.18 0)
 			(hide yes)
 			(show_name no)
@@ -14848,7 +15046,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "RT0402FRE071KL"
 			(at 180.34 139.7 0)
 			(hide yes)
 			(show_name no)
@@ -15173,6 +15371,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GT-USB-7010C"
+			(at 30.48 48.26 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "B12"
 			(uuid "80041143-30ba-4bd8-b09c-9086ef3f3624")
 		)
@@ -15309,7 +15518,7 @@
 				)
 			)
 		)
-		(property "Manufacutrer" "Murata DFE201612E-2R2M=P2"
+		(property "MANUFACTURER_PART_NUMBER" "DFE201612E-2R2M=P2"
 			(at 196.85 53.34 90)
 			(hide yes)
 			(show_name no)
@@ -15480,6 +15689,17 @@
 			)
 		)
 		(property "LCSC PN" "C91606"
+			(at 96.52 43.18 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM188R61E106MA73D"
 			(at 96.52 43.18 0)
 			(hide yes)
 			(show_name no)
@@ -15662,6 +15882,17 @@
 			)
 		)
 		(property "LCSC PN" "C91606"
+			(at 157.48 54.61 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM188R61E106MA73D"
 			(at 157.48 54.61 0)
 			(hide yes)
 			(show_name no)

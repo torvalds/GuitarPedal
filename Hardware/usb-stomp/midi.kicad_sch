@@ -2548,6 +2548,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "SN74AHCT1G125DCKR"
+			(at 45.72 88.9 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "3"
 			(uuid "4ad719d9-4eac-4f2a-b68d-6bd62f9b4786")
 		)
@@ -2718,7 +2729,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 27.94 100.33 0)
 			(hide yes)
 			(show_name no)
@@ -2844,6 +2855,17 @@
 			)
 		)
 		(property "LCSC PN" "C7473281"
+			(at 72.39 38.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "TLP2310"
 			(at 72.39 38.1 0)
 			(hide yes)
 			(show_name no)
@@ -3187,6 +3209,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "0402WGF2200TCE"
+			(at 73.66 86.36 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "290dd086-1d7d-4d19-a201-9aa03eba8525")
 		)
@@ -3515,7 +3548,7 @@
 				)
 			)
 		)
-		(property "Part" "LRC LMBR130T1G"
+		(property "MANUFACTURER_PART_NUMBER" "1N5819WS"
 			(at 48.26 38.1 0)
 			(hide yes)
 			(show_name no)
@@ -3609,7 +3642,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 33.02 49.53 0)
 			(hide yes)
 			(show_name no)
@@ -3736,7 +3769,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 227.33 68.58 0)
 			(hide yes)
 			(show_name no)
@@ -3941,7 +3974,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 240.03 68.58 0)
 			(hide yes)
 			(show_name no)
@@ -4154,6 +4187,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "0402WGF2200TCE"
+			(at 41.91 33.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "d60a06d0-d3d9-408c-88c2-616862ba1674")
 		)
@@ -4235,6 +4279,17 @@
 			)
 		)
 		(property "LCSC PN" "C25091"
+			(at 73.66 88.9 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "0402WGF2200TCE"
 			(at 73.66 88.9 90)
 			(hide yes)
 			(show_name no)
@@ -4327,6 +4382,17 @@
 			)
 		)
 		(property "LCSC PN" "C52917434"
+			(at 176.53 68.58 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "WS2812B-2020-V6"
 			(at 176.53 68.58 0)
 			(hide yes)
 			(show_name no)
@@ -4512,6 +4578,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "PJ-320D"
+			(at 24.13 30.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "R2"
 			(uuid "52d70d41-3ae6-456b-bc19-f0fa1f0077cc")
 		)
@@ -4687,6 +4764,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "PJ-320D"
+			(at 93.98 83.82 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "R2"
 			(uuid "c057f981-586e-4085-aa89-7f9618349cb4")
 		)
@@ -4851,6 +4939,17 @@
 			)
 		)
 		(property "LCSC PN" "C52917434"
+			(at 191.77 68.58 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "WS2812B-2020-V6"
 			(at 191.77 68.58 0)
 			(hide yes)
 			(show_name no)
@@ -5105,6 +5204,17 @@
 			)
 		)
 		(property "LCSC PN" "C52917434"
+			(at 161.29 68.58 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "WS2812B-2020-V6"
 			(at 161.29 68.58 0)
 			(hide yes)
 			(show_name no)
@@ -5517,7 +5627,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 252.73 68.58 0)
 			(hide yes)
 			(show_name no)

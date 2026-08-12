@@ -5430,6 +5430,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
+			(at 168.91 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 168.91 29.21 0)
 			(hide yes)
@@ -5522,6 +5533,17 @@
 			)
 		)
 		(property "LCSC PN" "C3901090"
+			(at 180.34 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 180.34 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -5634,6 +5656,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
+			(at 191.77 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 191.77 29.21 0)
 			(hide yes)
@@ -5726,6 +5759,17 @@
 			)
 		)
 		(property "LCSC PN" "C3901090"
+			(at 203.2 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 203.2 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -5838,6 +5882,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
+			(at 214.63 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 214.63 29.21 0)
 			(hide yes)
@@ -5930,6 +5985,17 @@
 			)
 		)
 		(property "LCSC PN" "C3901090"
+			(at 146.05 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 146.05 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -6196,6 +6262,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
+			(at 90.17 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 90.17 29.21 0)
 			(hide yes)
@@ -6287,7 +6364,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "0201WMF1001TEE"
 			(at 83.82 82.55 0)
 			(hide yes)
 			(show_name no)
@@ -6585,6 +6662,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "0201WMJ0330TEE"
+			(at 161.29 60.96 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 161.29 60.96 90)
 			(hide yes)
@@ -6677,6 +6765,17 @@
 			)
 		)
 		(property "LCSC PN" "C423356"
+			(at 66.04 49.53 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "0201WMJ0330TEE"
 			(at 66.04 49.53 0)
 			(hide yes)
 			(show_name no)
@@ -6780,6 +6879,17 @@
 			)
 		)
 		(property "LCSC PN" "C2858031"
+			(at 31.75 67.31 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
 			(at 31.75 67.31 0)
 			(hide yes)
 			(show_name no)
@@ -7043,6 +7153,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM0335C1E150JA01D"
+			(at 223.52 114.3 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 223.52 114.3 0)
 			(hide yes)
@@ -7146,6 +7267,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
+			(at 43.18 67.31 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 43.18 67.31 0)
 			(hide yes)
@@ -7238,6 +7370,17 @@
 			)
 		)
 		(property "LCSC PN" "C3901090"
+			(at 78.74 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 78.74 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -7351,6 +7494,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
+			(at 77.47 54.61 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 77.47 54.61 0)
 			(hide yes)
@@ -7445,6 +7599,17 @@
 			)
 		)
 		(property "LCSC PN" "C41378174"
+			(at 121.92 87.63 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "RP2354A"
 			(at 121.92 87.63 0)
 			(hide yes)
 			(show_name no)
@@ -7734,6 +7899,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
+			(at 209.55 58.42 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 209.55 58.42 0)
 			(hide yes)
@@ -7826,6 +8002,17 @@
 			)
 		)
 		(property "LCSC PN" "C2858031"
+			(at 220.98 58.42 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
 			(at 220.98 58.42 0)
 			(hide yes)
 			(show_name no)
@@ -8090,6 +8277,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "0201WMF1001TEE"
+			(at 243.84 114.3 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 243.84 114.3 90)
 			(hide yes)
@@ -8260,6 +8458,17 @@
 			)
 		)
 		(property "LCSC PN" "C423356"
+			(at 161.29 63.5 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "0201WMJ0330TEE"
 			(at 161.29 63.5 90)
 			(hide yes)
 			(show_name no)
@@ -8448,6 +8657,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
+			(at 67.31 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 67.31 29.21 0)
 			(hide yes)
@@ -8539,7 +8759,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "0201WMF1001TEE"
 			(at 83.82 124.46 0)
 			(hide yes)
 			(show_name no)
@@ -8685,6 +8905,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
+			(at 54.61 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 54.61 29.21 0)
 			(hide yes)
@@ -8787,6 +9018,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
+			(at 157.48 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 157.48 29.21 0)
 			(hide yes)
@@ -8879,6 +9121,17 @@
 			)
 		)
 		(property "LCSC PN" "C2858031"
+			(at 243.84 58.42 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
 			(at 243.84 58.42 0)
 			(hide yes)
 			(show_name no)
@@ -9069,6 +9322,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
+			(at 232.41 58.42 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 232.41 58.42 0)
 			(hide yes)
@@ -9161,6 +9425,17 @@
 			)
 		)
 		(property "LCSC PN" "C2858031"
+			(at 198.12 58.42 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
 			(at 198.12 58.42 0)
 			(hide yes)
 			(show_name no)
@@ -9265,6 +9540,17 @@
 			)
 		)
 		(property "LCSC PN" "C42411119"
+			(at 58.42 67.31 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "AOTA-B201610S3R3-101-T"
 			(at 58.42 67.31 0)
 			(hide yes)
 			(show_name no)
@@ -9453,6 +9739,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "ABM8-272-T3"
+			(at 233.68 109.22 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 233.68 109.22 90)
 			(hide yes)
@@ -9628,6 +9925,17 @@
 			)
 		)
 		(property "LCSC PN" "C161373"
+			(at 223.52 104.14 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM0335C1E150JA01D"
 			(at 223.52 104.14 0)
 			(hide yes)
 			(show_name no)

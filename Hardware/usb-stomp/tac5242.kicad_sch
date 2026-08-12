@@ -4644,6 +4644,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM188Z71E225KE43D"
+			(at 66.04 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Library" ""
 			(at 66.04 160.02 0)
 			(hide yes)
@@ -4759,7 +4770,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM188Z71E225KE43D"
 			(at 49.53 100.33 0)
 			(hide yes)
 			(show_name no)
@@ -5131,7 +5142,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "MCS04020C1004FE000"
 			(at 110.49 165.1 0)
 			(hide yes)
 			(show_name no)
@@ -5435,6 +5446,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM188Z71E225KE43D"
+			(at 181.61 114.3 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 181.61 114.3 0)
 			(hide yes)
@@ -5606,7 +5628,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM1555C1E151JA01D"
 			(at 83.82 121.92 0)
 			(hide yes)
 			(show_name no)
@@ -5742,7 +5764,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM188Z71E225KE43D"
 			(at 135.89 76.2 0)
 			(hide yes)
 			(show_name no)
@@ -6580,7 +6602,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "RT0402FRE071KL"
 			(at 55.88 160.02 0)
 			(hide yes)
 			(show_name no)
@@ -6704,7 +6726,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "RT0402FRE071KL"
 			(at 95.25 160.02 0)
 			(hide yes)
 			(show_name no)
@@ -7201,7 +7223,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "MCS04020C1004FE000"
 			(at 38.1 100.33 0)
 			(hide yes)
 			(show_name no)
@@ -7338,6 +7360,17 @@
 			)
 		)
 		(property "LCSC PN" "C91606"
+			(at 181.61 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM188R61E106MA73D"
 			(at 181.61 45.72 0)
 			(hide yes)
 			(show_name no)
@@ -7518,7 +7551,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM188Z71E225KE43D"
 			(at 135.89 86.36 0)
 			(hide yes)
 			(show_name no)
@@ -7652,7 +7685,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "RT0402BRD07100RL"
 			(at 74.93 73.66 0)
 			(hide yes)
 			(show_name no)
@@ -8015,6 +8048,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM188R61E106MA73D"
+			(at 181.61 71.12 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 181.61 71.12 0)
 			(hide yes)
@@ -8108,7 +8152,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM1555C1E151JA01D"
 			(at 83.82 81.28 0)
 			(hide yes)
 			(show_name no)
@@ -8245,7 +8289,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "MCS04020C1004FE000"
 			(at 38.1 90.17 0)
 			(hide yes)
 			(show_name no)
@@ -8393,6 +8437,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM188Z71E225KE43D"
+			(at 181.61 92.71 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 181.61 92.71 0)
 			(hide yes)
@@ -8485,7 +8540,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "MCS04020C1004FE000"
 			(at 67.31 86.36 0)
 			(hide yes)
 			(show_name no)
@@ -8619,7 +8674,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "RT0402BRD07100RL"
 			(at 74.93 114.3 0)
 			(hide yes)
 			(show_name no)
@@ -8845,6 +8900,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
+			(at 237.49 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 237.49 45.72 0)
 			(hide yes)
@@ -9023,6 +9089,17 @@
 			)
 		)
 		(property "LCSC PN" "C130011"
+			(at 96.52 41.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "OPA2365AIDR"
 			(at 96.52 41.91 0)
 			(hide yes)
 			(show_name no)
@@ -9220,6 +9297,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM188Z71E225KE43D"
+			(at 168.91 163.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Library" ""
 			(at 168.91 163.83 0)
 			(hide yes)
@@ -9325,6 +9413,17 @@
 			)
 		)
 		(property "LCSC PN" "C3901090"
+			(at 223.52 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 223.52 45.72 0)
 			(hide yes)
 			(show_name no)
@@ -9617,6 +9716,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
+			(at 189.23 71.12 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 189.23 71.12 0)
 			(hide yes)
@@ -9721,7 +9831,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "Samsung CL32B226KAJNNNE"
+		(property "MANUFACTURER_PART_NUMBER" "CL32B226KAJNNNE"
 			(at 143.51 163.83 0)
 			(hide yes)
 			(show_name no)
@@ -10029,6 +10139,17 @@
 			)
 		)
 		(property "LCSC PN" "C2848334"
+			(at 156.21 161.29 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "TLV76733DRVR"
 			(at 156.21 161.29 0)
 			(hide yes)
 			(show_name no)
@@ -10372,7 +10493,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM188Z71E225KE43D"
 			(at 135.89 116.84 0)
 			(hide yes)
 			(show_name no)
@@ -10602,6 +10723,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "OPA2365AIDR"
+			(at 99.06 116.84 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "4"
 			(uuid "25557ac5-867b-4de8-a382-69d7d73fb815")
 		)
@@ -10795,6 +10927,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "OPA2365AIDR"
+			(at 99.06 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "4"
 			(uuid "25557ac5-867b-4de8-a382-69d7d73fb816")
 		)
@@ -10893,7 +11036,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "RT0402BRD07100RL"
 			(at 118.11 116.84 0)
 			(hide yes)
 			(show_name no)
@@ -11105,7 +11248,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM188Z71E225KE43D"
 			(at 59.69 73.66 0)
 			(hide yes)
 			(show_name no)
@@ -11240,7 +11383,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM188Z71E225KE43D"
 			(at 59.69 114.3 0)
 			(hide yes)
 			(show_name no)
@@ -11378,7 +11521,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 78.74 41.91 0)
 			(hide yes)
 			(show_name no)
@@ -11525,6 +11668,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM188R61E106MA73D"
+			(at 209.55 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 209.55 45.72 0)
 			(hide yes)
@@ -11627,6 +11781,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "FRC0402F1R00TS"
+			(at 130.81 161.29 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 130.81 161.29 0)
 			(hide yes)
@@ -11719,7 +11884,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "MCS04020C1004FE000"
 			(at 67.31 104.14 0)
 			(hide yes)
 			(show_name no)
@@ -11857,7 +12022,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "MCS04020C1004FE000"
 			(at 71.12 165.1 0)
 			(hide yes)
 			(show_name no)
@@ -11992,7 +12157,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "RT0402BRD07100RL"
 			(at 118.11 76.2 0)
 			(hide yes)
 			(show_name no)
@@ -12453,6 +12618,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM188R61E106MA73D"
+			(at 195.58 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
 			(at 195.58 45.72 0)
 			(hide yes)
@@ -12712,7 +12888,7 @@
 				)
 			)
 		)
-		(property "Manufacutrer" "Murata DFE201612E-2R2M=P2"
+		(property "MANUFACTURER_PART_NUMBER" "DFE201612E-2R2M=P2"
 			(at 130.81 158.75 90)
 			(hide yes)
 			(show_name no)
@@ -12892,6 +13068,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM188Z71E225KE43D"
+			(at 105.41 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Library" ""
 			(at 105.41 160.02 0)
 			(hide yes)
@@ -13008,6 +13195,17 @@
 			)
 		)
 		(property "LCSC PN" "C47122155"
+			(at 240.03 100.33 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "TAC5242IRGER"
 			(at 240.03 100.33 0)
 			(hide yes)
 			(show_name no)
@@ -13268,7 +13466,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM188Z71E225KE43D"
 			(at 135.89 127 0)
 			(hide yes)
 			(show_name no)

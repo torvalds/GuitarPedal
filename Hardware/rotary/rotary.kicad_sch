@@ -6293,6 +6293,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "WS2812B-4020"
+			(at 210.82 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "e8c8c9d4-a606-4cc1-8812-a6b0253583bb")
 		)
@@ -6381,6 +6392,17 @@
 			)
 		)
 		(property "LCSC PN" "C38060243"
+			(at 147.32 45.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "TPS628438DRLR"
 			(at 147.32 45.72 0)
 			(hide yes)
 			(show_name no)
@@ -6663,7 +6685,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 90.17 157.48 0)
 			(hide yes)
 			(show_name no)
@@ -6889,7 +6911,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 115.57 182.88 0)
 			(hide yes)
 			(show_name no)
@@ -7023,18 +7045,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Murata Electronics"
-			(at 162.56 38.1 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Part#" "LQM2MPN1R0MGHL"
+		(property "MANUFACTURER_PART_NUMBER" "LQM2MPN1R0MGHL"
 			(at 162.56 38.1 90)
 			(hide yes)
 			(show_name no)
@@ -7214,6 +7225,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM188Z71E225KE43D"
+			(at 125.73 44.45 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Library" ""
 			(at 125.73 44.45 0)
 			(hide yes)
@@ -7317,6 +7339,17 @@
 			)
 		)
 		(property "LCSC PN" "C965557"
+			(at 231.14 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "WS2812B-4020"
 			(at 231.14 102.87 0)
 			(hide yes)
 			(show_name no)
@@ -7579,6 +7612,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GT-USB-7010C"
+			(at 30.48 43.18 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "B12"
 			(uuid "b9268807-4e77-4b32-b16c-bea18a3c489f")
 		)
@@ -7795,6 +7839,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "RC0201FR-07249KL"
+			(at 135.89 50.8 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "aef77d3b-ab92-4b92-b250-f1113930b9dd")
 		)
@@ -7956,7 +8011,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 199.39 40.64 0)
 			(hide yes)
 			(show_name no)
@@ -8081,7 +8136,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 193.04 149.86 0)
 			(hide yes)
 			(show_name no)
@@ -8317,6 +8372,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "WS2812B-4020"
+			(at 105.41 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "d8e0ac02-30f7-48bb-b819-2bf711ac9824")
 		)
@@ -8483,6 +8549,17 @@
 			)
 		)
 		(property "LCSC PN" "C965557"
+			(at 167.64 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "WS2812B-4020"
 			(at 167.64 102.87 0)
 			(hide yes)
 			(show_name no)
@@ -8701,6 +8778,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "LTST-C281KGKT"
+			(at 92.71 25.4 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Library" ""
 			(at 92.71 25.4 90)
 			(hide yes)
@@ -8891,6 +8979,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "0201WMF5101TEE"
+			(at 62.23 35.56 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "348cbc4f-921a-4312-a3a1-68d365a0139d")
 		)
@@ -8972,6 +9071,17 @@
 			)
 		)
 		(property "LCSC PN" "C5220642"
+			(at 167.64 148.59 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "TMAG5170A1QDGKR"
 			(at 167.64 148.59 0)
 			(hide yes)
 			(show_name no)
@@ -9097,6 +9207,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "USBLC6-2P6"
+			(at 67.31 64.77 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "4"
 			(uuid "5ba9b267-f5ec-4708-ba88-aea8d34f5470")
 		)
@@ -9190,7 +9311,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 90.17 182.88 0)
 			(hide yes)
 			(show_name no)
@@ -9471,7 +9592,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 102.87 157.48 0)
 			(hide yes)
 			(show_name no)
@@ -9674,7 +9795,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 128.27 157.48 0)
 			(hide yes)
 			(show_name no)
@@ -9799,6 +9920,17 @@
 			)
 		)
 		(property "LCSC PN" "C965557"
+			(at 127 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "WS2812B-4020"
 			(at 127 102.87 0)
 			(hide yes)
 			(show_name no)
@@ -10007,6 +10139,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "0201WMF5101TEE"
+			(at 62.23 33.02 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "1"
 			(uuid "d1e182ab-6fa6-4de8-90ce-69eaa428a9e5")
 		)
@@ -10166,6 +10309,17 @@
 			)
 		)
 		(property "LCSC PN" "C965557"
+			(at 189.23 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "WS2812B-4020"
 			(at 189.23 102.87 0)
 			(hide yes)
 			(show_name no)
@@ -10341,7 +10495,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 115.57 157.48 0)
 			(hide yes)
 			(show_name no)
@@ -10468,6 +10622,17 @@
 			)
 		)
 		(property "LCSC PN" "C86816"
+			(at 168.91 44.45 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM21BR61E226ME44L"
 			(at 168.91 44.45 0)
 			(hide yes)
 			(show_name no)
@@ -10646,6 +10811,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "BAT54CW"
+			(at 217.17 36.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "2"
 			(uuid "e43c5318-2ff9-482f-a3ee-566a30fceea8")
 		)
@@ -10730,6 +10906,17 @@
 			)
 		)
 		(property "LCSC PN" "C965557"
+			(at 251.46 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "WS2812B-4020"
 			(at 251.46 102.87 0)
 			(hide yes)
 			(show_name no)
@@ -11138,7 +11325,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 128.27 182.88 0)
 			(hide yes)
 			(show_name no)
@@ -11263,7 +11450,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 102.87 182.88 0)
 			(hide yes)
 			(show_name no)
@@ -11466,7 +11653,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "0201WMF1001TEE"
 			(at 204.47 36.83 0)
 			(hide yes)
 			(show_name no)
@@ -11669,7 +11856,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "0201WMF1001TEE"
 			(at 85.09 25.4 0)
 			(hide yes)
 			(show_name no)
@@ -11816,6 +12003,17 @@
 			)
 		)
 		(property "LCSC PN" "C965557"
+			(at 147.32 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "WS2812B-4020"
 			(at 147.32 102.87 0)
 			(hide yes)
 			(show_name no)
