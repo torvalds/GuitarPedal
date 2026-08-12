@@ -5849,6 +5849,7 @@
 		)
 		(property "Description" ""
 			(at 254 34.29 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5913,8 +5914,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "2.2uF 25V 10% X7R 0805"
 			(at 228.6 40.64 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6021,6 +6023,7 @@
 		)
 		(property "Description" ""
 			(at 228.6 45.72 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6086,6 +6089,7 @@
 		)
 		(property "Description" ""
 			(at 254 45.72 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6151,6 +6155,7 @@
 		)
 		(property "Description" "Generic connectable mounting pin connector, single row, 01x04, script generated (kicad-library-utils/schlib/autogen/connector/)"
 			(at 33.02 142.24 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6267,6 +6272,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 43.18 179.07 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6332,8 +6338,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Polarized capacitor"
+		(property "Description" "47uF 35V D6.3xL5.8"
 			(at 250.19 82.55 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6423,6 +6430,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 67.31 62.23 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6489,6 +6497,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 25.4 147.32 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6555,6 +6564,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"+3V3\""
 			(at 110.49 24.13 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6620,6 +6630,7 @@
 		)
 		(property "Description" "Light emitting diode"
 			(at 120.65 172.72 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6699,6 +6710,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"+3V3\""
 			(at 39.37 142.24 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6764,6 +6776,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 194.31 93.98 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6829,6 +6842,7 @@
 		)
 		(property "Description" "Rotary encoder, dual channel, incremental quadrate outputs, with switch and MP Pin"
 			(at 76.2 191.77 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6911,6 +6925,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 134.62 156.21 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6975,8 +6990,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "2.2uF 25V 10% X7R 0805"
 			(at 254 40.64 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7083,6 +7099,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 69.85 31.75 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7149,6 +7166,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 82.55 29.21 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7217,6 +7235,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 151.13 53.34 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7282,6 +7301,7 @@
 		)
 		(property "Description" "USB 2.0-only 16P Type-C Receptacle connector"
 			(at 30.48 40.64 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7433,8 +7453,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "2.2uF 25V 10% X7R 0805"
 			(at 25.4 143.51 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7541,6 +7562,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 127 173.99 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7604,8 +7626,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1kΩ 50V 1% 0402"
 			(at 142.24 172.72 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7711,6 +7734,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 83.82 179.07 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7774,8 +7798,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Light emitting diode"
+		(property "Description" "LED yellow-green 2V 0402"
 			(at 189.23 92.71 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7912,6 +7937,7 @@
 		)
 		(property "Description" "Generic connector, single row, 01x03, script generated"
 			(at 151.13 152.4 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7984,6 +8010,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 35.56 184.15 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8050,6 +8077,7 @@
 		)
 		(property "Description" "Special symbol for telling ERC where power comes from"
 			(at 193.04 130.81 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8115,6 +8143,7 @@
 		)
 		(property "Description" "Light emitting diode"
 			(at 151.13 172.72 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8193,6 +8222,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"+3V3\""
 			(at 25.4 139.7 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8255,8 +8285,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "5.1kΩ 50V 1% 0402"
 			(at 62.23 33.02 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8348,6 +8379,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 151.13 31.75 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8414,6 +8446,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 59.69 181.61 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8485,6 +8518,7 @@
 		)
 		(property "Description" "Very low capacitance ESD protection diode, 2 data-line, SOT-666"
 			(at 67.31 54.61 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8585,6 +8619,7 @@
 		)
 		(property "Description" "1A Precision Linear Voltage Regulator, with enable pin, Fixed Output 3.3V, WSON6"
 			(at 241.3 38.1 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8707,6 +8742,7 @@
 		)
 		(property "Description" "Special symbol for telling ERC where power comes from"
 			(at 205.74 130.81 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8770,8 +8806,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "5.1kΩ 50V 1% 0402"
 			(at 62.23 30.48 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8861,6 +8898,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 76.2 184.15 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8927,6 +8965,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 193.04 130.81 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8993,6 +9032,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 30.48 63.5 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9059,6 +9099,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 33.02 152.4 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9125,6 +9166,7 @@
 		)
 		(property "Description" "Generic connectable mounting pin connector, single row, 01x12, script generated (kicad-library-utils/schlib/autogen/connector/)"
 			(at 165.1 39.37 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9265,6 +9307,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 165.1 59.69 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9331,6 +9374,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 157.48 173.99 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9396,6 +9440,7 @@
 		)
 		(property "Description" ""
 			(at 231.14 78.74 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9463,6 +9508,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 151.13 44.45 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9530,6 +9576,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 20.32 182.88 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9595,8 +9642,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "BM28 24P 0.35mm socket"
 			(at 110.49 41.91 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9775,6 +9823,7 @@
 		)
 		(property "Description" "Rotary encoder, dual channel, incremental quadrate outputs, with switch and MP Pin"
 			(at 35.56 191.77 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9857,6 +9906,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 39.37 139.7 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9923,6 +9973,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"+3V3\""
 			(at 82.55 21.59 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9989,6 +10040,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 110.49 59.69 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10054,8 +10106,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Polarized capacitor"
+		(property "Description" "47uF 35V D6.3xL5.8"
 			(at 231.14 82.55 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10145,6 +10198,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 22.86 63.5 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10210,8 +10264,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "2.2uF 25V 10% X7R 0805"
 			(at 82.55 25.4 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10316,8 +10371,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1kΩ 50V 1% 0402"
 			(at 181.61 92.71 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10438,8 +10494,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1kΩ 50V 1% 0402"
 			(at 111.76 172.72 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10545,6 +10602,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 250.19 86.36 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10611,6 +10669,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 231.14 86.36 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10678,6 +10737,7 @@
 		)
 		(property "Description" ""
 			(at 241.3 45.72 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)

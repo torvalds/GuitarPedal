@@ -3660,7 +3660,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2uF 25V 10% X7R 0603"
 			(at 49.53 100.33 0)
 			(hide yes)
 			(show_name no)
@@ -4031,7 +4031,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2uF 25V 10% X7R 0603"
 			(at 181.61 114.3 0)
 			(hide yes)
 			(show_name no)
@@ -4224,7 +4224,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "150pF 25V 5% C0G 0402"
 			(at 83.82 121.92 0)
 			(hide yes)
 			(show_name no)
@@ -4360,7 +4360,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2uF 25V 10% X7R 0603"
 			(at 135.89 76.2 0)
 			(hide yes)
 			(show_name no)
@@ -5200,7 +5200,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1MΩ 50V 1% thin-film 0402"
 			(at 38.1 100.33 0)
 			(hide yes)
 			(show_name no)
@@ -5336,7 +5336,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "10uF 25V 20% X5R 0603"
 			(at 181.61 45.72 0)
 			(hide yes)
 			(show_name no)
@@ -5528,7 +5528,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2uF 25V 10% X7R 0603"
 			(at 135.89 86.36 0)
 			(hide yes)
 			(show_name no)
@@ -5662,7 +5662,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "100Ω 50V 0.1% thin-film 0402"
 			(at 74.93 73.66 0)
 			(hide yes)
 			(show_name no)
@@ -5877,7 +5877,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2nF 50V 2% C0G 0402"
 			(at 128.27 121.92 0)
 			(hide yes)
 			(show_name no)
@@ -6014,7 +6014,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "10uF 25V 20% X5R 0603"
 			(at 181.61 71.12 0)
 			(hide yes)
 			(show_name no)
@@ -6129,7 +6129,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "150pF 25V 5% C0G 0402"
 			(at 83.82 81.28 0)
 			(hide yes)
 			(show_name no)
@@ -6266,7 +6266,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1MΩ 50V 1% thin-film 0402"
 			(at 38.1 90.17 0)
 			(hide yes)
 			(show_name no)
@@ -6403,7 +6403,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2uF 25V 10% X7R 0603"
 			(at 181.61 92.71 0)
 			(hide yes)
 			(show_name no)
@@ -6517,7 +6517,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1MΩ 50V 1% thin-film 0402"
 			(at 67.31 86.36 0)
 			(hide yes)
 			(show_name no)
@@ -6651,7 +6651,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "100Ω 50V 0.1% thin-film 0402"
 			(at 74.93 114.3 0)
 			(hide yes)
 			(show_name no)
@@ -6866,7 +6866,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 237.49 45.72 0)
 			(hide yes)
 			(show_name no)
@@ -7265,7 +7265,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 223.52 45.72 0)
 			(hide yes)
 			(show_name no)
@@ -7469,7 +7469,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 189.23 71.12 0)
 			(hide yes)
 			(show_name no)
@@ -7662,7 +7662,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2nF 50V 2% C0G 0402"
 			(at 128.27 81.28 0)
 			(hide yes)
 			(show_name no)
@@ -7798,7 +7798,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2uF 25V 10% X7R 0603"
 			(at 135.89 116.84 0)
 			(hide yes)
 			(show_name no)
@@ -8341,7 +8341,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "100Ω 50V 0.1% thin-film 0402"
 			(at 118.11 116.84 0)
 			(hide yes)
 			(show_name no)
@@ -8553,7 +8553,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2uF 25V 10% X7R 0603"
 			(at 59.69 73.66 0)
 			(hide yes)
 			(show_name no)
@@ -8688,7 +8688,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2uF 25V 10% X7R 0603"
 			(at 59.69 114.3 0)
 			(hide yes)
 			(show_name no)
@@ -8826,7 +8826,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 78.74 41.91 0)
 			(hide yes)
 			(show_name no)
@@ -8962,7 +8962,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "10uF 25V 20% X5R 0603"
 			(at 209.55 45.72 0)
 			(hide yes)
 			(show_name no)
@@ -9076,7 +9076,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1MΩ 50V 1% thin-film 0402"
 			(at 67.31 104.14 0)
 			(hide yes)
 			(show_name no)
@@ -9211,7 +9211,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "100Ω 50V 0.1% thin-film 0402"
 			(at 118.11 76.2 0)
 			(hide yes)
 			(show_name no)
@@ -9504,7 +9504,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "10uF 25V 20% X5R 0603"
 			(at 195.58 45.72 0)
 			(hide yes)
 			(show_name no)
@@ -10049,7 +10049,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2uF 25V 10% X7R 0603"
 			(at 135.89 127 0)
 			(hide yes)
 			(show_name no)

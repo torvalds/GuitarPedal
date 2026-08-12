@@ -3604,6 +3604,7 @@
 		)
 		(property "Description" ""
 			(at 252.73 62.23 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3669,6 +3670,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 63.5 147.32 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3735,6 +3737,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 83.82 148.59 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3801,6 +3804,7 @@
 		)
 		(property "Description" "Special symbol for telling ERC where power comes from"
 			(at 260.35 114.3 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3867,6 +3871,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 44.45 63.5 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3933,6 +3938,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 171.45 125.73 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3999,6 +4005,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 177.8 60.96 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4065,6 +4072,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"+3V3\""
 			(at 142.24 100.33 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4130,6 +4138,7 @@
 		)
 		(property "Description" "Special symbol for telling ERC where power comes from"
 			(at 245.11 114.3 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4196,6 +4205,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 209.55 87.63 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4261,6 +4271,7 @@
 		)
 		(property "Description" ""
 			(at 209.55 68.58 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4325,6 +4336,7 @@
 		)
 		(property "Description" ""
 			(at 77.47 82.55 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4390,6 +4402,7 @@
 		)
 		(property "Description" "2-Kbit serial I²C bus EEPROM"
 			(at 152.4 124.46 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4487,6 +4500,7 @@
 		)
 		(property "Description" ""
 			(at 44.45 48.26 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4551,8 +4565,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 100.33 55.88 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4641,8 +4656,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "1uF 16V 5% X7R 0603"
 			(at 177.8 55.88 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4731,6 +4747,7 @@
 		)
 		(property "Description" ""
 			(at 171.45 118.11 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4795,8 +4812,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "10uF 25V 20% X5R 0603"
 			(at 134.62 55.88 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4886,6 +4904,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 161.29 111.76 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4951,8 +4970,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Light emitting diode"
+		(property "Description" "LED yellow-green 2V 0402"
 			(at 209.55 82.55 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5069,6 +5089,7 @@
 		)
 		(property "Description" ""
 			(at 252.73 97.79 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5134,6 +5155,7 @@
 		)
 		(property "Description" ""
 			(at 245.11 114.3 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5198,8 +5220,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 171.45 121.92 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5289,6 +5312,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 161.29 60.96 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5351,8 +5375,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "4.7kΩ 50V 1% 0402"
 			(at 212.09 116.84 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5441,8 +5466,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 86.36 55.88 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5532,6 +5558,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 142.24 118.11 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5596,8 +5623,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "10uF 25V 20% X5R 0603"
 			(at 72.39 55.88 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5686,8 +5714,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "1uF 16V 5% X7R 0603"
 			(at 161.29 55.88 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5775,8 +5804,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "10uF 25V 20% X5R 0603"
 			(at 44.45 55.88 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5862,8 +5892,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "4.7kΩ 50V 1% 0402"
 			(at 212.09 113.03 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5953,6 +5984,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 134.62 62.23 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6018,8 +6050,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "4.7kΩ 50V 1% 0402"
 			(at 63.5 143.51 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6107,8 +6140,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "10uF 25V 20% X5R 0603"
 			(at 58.42 55.88 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6196,8 +6230,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1kΩ 50V 1% 0402"
 			(at 209.55 73.66 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6302,8 +6337,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 142.24 55.88 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6392,6 +6428,7 @@
 		)
 		(property "Description" ""
 			(at 260.35 114.3 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6456,8 +6493,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "BM28 24P 0.35mm plug"
 			(at 252.73 80.01 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6620,6 +6658,7 @@
 		)
 		(property "Description" "Stereo audio codec VQFN-24 package with corner ground"
 			(at 83.82 158.75 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6790,6 +6829,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"+3V3\""
 			(at 217.17 110.49 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)

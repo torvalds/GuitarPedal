@@ -6120,6 +6120,7 @@
 		)
 		(property "Description" ""
 			(at 168.91 49.53 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6197,6 +6198,7 @@
 		)
 		(property "Description" ""
 			(at 125.73 49.53 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6674,7 +6676,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 90.17 157.48 0)
 			(hide yes)
 			(show_name no)
@@ -6900,7 +6902,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 115.57 182.88 0)
 			(hide yes)
 			(show_name no)
@@ -7023,7 +7025,7 @@
 				)
 			)
 		)
-		(property "Description" "1.9A 1uH 2A 60MHz 64mΩ Multilayer inductor ±20% 0806 Power Inductors ROHS"
+		(property "Description" "1uH 2A 0806"
 			(at 162.56 38.1 0)
 			(hide yes)
 			(show_name no)
@@ -7128,6 +7130,7 @@
 		)
 		(property "Description" ""
 			(at 135.89 55.88 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7204,8 +7207,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "2.2uF 25V 10% X7R 0603"
 			(at 125.73 44.45 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7817,7 +7821,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "249kΩ 25V 1% 0201"
 			(at 135.89 50.8 0)
 			(hide yes)
 			(show_name no)
@@ -8000,7 +8004,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 199.39 40.64 0)
 			(hide yes)
 			(show_name no)
@@ -8125,7 +8129,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 193.04 149.86 0)
 			(hide yes)
 			(show_name no)
@@ -8723,7 +8727,7 @@
 				)
 			)
 		)
-		(property "Description" "Light emitting diode"
+		(property "Description" "LED yellow-green 2V 0402"
 			(at 92.71 25.4 0)
 			(hide yes)
 			(show_name no)
@@ -8957,7 +8961,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "5.1kΩ 25V 1% 0201"
 			(at 62.23 35.56 0)
 			(hide yes)
 			(show_name no)
@@ -9300,7 +9304,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 90.17 182.88 0)
 			(hide yes)
 			(show_name no)
@@ -9581,7 +9585,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 102.87 157.48 0)
 			(hide yes)
 			(show_name no)
@@ -9784,7 +9788,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 128.27 157.48 0)
 			(hide yes)
 			(show_name no)
@@ -10117,7 +10121,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "5.1kΩ 25V 1% 0201"
 			(at 62.23 33.02 0)
 			(hide yes)
 			(show_name no)
@@ -10484,7 +10488,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 115.57 157.48 0)
 			(hide yes)
 			(show_name no)
@@ -10610,7 +10614,7 @@
 				)
 			)
 		)
-		(property "Description" "22uF 25V X5R ±20% 0805 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS"
+		(property "Description" "22uF 25V 20% X5R 0805"
 			(at 168.91 44.45 0)
 			(hide yes)
 			(show_name no)
@@ -10714,6 +10718,7 @@
 		)
 		(property "Description" ""
 			(at 168.91 36.83 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -11161,6 +11166,7 @@
 		)
 		(property "Description" ""
 			(at 147.32 55.88 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -11314,7 +11320,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 128.27 182.88 0)
 			(hide yes)
 			(show_name no)
@@ -11439,7 +11445,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 102.87 182.88 0)
 			(hide yes)
 			(show_name no)
@@ -11642,7 +11648,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1kΩ 25V 1% 0201"
 			(at 204.47 36.83 0)
 			(hide yes)
 			(show_name no)
@@ -11845,7 +11851,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1kΩ 25V 1% 0201"
 			(at 85.09 25.4 0)
 			(hide yes)
 			(show_name no)

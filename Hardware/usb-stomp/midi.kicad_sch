@@ -2718,7 +2718,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 27.94 100.33 0)
 			(hide yes)
 			(show_name no)
@@ -3187,7 +3187,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "220Ω 50V 1% 0402"
 			(at 73.66 86.36 0)
 			(hide yes)
 			(show_name no)
@@ -3449,6 +3449,7 @@
 		)
 		(property "Description" ""
 			(at 176.53 76.2 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3631,7 +3632,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 33.02 49.53 0)
 			(hide yes)
 			(show_name no)
@@ -3758,7 +3759,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 227.33 68.58 0)
 			(hide yes)
 			(show_name no)
@@ -3963,7 +3964,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 240.03 68.58 0)
 			(hide yes)
 			(show_name no)
@@ -4165,7 +4166,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "220Ω 50V 1% 0402"
 			(at 41.91 33.02 0)
 			(hide yes)
 			(show_name no)
@@ -4267,7 +4268,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "220Ω 50V 1% 0402"
 			(at 73.66 88.9 0)
 			(hide yes)
 			(show_name no)
@@ -4668,6 +4669,7 @@
 		)
 		(property "Description" ""
 			(at 191.77 76.2 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4852,6 +4854,7 @@
 		)
 		(property "Description" ""
 			(at 33.02 45.72 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5039,6 +5042,7 @@
 		)
 		(property "Description" ""
 			(at 161.29 76.2 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5616,7 +5620,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 252.73 68.58 0)
 			(hide yes)
 			(show_name no)

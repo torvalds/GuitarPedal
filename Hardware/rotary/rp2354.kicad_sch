@@ -5334,6 +5334,7 @@
 		)
 		(property "Description" ""
 			(at 139.7 22.86 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5409,8 +5410,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 170.18 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5522,8 +5524,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 181.61 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5635,8 +5638,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 193.04 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5748,8 +5752,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 204.47 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5861,8 +5866,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 215.9 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5974,8 +5980,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 147.32 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6166,6 +6173,7 @@
 		)
 		(property "Description" ""
 			(at 33.02 46.99 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6241,8 +6249,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 91.44 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6431,7 +6440,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1kΩ 25V 1% 0201"
 			(at 85.09 82.55 0)
 			(hide yes)
 			(show_name no)
@@ -6568,6 +6577,7 @@
 		)
 		(property "Description" ""
 			(at 78.74 59.69 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6644,6 +6654,7 @@
 		)
 		(property "Description" ""
 			(at 218.44 116.84 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6795,7 +6806,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "33Ω 25V 5% 0201"
 			(at 162.56 60.96 0)
 			(hide yes)
 			(show_name no)
@@ -6909,8 +6920,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "33Ω 25V 5% 0201"
 			(at 67.31 49.53 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7023,8 +7035,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 33.02 67.31 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7137,6 +7150,7 @@
 		)
 		(property "Description" ""
 			(at 55.88 35.56 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7213,6 +7227,7 @@
 		)
 		(property "Description" ""
 			(at 125.73 187.96 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7287,8 +7302,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "15pF 25V 5% C0G 0201"
 			(at 224.79 114.3 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7401,8 +7417,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 44.45 67.31 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7514,8 +7531,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 80.01 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7628,8 +7646,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 78.74 54.61 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8033,8 +8052,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 210.82 58.42 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8146,8 +8166,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 222.25 58.42 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8261,6 +8282,7 @@
 		)
 		(property "Description" ""
 			(at 215.9 35.56 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8337,6 +8359,7 @@
 		)
 		(property "Description" ""
 			(at 100.33 22.86 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8414,6 +8437,7 @@
 		)
 		(property "Description" ""
 			(at 99.06 187.96 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8488,8 +8512,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "1kΩ 25V 1% 0201"
 			(at 245.11 114.3 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8603,6 +8628,7 @@
 		)
 		(property "Description" ""
 			(at 199.39 64.77 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8678,7 +8704,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "33Ω 25V 5% 0201"
 			(at 162.56 63.5 0)
 			(hide yes)
 			(show_name no)
@@ -8793,6 +8819,7 @@
 		)
 		(property "Description" ""
 			(at 199.39 50.8 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8868,8 +8895,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 68.58 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8980,7 +9008,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1kΩ 25V 1% 0201"
 			(at 85.09 124.46 0)
 			(hide yes)
 			(show_name no)
@@ -9116,8 +9144,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 55.88 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9229,8 +9258,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 158.75 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9342,8 +9372,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 245.11 58.42 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9533,8 +9564,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 233.68 58.42 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9646,8 +9678,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 199.39 58.42 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9760,7 +9793,7 @@
 				)
 			)
 		)
-		(property "Description" "Inductor"
+		(property "Description" "3.3uH 0806"
 			(at 59.69 82.55 0)
 			(hide yes)
 			(show_name no)
@@ -9875,6 +9908,7 @@
 		)
 		(property "Description" ""
 			(at 123.19 157.48 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9950,8 +9984,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "ABM8 12MHz 30ppm 3225"
 			(at 234.95 109.22 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -10070,6 +10105,7 @@
 		)
 		(property "Description" ""
 			(at 114.3 187.96 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -10147,6 +10183,7 @@
 		)
 		(property "Description" ""
 			(at 33.02 77.47 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -10222,8 +10259,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "15pF 25V 5% C0G 0201"
 			(at 224.79 104.14 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -10336,6 +10374,7 @@
 		)
 		(property "Description" ""
 			(at 44.45 60.96 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
