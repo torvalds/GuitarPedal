@@ -70,6 +70,11 @@
 	Murata GRM0335C1E150JA01D
 	C161373
 
+# The 0402 crystal load capacitor, for when the 0201 above will not fit.
+15pF/50V/5%/C0G/0402:
+	Murata GRM1555C1H150JA01D
+	C76950
+
 # RF filter on the guitar input, 1k in series ahead of it - C307/C308.
 # One of the few places C0G is possible at all, being small enough.
 150pF/25V/5%/C0G/0402:
@@ -129,6 +134,16 @@
 	Murata GRM21BR71E225KE11L
 	C77081
 
+# The intended audio coupling capacitor for the next spin, taking the
+# low-frequency corner from 18.6Hz to about 8.9Hz - the first standard
+# value that puts it under 10Hz.  Held to the audio-path standard: X7R
+# and the physically larger part, name-brand Murata.  4.7uF already
+# exists on these boards as C2858031, but that is an 0402 power-rail
+# part in X5R, which is a different thing entirely.
+4.7uF/50V/10%/X7R/0805:
+	Murata GRM21BZ71H475KE15L
+	C437557
+
 22uF/25V/20%/X5R/0805:
 	Murata GRM21BR61E226ME44L
 	C86816
@@ -174,6 +189,11 @@
 1kΩ/25V/1%/0201:
 	UniRoyal 0201WMF1001TEE
 	C270365
+
+# The 0402 series damper, and a Basic part unlike its 0201 sibling.
+33Ω/50V/1%/0402:
+	UniRoyal 0402WGF330JTCE
+	C25105 basic
 
 # USB and QSPI series termination.  5% is fine for a series damper.
 33Ω/25V/5%/0201:
