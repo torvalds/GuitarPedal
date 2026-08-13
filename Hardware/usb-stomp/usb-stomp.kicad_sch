@@ -8321,7 +8321,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 119.6848 187.96 0)
 			(hide yes)
 			(show_name no)
@@ -8343,7 +8343,7 @@
 				)
 			)
 		)
-		(property "Description" "0.1uF 16V X7R 0201"
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 120.65 184.15 0)
 			(hide yes)
 			(show_name no)
@@ -8354,7 +8354,7 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C3901090"
+		(property "LCSC PN" "C1525"
 			(at 120.65 184.15 0)
 			(hide yes)
 			(show_name no)
@@ -8365,7 +8365,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
 			(at 120.65 184.15 0)
 			(hide yes)
 			(show_name no)
@@ -11014,7 +11014,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 267.0048 105.41 0)
 			(hide yes)
 			(show_name no)
@@ -11036,7 +11036,7 @@
 				)
 			)
 		)
-		(property "Description" "0.1uF 16V X7R 0201"
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 267.97 109.22 0)
 			(hide yes)
 			(show_name no)
@@ -11047,7 +11047,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
 			(at 267.97 109.22 0)
 			(hide yes)
 			(show_name no)
@@ -11080,7 +11080,7 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C3901090"
+		(property "LCSC PN" "C1525"
 			(at 267.97 109.22 0)
 			(hide yes)
 			(show_name no)
@@ -13442,7 +13442,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 91.1352 39.37 0)
 			(hide yes)
 			(show_name no)
@@ -13464,7 +13464,7 @@
 				)
 			)
 		)
-		(property "Description" "0.1uF 16V X7R 0201"
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 90.17 43.18 0)
 			(hide yes)
 			(show_name no)
@@ -13475,7 +13475,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
 			(at 90.17 43.18 0)
 			(hide yes)
 			(show_name no)
@@ -13508,7 +13508,7 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C3901090"
+		(property "LCSC PN" "C1525"
 			(at 90.17 43.18 0)
 			(hide yes)
 			(show_name no)

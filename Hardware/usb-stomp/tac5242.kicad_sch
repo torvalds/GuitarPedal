@@ -5723,7 +5723,7 @@
 				)
 			)
 		)
-		(property "Value" "2.2uF"
+		(property "Value" "4.7uF"
 			(at 135.89 71.12 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5733,7 +5733,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
 			(at 139.7 77.1652 0)
 			(hide yes)
 			(show_name no)
@@ -5755,7 +5755,7 @@
 				)
 			)
 		)
-		(property "Description" "2.2uF 25V 10% X7R 0603"
+		(property "Description" "4.7uF 50V 10% X7R 0805"
 			(at 135.89 76.2 0)
 			(hide yes)
 			(show_name no)
@@ -5766,7 +5766,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "GRM188Z71E225KE43D"
+		(property "MANUFACTURER_PART_NUMBER" "GRM21BZ71H475KE15L"
 			(at 135.89 76.2 0)
 			(hide yes)
 			(show_name no)
@@ -5799,7 +5799,7 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C415535"
+		(property "LCSC PN" "C437557"
 			(at 135.89 76.2 90)
 			(hide yes)
 			(show_name no)
@@ -7510,7 +7510,7 @@
 				)
 			)
 		)
-		(property "Value" "2.2uF"
+		(property "Value" "4.7uF"
 			(at 135.89 91.44 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7520,7 +7520,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
 			(at 139.7 87.3252 0)
 			(hide yes)
 			(show_name no)
@@ -7542,7 +7542,7 @@
 				)
 			)
 		)
-		(property "Description" "2.2uF 25V 10% X7R 0603"
+		(property "Description" "4.7uF 50V 10% X7R 0805"
 			(at 135.89 86.36 0)
 			(hide yes)
 			(show_name no)
@@ -7553,7 +7553,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "GRM188Z71E225KE43D"
+		(property "MANUFACTURER_PART_NUMBER" "GRM21BZ71H475KE15L"
 			(at 135.89 86.36 0)
 			(hide yes)
 			(show_name no)
@@ -7586,7 +7586,7 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C415535"
+		(property "LCSC PN" "C437557"
 			(at 135.89 86.36 90)
 			(hide yes)
 			(show_name no)
@@ -8858,7 +8858,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 238.4552 49.53 0)
 			(hide yes)
 			(show_name no)
@@ -8880,7 +8880,7 @@
 				)
 			)
 		)
-		(property "Description" "0.1uF 16V X7R 0201"
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 237.49 45.72 0)
 			(hide yes)
 			(show_name no)
@@ -8891,7 +8891,7 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C3901090"
+		(property "LCSC PN" "C1525"
 			(at 237.49 45.72 0)
 			(hide yes)
 			(show_name no)
@@ -8902,7 +8902,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
 			(at 237.49 45.72 0)
 			(hide yes)
 			(show_name no)
@@ -9382,7 +9382,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 224.4852 49.53 0)
 			(hide yes)
 			(show_name no)
@@ -9404,7 +9404,7 @@
 				)
 			)
 		)
-		(property "Description" "0.1uF 16V X7R 0201"
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 223.52 45.72 0)
 			(hide yes)
 			(show_name no)
@@ -9415,7 +9415,7 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C3901090"
+		(property "LCSC PN" "C1525"
 			(at 223.52 45.72 0)
 			(hide yes)
 			(show_name no)
@@ -9426,7 +9426,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
 			(at 223.52 45.72 0)
 			(hide yes)
 			(show_name no)
@@ -9675,7 +9675,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 190.1952 74.93 0)
 			(hide yes)
 			(show_name no)
@@ -9697,7 +9697,7 @@
 				)
 			)
 		)
-		(property "Description" "0.1uF 16V X7R 0201"
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 189.23 71.12 0)
 			(hide yes)
 			(show_name no)
@@ -9708,7 +9708,7 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C3901090"
+		(property "LCSC PN" "C1525"
 			(at 189.23 71.12 0)
 			(hide yes)
 			(show_name no)
@@ -9719,7 +9719,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
 			(at 189.23 71.12 0)
 			(hide yes)
 			(show_name no)
@@ -10453,7 +10453,7 @@
 				)
 			)
 		)
-		(property "Value" "2.2uF"
+		(property "Value" "4.7uF"
 			(at 135.89 111.76 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10463,7 +10463,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
 			(at 139.7 117.8052 0)
 			(hide yes)
 			(show_name no)
@@ -10485,7 +10485,7 @@
 				)
 			)
 		)
-		(property "Description" "2.2uF 25V 10% X7R 0603"
+		(property "Description" "4.7uF 50V 10% X7R 0805"
 			(at 135.89 116.84 0)
 			(hide yes)
 			(show_name no)
@@ -10496,7 +10496,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "GRM188Z71E225KE43D"
+		(property "MANUFACTURER_PART_NUMBER" "GRM21BZ71H475KE15L"
 			(at 135.89 116.84 0)
 			(hide yes)
 			(show_name no)
@@ -10529,7 +10529,7 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C415535"
+		(property "LCSC PN" "C437557"
 			(at 135.89 116.84 90)
 			(hide yes)
 			(show_name no)
@@ -11491,7 +11491,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 79.7052 38.1 0)
 			(hide yes)
 			(show_name no)
@@ -11513,7 +11513,7 @@
 				)
 			)
 		)
-		(property "Description" "0.1uF 16V X7R 0201"
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 78.74 41.91 0)
 			(hide yes)
 			(show_name no)
@@ -11524,7 +11524,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
 			(at 78.74 41.91 0)
 			(hide yes)
 			(show_name no)
@@ -11557,7 +11557,7 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C3901090"
+		(property "LCSC PN" "C1525"
 			(at 78.74 41.91 0)
 			(hide yes)
 			(show_name no)
@@ -13427,7 +13427,7 @@
 				)
 			)
 		)
-		(property "Value" "2.2uF"
+		(property "Value" "4.7uF"
 			(at 135.89 132.08 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -13437,7 +13437,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
 			(at 139.7 127.9652 0)
 			(hide yes)
 			(show_name no)
@@ -13459,7 +13459,7 @@
 				)
 			)
 		)
-		(property "Description" "2.2uF 25V 10% X7R 0603"
+		(property "Description" "4.7uF 50V 10% X7R 0805"
 			(at 135.89 127 0)
 			(hide yes)
 			(show_name no)
@@ -13470,7 +13470,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "GRM188Z71E225KE43D"
+		(property "MANUFACTURER_PART_NUMBER" "GRM21BZ71H475KE15L"
 			(at 135.89 127 0)
 			(hide yes)
 			(show_name no)
@@ -13503,7 +13503,7 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C415535"
+		(property "LCSC PN" "C437557"
 			(at 135.89 127 90)
 			(hide yes)
 			(show_name no)
