@@ -49,10 +49,36 @@ def main():
     ap.add_argument("--freq", type=float, default=440.0,
                     help="generator frequency, Hz")
     ap.add_argument("--seconds", type=float, default=3.0)
+    ap.add_argument("--target", default=None,
+                    help="serial, label or product substring naming one pedal")
     args = ap.parse_args()
 
-    card = audio.find_card()
-    p = pedal.port()
+    #
+    # find_card() and port() each answer with the first thing they see,
+    # and the two enumerate independently - so with more than one board
+    # attached they can disagree about which pedal this is.  Going
+    # through discover() keeps the card and the port from the same
+    # entry, and --target is how a caller says which entry.
+    #
+    found = pedal.discover()
+    if not found:
+        print("test-audio: SKIPPED - no pedal on the USB")
+        return 0
+    if args.target:
+        d = pedal.find(args.target, among=found)
+        if not d:
+            print("test-audio: SKIPPED - '%s' does not name exactly one of "
+                  "the %d pedals here: %s"
+                  % (args.target, len(found),
+                     ", ".join(x["label"] for x in found)))
+            return 0
+    elif len(found) > 1:
+        print("test-audio: SKIPPED - %d pedals and no --target; this wants "
+              "exactly one" % len(found))
+        return 0
+    else:
+        d = found[0]
+    card, p = d["card"], d["port"]
     if card is None or p is None:
         print("test-audio: SKIPPED - no pedal on the USB")
         return 0

@@ -5334,6 +5334,7 @@
 		)
 		(property "Description" ""
 			(at 138.43 21.59 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5409,8 +5410,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 168.91 27.94 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5420,6 +5422,17 @@
 			)
 		)
 		(property "LCSC PN" "C3901090"
+			(at 168.91 27.94 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 168.91 27.94 0)
 			(hide yes)
 			(show_name no)
@@ -5511,8 +5524,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 180.34 27.94 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5522,6 +5536,17 @@
 			)
 		)
 		(property "LCSC PN" "C3901090"
+			(at 180.34 27.94 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 180.34 27.94 0)
 			(hide yes)
 			(show_name no)
@@ -5613,8 +5638,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 191.77 27.94 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5624,6 +5650,17 @@
 			)
 		)
 		(property "LCSC PN" "C3901090"
+			(at 191.77 27.94 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 191.77 27.94 0)
 			(hide yes)
 			(show_name no)
@@ -5715,8 +5752,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 203.2 27.94 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5726,6 +5764,17 @@
 			)
 		)
 		(property "LCSC PN" "C3901090"
+			(at 203.2 27.94 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 203.2 27.94 0)
 			(hide yes)
 			(show_name no)
@@ -5817,8 +5866,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 214.63 27.94 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5828,6 +5878,17 @@
 			)
 		)
 		(property "LCSC PN" "C3901090"
+			(at 214.63 27.94 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 214.63 27.94 0)
 			(hide yes)
 			(show_name no)
@@ -5919,8 +5980,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 146.05 27.94 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5930,6 +5992,17 @@
 			)
 		)
 		(property "LCSC PN" "C3901090"
+			(at 146.05 27.94 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 146.05 27.94 0)
 			(hide yes)
 			(show_name no)
@@ -6100,6 +6173,7 @@
 		)
 		(property "Description" ""
 			(at 31.75 45.72 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6175,8 +6249,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 90.17 27.94 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6186,6 +6261,17 @@
 			)
 		)
 		(property "LCSC PN" "C3901090"
+			(at 90.17 27.94 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 90.17 27.94 0)
 			(hide yes)
 			(show_name no)
@@ -6276,7 +6362,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1kΩ 25V 1% 0201"
 			(at 83.82 81.28 0)
 			(hide yes)
 			(show_name no)
@@ -6287,95 +6373,7 @@
 				)
 			)
 		)
-		(property "Availability" ""
-			(at 83.82 81.28 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Check_prices" ""
-			(at 83.82 81.28 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description_1" ""
-			(at 83.82 81.28 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 83.82 81.28 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MF" ""
-			(at 83.82 81.28 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MP" ""
-			(at 83.82 81.28 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 83.82 81.28 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Package" ""
-			(at 83.82 81.28 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "0201WMF1001TEE"
 			(at 83.82 81.28 0)
 			(hide yes)
 			(show_name no)
@@ -6398,28 +6396,6 @@
 			)
 		)
 		(property "Sim.Pins" ""
-			(at 83.82 81.28 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "SnapEDA_Link" ""
-			(at 83.82 81.28 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "VENDOR" ""
 			(at 83.82 81.28 0)
 			(hide yes)
 			(show_name no)
@@ -6523,6 +6499,7 @@
 		)
 		(property "Description" ""
 			(at 77.47 58.42 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6599,6 +6576,7 @@
 		)
 		(property "Description" ""
 			(at 217.17 115.57 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6673,7 +6651,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "33Ω 25V 5% 0201"
 			(at 161.29 59.69 0)
 			(hide yes)
 			(show_name no)
@@ -6685,6 +6663,17 @@
 			)
 		)
 		(property "LCSC PN" "C423356"
+			(at 161.29 59.69 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "0201WMJ0330TEE"
 			(at 161.29 59.69 90)
 			(hide yes)
 			(show_name no)
@@ -6776,8 +6765,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "33Ω 25V 5% 0201"
 			(at 66.04 48.26 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6787,6 +6777,17 @@
 			)
 		)
 		(property "LCSC PN" "C423356"
+			(at 66.04 48.26 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "0201WMJ0330TEE"
 			(at 66.04 48.26 0)
 			(hide yes)
 			(show_name no)
@@ -6879,8 +6880,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 31.75 66.04 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6890,6 +6892,17 @@
 			)
 		)
 		(property "LCSC PN" "C2858031"
+			(at 31.75 66.04 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
 			(at 31.75 66.04 0)
 			(hide yes)
 			(show_name no)
@@ -6982,6 +6995,7 @@
 		)
 		(property "Description" ""
 			(at 54.61 34.29 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7058,6 +7072,7 @@
 		)
 		(property "Description" ""
 			(at 124.46 186.69 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7132,8 +7147,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "15pF 25V 5% C0G 0201"
 			(at 223.52 113.03 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7143,6 +7159,17 @@
 			)
 		)
 		(property "LCSC PN" "C161373"
+			(at 223.52 113.03 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM0335C1E150JA01D"
 			(at 223.52 113.03 0)
 			(hide yes)
 			(show_name no)
@@ -7235,8 +7262,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 43.18 66.04 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7246,6 +7274,17 @@
 			)
 		)
 		(property "LCSC PN" "C2858031"
+			(at 43.18 66.04 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
 			(at 43.18 66.04 0)
 			(hide yes)
 			(show_name no)
@@ -7337,8 +7376,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 78.74 27.94 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7348,6 +7388,17 @@
 			)
 		)
 		(property "LCSC PN" "C3901090"
+			(at 78.74 27.94 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 78.74 27.94 0)
 			(hide yes)
 			(show_name no)
@@ -7440,8 +7491,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 77.47 53.34 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7451,6 +7503,17 @@
 			)
 		)
 		(property "LCSC PN" "C2858031"
+			(at 77.47 53.34 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
 			(at 77.47 53.34 0)
 			(hide yes)
 			(show_name no)
@@ -7555,6 +7618,17 @@
 			)
 		)
 		(property "LCSC PN" "C41378174"
+			(at 121.92 86.36 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "RP2354A"
 			(at 121.92 86.36 0)
 			(hide yes)
 			(show_name no)
@@ -7823,8 +7897,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 209.55 57.15 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7834,6 +7909,17 @@
 			)
 		)
 		(property "LCSC PN" "C2858031"
+			(at 209.55 57.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
 			(at 209.55 57.15 0)
 			(hide yes)
 			(show_name no)
@@ -7925,8 +8011,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 220.98 57.15 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7936,6 +8023,17 @@
 			)
 		)
 		(property "LCSC PN" "C2858031"
+			(at 220.98 57.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
 			(at 220.98 57.15 0)
 			(hide yes)
 			(show_name no)
@@ -8029,6 +8127,7 @@
 		)
 		(property "Description" ""
 			(at 214.63 34.29 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8105,6 +8204,7 @@
 		)
 		(property "Description" ""
 			(at 99.06 21.59 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8179,8 +8279,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "1kΩ 25V 1% 0201"
 			(at 243.84 113.03 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8190,6 +8291,17 @@
 			)
 		)
 		(property "LCSC PN" "C270365"
+			(at 243.84 113.03 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "0201WMF1001TEE"
 			(at 243.84 113.03 90)
 			(hide yes)
 			(show_name no)
@@ -8283,6 +8395,7 @@
 		)
 		(property "Description" ""
 			(at 198.12 63.5 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8358,7 +8471,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "33Ω 25V 5% 0201"
 			(at 161.29 62.23 0)
 			(hide yes)
 			(show_name no)
@@ -8370,6 +8483,17 @@
 			)
 		)
 		(property "LCSC PN" "C423356"
+			(at 161.29 62.23 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "0201WMJ0330TEE"
 			(at 161.29 62.23 90)
 			(hide yes)
 			(show_name no)
@@ -8462,6 +8586,7 @@
 		)
 		(property "Description" ""
 			(at 198.12 49.53 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8537,8 +8662,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 67.31 27.94 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8548,6 +8674,17 @@
 			)
 		)
 		(property "LCSC PN" "C3901090"
+			(at 67.31 27.94 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 67.31 27.94 0)
 			(hide yes)
 			(show_name no)
@@ -8638,7 +8775,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1kΩ 25V 1% 0201"
 			(at 83.82 123.19 0)
 			(hide yes)
 			(show_name no)
@@ -8649,95 +8786,7 @@
 				)
 			)
 		)
-		(property "Availability" ""
-			(at 83.82 123.19 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Check_prices" ""
-			(at 83.82 123.19 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description_1" ""
-			(at 83.82 123.19 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 83.82 123.19 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MF" ""
-			(at 83.82 123.19 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MP" ""
-			(at 83.82 123.19 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 83.82 123.19 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Package" ""
-			(at 83.82 123.19 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "0201WMF1001TEE"
 			(at 83.82 123.19 0)
 			(hide yes)
 			(show_name no)
@@ -8760,28 +8809,6 @@
 			)
 		)
 		(property "Sim.Pins" ""
-			(at 83.82 123.19 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "SnapEDA_Link" ""
-			(at 83.82 123.19 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "VENDOR" ""
 			(at 83.82 123.19 0)
 			(hide yes)
 			(show_name no)
@@ -8884,8 +8911,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 54.61 27.94 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8895,6 +8923,17 @@
 			)
 		)
 		(property "LCSC PN" "C2858031"
+			(at 54.61 27.94 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
 			(at 54.61 27.94 0)
 			(hide yes)
 			(show_name no)
@@ -8986,8 +9025,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V X7R 0201"
 			(at 157.48 27.94 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8997,6 +9037,17 @@
 			)
 		)
 		(property "LCSC PN" "C3901090"
+			(at 157.48 27.94 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM033Z71C104ME14D"
 			(at 157.48 27.94 0)
 			(hide yes)
 			(show_name no)
@@ -9088,8 +9139,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 243.84 57.15 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9099,6 +9151,17 @@
 			)
 		)
 		(property "LCSC PN" "C2858031"
+			(at 243.84 57.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
 			(at 243.84 57.15 0)
 			(hide yes)
 			(show_name no)
@@ -9268,8 +9331,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 232.41 57.15 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9279,6 +9343,17 @@
 			)
 		)
 		(property "LCSC PN" "C2858031"
+			(at 232.41 57.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
 			(at 232.41 57.15 0)
 			(hide yes)
 			(show_name no)
@@ -9370,8 +9445,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 198.12 57.15 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9381,6 +9457,17 @@
 			)
 		)
 		(property "LCSC PN" "C2858031"
+			(at 198.12 57.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
 			(at 198.12 57.15 0)
 			(hide yes)
 			(show_name no)
@@ -9473,7 +9560,7 @@
 				)
 			)
 		)
-		(property "Description" "Inductor"
+		(property "Description" "3.3uH 0806"
 			(at 58.42 81.28 0)
 			(hide yes)
 			(show_name no)
@@ -9485,6 +9572,17 @@
 			)
 		)
 		(property "LCSC PN" "C42411119"
+			(at 58.42 66.04 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "AOTA-B201610S3R3-101-T"
 			(at 58.42 66.04 0)
 			(hide yes)
 			(show_name no)
@@ -9577,6 +9675,7 @@
 		)
 		(property "Description" ""
 			(at 121.92 156.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9652,8 +9751,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "ABM8 12MHz 30ppm 3225"
 			(at 233.68 107.95 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9663,6 +9763,17 @@
 			)
 		)
 		(property "LCSC PN" "C20625731"
+			(at 233.68 107.95 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "ABM8-272-T3"
 			(at 233.68 107.95 90)
 			(hide yes)
 			(show_name no)
@@ -9762,6 +9873,7 @@
 		)
 		(property "Description" ""
 			(at 31.75 76.2 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9837,8 +9949,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "15pF 25V 5% C0G 0201"
 			(at 223.52 102.87 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9848,6 +9961,17 @@
 			)
 		)
 		(property "LCSC PN" "C161373"
+			(at 223.52 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM0335C1E150JA01D"
 			(at 223.52 102.87 0)
 			(hide yes)
 			(show_name no)
@@ -9940,6 +10064,7 @@
 		)
 		(property "Description" ""
 			(at 43.18 59.69 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects

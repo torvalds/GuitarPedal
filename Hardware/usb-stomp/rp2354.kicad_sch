@@ -5334,6 +5334,7 @@
 		)
 		(property "Description" ""
 			(at 138.43 22.86 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5387,7 +5388,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 169.8752 33.02 0)
 			(hide yes)
 			(show_name no)
@@ -5409,8 +5410,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 168.91 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5419,7 +5421,18 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C3901090"
+		(property "LCSC PN" "C1525"
+			(at 168.91 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
 			(at 168.91 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -5431,50 +5444,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 168.91 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 168.91 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 168.91 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 168.91 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 168.91 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -5533,7 +5502,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 181.3052 33.02 0)
 			(hide yes)
 			(show_name no)
@@ -5555,8 +5524,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 180.34 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5565,7 +5535,18 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C3901090"
+		(property "LCSC PN" "C1525"
+			(at 180.34 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
 			(at 180.34 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -5577,50 +5558,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 180.34 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 180.34 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 180.34 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 180.34 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 180.34 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -5679,7 +5616,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 192.7352 33.02 0)
 			(hide yes)
 			(show_name no)
@@ -5701,8 +5638,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 191.77 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5711,7 +5649,18 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C3901090"
+		(property "LCSC PN" "C1525"
+			(at 191.77 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
 			(at 191.77 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -5723,50 +5672,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 191.77 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 191.77 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 191.77 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 191.77 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 191.77 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -5825,7 +5730,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 204.1652 33.02 0)
 			(hide yes)
 			(show_name no)
@@ -5847,8 +5752,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 203.2 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5857,7 +5763,18 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C3901090"
+		(property "LCSC PN" "C1525"
+			(at 203.2 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
 			(at 203.2 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -5869,50 +5786,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 203.2 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 203.2 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 203.2 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 203.2 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 203.2 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -5971,7 +5844,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 215.5952 33.02 0)
 			(hide yes)
 			(show_name no)
@@ -5993,8 +5866,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 214.63 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6003,7 +5877,18 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C3901090"
+		(property "LCSC PN" "C1525"
+			(at 214.63 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
 			(at 214.63 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -6015,50 +5900,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 214.63 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 214.63 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 214.63 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 214.63 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 214.63 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -6117,7 +5958,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 147.0152 33.02 0)
 			(hide yes)
 			(show_name no)
@@ -6139,8 +5980,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 146.05 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6149,7 +5991,18 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C3901090"
+		(property "LCSC PN" "C1525"
+			(at 146.05 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
 			(at 146.05 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -6161,50 +6014,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 146.05 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 146.05 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 146.05 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 146.05 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 146.05 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -6364,6 +6173,7 @@
 		)
 		(property "Description" ""
 			(at 31.75 46.99 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6417,7 +6227,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 91.1352 33.02 0)
 			(hide yes)
 			(show_name no)
@@ -6439,8 +6249,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 90.17 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6449,7 +6260,18 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C3901090"
+		(property "LCSC PN" "C1525"
+			(at 90.17 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
 			(at 90.17 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -6461,50 +6283,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 90.17 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 90.17 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 90.17 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 90.17 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 90.17 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -6552,7 +6330,7 @@
 				)
 			)
 		)
-		(property "Value" "1k"
+		(property "Value" "1kΩ"
 			(at 83.82 78.74 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6562,7 +6340,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_0201_0603Metric"
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
 			(at 83.82 84.328 90)
 			(hide yes)
 			(show_name no)
@@ -6584,7 +6362,7 @@
 				)
 			)
 		)
-		(property "Description" "1kΩ 25V 50mW Thick Film Resistor ±1% ±200ppm/℃ 0201"
+		(property "Description" "1kΩ 50V 1% 0402"
 			(at 83.82 82.55 0)
 			(hide yes)
 			(show_name no)
@@ -6595,95 +6373,7 @@
 				)
 			)
 		)
-		(property "Availability" ""
-			(at 83.82 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Check_prices" ""
-			(at 83.82 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description_1" ""
-			(at 83.82 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 83.82 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MF" ""
-			(at 83.82 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MP" ""
-			(at 83.82 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 83.82 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Package" ""
-			(at 83.82 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "0402WGF1001TCE"
 			(at 83.82 82.55 0)
 			(hide yes)
 			(show_name no)
@@ -6716,29 +6406,7 @@
 				)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 83.82 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "VENDOR" ""
-			(at 83.82 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC PN" "C270365"
+		(property "LCSC PN" "C11702"
 			(at 83.82 82.55 90)
 			(hide yes)
 			(show_name no)
@@ -6750,50 +6418,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 83.82 82.55 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 83.82 82.55 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 83.82 82.55 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 83.82 82.55 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 83.82 82.55 90)
 			(hide yes)
 			(show_name no)
@@ -6875,6 +6499,7 @@
 		)
 		(property "Description" ""
 			(at 77.47 59.69 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6951,6 +6576,7 @@
 		)
 		(property "Description" ""
 			(at 217.17 116.84 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6993,7 +6619,7 @@
 				)
 			)
 		)
-		(property "Value" "33R"
+		(property "Value" "33Ω"
 			(at 161.29 57.15 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7003,7 +6629,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_0201_0603Metric"
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
 			(at 161.29 62.738 90)
 			(hide yes)
 			(show_name no)
@@ -7025,7 +6651,7 @@
 				)
 			)
 		)
-		(property "Description" "33Ω 25V 50mW Thick Film Resistor ±200ppm/℃ ±5% 0201"
+		(property "Description" "33Ω 50V 1% 0402"
 			(at 161.29 60.96 0)
 			(hide yes)
 			(show_name no)
@@ -7036,7 +6662,18 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C423356"
+		(property "LCSC PN" "C25105"
+			(at 161.29 60.96 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "0402WGF330JTCE"
 			(at 161.29 60.96 90)
 			(hide yes)
 			(show_name no)
@@ -7048,50 +6685,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 161.29 60.96 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 161.29 60.96 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 161.29 60.96 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 161.29 60.96 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 161.29 60.96 90)
 			(hide yes)
 			(show_name no)
@@ -7139,7 +6732,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "33R"
+		(property "Value" "33Ω"
 			(at 67.183 47.752 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7150,7 +6743,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_0201_0603Metric"
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
 			(at 66.04 51.308 90)
 			(hide yes)
 			(show_name no)
@@ -7172,8 +6765,9 @@
 				)
 			)
 		)
-		(property "Description" "33Ω 25V 50mW Thick Film Resistor ±200ppm/℃ ±5% 0201"
+		(property "Description" "33Ω 50V 1% 0402"
 			(at 66.04 49.53 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7182,7 +6776,18 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C423356"
+		(property "LCSC PN" "C25105"
+			(at 66.04 49.53 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "0402WGF330JTCE"
 			(at 66.04 49.53 0)
 			(hide yes)
 			(show_name no)
@@ -7194,50 +6799,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 66.04 49.53 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 66.04 49.53 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 66.04 49.53 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 66.04 49.53 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 66.04 49.53 0)
 			(hide yes)
 			(show_name no)
@@ -7319,8 +6880,9 @@
 				)
 			)
 		)
-		(property "Description" "25V 4.7uF X5R ±20% 0402"
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 31.75 67.31 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7340,51 +6902,18 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
+			(at 31.75 67.31 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
-			(at 31.75 67.31 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 31.75 67.31 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 31.75 67.31 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 31.75 67.31 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 31.75 67.31 0)
 			(hide yes)
 			(show_name no)
@@ -7466,6 +6995,7 @@
 		)
 		(property "Description" ""
 			(at 54.61 35.56 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7542,6 +7072,7 @@
 		)
 		(property "Description" ""
 			(at 124.46 187.96 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7594,7 +7125,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 219.71 113.3348 0)
 			(hide yes)
 			(show_name no)
@@ -7616,8 +7147,9 @@
 				)
 			)
 		)
-		(property "Description" "15pF 25V C0G ±5% 0201"
+		(property "Description" "15pF 50V 5% C0G 0402"
 			(at 223.52 114.3 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7626,7 +7158,18 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C161373"
+		(property "LCSC PN" "C76950"
+			(at 223.52 114.3 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM1555C1H150JA01D"
 			(at 223.52 114.3 0)
 			(hide yes)
 			(show_name no)
@@ -7639,50 +7182,6 @@
 		)
 		(property "Sim.Params" ""
 			(at 223.52 114.3 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 223.52 114.3 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 223.52 114.3 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 223.52 114.3 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
-			(at 223.52 114.3 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7763,8 +7262,9 @@
 				)
 			)
 		)
-		(property "Description" "25V 4.7uF X5R ±20% 0402"
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 43.18 67.31 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7784,51 +7284,18 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
+			(at 43.18 67.31 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
-			(at 43.18 67.31 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 43.18 67.31 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 43.18 67.31 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 43.18 67.31 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 43.18 67.31 0)
 			(hide yes)
 			(show_name no)
@@ -7887,7 +7354,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 79.7052 33.02 0)
 			(hide yes)
 			(show_name no)
@@ -7909,8 +7376,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 78.74 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7919,7 +7387,18 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C3901090"
+		(property "LCSC PN" "C1525"
+			(at 78.74 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
 			(at 78.74 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -7931,50 +7410,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 78.74 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 78.74 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 78.74 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 78.74 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 78.74 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -8056,8 +7491,9 @@
 				)
 			)
 		)
-		(property "Description" "25V 4.7uF X5R ±20% 0402"
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 77.47 54.61 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8077,51 +7513,18 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
+			(at 77.47 54.61 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
-			(at 77.47 54.61 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 77.47 54.61 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 77.47 54.61 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 77.47 54.61 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 77.47 54.61 0)
 			(hide yes)
 			(show_name no)
@@ -8225,51 +7628,18 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "RP2354A"
+			(at 121.92 87.63 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
-			(at 121.92 87.63 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 121.92 87.63 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 121.92 87.63 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 121.92 87.63 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 121.92 87.63 0)
 			(hide yes)
 			(show_name no)
@@ -8527,8 +7897,9 @@
 				)
 			)
 		)
-		(property "Description" "25V 4.7uF X5R ±20% 0402"
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 209.55 58.42 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8548,51 +7919,18 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
+			(at 209.55 58.42 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
-			(at 209.55 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 209.55 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 209.55 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 209.55 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 209.55 58.42 0)
 			(hide yes)
 			(show_name no)
@@ -8673,8 +8011,9 @@
 				)
 			)
 		)
-		(property "Description" "25V 4.7uF X5R ±20% 0402"
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 220.98 58.42 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8694,51 +8033,18 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
+			(at 220.98 58.42 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
-			(at 220.98 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 220.98 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 220.98 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 220.98 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 220.98 58.42 0)
 			(hide yes)
 			(show_name no)
@@ -8821,6 +8127,7 @@
 		)
 		(property "Description" ""
 			(at 214.63 35.56 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8897,6 +8204,7 @@
 		)
 		(property "Description" ""
 			(at 99.06 22.86 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8939,7 +8247,7 @@
 				)
 			)
 		)
-		(property "Value" "1k"
+		(property "Value" "1kΩ"
 			(at 243.84 117.2464 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8949,7 +8257,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_0201_0603Metric"
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
 			(at 243.84 116.078 90)
 			(hide yes)
 			(show_name no)
@@ -8971,8 +8279,9 @@
 				)
 			)
 		)
-		(property "Description" "1kΩ 25V 50mW Thick Film Resistor ±1% ±200ppm/℃ 0201"
+		(property "Description" "1kΩ 50V 1% 0402"
 			(at 243.84 114.3 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8981,7 +8290,18 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C270365"
+		(property "LCSC PN" "C11702"
+			(at 243.84 114.3 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "0402WGF1001TCE"
 			(at 243.84 114.3 90)
 			(hide yes)
 			(show_name no)
@@ -8993,50 +8313,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 243.84 114.3 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 243.84 114.3 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 243.84 114.3 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 243.84 114.3 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 243.84 114.3 90)
 			(hide yes)
 			(show_name no)
@@ -9119,6 +8395,7 @@
 		)
 		(property "Description" ""
 			(at 198.12 64.77 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9162,7 +8439,7 @@
 				)
 			)
 		)
-		(property "Value" "33R"
+		(property "Value" "33Ω"
 			(at 161.29 67.31 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9172,7 +8449,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_0201_0603Metric"
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
 			(at 161.29 61.722 90)
 			(hide yes)
 			(show_name no)
@@ -9194,7 +8471,7 @@
 				)
 			)
 		)
-		(property "Description" "33Ω 25V 50mW Thick Film Resistor ±200ppm/℃ ±5% 0201"
+		(property "Description" "33Ω 50V 1% 0402"
 			(at 161.29 63.5 0)
 			(hide yes)
 			(show_name no)
@@ -9205,7 +8482,18 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C423356"
+		(property "LCSC PN" "C25105"
+			(at 161.29 63.5 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "0402WGF330JTCE"
 			(at 161.29 63.5 90)
 			(hide yes)
 			(show_name no)
@@ -9217,50 +8505,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 161.29 63.5 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 161.29 63.5 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 161.29 63.5 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 161.29 63.5 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 161.29 63.5 90)
 			(hide yes)
 			(show_name no)
@@ -9342,6 +8586,7 @@
 		)
 		(property "Description" ""
 			(at 198.12 50.8 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9395,7 +8640,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 68.2752 33.02 0)
 			(hide yes)
 			(show_name no)
@@ -9417,8 +8662,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 67.31 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9427,7 +8673,18 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C3901090"
+		(property "LCSC PN" "C1525"
+			(at 67.31 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
 			(at 67.31 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -9439,50 +8696,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 67.31 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 67.31 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 67.31 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 67.31 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 67.31 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -9530,7 +8743,7 @@
 				)
 			)
 		)
-		(property "Value" "1k"
+		(property "Value" "1kΩ"
 			(at 83.82 120.65 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9540,7 +8753,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_0201_0603Metric"
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
 			(at 83.82 126.238 90)
 			(hide yes)
 			(show_name no)
@@ -9562,7 +8775,7 @@
 				)
 			)
 		)
-		(property "Description" "1kΩ 25V 50mW Thick Film Resistor ±1% ±200ppm/℃ 0201"
+		(property "Description" "1kΩ 50V 1% 0402"
 			(at 83.82 124.46 0)
 			(hide yes)
 			(show_name no)
@@ -9573,95 +8786,7 @@
 				)
 			)
 		)
-		(property "Availability" ""
-			(at 83.82 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Check_prices" ""
-			(at 83.82 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description_1" ""
-			(at 83.82 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 83.82 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MF" ""
-			(at 83.82 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MP" ""
-			(at 83.82 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 83.82 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Package" ""
-			(at 83.82 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "0402WGF1001TCE"
 			(at 83.82 124.46 0)
 			(hide yes)
 			(show_name no)
@@ -9694,29 +8819,7 @@
 				)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 83.82 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "VENDOR" ""
-			(at 83.82 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC PN" "C270365"
+		(property "LCSC PN" "C11702"
 			(at 83.82 124.46 90)
 			(hide yes)
 			(show_name no)
@@ -9728,50 +8831,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 83.82 124.46 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 83.82 124.46 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 83.82 124.46 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 83.82 124.46 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 83.82 124.46 90)
 			(hide yes)
 			(show_name no)
@@ -9852,8 +8911,9 @@
 				)
 			)
 		)
-		(property "Description" "25V 4.7uF X5R ±20% 0402"
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 54.61 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9873,51 +8933,18 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
+			(at 54.61 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
-			(at 54.61 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 54.61 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 54.61 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 54.61 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 54.61 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -9976,7 +9003,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 158.4452 33.02 0)
 			(hide yes)
 			(show_name no)
@@ -9998,8 +9025,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 157.48 29.21 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -10008,7 +9036,18 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C3901090"
+		(property "LCSC PN" "C1525"
+			(at 157.48 29.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
 			(at 157.48 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -10020,50 +9059,6 @@
 			)
 		)
 		(property "Sim.Params" ""
-			(at 157.48 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 157.48 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 157.48 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 157.48 29.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 157.48 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -10144,8 +9139,9 @@
 				)
 			)
 		)
-		(property "Description" "25V 4.7uF X5R ±20% 0402"
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 243.84 58.42 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -10165,51 +9161,18 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
+			(at 243.84 58.42 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
-			(at 243.84 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 243.84 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 243.84 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 243.84 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 243.84 58.42 0)
 			(hide yes)
 			(show_name no)
@@ -10368,8 +9331,9 @@
 				)
 			)
 		)
-		(property "Description" "25V 4.7uF X5R ±20% 0402"
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 232.41 58.42 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -10389,51 +9353,18 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
+			(at 232.41 58.42 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
-			(at 232.41 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 232.41 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 232.41 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 232.41 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 232.41 58.42 0)
 			(hide yes)
 			(show_name no)
@@ -10514,8 +9445,9 @@
 				)
 			)
 		)
-		(property "Description" "25V 4.7uF X5R ±20% 0402"
+		(property "Description" "4.7uF 25V 20% X5R 0402"
 			(at 198.12 58.42 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -10535,51 +9467,18 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM155R61E475ME15D"
+			(at 198.12 58.42 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
-			(at 198.12 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 198.12 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 198.12 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 198.12 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 198.12 58.42 0)
 			(hide yes)
 			(show_name no)
@@ -10661,7 +9560,7 @@
 				)
 			)
 		)
-		(property "Description" "Inductor"
+		(property "Description" "3.3uH 0806"
 			(at 58.42 82.55 0)
 			(hide yes)
 			(show_name no)
@@ -10683,51 +9582,18 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "AOTA-B201610S3R3-101-T"
+			(at 58.42 67.31 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
-			(at 58.42 67.31 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 58.42 67.31 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 58.42 67.31 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 58.42 67.31 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 58.42 67.31 0)
 			(hide yes)
 			(show_name no)
@@ -10809,6 +9675,7 @@
 		)
 		(property "Description" ""
 			(at 121.92 157.48 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -10884,8 +9751,9 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "ABM8 12MHz 30ppm 3225"
 			(at 233.68 109.22 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -10905,51 +9773,18 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "ABM8-272-T3"
+			(at 233.68 109.22 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(property "Sim.Params" ""
-			(at 233.68 109.22 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 233.68 109.22 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 233.68 109.22 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 233.68 109.22 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
 			(at 233.68 109.22 90)
 			(hide yes)
 			(show_name no)
@@ -11038,6 +9873,7 @@
 		)
 		(property "Description" ""
 			(at 31.75 77.47 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -11091,7 +9927,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 219.71 103.1748 0)
 			(hide yes)
 			(show_name no)
@@ -11113,8 +9949,9 @@
 				)
 			)
 		)
-		(property "Description" "15pF 25V C0G ±5% 0201"
+		(property "Description" "15pF 50V 5% C0G 0402"
 			(at 223.52 104.14 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -11123,7 +9960,18 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C161373"
+		(property "LCSC PN" "C76950"
+			(at 223.52 104.14 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM1555C1H150JA01D"
 			(at 223.52 104.14 0)
 			(hide yes)
 			(show_name no)
@@ -11136,50 +9984,6 @@
 		)
 		(property "Sim.Params" ""
 			(at 223.52 104.14 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Field6" ""
-			(at 223.52 104.14 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S3.1" ""
-			(at 223.52 104.14 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S4.1" ""
-			(at 223.52 104.14 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "KLC_S6.2" ""
-			(at 223.52 104.14 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11260,6 +10064,7 @@
 		)
 		(property "Description" ""
 			(at 43.18 60.96 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects

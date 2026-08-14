@@ -37,6 +37,7 @@
 # builds of one source and there is no reason for them to differ at all.
 #
 import subprocess
+import argparse
 import sys
 import time
 
@@ -162,16 +163,38 @@ def compare(name, pedal_y, bench_y, harmonics=9):
 
 
 def main():
+    #
+    # Which board, when there is more than one.
+    #
+    # Refusing to guess is the default and stays the default: two boards
+    # of one revision look identical to everything except their serial,
+    # and answering either of them is how a test ends up reporting on
+    # the board nobody was asking about.  --target names one, through
+    # pedal.find(), which refuses ambiguity in its own right.
+    #
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--target", default=None,
+                    help="serial, label or product substring naming one pedal")
+    args = ap.parse_args()
+
     found = pedal.discover()
     if not found:
-        print("test-bench: SKIPPED - no pedal on the USB")
+        print("%s: SKIPPED - no pedal on the USB" % "test-bench")
         return 0
-    if len(found) > 1:
-        print("test-bench: SKIPPED - %d pedals; this wants exactly one"
-              % len(found))
+    if args.target:
+        d = pedal.find(args.target, among=found)
+        if not d:
+            print("%s: SKIPPED - '%s' does not name exactly one of the %d "
+                  "pedals here: %s"
+                  % ("test-bench", args.target, len(found),
+                     ", ".join(x["label"] for x in found)))
+            return 0
+    elif len(found) > 1:
+        print("%s: SKIPPED - %d pedals and no --target; this wants exactly one"
+              % ("test-bench", len(found)))
         return 0
-
-    d = found[0]
+    else:
+        d = found[0]
     print("test-bench: %s, card %d, port %s"
           % (d["label"], d["card"], d["port"]))
     print("            [TESTTONE] 440 Hz -18 dBFS into [BOOST], captured over USB")

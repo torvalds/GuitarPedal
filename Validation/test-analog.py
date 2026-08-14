@@ -43,6 +43,7 @@
 # than the distortion being measured.  That mistake is easy to make and
 # looks like a result.
 #
+import argparse
 import sys
 import time
 
@@ -98,15 +99,38 @@ def loopback_present(p, card):
 
 
 def main():
+    #
+    # Which board, when there is more than one.
+    #
+    # Refusing to guess is the default and stays the default: two boards
+    # of one revision look identical to everything except their serial,
+    # and answering either of them is how a test ends up reporting on
+    # the board nobody was asking about.  --target names one, through
+    # pedal.find(), which refuses ambiguity in its own right.
+    #
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--target", default=None,
+                    help="serial, label or product substring naming one pedal")
+    args = ap.parse_args()
+
     found = pedal.discover()
     if not found:
-        print("test-analog: SKIPPED - no pedal on the USB")
+        print("%s: SKIPPED - no pedal on the USB" % "test-analog")
         return 0
-    if len(found) > 1:
-        print("test-analog: SKIPPED - %d pedals; this wants exactly one" % len(found))
+    if args.target:
+        d = pedal.find(args.target, among=found)
+        if not d:
+            print("%s: SKIPPED - '%s' does not name exactly one of the %d "
+                  "pedals here: %s"
+                  % ("test-analog", args.target, len(found),
+                     ", ".join(x["label"] for x in found)))
+            return 0
+    elif len(found) > 1:
+        print("%s: SKIPPED - %d pedals and no --target; this wants exactly one"
+              % ("test-analog", len(found)))
         return 0
-
-    d = found[0]
+    else:
+        d = found[0]
     p, card = d["port"], d["card"]
     print("test-analog: %s, card %d, port %s" % (d["label"], card, p))
 

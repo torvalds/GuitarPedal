@@ -6508,6 +6508,7 @@
 		)
 		(property "Description" ""
 			(at 90.17 54.61 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6572,8 +6573,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "2.2uF 25V 10% X7R 0805"
 			(at 64.77 60.96 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6589,13 +6591,15 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM21BR71E225KE11L"
 			(at 64.77 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(hide yes)
 			)
 		)
 		(property "Sim.Library" ""
@@ -6678,6 +6682,7 @@
 		)
 		(property "Description" ""
 			(at 64.77 66.04 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6743,6 +6748,7 @@
 		)
 		(property "Description" ""
 			(at 90.17 66.04 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6807,8 +6813,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "1uF 25V 10% X7R 0603"
 			(at 180.34 83.82 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6816,79 +6823,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 180.34 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 180.34 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 180.34 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 180.34 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 180.34 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 180.34 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 180.34 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 180.34 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "GCM188R71E105KA64D"
 			(at 180.34 83.82 0)
 			(effects
 				(font
@@ -6915,43 +6850,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 180.34 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 180.34 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C85862"
-			(at 180.34 83.82 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 180.34 83.82 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 180.34 83.82 90)
 			(effects
 				(font
@@ -7022,6 +6921,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 214.63 109.22 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7085,8 +6985,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "1uF 25V 10% X7R 0603"
 			(at 81.28 92.71 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7094,79 +6995,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 81.28 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 81.28 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 81.28 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 81.28 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 81.28 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 81.28 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 81.28 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 81.28 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "GCM188R71E105KA64D"
 			(at 81.28 92.71 0)
 			(effects
 				(font
@@ -7193,43 +7022,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 81.28 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 81.28 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C85862"
-			(at 81.28 92.71 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 81.28 92.71 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 81.28 92.71 90)
 			(effects
 				(font
@@ -7300,6 +7093,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 259.08 109.22 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7365,8 +7159,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "2.2uF 25V 10% X7R 0805"
 			(at 66.04 33.02 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7382,13 +7177,15 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM21BR71E225KE11L"
 			(at 66.04 33.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(hide yes)
 			)
 		)
 		(property "Sim.Library" ""
@@ -7470,8 +7267,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1MΩ 50V 1% thin-film 0402"
 			(at 182.88 105.41 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7479,79 +7277,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 182.88 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 182.88 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 182.88 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 182.88 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 182.88 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 182.88 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 182.88 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 182.88 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "MCS04020C1004FE000"
 			(at 182.88 105.41 0)
 			(effects
 				(font
@@ -7578,43 +7304,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 182.88 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 182.88 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C1884615"
-			(at 182.88 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 182.88 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 182.88 105.41 0)
 			(effects
 				(font
@@ -7685,6 +7375,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 102.87 24.13 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7750,8 +7441,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1MΩ 50V 1% thin-film 0402"
 			(at 182.88 64.77 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7759,79 +7451,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 182.88 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 182.88 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 182.88 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 182.88 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 182.88 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 182.88 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 182.88 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 182.88 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "MCS04020C1004FE000"
 			(at 182.88 64.77 0)
 			(effects
 				(font
@@ -7858,43 +7478,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 182.88 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 182.88 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C1884615"
-			(at 182.88 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 182.88 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 182.88 64.77 0)
 			(effects
 				(font
@@ -7964,8 +7548,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "1uF 25V 10% X7R 0603"
 			(at 143.51 97.79 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7980,6 +7565,17 @@
 					(size 1.27 1.27)
 				)
 				(hide yes)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GCM188R71E105KA64D"
+			(at 143.51 97.79 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 			)
 		)
 		(pin "2"
@@ -8043,8 +7639,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 90.17 177.8 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8059,6 +7656,17 @@
 					(size 1.27 1.27)
 				)
 				(hide yes)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
+			(at 90.17 177.8 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 			)
 		)
 		(pin "2"
@@ -8123,6 +7731,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 243.84 38.1 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8188,8 +7797,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "150pF 25V 5% C0G 0402"
 			(at 214.63 105.41 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8197,79 +7807,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 214.63 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 214.63 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 214.63 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 214.63 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 214.63 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 214.63 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 214.63 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 214.63 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM1555C1E151JA01D"
 			(at 214.63 105.41 0)
 			(effects
 				(font
@@ -8296,43 +7834,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 214.63 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 214.63 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C710836"
-			(at 214.63 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 214.63 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 214.63 105.41 0)
 			(effects
 				(font
@@ -8403,8 +7905,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1MΩ 50V 1% thin-film 0402"
 			(at 86.36 121.92 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8412,79 +7915,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 86.36 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 86.36 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 86.36 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 86.36 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 86.36 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 86.36 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 86.36 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 86.36 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "MCS04020C1004FE000"
 			(at 86.36 121.92 0)
 			(effects
 				(font
@@ -8511,43 +7942,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 86.36 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 86.36 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C1884615"
-			(at 86.36 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 86.36 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 86.36 121.92 0)
 			(effects
 				(font
@@ -8616,8 +8011,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "1uF 25V 10% X7R 0603"
 			(at 266.7 59.69 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8625,79 +8021,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 266.7 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 266.7 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 266.7 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 266.7 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 266.7 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 266.7 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 266.7 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 266.7 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "GCM188R71E105KA64D"
 			(at 266.7 59.69 0)
 			(effects
 				(font
@@ -8724,43 +8048,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 266.7 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 266.7 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C85862"
-			(at 266.7 59.69 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 266.7 59.69 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 266.7 59.69 90)
 			(effects
 				(font
@@ -8832,6 +8120,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 36.83 91.44 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8897,6 +8186,7 @@
 		)
 		(property "Description" ""
 			(at 109.22 49.53 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8961,6 +8251,7 @@
 		)
 		(property "Description" "Dual operational amplifier"
 			(at 229.87 59.69 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9004,7 +8295,7 @@
 				(hide yes)
 			)
 		)
-		(property "JLCPCB" "C130011"
+		(property "LCSC PN" "C130011"
 			(at 229.87 59.69 0)
 			(effects
 				(font
@@ -9013,13 +8304,15 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC PN" "C130011"
+		(property "MANUFACTURER_PART_NUMBER" "OPA2365AIDR"
 			(at 229.87 59.69 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(hide yes)
 			)
 		)
 		(pin "4"
@@ -9101,6 +8394,7 @@
 		)
 		(property "Description" ""
 			(at 168.91 69.85 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9166,6 +8460,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 161.29 177.8 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9232,6 +8527,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 143.51 102.87 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9298,20 +8594,11 @@
 		)
 		(property "Description" "64-Kbit serial I²C bus EEPROM"
 			(at 69.85 187.96 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" "C222104"
-			(at 68.58 185.42 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
 				(hide yes)
 			)
 		)
@@ -9322,6 +8609,17 @@
 					(size 1.27 1.27)
 				)
 				(hide yes)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "M24C64-FMH6TG"
+			(at 69.85 172.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 			)
 		)
 		(pin "1"
@@ -9393,8 +8691,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1kΩ 50V 1% thin-film 0402"
 			(at 248.92 100.33 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9402,79 +8701,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 248.92 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 248.92 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 248.92 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 248.92 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 248.92 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 248.92 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 248.92 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 248.92 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "RT0402FRE071KL"
 			(at 248.92 100.33 0)
 			(effects
 				(font
@@ -9501,43 +8728,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 248.92 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 248.92 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C136974"
-			(at 248.92 100.33 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 248.92 100.33 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 248.92 100.33 90)
 			(effects
 				(font
@@ -9607,6 +8798,7 @@
 		)
 		(property "Description" ""
 			(at 259.08 26.67 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9672,6 +8864,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 214.63 68.58 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9738,6 +8931,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 248.92 156.21 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9804,6 +8998,7 @@
 		)
 		(property "Description" ""
 			(at 66.04 36.83 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9868,6 +9063,7 @@
 		)
 		(property "Description" ""
 			(at 153.67 173.99 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9932,6 +9128,7 @@
 		)
 		(property "Description" "Dual operational amplifier"
 			(at 229.87 100.33 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9975,7 +9172,7 @@
 				(hide yes)
 			)
 		)
-		(property "JLCPCB" "C130011"
+		(property "LCSC PN" "C130011"
 			(at 229.87 100.33 0)
 			(effects
 				(font
@@ -9984,13 +9181,15 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC PN" "C130011"
+		(property "MANUFACTURER_PART_NUMBER" "OPA2365AIDR"
 			(at 229.87 100.33 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(hide yes)
 			)
 		)
 		(pin "4"
@@ -10074,6 +9273,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 45.72 60.96 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10140,6 +9340,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 135.89 189.23 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10206,6 +9407,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 78.74 175.26 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10272,6 +9474,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 86.36 101.6 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10337,6 +9540,7 @@
 		)
 		(property "Description" ""
 			(at 243.84 30.48 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10402,6 +9606,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"+8V\""
 			(at 66.04 26.67 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10467,8 +9672,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Polarized capacitor"
+		(property "Description" "47uF 35V D6.3xL5.8"
 			(at 109.22 53.34 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10483,6 +9689,17 @@
 					(size 1.27 1.27)
 				)
 				(hide yes)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "EEHZA1V470P"
+			(at 109.22 53.34 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 			)
 		)
 		(pin "2"
@@ -10547,6 +9764,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"+9V\""
 			(at 24.13 45.72 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10609,17 +9827,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "4.7kΩ 50V 1% 0402"
 			(at 71.12 149.86 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" "C25900"
-			(at 71.12 149.86 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10634,6 +9844,17 @@
 					(size 1.27 1.27)
 				)
 				(hide yes)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "0402WGF4701TCE"
+			(at 71.12 149.86 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 			)
 		)
 		(pin "2"
@@ -10698,6 +9919,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 86.36 125.73 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10765,6 +9987,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 36.83 114.3 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10831,6 +10054,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 59.69 181.61 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10897,6 +10121,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 168.91 87.63 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10962,8 +10187,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1MΩ 50V 1% thin-film 0402"
 			(at 168.91 83.82 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10971,79 +10197,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 168.91 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 168.91 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 168.91 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 168.91 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 168.91 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 168.91 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 168.91 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 168.91 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "MCS04020C1004FE000"
 			(at 168.91 83.82 0)
 			(effects
 				(font
@@ -11070,43 +10224,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 168.91 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 168.91 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C1884615"
-			(at 168.91 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 168.91 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 168.91 83.82 0)
 			(effects
 				(font
@@ -11177,8 +10295,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1MΩ 50V 1% thin-film 0402"
 			(at 86.36 97.79 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11186,79 +10305,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 86.36 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 86.36 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 86.36 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 86.36 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 86.36 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 86.36 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 86.36 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 86.36 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "MCS04020C1004FE000"
 			(at 86.36 97.79 0)
 			(effects
 				(font
@@ -11285,43 +10332,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 86.36 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 86.36 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C1884615"
-			(at 86.36 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 86.36 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 86.36 97.79 0)
 			(effects
 				(font
@@ -11390,8 +10401,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "2.2uF 25V 10% X7R 0805"
 			(at 90.17 60.96 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11407,13 +10419,15 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM21BR71E225KE11L"
 			(at 90.17 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(hide yes)
 			)
 		)
 		(property "Sim.Library" ""
@@ -11497,6 +10511,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 30.48 154.94 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11561,8 +10576,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "10uF 25V 20% X5R 0603"
 			(at 170.18 149.86 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11577,6 +10593,17 @@
 					(size 1.27 1.27)
 				)
 				(hide yes)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM188R61E106MA73D"
+			(at 170.18 149.86 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 			)
 		)
 		(pin "2"
@@ -11639,8 +10666,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1kΩ 50V 1% thin-film 0402"
 			(at 248.92 59.69 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11648,79 +10676,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 248.92 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 248.92 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 248.92 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 248.92 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 248.92 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 248.92 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 248.92 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 248.92 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "RT0402FRE071KL"
 			(at 248.92 59.69 0)
 			(effects
 				(font
@@ -11747,43 +10703,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 248.92 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 248.92 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C136974"
-			(at 248.92 59.69 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 248.92 59.69 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 248.92 59.69 90)
 			(effects
 				(font
@@ -11851,8 +10771,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Diode"
+		(property "Description" "SM4007PL 1kV 1A SOD-123FL"
 			(at 31.75 46.99 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11878,15 +10799,6 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" "C64898"
-			(at 31.75 46.99 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C64898"
 			(at 31.75 46.99 0)
 			(effects
@@ -11896,13 +10808,15 @@
 				(hide yes)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "MANUFACTURER_PART_NUMBER" "SM4007PL"
 			(at 31.75 46.99 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(hide yes)
 			)
 		)
 		(property "Sim.Library" ""
@@ -11985,6 +10899,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 76.2 125.73 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12050,6 +10965,7 @@
 		)
 		(property "Description" ""
 			(at 90.17 173.99 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12116,6 +11032,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 36.83 96.52 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12179,8 +11096,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "1uF 25V 10% X7R 0603"
 			(at 179.07 34.29 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12188,79 +11106,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 179.07 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 179.07 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 179.07 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 179.07 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 179.07 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 179.07 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 179.07 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 179.07 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "GCM188R71E105KA64D"
 			(at 179.07 34.29 0)
 			(effects
 				(font
@@ -12287,43 +11133,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 179.07 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 179.07 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C85862"
-			(at 179.07 34.29 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 179.07 34.29 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 179.07 34.29 90)
 			(effects
 				(font
@@ -12394,35 +11204,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2nF 50V 2% C0G 0402"
 			(at 76.2 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Availability" ""
-			(at 76.2 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 76.2 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 76.2 97.79 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12431,51 +11215,6 @@
 			)
 		)
 		(property "MANUFACTURER_PART_NUMBER" "GRM1555C1H222GA01D"
-			(at 76.2 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 76.2 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 76.2 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 76.2 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 76.2 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
 			(at 76.2 97.79 0)
 			(effects
 				(font
@@ -12502,43 +11241,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 76.2 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 76.2 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C2987940"
-			(at 76.2 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 76.2 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 76.2 97.79 0)
 			(effects
 				(font
@@ -12605,8 +11308,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1kΩ 50V 1% thin-film 0402"
 			(at 205.74 57.15 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12614,79 +11318,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 205.74 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 205.74 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 205.74 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 205.74 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 205.74 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 205.74 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 205.74 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 205.74 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "RT0402FRE071KL"
 			(at 205.74 57.15 0)
 			(effects
 				(font
@@ -12713,43 +11345,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 205.74 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 205.74 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C136974"
-			(at 205.74 57.15 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 205.74 57.15 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 205.74 57.15 90)
 			(effects
 				(font
@@ -12817,8 +11413,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "1uF 25V 10% X7R 0603"
 			(at 81.28 116.84 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12826,79 +11423,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 81.28 116.84 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 81.28 116.84 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 81.28 116.84 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 81.28 116.84 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 81.28 116.84 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 81.28 116.84 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 81.28 116.84 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 81.28 116.84 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "GCM188R71E105KA64D"
 			(at 81.28 116.84 0)
 			(effects
 				(font
@@ -12925,43 +11450,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 81.28 116.84 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 81.28 116.84 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C85862"
-			(at 81.28 116.84 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 81.28 116.84 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 81.28 116.84 90)
 			(effects
 				(font
@@ -13031,35 +11520,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2nF 50V 2% C0G 0402"
 			(at 259.08 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Availability" ""
-			(at 259.08 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 259.08 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 259.08 105.41 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13068,51 +11531,6 @@
 			)
 		)
 		(property "MANUFACTURER_PART_NUMBER" "GRM1555C1H222GA01D"
-			(at 259.08 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 259.08 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 259.08 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 259.08 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 259.08 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
 			(at 259.08 105.41 0)
 			(effects
 				(font
@@ -13139,43 +11557,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 259.08 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 259.08 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C2987940"
-			(at 259.08 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 259.08 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 259.08 105.41 0)
 			(effects
 				(font
@@ -13245,8 +11627,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "10uF 25V 20% X5R 0603"
 			(at 248.92 149.86 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13261,6 +11644,17 @@
 					(size 1.27 1.27)
 				)
 				(hide yes)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM188R61E106MA73D"
+			(at 248.92 149.86 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 			)
 		)
 		(pin "2"
@@ -13324,8 +11718,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "150pF 25V 5% C0G 0402"
 			(at 214.63 64.77 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13333,79 +11728,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 214.63 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 214.63 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 214.63 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 214.63 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 214.63 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 214.63 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 214.63 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 214.63 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM1555C1E151JA01D"
 			(at 214.63 64.77 0)
 			(effects
 				(font
@@ -13432,43 +11755,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 214.63 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 214.63 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C710836"
-			(at 214.63 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 214.63 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 214.63 64.77 0)
 			(effects
 				(font
@@ -13538,8 +11825,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1MΩ 50V 1% thin-film 0402"
 			(at 168.91 73.66 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13547,79 +11835,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 168.91 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 168.91 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 168.91 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 168.91 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 168.91 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 168.91 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 168.91 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 168.91 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "MCS04020C1004FE000"
 			(at 168.91 73.66 0)
 			(effects
 				(font
@@ -13646,43 +11862,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 168.91 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 168.91 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C1884615"
-			(at 168.91 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 168.91 73.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 168.91 73.66 0)
 			(effects
 				(font
@@ -13752,8 +11932,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "1uF 25V 10% X7R 0603"
 			(at 127 97.79 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13768,6 +11949,17 @@
 					(size 1.27 1.27)
 				)
 				(hide yes)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GCM188R71E105KA64D"
+			(at 127 97.79 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 			)
 		)
 		(pin "2"
@@ -13832,6 +12024,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 182.88 68.58 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13896,8 +12089,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1MΩ 50V 1% thin-film 0402"
 			(at 198.12 69.85 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13905,79 +12099,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 198.12 69.85 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 198.12 69.85 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 198.12 69.85 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 198.12 69.85 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 198.12 69.85 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 198.12 69.85 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 198.12 69.85 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 198.12 69.85 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "MCS04020C1004FE000"
 			(at 198.12 69.85 0)
 			(effects
 				(font
@@ -14004,43 +12126,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 198.12 69.85 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 198.12 69.85 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C1884615"
-			(at 198.12 69.85 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 198.12 69.85 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 198.12 69.85 0)
 			(effects
 				(font
@@ -14107,8 +12193,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1kΩ 50V 1% thin-film 0402"
 			(at 205.74 97.79 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14116,79 +12203,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 205.74 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 205.74 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 205.74 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 205.74 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 205.74 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 205.74 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 205.74 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 205.74 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "RT0402FRE071KL"
 			(at 205.74 97.79 0)
 			(effects
 				(font
@@ -14215,43 +12230,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 205.74 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 205.74 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C136974"
-			(at 205.74 97.79 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 205.74 97.79 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 205.74 97.79 90)
 			(effects
 				(font
@@ -14322,6 +12301,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 259.08 41.91 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14387,8 +12367,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 226.06 149.86 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14403,6 +12384,17 @@
 					(size 1.27 1.27)
 				)
 				(hide yes)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
+			(at 226.06 149.86 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 			)
 		)
 		(pin "2"
@@ -14467,6 +12459,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"+3V3\""
 			(at 59.69 163.83 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14530,8 +12523,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Light emitting diode"
+		(property "Description" "LED yellow-green 2V 0402"
 			(at 40.64 59.69 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14575,13 +12569,15 @@
 				(hide yes)
 			)
 		)
-		(property "JLCPCB" ""
+		(property "MANUFACTURER_PART_NUMBER" "LTST-C281KGKT"
 			(at 40.64 59.69 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(hide yes)
 			)
 		)
 		(property "Sim.Library" ""
@@ -14664,6 +12660,7 @@
 		)
 		(property "Description" ""
 			(at 88.9 36.83 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14728,6 +12725,7 @@
 		)
 		(property "Description" ""
 			(at 129.54 123.19 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14792,8 +12790,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 212.09 149.86 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14808,6 +12807,17 @@
 					(size 1.27 1.27)
 				)
 				(hide yes)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
+			(at 212.09 149.86 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 			)
 		)
 		(pin "2"
@@ -14873,6 +12883,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 30.48 176.53 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14940,6 +12951,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"+9V\""
 			(at 38.1 33.02 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15005,8 +13017,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 256.54 149.86 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15021,6 +13034,17 @@
 					(size 1.27 1.27)
 				)
 				(hide yes)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
+			(at 256.54 149.86 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 			)
 		)
 		(pin "2"
@@ -15085,6 +13109,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"+9V\""
 			(at 120.65 24.13 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15152,6 +13177,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 38.1 27.94 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15217,15 +13243,7 @@
 		)
 		(property "Description" "1A Precision Linear Voltage Regulator, with enable pin, Fixed Output 3.3V, WSON6"
 			(at 77.47 58.42 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
-			(at 77.47 58.42 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15240,6 +13258,17 @@
 					(size 1.27 1.27)
 				)
 				(hide yes)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "TLV76733DRVR"
+			(at 77.47 58.42 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 			)
 		)
 		(property "Sim.Library" ""
@@ -15337,6 +13366,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 76.2 101.6 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15403,6 +13433,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 180.34 87.63 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15468,35 +13499,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2nF 50V 2% C0G 0402"
 			(at 259.08 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Availability" ""
-			(at 259.08 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 259.08 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 259.08 64.77 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15505,51 +13510,6 @@
 			)
 		)
 		(property "MANUFACTURER_PART_NUMBER" "GRM1555C1H222GA01D"
-			(at 259.08 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 259.08 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 259.08 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 259.08 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 259.08 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
 			(at 259.08 64.77 0)
 			(effects
 				(font
@@ -15576,43 +13536,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 259.08 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 259.08 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C2987940"
-			(at 259.08 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 259.08 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 259.08 64.77 0)
 			(effects
 				(font
@@ -15681,8 +13605,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "1uF 25V 10% X7R 0603"
 			(at 266.7 100.33 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15690,79 +13615,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 266.7 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 266.7 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 266.7 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 266.7 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 266.7 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 266.7 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 266.7 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 266.7 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "GCM188R71E105KA64D"
 			(at 266.7 100.33 0)
 			(effects
 				(font
@@ -15789,43 +13642,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 266.7 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 266.7 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C85862"
-			(at 266.7 100.33 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 266.7 100.33 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 266.7 100.33 90)
 			(effects
 				(font
@@ -15897,6 +13714,7 @@
 		)
 		(property "Description" "Dual operational amplifier"
 			(at 261.62 34.29 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15940,7 +13758,7 @@
 				(hide yes)
 			)
 		)
-		(property "JLCPCB" "C130011"
+		(property "LCSC PN" "C130011"
 			(at 261.62 34.29 0)
 			(effects
 				(font
@@ -15949,13 +13767,15 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC PN" "C130011"
+		(property "MANUFACTURER_PART_NUMBER" "OPA2365AIDR"
 			(at 261.62 34.29 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(hide yes)
 			)
 		)
 		(pin "4"
@@ -16035,8 +13855,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1kΩ 50V 1% thin-film 0402"
 			(at 71.12 116.84 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16044,79 +13865,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 71.12 116.84 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 71.12 116.84 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 71.12 116.84 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 71.12 116.84 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 71.12 116.84 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 71.12 116.84 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 71.12 116.84 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 71.12 116.84 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "RT0402FRE071KL"
 			(at 71.12 116.84 0)
 			(effects
 				(font
@@ -16143,43 +13892,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 71.12 116.84 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 71.12 116.84 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C136974"
-			(at 71.12 116.84 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 71.12 116.84 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 71.12 116.84 90)
 			(effects
 				(font
@@ -16250,6 +13963,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"+8V\""
 			(at 135.89 26.67 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16312,8 +14026,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1kΩ 50V 1% thin-film 0402"
 			(at 31.75 59.69 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16321,79 +14036,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 31.75 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 31.75 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 31.75 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 31.75 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 31.75 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 31.75 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 31.75 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 31.75 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "RT0402FRE071KL"
 			(at 31.75 59.69 0)
 			(effects
 				(font
@@ -16420,43 +14063,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 31.75 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 31.75 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C136974"
-			(at 31.75 59.69 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 31.75 59.69 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 31.75 59.69 90)
 			(effects
 				(font
@@ -16527,8 +14134,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "2.2uF 25V 10% X7R 0805"
 			(at 88.9 33.02 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16544,13 +14152,15 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "MANUFACTURER_PART_NUMBER" "GRM21BR71E225KE11L"
 			(at 88.9 33.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(hide yes)
 			)
 		)
 		(property "Sim.Library" ""
@@ -16632,6 +14242,7 @@
 		)
 		(property "Description" "Audio Jack, 3 Poles (Stereo / TRS), Switched TR Poles (Normalling)"
 			(at 31.75 88.9 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16710,6 +14321,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"+3V3\""
 			(at 76.2 147.32 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16772,8 +14384,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "1uF 25V 10% X7R 0603"
 			(at 190.5 57.15 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16781,79 +14394,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 190.5 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 190.5 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 190.5 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 190.5 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 190.5 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 190.5 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 190.5 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 190.5 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "GCM188R71E105KA64D"
 			(at 190.5 57.15 0)
 			(effects
 				(font
@@ -16880,43 +14421,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 190.5 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 190.5 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C85862"
-			(at 190.5 57.15 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 190.5 57.15 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 190.5 57.15 90)
 			(effects
 				(font
@@ -16984,8 +14489,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "1uF 25V 10% X7R 0603"
 			(at 190.5 97.79 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16993,79 +14499,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 190.5 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 190.5 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 190.5 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 190.5 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 190.5 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 190.5 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 190.5 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 190.5 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "GCM188R71E105KA64D"
 			(at 190.5 97.79 0)
 			(effects
 				(font
@@ -17092,43 +14526,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 190.5 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 190.5 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C85862"
-			(at 190.5 97.79 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 190.5 97.79 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 190.5 97.79 90)
 			(effects
 				(font
@@ -17199,8 +14597,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "0.1uF 16V 10% X7R 0402"
 			(at 243.84 34.29 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -17208,79 +14607,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 243.84 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 243.84 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 243.84 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 243.84 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 243.84 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 243.84 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 243.84 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 243.84 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
 			(at 243.84 34.29 0)
 			(effects
 				(font
@@ -17307,43 +14634,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 243.84 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 243.84 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C1525"
-			(at 243.84 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 243.84 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 243.84 34.29 0)
 			(effects
 				(font
@@ -17412,8 +14703,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "10uF 25V 20% X5R 0603"
 			(at 198.12 149.86 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -17428,6 +14720,17 @@
 					(size 1.27 1.27)
 				)
 				(hide yes)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM188R61E106MA73D"
+			(at 198.12 149.86 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 			)
 		)
 		(pin "2"
@@ -17491,15 +14794,7 @@
 		)
 		(property "Description" "1A, 16V Precision Linear Voltage Regulator, with enable pin, Fixed Output 5.0V, WSON-6"
 			(at 77.47 30.48 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 77.47 30.48 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -17514,6 +14809,17 @@
 					(size 1.27 1.27)
 				)
 				(hide yes)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "TLV76750DRVR"
+			(at 77.47 30.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 			)
 		)
 		(property "Sim.Library" ""
@@ -17611,6 +14917,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 193.04 35.56 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -17675,8 +14982,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1MΩ 50V 1% thin-film 0402"
 			(at 198.12 87.63 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -17684,79 +14992,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 198.12 87.63 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 198.12 87.63 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 198.12 87.63 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 198.12 87.63 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 198.12 87.63 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 198.12 87.63 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 198.12 87.63 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 198.12 87.63 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "MCS04020C1004FE000"
 			(at 198.12 87.63 0)
 			(effects
 				(font
@@ -17783,43 +15019,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 198.12 87.63 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 198.12 87.63 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C1884615"
-			(at 198.12 87.63 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 198.12 87.63 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 198.12 87.63 0)
 			(effects
 				(font
@@ -17889,6 +15089,7 @@
 		)
 		(property "Description" "Audio Jack, 3 Poles (Stereo / TRS), Switched TR Poles (Normalling)"
 			(at 31.75 116.84 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -17967,15 +15168,7 @@
 		)
 		(property "Description" "Generic connectable mounting pin connector, single row, 01x12, script generated (kicad-library-utils/schlib/autogen/connector/)"
 			(at 44.45 166.37 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 44.45 166.37 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -17990,6 +15183,17 @@
 					(size 1.27 1.27)
 				)
 				(hide yes)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "AFH05-S12FIA-1H"
+			(at 44.45 166.37 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 			)
 		)
 		(property "Sim.Library" ""
@@ -18105,6 +15309,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 173.99 35.56 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18168,8 +15373,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "1kΩ 50V 1% thin-film 0402"
 			(at 71.12 92.71 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18177,79 +15383,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 71.12 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 71.12 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 71.12 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 71.12 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 71.12 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 71.12 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 71.12 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 71.12 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "RT0402FRE071KL"
 			(at 71.12 92.71 0)
 			(effects
 				(font
@@ -18276,43 +15410,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 71.12 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 71.12 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C136974"
-			(at 71.12 92.71 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 71.12 92.71 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 71.12 92.71 90)
 			(effects
 				(font
@@ -18382,6 +15480,7 @@
 		)
 		(property "Description" ""
 			(at 170.18 142.24 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18447,6 +15546,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 44.45 186.69 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18513,6 +15613,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 109.22 57.15 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18579,6 +15680,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 90.17 181.61 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18645,6 +15747,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 259.08 68.58 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18712,6 +15815,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 30.48 163.83 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18776,8 +15880,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "10uF 25V 20% X5R 0603"
 			(at 184.15 149.86 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18792,6 +15897,17 @@
 					(size 1.27 1.27)
 				)
 				(hide yes)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "GRM188R61E106MA73D"
+			(at 184.15 149.86 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 			)
 		)
 		(pin "2"
@@ -18858,6 +15974,7 @@
 		)
 		(property "Description" "Special symbol for telling ERC where power comes from"
 			(at 102.87 24.13 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18924,6 +16041,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 170.18 157.48 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18990,6 +16108,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"+8V\""
 			(at 39.37 45.72 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -19055,33 +16174,7 @@
 		)
 		(property "Description" "DC Barrel Jack with an internal switch"
 			(at 29.21 30.48 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Availability" ""
-			(at 29.21 30.48 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 29.21 30.48 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 29.21 30.48 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -19090,51 +16183,6 @@
 			)
 		)
 		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 29.21 30.48 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 29.21 30.48 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 29.21 30.48 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 29.21 30.48 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 29.21 30.48 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
 			(at 29.21 30.48 0)
 			(effects
 				(font
@@ -19161,34 +16209,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 29.21 30.48 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 29.21 30.48 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" ""
-			(at 29.21 30.48 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
 			(at 29.21 30.48 0)
 			(effects
 				(font
@@ -19279,35 +16300,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "2.2nF 50V 2% C0G 0402"
 			(at 76.2 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Availability" ""
-			(at 76.2 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 76.2 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 76.2 121.92 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -19316,51 +16311,6 @@
 			)
 		)
 		(property "MANUFACTURER_PART_NUMBER" "GRM1555C1H222GA01D"
-			(at 76.2 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 76.2 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 76.2 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 76.2 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 76.2 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
 			(at 76.2 121.92 0)
 			(effects
 				(font
@@ -19387,43 +16337,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 76.2 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 76.2 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C2987940"
-			(at 76.2 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 76.2 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 76.2 121.92 0)
 			(effects
 				(font
@@ -19494,6 +16408,7 @@
 		)
 		(property "Description" "Special symbol for telling ERC where power comes from"
 			(at 120.65 24.13 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -19561,15 +16476,7 @@
 		)
 		(property "Description" "Stereo audio codec VQFN-24 package with corner ground"
 			(at 135.89 199.39 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" "C47122155"
-			(at 135.89 156.21 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -19584,6 +16491,17 @@
 					(size 1.27 1.27)
 				)
 				(hide yes)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "TAC5242IRGER"
+			(at 135.89 156.21 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 			)
 		)
 		(pin "10"
@@ -19730,6 +16648,7 @@
 		)
 		(property "Description" ""
 			(at 76.2 39.37 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -19791,17 +16710,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" "4.7kΩ 50V 1% 0402"
 			(at 71.12 153.67 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" "C25900"
-			(at 71.12 153.67 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -19816,6 +16727,17 @@
 					(size 1.27 1.27)
 				)
 				(hide yes)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "0402WGF4701TCE"
+			(at 71.12 153.67 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 			)
 		)
 		(pin "2"
@@ -19880,6 +16802,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 182.88 109.22 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -19943,8 +16866,9 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "1uF 25V 10% X7R 0603"
 			(at 198.12 34.29 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -19952,79 +16876,7 @@
 				(hide yes)
 			)
 		)
-		(property "Availability" ""
-			(at 198.12 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Check_prices" ""
-			(at 198.12 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description_1" ""
-			(at 198.12 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" ""
-			(at 198.12 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MF" ""
-			(at 198.12 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MP" ""
-			(at 198.12 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "PROD_ID" ""
-			(at 198.12 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Package" ""
-			(at 198.12 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Price" ""
+		(property "MANUFACTURER_PART_NUMBER" "GCM188R71E105KA64D"
 			(at 198.12 34.29 0)
 			(effects
 				(font
@@ -20051,43 +16903,7 @@
 				(hide yes)
 			)
 		)
-		(property "SnapEDA_Link" ""
-			(at 198.12 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "VENDOR" ""
-			(at 198.12 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(property "LCSC PN" "C85862"
-			(at 198.12 34.29 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "JLCPCB" ""
-			(at 198.12 34.29 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
 			(at 198.12 34.29 90)
 			(effects
 				(font
@@ -20160,6 +16976,7 @@
 		)
 		(property "Description" "Special symbol for telling ERC where power comes from"
 			(at 135.89 26.67 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -20226,6 +17043,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 127 102.87 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -20293,6 +17111,7 @@
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 36.83 86.36 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -20360,6 +17179,7 @@
 		)
 		(property "Description" ""
 			(at 77.47 66.04 0)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
