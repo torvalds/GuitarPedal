@@ -47,8 +47,8 @@
 // The expression jack.  A TRS jack, and both signal contacts reach the
 // chip the same way:
 //
-//	J103.T --- R107 1k --- GPIO27/ADC1 --- C108 22nF --- GND
-//	J103.R --- R106 1k --- GPIO26/ADC0 --- C105 22nF --- GND
+//	J103.T --- R105 1k --- GPIO27/ADC1 --- C107 22nF --- GND
+//	J103.R --- R104 1k --- GPIO26/ADC0 --- C104 22nF --- GND
 //	J103.S, J103.TN, J103.RN --- GND
 //
 // The 1k in series is what makes it safe to drive either pin as an

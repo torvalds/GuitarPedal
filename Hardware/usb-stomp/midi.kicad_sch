@@ -1343,74 +1343,34 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "LED:WS2812B-2020"
-			(pin_names
-				(offset 0.254)
-			)
+		(symbol "Mylib:WS2812B-4020"
 			(exclude_from_sim no)
 			(in_bom yes)
 			(on_board yes)
 			(in_pos_files yes)
 			(duplicate_pin_numbers_are_jumpers no)
 			(property "Reference" "D"
-				(at 5.08 5.715 0)
+				(at 4.826 8.128 0)
 				(show_name no)
 				(do_not_autoplace no)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
-					(justify right bottom)
 				)
 			)
-			(property "Value" "WS2812B-2020"
-				(at 1.27 -5.715 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left top)
-				)
-			)
-			(property "Footprint" "LED_SMD:LED_WS2812B-2020_PLCC4_2.0x2.0mm"
-				(at 1.27 -7.62 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left top)
-				)
-			)
-			(property "Datasheet" "https://cdn-shop.adafruit.com/product-files/4684/4684_WS2812B-2020_V1.3_EN.pdf"
-				(at 2.54 -9.525 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left top)
-				)
-			)
-			(property "Description" "RGB LED with integrated controller, 2.0 x 2.0 mm, 12 mA"
+			(property "Value" ""
 				(at 0 0 0)
 				(show_name no)
 				(do_not_autoplace no)
-				(hide yes)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
 				)
 			)
-			(property "ki_keywords" "RGB LED NeoPixel Nano addressable"
-				(at 0 0 0)
+			(property "Footprint" "Mylib:WS2812B-4020"
+				(at 0.254 -21.082 0)
 				(show_name no)
 				(do_not_autoplace no)
 				(hide yes)
@@ -1420,8 +1380,8 @@
 					)
 				)
 			)
-			(property "ki_fp_filters" "LED*WS2812*-2020_PLCC4*"
-				(at 0 0 0)
+			(property "Datasheet" "https://jlcpcb.com/partdetail/Worldsemi-WS2812B4020/C965557"
+				(at 4.318 -24.13 0)
 				(show_name no)
 				(do_not_autoplace no)
 				(hide yes)
@@ -1431,136 +1391,33 @@
 					)
 				)
 			)
-			(symbol "WS2812B-2020_0_0"
-				(text "RGB"
-					(at 2.286 -4.191 0)
-					(effects
-						(font
-							(size 0.762 0.762)
-						)
+			(property "Description" "Side output smart LED"
+				(at 0.254 -29.972 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
 					)
 				)
 			)
-			(symbol "WS2812B-2020_0_1"
-				(polyline
-					(pts
-						(xy 1.27 -2.54) (xy 1.778 -2.54)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.27 -3.556) (xy 1.778 -3.556)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 2.286 -1.524) (xy 1.27 -2.54) (xy 1.27 -2.032)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 2.286 -2.54) (xy 1.27 -3.556) (xy 1.27 -3.048)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 3.683 -1.016) (xy 3.683 -3.556) (xy 3.683 -4.064)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 4.699 -1.524) (xy 2.667 -1.524) (xy 3.683 -3.556) (xy 4.699 -1.524)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 4.699 -3.556) (xy 2.667 -3.556)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(rectangle
-					(start 5.08 5.08)
-					(end -5.08 -5.08)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type background)
+			(property "LCSC PN" "C965557"
+				(at 0 -27.178 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
 					)
 				)
 			)
-			(symbol "WS2812B-2020_1_1"
-				(pin output line
-					(at 7.62 0 180)
-					(length 2.54)
-					(name "DOUT"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
+			(symbol "WS2812B-4020_0_0"
 				(pin power_in line
-					(at 0 -7.62 90)
+					(at 0 8.89 270)
 					(length 2.54)
-					(name "VSS"
+					(name "VDD"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1575,10 +1432,10 @@
 						)
 					)
 				)
-				(pin input line
-					(at -7.62 0 0)
+				(pin output line
+					(at 8.89 0 180)
 					(length 2.54)
-					(name "DIN"
+					(name "DOUT"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1594,9 +1451,9 @@
 					)
 				)
 				(pin power_in line
-					(at 0 7.62 270)
+					(at 0 -8.89 90)
 					(length 2.54)
-					(name "VDD"
+					(name "VSS"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1604,6 +1461,39 @@
 						)
 					)
 					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(symbol "WS2812B-4020_0_1"
+				(rectangle
+					(start -6.35 6.35)
+					(end 6.35 -6.35)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "WS2812B-4020_1_0"
+				(pin input line
+					(at -8.89 0 0)
+					(length 2.54)
+					(name "DIN"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -2059,7 +1949,7 @@
 		)
 		(uuid "c71f538c-6e88-45ff-aca4-844ca6dfcbfd")
 	)
-	(text_box "The WS2812B-2020-V6 that I'm using doesn't need level shifting.\nThe datasheet sats that anything between 0.55*VDD and VDD+0.7\ncounts as a high signal, so a 5V WS2812B can be driven by 2.8V"
+	(text_box "The WS2812B-4020-V6 that I'm using doesn't need level shifting.\nThe datasheet sats that anything between 0.55*VDD and VDD+0.7\ncounts as a high signal, so a 5V WS2812B can be driven by 2.8V"
 		(exclude_from_sim no)
 		(at 110.49 13.97 0)
 		(size 149.225 99.06)
@@ -2080,34 +1970,58 @@
 		(uuid "e89fc262-6afe-411f-a6c6-face91157fb5")
 	)
 	(junction
+		(at 209.55 40.64)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "285581ff-9619-445f-bcaa-9ba687e6c847")
+	)
+	(junction
 		(at 48.26 33.02)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "475b507e-0720-43bd-afeb-dc5939497c83")
 	)
 	(junction
-		(at 240.03 64.77)
+		(at 196.85 33.02)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "475ce757-08b8-4705-b267-0dd4c5eb6410")
 	)
 	(junction
-		(at 227.33 72.39)
+		(at 184.15 40.64)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "637fd51c-3b14-4d3a-8a85-3020356aed2b")
 	)
 	(junction
-		(at 240.03 72.39)
+		(at 209.55 33.02)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "861beaba-88de-4cd2-826c-de7cbee3b514")
+	)
+	(junction
+		(at 196.85 40.64)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "8bc94fc1-c43a-4bac-86b1-af5458d50023")
 	)
 	(junction
-		(at 227.33 64.77)
+		(at 222.25 40.64)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "9aa8d7cf-db61-4fa9-81ca-1df32663684e")
+	)
+	(junction
+		(at 184.15 33.02)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "af49797b-634f-4f42-8137-82c8d9766efa")
+	)
+	(junction
+		(at 222.25 33.02)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "f2595693-46b1-42db-ae11-fc711f935a42")
 	)
 	(junction
 		(at 48.26 43.18)
@@ -2120,6 +2034,10 @@
 		(uuid "462febce-977e-4fca-b214-2579318e3747")
 	)
 	(no_connect
+		(at 232.41 69.85)
+		(uuid "524b1c2e-3115-49b0-99d9-9afa37edc8c2")
+	)
+	(no_connect
 		(at 88.9 83.82)
 		(uuid "6d9b443e-09e0-4670-bea3-f45381302eda")
 	)
@@ -2127,9 +2045,15 @@
 		(at 29.21 27.94)
 		(uuid "ce2ba093-96af-4c9d-ba8f-53b96ac32fe9")
 	)
-	(no_connect
-		(at 199.39 68.58)
-		(uuid "f6ede1fb-9c79-45c9-8552-91924fe29119")
+	(wire
+		(pts
+			(xy 209.55 40.64) (xy 222.25 40.64)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "058be7ba-0a50-4afd-9144-f6e784c2e3e9")
 	)
 	(wire
 		(pts
@@ -2143,6 +2067,26 @@
 	)
 	(wire
 		(pts
+			(xy 151.13 69.85) (xy 153.67 69.85)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0ac94a00-7279-4e89-b2a1-84aae43f4d32")
+	)
+	(wire
+		(pts
+			(xy 222.25 33.02) (xy 234.95 33.02)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0c9f067c-a641-49fa-beb3-9f64a58c8dcf")
+	)
+	(wire
+		(pts
 			(xy 69.85 88.9) (xy 58.42 88.9)
 		)
 		(stroke
@@ -2150,6 +2094,16 @@
 			(type default)
 		)
 		(uuid "18187733-86ae-48c2-9125-2dc399011ed7")
+	)
+	(wire
+		(pts
+			(xy 222.25 40.64) (xy 234.95 40.64)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1a8b207f-bc4d-4b00-8eff-662e3eedcba8")
 	)
 	(wire
 		(pts
@@ -2163,7 +2117,7 @@
 	)
 	(wire
 		(pts
-			(xy 240.03 64.77) (xy 252.73 64.77)
+			(xy 196.85 33.02) (xy 209.55 33.02)
 		)
 		(stroke
 			(width 0)
@@ -2193,16 +2147,6 @@
 	)
 	(wire
 		(pts
-			(xy 151.13 68.58) (xy 153.67 68.58)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "4b68cfa0-b6a1-4854-89ec-c62d4b515800")
-	)
-	(wire
-		(pts
 			(xy 69.85 86.36) (xy 66.04 86.36)
 		)
 		(stroke
@@ -2213,7 +2157,7 @@
 	)
 	(wire
 		(pts
-			(xy 227.33 72.39) (xy 240.03 72.39)
+			(xy 184.15 40.64) (xy 196.85 40.64)
 		)
 		(stroke
 			(width 0)
@@ -2243,7 +2187,7 @@
 	)
 	(wire
 		(pts
-			(xy 240.03 72.39) (xy 252.73 72.39)
+			(xy 196.85 40.64) (xy 209.55 40.64)
 		)
 		(stroke
 			(width 0)
@@ -2303,6 +2247,16 @@
 	)
 	(wire
 		(pts
+			(xy 171.45 69.85) (xy 173.99 69.85)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "94be8fa1-86a4-42c2-9e95-8404e02e080a")
+	)
+	(wire
+		(pts
 			(xy 48.26 43.18) (xy 62.23 43.18)
 		)
 		(stroke
@@ -2313,7 +2267,7 @@
 	)
 	(wire
 		(pts
-			(xy 227.33 64.77) (xy 240.03 64.77)
+			(xy 184.15 33.02) (xy 196.85 33.02)
 		)
 		(stroke
 			(width 0)
@@ -2341,6 +2295,46 @@
 		)
 		(uuid "ac2d721a-96b4-480d-b24c-6c506ac82475")
 	)
+	(wire
+		(pts
+			(xy 209.55 33.02) (xy 222.25 33.02)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b4de7c6c-afbd-4394-a401-6dca619ce8b7")
+	)
+	(wire
+		(pts
+			(xy 191.77 69.85) (xy 194.31 69.85)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c2dacc04-f7ca-46a6-8745-d33a8b385a68")
+	)
+	(wire
+		(pts
+			(xy 132.08 69.85) (xy 133.35 69.85)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d364e545-fbf0-4309-a241-8795e359dc80")
+	)
+	(wire
+		(pts
+			(xy 212.09 69.85) (xy 214.63 69.85)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e9dc9105-13cf-403b-8937-2dd8ed55ace8")
+	)
 	(label "MIDI_OUT"
 		(at 78.74 88.9 0)
 		(effects
@@ -2363,7 +2357,7 @@
 	)
 	(hierarchical_label "WS2812B"
 		(shape input)
-		(at 151.13 68.58 180)
+		(at 132.08 69.85 180)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -2393,6 +2387,162 @@
 			(justify left)
 		)
 		(uuid "f1a65c13-9a6d-41a6-972b-a539babc5e1e")
+	)
+	(symbol
+		(lib_id "power:+5V")
+		(at 223.52 60.96 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "0d35f6b5-790a-4099-9d3b-c896dfbf4af3")
+		(property "Reference" "#PWR0222"
+			(at 223.52 64.77 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "+5V"
+			(at 223.52 55.88 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 223.52 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 223.52 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+5V\""
+			(at 223.52 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "b5d80733-14b5-420a-ab36-52c01ba7bb1f")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
+					(reference "#PWR0222")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+5V")
+		(at 182.88 60.96 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "23e96e9e-c091-4209-abd2-a159e5069b20")
+		(property "Reference" "#PWR0216"
+			(at 182.88 64.77 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "+5V"
+			(at 182.88 55.88 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 182.88 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 182.88 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+5V\""
+			(at 182.88 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "b71b488c-8fae-4b10-b4d5-abe17bc43b5e")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
+					(reference "#PWR0216")
+					(unit 1)
+				)
+			)
+		)
 	)
 	(symbol
 		(lib_id "power:GND")
@@ -2467,6 +2617,85 @@
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
 					(reference "#PWR0206")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 203.2 78.74 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "26a7ba61-20ae-4078-b00c-2379b1271324")
+		(property "Reference" "#PWR0221"
+			(at 203.2 85.09 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 205.74 80.0099 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" ""
+			(at 203.2 78.74 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 203.2 78.74 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 203.2 78.74 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "eff6a486-9df3-4e31-bc4b-2f5fedbf7088")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
+					(reference "#PWR0221")
 					(unit 1)
 				)
 			)
@@ -2585,6 +2814,84 @@
 	)
 	(symbol
 		(lib_id "power:+5V")
+		(at 203.2 60.96 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "462888f6-5a8c-49fa-bc3d-f64c3387ecd0")
+		(property "Reference" "#PWR0220"
+			(at 203.2 64.77 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "+5V"
+			(at 203.2 55.88 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 203.2 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 203.2 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+5V\""
+			(at 203.2 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "6e24ee20-fe7f-464a-84ce-e0bac37c10be")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
+					(reference "#PWR0220")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+5V")
 		(at 66.04 83.82 0)
 		(unit 1)
 		(body_style 1)
@@ -2656,6 +2963,114 @@
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
 					(reference "#PWR0208")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Mylib:WS2812B-4020")
+		(at 203.2 69.85 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "499c5b2a-2f07-4a2d-b9c1-2a7644806ecb")
+		(property "Reference" "D205"
+			(at 213.36 65.9698 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "WS2812B-4020"
+			(at 203.2 69.85 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Mylib:WS2812B-4020"
+			(at 203.454 90.932 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "https://jlcpcb.com/partdetail/Worldsemi-WS2812B4020/C965557"
+			(at 207.518 93.98 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Side output smart LED"
+			(at 203.454 99.822 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC PN" "C965557"
+			(at 203.2 97.028 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "WS2812B-4020"
+			(at 203.2 97.028 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "4"
+			(uuid "d85ef0d0-cc0f-4845-9170-59b7d8ffd031")
+		)
+		(pin "3"
+			(uuid "4d2aec79-65d5-4cab-add2-0c7c188c93eb")
+		)
+		(pin "1"
+			(uuid "4ad80462-91dc-4e0f-a2e7-bd3310af2f4f")
+		)
+		(pin "2"
+			(uuid "797322af-53d6-4c45-a86a-d5a4e487cd54")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
+					(reference "D205")
 					(unit 1)
 				)
 			)
@@ -2789,6 +3204,114 @@
 		)
 	)
 	(symbol
+		(lib_id "Mylib:WS2812B-4020")
+		(at 162.56 69.85 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "50b946cf-02e4-464f-92a4-2093feff96c8")
+		(property "Reference" "D203"
+			(at 172.72 65.9698 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "WS2812B-4020"
+			(at 162.56 69.85 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Mylib:WS2812B-4020"
+			(at 162.814 90.932 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "https://jlcpcb.com/partdetail/Worldsemi-WS2812B4020/C965557"
+			(at 166.878 93.98 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Side output smart LED"
+			(at 162.814 99.822 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC PN" "C965557"
+			(at 162.56 97.028 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "WS2812B-4020"
+			(at 162.56 97.028 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "4"
+			(uuid "fe45cca0-0765-45df-87dd-36d4c8a5519b")
+		)
+		(pin "3"
+			(uuid "c55e6c5f-02fa-48e4-84ef-ca9a95db5448")
+		)
+		(pin "1"
+			(uuid "8abdfbf2-f8e6-4ee0-9c74-59be14148449")
+		)
+		(pin "2"
+			(uuid "26e96279-1db6-4b4b-952c-6e7c5bcda526")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
+					(reference "D203")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Isolator:TLP2310")
 		(at 72.39 38.1 0)
 		(unit 1)
@@ -2895,84 +3418,6 @@
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
 					(reference "U202")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:+5V")
-		(at 176.53 60.96 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "5697ac5c-c418-45f0-97e6-95083de05ef6")
-		(property "Reference" "#PWR0214"
-			(at 176.53 64.77 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "+5V"
-			(at 176.53 55.88 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 176.53 60.96 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 176.53 60.96 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 176.53 60.96 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "e52c4f30-baa2-4fd2-958e-282020366e57")
-		)
-		(instances
-			(project "usb-stomp"
-				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
-					(reference "#PWR0214")
 					(unit 1)
 				)
 			)
@@ -3392,85 +3837,6 @@
 		)
 	)
 	(symbol
-		(lib_id "power:GND")
-		(at 176.53 76.2 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "671dcdce-7063-475a-87d7-3f76883245b9")
-		(property "Reference" "#PWR0215"
-			(at 176.53 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "GND"
-			(at 179.07 77.4699 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" ""
-			(at 176.53 76.2 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 176.53 76.2 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" ""
-			(at 176.53 76.2 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "32b29b2b-f95f-40c3-a453-e974e5ef9a06")
-		)
-		(instances
-			(project "usb-stomp"
-				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
-					(reference "#PWR0215")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Device:D_Schottky")
 		(at 48.26 38.1 90)
 		(mirror x)
@@ -3704,7 +4070,7 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 227.33 68.58 0)
+		(at 184.15 36.83 0)
 		(mirror x)
 		(unit 1)
 		(body_style 1)
@@ -3716,7 +4082,7 @@
 		(fields_autoplaced yes)
 		(uuid "70940f20-a274-41a4-badb-85e11066a56e")
 		(property "Reference" "C203"
-			(at 223.52 67.3099 0)
+			(at 180.34 35.5599 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3727,7 +4093,7 @@
 			)
 		)
 		(property "Value" "0.1uF"
-			(at 223.52 69.8499 0)
+			(at 180.34 38.0999 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3738,7 +4104,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 228.2952 64.77 0)
+			(at 185.1152 33.02 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3749,7 +4115,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 227.33 68.58 0)
+			(at 184.15 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3760,7 +4126,7 @@
 			)
 		)
 		(property "Description" "0.1uF 16V 10% X7R 0402"
-			(at 227.33 68.58 0)
+			(at 184.15 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3771,7 +4137,7 @@
 			)
 		)
 		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
-			(at 227.33 68.58 0)
+			(at 184.15 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3782,7 +4148,7 @@
 			)
 		)
 		(property "Sim.Device" ""
-			(at 227.33 68.58 0)
+			(at 184.15 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3793,7 +4159,7 @@
 			)
 		)
 		(property "Sim.Pins" ""
-			(at 227.33 68.58 0)
+			(at 184.15 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3804,7 +4170,7 @@
 			)
 		)
 		(property "LCSC PN" "C1525"
-			(at 227.33 68.58 0)
+			(at 184.15 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3824,6 +4190,114 @@
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
 					(reference "C203")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Mylib:WS2812B-4020")
+		(at 142.24 69.85 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "71ae18d0-8c34-4e62-b221-4932b1f42eed")
+		(property "Reference" "D202"
+			(at 152.4 65.9698 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "WS2812B-4020"
+			(at 142.24 69.85 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Mylib:WS2812B-4020"
+			(at 142.494 90.932 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "https://jlcpcb.com/partdetail/Worldsemi-WS2812B4020/C965557"
+			(at 146.558 93.98 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Side output smart LED"
+			(at 142.494 99.822 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC PN" "C965557"
+			(at 142.24 97.028 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "WS2812B-4020"
+			(at 142.24 97.028 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "4"
+			(uuid "4a118c4e-d5d7-4682-9140-61d476f3175c")
+		)
+		(pin "3"
+			(uuid "bd6b997a-5e9a-48d8-9295-b3cf0459bbfc")
+		)
+		(pin "1"
+			(uuid "d9648b7f-c9ce-4dae-911a-f8588f9caebd")
+		)
+		(pin "2"
+			(uuid "87120c06-0a96-4a5b-9b5a-ad88059236ce")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
+					(reference "D202")
 					(unit 1)
 				)
 			)
@@ -3908,8 +4382,87 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GND")
+		(at 182.88 78.74 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "77a3837d-91f6-4442-a371-44920017fd32")
+		(property "Reference" "#PWR0217"
+			(at 182.88 85.09 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 185.42 80.0099 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" ""
+			(at 182.88 78.74 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 182.88 78.74 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 182.88 78.74 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "9f4f94b9-f84f-4ad4-b3cc-87aebf6a90c9")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
+					(reference "#PWR0217")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:C")
-		(at 240.03 68.58 0)
+		(at 196.85 36.83 0)
 		(mirror x)
 		(unit 1)
 		(body_style 1)
@@ -3921,7 +4474,7 @@
 		(fields_autoplaced yes)
 		(uuid "7b6be133-c192-4ca1-b9d4-2412d19d6a90")
 		(property "Reference" "C204"
-			(at 236.22 67.3099 0)
+			(at 193.04 35.5599 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3932,7 +4485,7 @@
 			)
 		)
 		(property "Value" "0.1uF"
-			(at 236.22 69.8499 0)
+			(at 193.04 38.0999 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3943,7 +4496,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 240.9952 64.77 0)
+			(at 197.8152 33.02 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3954,7 +4507,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 240.03 68.58 0)
+			(at 196.85 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3965,7 +4518,7 @@
 			)
 		)
 		(property "Description" "0.1uF 16V 10% X7R 0402"
-			(at 240.03 68.58 0)
+			(at 196.85 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3976,7 +4529,7 @@
 			)
 		)
 		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
-			(at 240.03 68.58 0)
+			(at 196.85 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3987,7 +4540,7 @@
 			)
 		)
 		(property "Sim.Device" ""
-			(at 240.03 68.58 0)
+			(at 196.85 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3998,7 +4551,7 @@
 			)
 		)
 		(property "Sim.Pins" ""
-			(at 240.03 68.58 0)
+			(at 196.85 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4009,7 +4562,7 @@
 			)
 		)
 		(property "LCSC PN" "C1525"
-			(at 240.03 68.58 0)
+			(at 196.85 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4035,8 +4588,9 @@
 		)
 	)
 	(symbol
-		(lib_id "power:+5V")
-		(at 161.29 60.96 0)
+		(lib_id "Device:C")
+		(at 234.95 36.83 0)
+		(mirror x)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -4045,30 +4599,31 @@
 		(in_pos_files yes)
 		(dnp no)
 		(fields_autoplaced yes)
-		(uuid "8038f759-2c38-4c68-a954-abe35bed8c4c")
-		(property "Reference" "#PWR0212"
-			(at 161.29 64.77 0)
-			(hide yes)
+		(uuid "8f486f9c-20f2-44cb-832e-9d5a9b101208")
+		(property "Reference" "C207"
+			(at 231.14 35.5599 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify right)
 			)
 		)
-		(property "Value" "+5V"
-			(at 161.29 55.88 0)
+		(property "Value" "0.1uF"
+			(at 231.14 38.0999 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify right)
 			)
 		)
-		(property "Footprint" ""
-			(at 161.29 60.96 0)
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
+			(at 235.9152 33.02 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4079,7 +4634,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 161.29 60.96 0)
+			(at 234.95 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4089,8 +4644,8 @@
 				)
 			)
 		)
-		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 161.29 60.96 0)
+		(property "Description" "0.1uF 16V 10% X7R 0402"
+			(at 234.95 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4099,14 +4654,61 @@
 					(size 1.27 1.27)
 				)
 			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
+			(at 234.95 36.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Device" ""
+			(at 234.95 36.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Pins" ""
+			(at 234.95 36.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC PN" "C1525"
+			(at 234.95 36.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "2af518c4-874c-443b-8c46-53089cb57c3c")
 		)
 		(pin "1"
-			(uuid "e5ed1cac-d23f-4e59-b0e7-9ea3f3ce1002")
+			(uuid "02edd0a9-a5fe-44db-b666-304c036413a6")
 		)
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
-					(reference "#PWR0212")
+					(reference "C207")
 					(unit 1)
 				)
 			)
@@ -4215,6 +4817,133 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:C")
+		(at 222.25 36.83 0)
+		(mirror x)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "9f706930-a5e0-4fe7-96da-5098c055a06d")
+		(property "Reference" "C206"
+			(at 218.44 35.5599 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "0.1uF"
+			(at 218.44 38.0999 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
+			(at 223.2152 33.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 222.25 36.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "0.1uF 16V 10% X7R 0402"
+			(at 222.25 36.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
+			(at 222.25 36.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Device" ""
+			(at 222.25 36.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Pins" ""
+			(at 222.25 36.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC PN" "C1525"
+			(at 222.25 36.83 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "732aac3d-372b-4b98-a335-e3ee265c7304")
+		)
+		(pin "1"
+			(uuid "3c114ba7-9e2b-4e7e-ac3f-9629c492403e")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
+					(reference "C206")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:R")
 		(at 73.66 88.9 90)
 		(mirror x)
@@ -4311,115 +5040,6 @@
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
 					(reference "R203")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "LED:WS2812B-2020")
-		(at 176.53 68.58 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "a56db7a0-5f49-44ae-903b-f59280fa052a")
-		(property "Reference" "D203"
-			(at 176.53 48.768 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "WS2812B-2020-V6"
-			(at 176.53 51.308 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "LED_SMD:LED_WS2812B-2020_PLCC4_2.0x2.0mm"
-			(at 177.8 76.2 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(property "Datasheet" "https://cdn-shop.adafruit.com/product-files/4684/4684_WS2812B-2020_V1.3_EN.pdf"
-			(at 179.07 78.105 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(property "Description" "RGB LED with integrated controller, 2.0 x 2.0 mm, 12 mA"
-			(at 176.53 68.58 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC PN" "C52917434"
-			(at 176.53 68.58 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" "WS2812B-2020-V6"
-			(at 176.53 68.58 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "4"
-			(uuid "c8c2f7e8-b1b8-461c-9660-37c96719feb3")
-		)
-		(pin "3"
-			(uuid "76e48298-1473-4c84-8ddf-b90ea9c61be6")
-		)
-		(pin "1"
-			(uuid "1f83af19-350d-4acf-a676-b2065d3a8aa0")
-		)
-		(pin "2"
-			(uuid "68ade344-7bdd-436e-84f0-4ea340e2e8e0")
-		)
-		(instances
-			(project "usb-stomp"
-				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
-					(reference "D203")
 					(unit 1)
 				)
 			)
@@ -4612,8 +5232,8 @@
 		)
 	)
 	(symbol
-		(lib_id "power:GND")
-		(at 191.77 76.2 0)
+		(lib_id "power:+5V")
+		(at 162.56 60.96 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -4622,9 +5242,9 @@
 		(in_pos_files yes)
 		(dnp no)
 		(fields_autoplaced yes)
-		(uuid "b9774de9-5a3c-403e-a17b-66b767bc76dd")
-		(property "Reference" "#PWR0217"
-			(at 191.77 82.55 0)
+		(uuid "b5c94561-8e3e-44a4-beb5-9af1ee0a6c3f")
+		(property "Reference" "#PWR0214"
+			(at 162.56 64.77 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4634,19 +5254,18 @@
 				)
 			)
 		)
-		(property "Value" "GND"
-			(at 194.31 77.4699 0)
+		(property "Value" "+5V"
+			(at 162.56 55.88 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
 			)
 		)
 		(property "Footprint" ""
-			(at 191.77 76.2 0)
+			(at 162.56 60.96 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4657,7 +5276,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 191.77 76.2 0)
+			(at 162.56 60.96 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4667,8 +5286,8 @@
 				)
 			)
 		)
-		(property "Description" ""
-			(at 191.77 76.2 0)
+		(property "Description" "Power symbol creates a global label with name \"+5V\""
+			(at 162.56 60.96 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4679,12 +5298,12 @@
 			)
 		)
 		(pin "1"
-			(uuid "07ceae4b-5cb4-4fd0-b441-1251684bb44f")
+			(uuid "2a495ef9-e67d-402f-b481-d964cc22bf48")
 		)
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
-					(reference "#PWR0217")
+					(reference "#PWR0214")
 					(unit 1)
 				)
 			)
@@ -4799,6 +5418,84 @@
 		)
 	)
 	(symbol
+		(lib_id "power:+5V")
+		(at 142.24 60.96 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "c9757dbe-3c93-4b5b-8dd4-4d13c7fd6712")
+		(property "Reference" "#PWR0212"
+			(at 142.24 64.77 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "+5V"
+			(at 142.24 55.88 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 142.24 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 142.24 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+5V\""
+			(at 142.24 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "afc6150d-a3da-4eb7-9e52-43046b5e002c")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
+					(reference "#PWR0212")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:+3V3")
 		(at 33.02 45.72 0)
 		(unit 1)
@@ -4876,8 +5573,8 @@
 		)
 	)
 	(symbol
-		(lib_id "LED:WS2812B-2020")
-		(at 191.77 68.58 0)
+		(lib_id "Mylib:WS2812B-4020")
+		(at 223.52 69.85 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -4885,9 +5582,10 @@
 		(on_board yes)
 		(in_pos_files yes)
 		(dnp no)
-		(uuid "d4bdfe8d-68e1-4d06-9d33-e2e9cbd3b08b")
-		(property "Reference" "D204"
-			(at 201.676 58.928 0)
+		(fields_autoplaced yes)
+		(uuid "e0796a63-0a51-4678-8c37-46b38bd7fd7e")
+		(property "Reference" "D206"
+			(at 233.68 65.9698 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4896,8 +5594,8 @@
 				)
 			)
 		)
-		(property "Value" "WS2812B-2020-V6"
-			(at 201.676 61.468 0)
+		(property "Value" "WS2812B-4020"
+			(at 223.52 69.85 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4906,32 +5604,8 @@
 				)
 			)
 		)
-		(property "Footprint" "LED_SMD:LED_WS2812B-2020_PLCC4_2.0x2.0mm"
-			(at 193.04 76.2 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(property "Datasheet" "https://cdn-shop.adafruit.com/product-files/4684/4684_WS2812B-2020_V1.3_EN.pdf"
-			(at 194.31 78.105 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(property "Description" "RGB LED with integrated controller, 2.0 x 2.0 mm, 12 mA"
-			(at 191.77 68.58 0)
+		(property "Footprint" "Mylib:WS2812B-4020"
+			(at 223.774 90.932 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4941,8 +5615,8 @@
 				)
 			)
 		)
-		(property "LCSC PN" "C52917434"
-			(at 191.77 68.58 0)
+		(property "Datasheet" "https://jlcpcb.com/partdetail/Worldsemi-WS2812B4020/C965557"
+			(at 227.838 93.98 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4952,8 +5626,30 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "WS2812B-2020-V6"
-			(at 191.77 68.58 0)
+		(property "Description" "Side output smart LED"
+			(at 223.774 99.822 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC PN" "C965557"
+			(at 223.52 97.028 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "WS2812B-4020"
+			(at 223.52 97.028 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4964,100 +5660,21 @@
 			)
 		)
 		(pin "4"
-			(uuid "87112923-d369-456e-8eae-b6b634ce956c")
+			(uuid "d48b1586-1560-4cd3-81eb-5426833c24d1")
 		)
 		(pin "3"
-			(uuid "0c0856d1-27a6-49bf-ab7a-fd32056ef55d")
+			(uuid "ec9a32e4-8b33-406e-b678-95934bb3495b")
 		)
 		(pin "1"
-			(uuid "d2a5e23f-ea4b-453f-ad5f-eda0b27e0e2d")
+			(uuid "93585220-86c2-4248-a233-04a23c326703")
 		)
 		(pin "2"
-			(uuid "9720d198-d10a-47c2-acf3-cfce6a1c5af6")
+			(uuid "aceb4a69-e914-44b8-bd1d-c369e68df9a0")
 		)
 		(instances
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
-					(reference "D204")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 161.29 76.2 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "d5a622b0-76f1-4ebe-bfac-3ef3aee1c821")
-		(property "Reference" "#PWR0213"
-			(at 161.29 82.55 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "GND"
-			(at 163.83 77.4699 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" ""
-			(at 161.29 76.2 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 161.29 76.2 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" ""
-			(at 161.29 76.2 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "2bfc25c6-8e92-4011-9ca1-1437d8f71b35")
-		)
-		(instances
-			(project "usb-stomp"
-				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
-					(reference "#PWR0213")
+					(reference "D206")
 					(unit 1)
 				)
 			)
@@ -5065,7 +5682,7 @@
 	)
 	(symbol
 		(lib_id "power:+5V")
-		(at 227.33 64.77 0)
+		(at 184.15 33.02 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -5076,7 +5693,7 @@
 		(fields_autoplaced yes)
 		(uuid "e1570da1-21ed-4c43-b38d-2d73bf511a07")
 		(property "Reference" "#PWR0218"
-			(at 227.33 68.58 0)
+			(at 184.15 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5087,7 +5704,7 @@
 			)
 		)
 		(property "Value" "+5V"
-			(at 227.33 59.69 0)
+			(at 184.15 27.94 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5097,7 +5714,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 227.33 64.77 0)
+			(at 184.15 33.02 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5108,7 +5725,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 227.33 64.77 0)
+			(at 184.15 33.02 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5119,7 +5736,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 227.33 64.77 0)
+			(at 184.15 33.02 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5136,193 +5753,6 @@
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
 					(reference "#PWR0218")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "LED:WS2812B-2020")
-		(at 161.29 68.58 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "ea5edce5-4e5d-4b3a-8e85-3b96fed4ce8c")
-		(property "Reference" "D202"
-			(at 152.654 58.166 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "WS2812B-2020-V6"
-			(at 152.654 60.706 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "LED_SMD:LED_WS2812B-2020_PLCC4_2.0x2.0mm"
-			(at 162.56 76.2 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(property "Datasheet" "https://cdn-shop.adafruit.com/product-files/4684/4684_WS2812B-2020_V1.3_EN.pdf"
-			(at 163.83 78.105 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(property "Description" "RGB LED with integrated controller, 2.0 x 2.0 mm, 12 mA"
-			(at 161.29 68.58 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC PN" "C52917434"
-			(at 161.29 68.58 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" "WS2812B-2020-V6"
-			(at 161.29 68.58 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "4"
-			(uuid "b5d6c9b6-5122-4902-a4be-bee215ed0af1")
-		)
-		(pin "3"
-			(uuid "b02181e6-e966-40d5-8e41-24d45fc49a84")
-		)
-		(pin "1"
-			(uuid "832c0dea-18ad-4007-b9c9-ae890e13fc77")
-		)
-		(pin "2"
-			(uuid "7905015a-b7d4-43c9-92c8-a7ab831715a5")
-		)
-		(instances
-			(project "usb-stomp"
-				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
-					(reference "D202")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:+5V")
-		(at 191.77 60.96 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "ec6ced71-4cbe-4e11-b313-381007ff7838")
-		(property "Reference" "#PWR0216"
-			(at 191.77 64.77 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "+5V"
-			(at 191.77 55.88 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 191.77 60.96 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 191.77 60.96 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 191.77 60.96 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "0ae2fba0-d0b4-40df-b4fc-bb15e9f01862")
-		)
-		(instances
-			(project "usb-stomp"
-				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
-					(reference "#PWR0216")
 					(unit 1)
 				)
 			)
@@ -5408,7 +5838,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 227.33 72.39 0)
+		(at 142.24 78.74 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -5417,9 +5847,9 @@
 		(in_pos_files yes)
 		(dnp no)
 		(fields_autoplaced yes)
-		(uuid "f36ec3d4-9d3d-4ce5-9b17-38585d634bb9")
-		(property "Reference" "#PWR0219"
-			(at 227.33 78.74 0)
+		(uuid "ee949da2-7317-4505-ab10-411b7a976361")
+		(property "Reference" "#PWR0213"
+			(at 142.24 85.09 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5430,17 +5860,18 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 227.33 77.47 0)
+			(at 144.78 80.0099 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify left)
 			)
 		)
 		(property "Footprint" ""
-			(at 227.33 72.39 0)
+			(at 142.24 78.74 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5451,7 +5882,85 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 227.33 72.39 0)
+			(at 142.24 78.74 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 142.24 78.74 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "3c9cb301-cf84-48cf-8e25-961a53d340de")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
+					(reference "#PWR0213")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 184.15 40.64 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "f36ec3d4-9d3d-4ce5-9b17-38585d634bb9")
+		(property "Reference" "#PWR0219"
+			(at 184.15 46.99 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 184.15 45.72 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 184.15 40.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 184.15 40.64 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5462,7 +5971,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 227.33 72.39 0)
+			(at 184.15 40.64 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5479,6 +5988,272 @@
 			(project "usb-stomp"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
 					(reference "#PWR0219")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 223.52 78.74 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "f47db726-4656-41b2-8024-5275b8e697aa")
+		(property "Reference" "#PWR0223"
+			(at 223.52 85.09 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 226.06 80.0099 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" ""
+			(at 223.52 78.74 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 223.52 78.74 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 223.52 78.74 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "d5426db2-71a9-4e75-86a1-b46b79c36602")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
+					(reference "#PWR0223")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Mylib:WS2812B-4020")
+		(at 182.88 69.85 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "f65e58c4-a45b-4b5a-88a1-642fbe591599")
+		(property "Reference" "D204"
+			(at 193.04 65.9698 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "WS2812B-4020"
+			(at 182.88 69.85 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Mylib:WS2812B-4020"
+			(at 183.134 90.932 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "https://jlcpcb.com/partdetail/Worldsemi-WS2812B4020/C965557"
+			(at 187.198 93.98 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Side output smart LED"
+			(at 183.134 99.822 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC PN" "C965557"
+			(at 182.88 97.028 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "WS2812B-4020"
+			(at 182.88 97.028 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "4"
+			(uuid "ec72cd31-df98-4e10-a603-18aa0bcf67a1")
+		)
+		(pin "3"
+			(uuid "f0b18ce1-2593-4ed1-b0de-94a6449a7eec")
+		)
+		(pin "1"
+			(uuid "8fb4b2c5-1d92-4960-9186-cba58d54c5fb")
+		)
+		(pin "2"
+			(uuid "7dd24354-d144-4115-9c3d-25105e197bde")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
+					(reference "D204")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 162.56 78.74 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "f6b90113-2fc2-46ad-b2b1-57c23df6998d")
+		(property "Reference" "#PWR0215"
+			(at 162.56 85.09 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 165.1 80.0099 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" ""
+			(at 162.56 78.74 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 162.56 78.74 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 162.56 78.74 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "370a4b40-3413-45bd-8e27-e99ca65afc60")
+		)
+		(instances
+			(project "usb-stomp"
+				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b"
+					(reference "#PWR0215")
 					(unit 1)
 				)
 			)
@@ -5565,7 +6340,7 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 252.73 68.58 0)
+		(at 209.55 36.83 0)
 		(mirror x)
 		(unit 1)
 		(body_style 1)
@@ -5577,7 +6352,7 @@
 		(fields_autoplaced yes)
 		(uuid "fed0b09b-d69b-416b-8304-27ded9593f95")
 		(property "Reference" "C205"
-			(at 248.92 67.3099 0)
+			(at 205.74 35.5599 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5588,7 +6363,7 @@
 			)
 		)
 		(property "Value" "0.1uF"
-			(at 248.92 69.8499 0)
+			(at 205.74 38.0999 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5599,7 +6374,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 253.6952 64.77 0)
+			(at 210.5152 33.02 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5610,7 +6385,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 252.73 68.58 0)
+			(at 209.55 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5621,7 +6396,7 @@
 			)
 		)
 		(property "Description" "0.1uF 16V 10% X7R 0402"
-			(at 252.73 68.58 0)
+			(at 209.55 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5632,7 +6407,7 @@
 			)
 		)
 		(property "MANUFACTURER_PART_NUMBER" "CL05B104KO5NNNC"
-			(at 252.73 68.58 0)
+			(at 209.55 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5643,7 +6418,7 @@
 			)
 		)
 		(property "Sim.Device" ""
-			(at 252.73 68.58 0)
+			(at 209.55 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5654,7 +6429,7 @@
 			)
 		)
 		(property "Sim.Pins" ""
-			(at 252.73 68.58 0)
+			(at 209.55 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5665,7 +6440,7 @@
 			)
 		)
 		(property "LCSC PN" "C1525"
-			(at 252.73 68.58 0)
+			(at 209.55 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)

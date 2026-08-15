@@ -433,7 +433,7 @@ TPS62153/5V/QFN-16:
 # PSRR at 1kHz.  Both of the ones used here are fixed versions rather
 # than adjustable, so no divider and nothing to get wrong.
 #
-# Two of these on usb-stomp: U104 is the digital 3.3V straight off the
+# Two of these on usb-stomp: U103 is the digital 3.3V straight off the
 # 5V rail, and U302 is the analog 3.3V behind the L301/R313/C317 filter
 # - which is the whole reason for having two.
 TLV76733/3.3V/WSON-6:

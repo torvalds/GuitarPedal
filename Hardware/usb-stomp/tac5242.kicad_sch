@@ -2470,6 +2470,17 @@
 			(embedded_fonts no)
 		)
 	)
+	(text "LC filter with 1 Ohm resistor across the inductor.\nWith the inductor's 0.1R DCR damping it, Q is about\n1.7: a +5 dB peak at 24 kHz, where the LDO does well.\n\nAbove 79 kHz ((R+r)/L) the 1R shorts out the inductor\nand what is left is a 1R/22uF single pole:\n  -20 dB at 100k\n  -43 dB at 1M\n  -51 dB at 2.5M, the TPS62153's switching frequency"
+		(exclude_from_sim no)
+		(at 124.714 184.15 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "0c535d8a-1dfb-4c35-9520-b638b54b7f6f")
+	)
 	(text "Audio connector board TAC5242"
 		(exclude_from_sim no)
 		(at 179.324 173.736 0)
