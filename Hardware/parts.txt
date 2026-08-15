@@ -13,8 +13,15 @@
 #
 #	Cnnnnnn [basic|promo]	the JLCPCB part, and its pricing tier
 #	http... or www...	a datasheet
+#	CHECK: <sentence>	look at this before placing an order
 #	one word with a ':'	the KiCad footprint
 #	anything else		manufacturer and part number
+#
+# CHECK: is the one tagged shape, because prose has no shape that tells
+# it apart from the manufacturer line.  The script below repeats every
+# one of them, for every part in a board's BOM, at the moment the
+# manufacturing files are made - so it is for the things that get
+# checked by eye and cannot be checked by anything else.
 #
 # The footprint is only written when it cannot be derived.  A resistor
 # or capacitor with an imperial size in its index gets the obvious KiCad
@@ -248,11 +255,25 @@
 
 # The part the RP2350 datasheet specifies for the chip's built-in 1.1V
 # buck regulator.  This one is a requirement rather than a search hit.
+#
+# It is polarised - the KiCad footprint is named for it - and JLCPCB's
+# rotation for a part and KiCad's are not always the same, so it can
+# arrive turned round.  It is easy to overlook and was nearly missed on
+# the 2026-08-14 order.  Getting it wrong is an RF emissions problem
+# rather than a working/not-working one, which is exactly why nothing
+# else will ever catch it.
 3.3uH/0806:
 	Abracon AOTA-B201610S3R3-101-T
 	C42411119
 	Mylib:AOTA-B2016
 	https://abracon.com/datasheets/AOTA-B201610S3R3-101-T.pdf
+	CHECK: polarised, and rotated by hand at the 2026-08-14 order -
+	CHECK: 180 degrees, and NOT because the footprints differ, which
+	CHECK: they do not at all.  It is the tape orientation, which is
+	CHECK: in no file.  The hard kind to spot: the body is
+	CHECK: symmetrical, so nothing looks wrong - match the silkscreen
+	CHECK: dot against the one JLCPCB draws.  The dot is the outer
+	CHECK: winding and belongs on the quiet rail, +1V1, our pad 1
 
 # The inductor for the TPS628438 buck on the rotary board - L101 there,
 # feeding +3V3.
@@ -282,6 +303,10 @@ BAT54SW/30V/SOT-323:
 	C22466373
 	Package_TO_SOT_SMD:SOT-323_SC-70
 	https://assets.nexperia.com/documents/data-sheet/BAT54W_SER.pdf
+	CHECK: JLCPCB's footprint for this is 180 degrees from ours -
+	CHECK: measured, not guessed.  Corrected by hand at the
+	CHECK: 2026-08-14 order, and the easy kind to spot: 180 out and
+	CHECK: the body plainly does not match the footprint outline
 
 # Common cathode, where the BAT54SW above is series-connected.
 BAT54CW/30V/SOT-323:
@@ -289,6 +314,8 @@ BAT54CW/30V/SOT-323:
 	C22392482
 	Package_TO_SOT_SMD:SOT-323_SC-70
 	https://assets.nexperia.com/documents/data-sheet/BAT54W_SER.pdf
+	CHECK: JLCPCB's footprint is 180 degrees from ours, the same as
+	CHECK: its BAT54SW sibling.  Not yet seen on a board
 
 SM4007PL/1kV/1A/SOD-123FL:
 	MDD SM4007PL
@@ -302,6 +329,12 @@ SM4007PL/1kV/1A/SOD-123FL:
 LED/yellow-green/2V/0402:
 	Lite-On LTST-C281KGKT
 	C160479
+	CHECK: same land pattern as JLCPCB's to 60um, and the silk marks
+	CHECK: are at opposite ends - theirs by pad 2, ours by pad 1 -
+	CHECK: but that is numbering, not orientation: D102 came out
+	CHECK: right on rev 1 with no rotation applied.  Left here as a
+	CHECK: known-benign difference rather than deleted, so the next
+	CHECK: person to notice it does not have to work it out again
 
 # The three addressable status LEDs.  Top-emitting, which is the
 # problem with them: they fire straight up into the 14mm gap between
@@ -319,6 +352,11 @@ WS2812B/4020:
 	Worldsemi WS2812B-4020
 	C965557
 	Mylib:WS2812B-4020
+	CHECK: our footprint has no pin 1 marker and does not need one:
+	CHECK: it outlines the body, with the gap on the pad side, so the
+	CHECK: silk says which face the light comes out of.  The pads are
+	CHECK: all on the back, so the part is unambiguous by shape.
+	CHECK: Placement confirmed right on the boards already built
 
 ## Crystals
 
@@ -343,6 +381,9 @@ USB-C/2.0/16P/GT-USB-7010C:
 	G-Switch GT-USB-7010C
 	C2843967
 	Connector_USB:USB_C_Receptacle_GCT_USB4105-xx-A_16P_TopMnt_Horizontal
+	CHECK: same footprint as ours to 8um, but JLCPCB's origin sits
+	CHECK: (0.000, -1.305) mm from it, so the position wants that
+	CHECK: offset applied by hand at ordering
 
 # The audio jacks, TRRS with switched contacts.  TN and RN grounded, so
 # an empty jack shorts tip to ground.
@@ -350,6 +391,9 @@ AudioJack/TRRS/PJ-320D:
 	SHOU HAN PJ-320D
 	C431535
 	Mylib:PJ-320D
+	CHECK: same footprint as ours to 0um, but JLCPCB's origin sits
+	CHECK: (+7.400, 0.000) mm from it, so the position wants that
+	CHECK: offset applied by hand at ordering
 
 # The vertical Type-C, J2 on pedal-board.  The GT-USB-7010C above is
 # the horizontal one and is what the current boards take.
@@ -448,6 +492,11 @@ SN74AHCT1G125/SC-70-5:
 	C350557
 	Package_TO_SOT_SMD:SOT-353_SC-70-5
 	http://www.ti.com/lit/sg/scyt129e/scyt129e.pdf
+	CHECK: JLCPCB's footprint is 90 degrees from ours (measured, at
+	CHECK: 255um residual - close enough to be the same land pattern
+	CHECK: and far enough to be worth an eye).  Never checked on a
+	CHECK: board; likely one of the fixups made at the 2026-08-14
+	CHECK: order without being written down
 
 # USB ESD protection.  JLCPCB writes the package SOT-666-6.
 USBLC6/SOT-666:
@@ -464,6 +513,9 @@ TLP2310/SOP:
 	C7473281
 	Package_SO:SO-5-6_4.55x3.7mm_P1.27mm
 	https://toshiba.semicon-storage.com/info/TLP2310_datasheet_en_20220913.pdf
+	CHECK: JLCPCB's footprint is 90 degrees from ours (measured).
+	CHECK: Never checked on a board; likely the other of the fixups
+	CHECK: made at the 2026-08-14 order without being written down
 
 # U102, still fitted on usb-stomp.  Scene storage no longer lives here -
 # flash_store.h keeps slots at the top of internal flash instead - so
