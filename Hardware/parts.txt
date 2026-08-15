@@ -363,6 +363,12 @@ WS2812B/2020:
 	C52917434
 	LED_SMD:LED_WS2812B-2020_PLCC4_2.0x2.0mm
 	https://cdn-shop.adafruit.com/product-files/4684/4684_WS2812B-2020_V1.3_EN.pdf
+	CHECK: the two footprints agree - same pads, same numbering, same
+	CHECK: orientation - but they mark completely different things.
+	CHECK: LCSC puts a '+' next to VCC, which is pin 4; ours indents
+	CHECK: the body rectangle at pin 1.  Neither is wrong and they do
+	CHECK: not conflict, but a JLCPCB engineer has queried this part
+	CHECK: before, so expect to be asked and have the answer ready
 
 # The side-emitting variant - D103-D110 on the rotary board, eight of
 # them round the knob.  This is the shape the pedal's status LEDs would
