@@ -282,12 +282,14 @@
 	Mylib:AOTA-B2016
 	https://abracon.com/datasheets/AOTA-B201610S3R3-101-T.pdf
 	CHECK: polarised, and rotated by hand at the 2026-08-14 order -
-	CHECK: 180 degrees, and NOT because the footprints differ, which
-	CHECK: they do not at all.  It is the tape orientation, which is
-	CHECK: in no file.  The hard kind to spot: the body is
+	CHECK: 180 degrees.  The pads are identical to 0um and the pad
+	CHECK: numbering is arbitrary on a two-terminal part, so the only
+	CHECK: thing that says so is the silkscreen: JLCPCB marks the pad
+	CHECK: ours does not.  The hard kind to spot: the body is
 	CHECK: symmetrical, so nothing looks wrong - match the silkscreen
 	CHECK: dot against the one JLCPCB draws.  The dot is the outer
 	CHECK: winding and belongs on the quiet rail, +1V1, our pad 1
+	JLC: rotate 180
 
 # The inductor for the TPS628438 buck on the rotary board - L101 there,
 # feeding +3V3.
