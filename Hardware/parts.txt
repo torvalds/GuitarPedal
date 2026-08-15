@@ -14,14 +14,28 @@
 #	Cnnnnnn [basic|promo]	the JLCPCB part, and its pricing tier
 #	http... or www...	a datasheet
 #	CHECK: <sentence>	look at this before placing an order
+#	JLC: rotate <deg>	JLCPCB's footprint against ours
+#	JLC: offset <dx> <dy>	   - see below
 #	one word with a ':'	the KiCad footprint
 #	anything else		manufacturer and part number
 #
-# CHECK: is the one tagged shape, because prose has no shape that tells
-# it apart from the manufacturer line.  The script below repeats every
-# one of them, for every part in a board's BOM, at the moment the
+# CHECK: is a tagged shape because prose has no shape that tells it
+# apart from the manufacturer line.  The script below repeats every one
+# of them, for every part in a board's BOM, at the moment the
 # manufacturing files are made - so it is for the things that get
 # checked by eye and cannot be checked by anything else.
+#
+# JLC: is how JLCPCB's own footprint for a part differs from ours,
+# measured from EasyEDA's footprint data rather than remembered.  Both
+# numbers are in *our footprint's* frame:
+#
+#   rotate D    their drawing has to be turned by D to land on ours
+#   offset dx dy   their origin sits here in our footprint's frame
+#
+# and the position file is corrected by them automatically.  A part with
+# no JLC: line needs no correction *that a footprint can show* - the
+# rotation also depends on how the part sits in its tape, which is in no
+# file either side has, so these lines never retire the CHECK: ones.
 #
 # The footprint is only written when it cannot be derived.  A resistor
 # or capacitor with an imperial size in its index gets the obvious KiCad
@@ -304,9 +318,11 @@ BAT54SW/30V/SOT-323:
 	Package_TO_SOT_SMD:SOT-323_SC-70
 	https://assets.nexperia.com/documents/data-sheet/BAT54W_SER.pdf
 	CHECK: JLCPCB's footprint for this is 180 degrees from ours -
-	CHECK: measured, not guessed.  Corrected by hand at the
-	CHECK: 2026-08-14 order, and the easy kind to spot: 180 out and
-	CHECK: the body plainly does not match the footprint outline
+	CHECK: measured, and applied to the position file automatically
+	CHECK: now.  Was corrected by hand at the 2026-08-14 order.  The
+	CHECK: easy kind to spot: 180 out and the body plainly does not
+	CHECK: match the footprint outline
+	JLC: rotate 180
 
 # Common cathode, where the BAT54SW above is series-connected.
 BAT54CW/30V/SOT-323:
@@ -316,6 +332,7 @@ BAT54CW/30V/SOT-323:
 	https://assets.nexperia.com/documents/data-sheet/BAT54W_SER.pdf
 	CHECK: JLCPCB's footprint is 180 degrees from ours, the same as
 	CHECK: its BAT54SW sibling.  Not yet seen on a board
+	JLC: rotate 180
 
 SM4007PL/1kV/1A/SOD-123FL:
 	MDD SM4007PL
@@ -382,8 +399,10 @@ USB-C/2.0/16P/GT-USB-7010C:
 	C2843967
 	Connector_USB:USB_C_Receptacle_GCT_USB4105-xx-A_16P_TopMnt_Horizontal
 	CHECK: same footprint as ours to 8um, but JLCPCB's origin sits
-	CHECK: (0.000, -1.305) mm from it, so the position wants that
-	CHECK: offset applied by hand at ordering
+	CHECK: (0.000, -1.305) mm from it.  Applied to the position file
+	CHECK: automatically now - confirm in the preview that it landed
+	CHECK: on the pads rather than 1.3mm the wrong way
+	JLC: offset +0.000 -1.305
 
 # The audio jacks, TRRS with switched contacts.  TN and RN grounded, so
 # an empty jack shorts tip to ground.
@@ -392,8 +411,10 @@ AudioJack/TRRS/PJ-320D:
 	C431535
 	Mylib:PJ-320D
 	CHECK: same footprint as ours to 0um, but JLCPCB's origin sits
-	CHECK: (+7.400, 0.000) mm from it, so the position wants that
-	CHECK: offset applied by hand at ordering
+	CHECK: (+7.400, 0.000) mm from it.  Applied to the position file
+	CHECK: automatically now, and 7.4mm is impossible to miss in the
+	CHECK: preview - so this is the part that proves the sign
+	JLC: offset +7.400 +0.000
 
 # The vertical Type-C, J2 on pedal-board.  The GT-USB-7010C above is
 # the horizontal one and is what the current boards take.
@@ -407,6 +428,7 @@ JST-SH/4P/1.00mm:
 	JST SM04B-SRSS-TB(LF)(SN)
 	C160404
 	Connector_JST:JST_SH_SM04B-SRSS-TB_1x04-1MP_P1.00mm_Horizontal
+	JLC: offset +0.000 -0.062
 
 # The FFC connector at both ends of the 12-way ribbon between the split
 # boards - power, i2c for control and i2s for audio down one cable.
@@ -463,6 +485,7 @@ OPA2365/SOIC-8:
 	TI OPA2365AIDR
 	C130011
 	Package_SO:SOIC-8_3.9x4.9mm_P1.27mm
+	JLC: rotate 90
 
 # 9V -> 5V.  Straps verified against SLVSAL5E in 111: DEF low selects
 # 5.0V, FSW low selects 2.5MHz, FB to AGND is what the fixed part wants.
@@ -472,6 +495,7 @@ TPS62153/5V/QFN-16:
 	C477927
 	Package_DFN_QFN:VQFN-16-1EP_3x3mm_P0.5mm_EP1.68x1.68mm_ThermalVias
 	http://www.ti.com/lit/ds/symlink/TPS62150.pdf
+	JLC: rotate 90
 
 # The TLV767 family: low-noise fixed-output LDOs, 1A, 60uVrms and 70dB
 # PSRR at 1kHz.  Both of the ones used here are fixed versions rather
@@ -492,11 +516,11 @@ SN74AHCT1G125/SC-70-5:
 	C350557
 	Package_TO_SOT_SMD:SOT-353_SC-70-5
 	http://www.ti.com/lit/sg/scyt129e/scyt129e.pdf
-	CHECK: JLCPCB's footprint is 90 degrees from ours (measured, at
-	CHECK: 255um residual - close enough to be the same land pattern
-	CHECK: and far enough to be worth an eye).  Never checked on a
-	CHECK: board; likely one of the fixups made at the 2026-08-14
-	CHECK: order without being written down
+	CHECK: JLCPCB's footprint is 90 degrees from ours, applied
+	CHECK: automatically now.  255um residual - the same land pattern,
+	CHECK: far enough apart to be worth an eye.  Likely one of the
+	CHECK: fixups made at the 2026-08-14 order without being recorded
+	JLC: rotate 90
 
 # USB ESD protection.  JLCPCB writes the package SOT-666-6.
 USBLC6/SOT-666:
@@ -504,6 +528,7 @@ USBLC6/SOT-666:
 	C15999
 	Package_TO_SOT_SMD:SOT-666
 	https://www.st.com/resource/en/datasheet/usblc6-2.pdf
+	JLC: rotate 180
 
 # The MIDI input optocoupler.  JLCPCB's package string here is just
 # 'SOP', which says nothing useful; the footprint is a 5-pin SO-6
@@ -513,9 +538,10 @@ TLP2310/SOP:
 	C7473281
 	Package_SO:SO-5-6_4.55x3.7mm_P1.27mm
 	https://toshiba.semicon-storage.com/info/TLP2310_datasheet_en_20220913.pdf
-	CHECK: JLCPCB's footprint is 90 degrees from ours (measured).
-	CHECK: Never checked on a board; likely the other of the fixups
-	CHECK: made at the 2026-08-14 order without being written down
+	CHECK: JLCPCB's footprint is 90 degrees from ours, applied
+	CHECK: automatically now.  Likely the other of the fixups made at
+	CHECK: the 2026-08-14 order without being recorded
+	JLC: rotate 90
 
 # U102, still fitted on usb-stomp.  Scene storage no longer lives here -
 # flash_store.h keeps slots at the top of internal flash instead - so
@@ -551,6 +577,7 @@ TMAG5170-Q1/VSSOP-8:
 	C5220642
 	Package_SO:VSSOP-8_3x3mm_P0.65mm
 	https://www.ti.com/lit/ds/symlink/tmag5170-q1.pdf
+	JLC: rotate 90
 
 # A small synchronous buck: 1.8-5.5V in, 600mA, 1.5MHz, 275nA quiescent.
 # U103 on the rotary board, making +3V3 straight from VBUS.  The output
@@ -561,6 +588,7 @@ TPS628438/SOT-563:
 	C38060243
 	Package_TO_SOT_SMD:SOT-563
 	https://www.ti.com/lit/ds/symlink/tps62843.pdf
+	JLC: rotate 180
 
 # The earlier codec, on the split boards.  Same VQFN-24-with-corner-pads
 # package as the TAC5242; the difference that mattered was the input,
