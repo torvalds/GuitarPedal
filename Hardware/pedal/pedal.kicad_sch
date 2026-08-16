@@ -4742,9 +4742,9 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "Carrier board for the rp2354 board\n\nOnly MIDI inputs - and a i2c connector just in case.\nOne stomp, one status LED."
+	(text "Stereo guitar pedal with RP2354B MCU and a TAC5242 codec\n\nControlled over MIDI - either over USB or TRS Type-A hacks.\n\nOne stomp switch, a rotary encoder, a few smart LEDs for status, and an expression pedal jack."
 		(exclude_from_sim no)
-		(at 178.816 172.72 0)
+		(at 178.816 173.99 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -7466,7 +7466,7 @@
 			(uuid "dcc04bdc-d93d-4580-92dd-58389c3e8b58")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0138")
 					(unit 1)
@@ -7592,7 +7592,7 @@
 			(uuid "7d3a8989-9bb3-41aa-88e4-d49115915485")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "C108")
 					(unit 1)
@@ -7670,7 +7670,7 @@
 			(uuid "be5e1adf-3d9c-4b0c-af63-ea5718eb5f47")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0130")
 					(unit 1)
@@ -7748,7 +7748,7 @@
 			(uuid "22afd0c5-f589-4824-99b7-bace2480f484")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0139")
 					(unit 1)
@@ -7826,7 +7826,7 @@
 			(uuid "533fd5ae-c1cd-4688-afae-eda12dca4843")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0119")
 					(unit 1)
@@ -7929,7 +7929,7 @@
 			(uuid "065fa8ec-e9e1-49f3-b5e5-5448b6cccabc")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "D104")
 					(unit 1)
@@ -8007,7 +8007,7 @@
 			(uuid "9c18857f-cb35-43ae-8675-aac60a0d18e6")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0127")
 					(unit 1)
@@ -8085,7 +8085,7 @@
 			(uuid "e4c1da88-ead8-4ca6-b64f-31512e3b8185")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0120")
 					(unit 1)
@@ -8163,7 +8163,7 @@
 			(uuid "745f4a65-dd1b-4a04-ae00-54037261ad4f")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0113")
 					(unit 1)
@@ -8241,7 +8241,7 @@
 			(uuid "ac90a8fb-e3dd-4ac9-a71e-b5c06ae26ba0")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0129")
 					(unit 1)
@@ -8345,7 +8345,7 @@
 			(uuid "fc6eecbe-517e-4680-92e5-343fdef7dd7b")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "C107")
 					(unit 1)
@@ -8423,7 +8423,7 @@
 			(uuid "1813b007-0526-4151-894d-634845b0a50b")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0110")
 					(unit 1)
@@ -8501,7 +8501,7 @@
 			(uuid "15d2568f-c2c9-4659-a8c9-b4d83dac9cb9")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0103")
 					(unit 1)
@@ -8580,7 +8580,7 @@
 			(uuid "61f94159-1716-4605-beec-bd89635cb03c")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0114")
 					(unit 1)
@@ -8658,7 +8658,7 @@
 			(uuid "a29006c9-3481-43be-8665-23c584a0c527")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0128")
 					(unit 1)
@@ -8736,7 +8736,7 @@
 			(uuid "ef60249f-856f-4e9c-90c7-a3c0aa2f661b")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0111")
 					(unit 1)
@@ -8882,7 +8882,7 @@
 			(uuid "08131c33-4684-4da7-a27b-147bdaa053f4")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "R105")
 					(unit 1)
@@ -8960,7 +8960,7 @@
 			(uuid "df70fc8d-7d81-44ce-8d54-c1097ef6e15a")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0137")
 					(unit 1)
@@ -9037,7 +9037,7 @@
 			(uuid "6fa6f444-b902-40ac-87bb-7bdb9482748d")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0108")
 					(unit 1)
@@ -9139,7 +9139,7 @@
 			(uuid "dc454f5b-2268-48d3-9e65-e2b6e67f0cf5")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "D103")
 					(unit 1)
@@ -9243,7 +9243,7 @@
 			(uuid "69534051-35a4-4b81-b6de-2c1e64393e2a")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "C104")
 					(unit 1)
@@ -9322,7 +9322,7 @@
 			(uuid "3b6b7e36-bbd0-49a5-adfa-5a0a0700c608")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0124")
 					(unit 1)
@@ -9400,7 +9400,7 @@
 			(uuid "20ac04ad-e7bc-462f-8853-92964aa52fbe")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0112")
 					(unit 1)
@@ -9537,7 +9537,7 @@
 			(uuid "220cf970-f0fd-4198-a958-4239dfd59db5")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "C106")
 					(unit 1)
@@ -9616,7 +9616,7 @@
 			(uuid "ba2004ff-f23b-4be9-8eb8-8f623b4552be")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0105")
 					(unit 1)
@@ -9719,7 +9719,7 @@
 			(uuid "f7e7bf64-95e6-46e0-b6ce-210d84c94b36")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "D101")
 					(unit 1)
@@ -9844,7 +9844,7 @@
 			(uuid "30f4ebea-d666-4f80-9382-f17c3d8f77b0")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "C111")
 					(unit 1)
@@ -9922,7 +9922,7 @@
 			(uuid "71b1ad74-77bd-4246-b708-d3dd463596f6")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0104")
 					(unit 1)
@@ -10071,7 +10071,7 @@
 			(uuid "4288f1d2-8ce1-4e0f-8818-4ec3acebb7b6")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "J102")
 					(unit 1)
@@ -10196,7 +10196,7 @@
 			(uuid "b47fac6f-8716-4016-8213-73afb15e8bc9")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "C110")
 					(unit 1)
@@ -10274,7 +10274,7 @@
 			(uuid "02a6d9b6-2dba-4056-852f-5612f79b626f")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0133")
 					(unit 1)
@@ -10353,7 +10353,7 @@
 			(uuid "f8b02b42-9c30-4989-8c4d-2e7726799451")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "SW101")
 					(unit 1)
@@ -10432,7 +10432,7 @@
 			(uuid "eecb69c8-dbf6-49bd-a476-d9e9be294ef8")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0109")
 					(unit 1)
@@ -10591,7 +10591,7 @@
 			(uuid "d91c836b-2624-4029-92e4-ab818305d08a")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "D102")
 					(unit 1)
@@ -10670,7 +10670,7 @@
 			(uuid "51ddeb41-65be-4078-8822-3526c6f66c12")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#FLG0101")
 					(unit 1)
@@ -10759,7 +10759,7 @@
 			(uuid "a93471a1-e15a-47d0-b1ea-55cddc51ec83")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "J103")
 					(unit 1)
@@ -10860,7 +10860,7 @@
 			(uuid "3667de4a-30fe-43fe-be06-4926140051c0")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "R102")
 					(unit 1)
@@ -10939,7 +10939,7 @@
 			(uuid "96d18094-ed0c-450e-b36f-41f7bff87acc")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0115")
 					(unit 1)
@@ -11059,7 +11059,7 @@
 			(uuid "d023195f-17e2-4e2c-acd8-22939c5fbe5f")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "U101")
 					(unit 1)
@@ -11198,7 +11198,7 @@
 			(uuid "4f184a85-550f-41da-a233-2d4762f92c57")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "U103")
 					(unit 1)
@@ -11300,7 +11300,7 @@
 			(uuid "704d9e4a-6894-4f8f-a44d-059e061e3c63")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "R106")
 					(unit 1)
@@ -11378,7 +11378,7 @@
 			(uuid "44ddc229-ac7d-4583-8888-42fb8fbde361")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0131")
 					(unit 1)
@@ -11480,7 +11480,7 @@
 			(uuid "0199a54e-5e7d-456b-b407-ea6a8646c80b")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "R101")
 					(unit 1)
@@ -11557,7 +11557,7 @@
 			(uuid "fa9334a3-dc26-4ff9-becc-4704b31499ef")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0126")
 					(unit 1)
@@ -11635,7 +11635,7 @@
 			(uuid "096c9927-cc54-4400-b270-8711ef3ba5a3")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0102")
 					(unit 1)
@@ -11739,7 +11739,7 @@
 			(uuid "7db936b1-5e88-4772-91ec-b89bcf7d7fc4")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "C105")
 					(unit 1)
@@ -11817,7 +11817,7 @@
 			(uuid "c4bd1d83-c754-447a-b80e-61bb54b4ef90")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0123")
 					(unit 1)
@@ -11924,7 +11924,7 @@
 			(uuid "ced6b984-d710-4bf8-8929-c53dcdbf24aa")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "D105")
 					(unit 1)
@@ -12031,7 +12031,7 @@
 			(uuid "03dcfba3-2064-425c-90c6-b705875bbf78")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "D107")
 					(unit 1)
@@ -12108,7 +12108,7 @@
 			(uuid "46b7166f-2c2f-4033-81b1-2376e8ef9318")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0106")
 					(unit 1)
@@ -12186,7 +12186,7 @@
 			(uuid "81d69790-042e-4348-a58a-dc20037335b0")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0121")
 					(unit 1)
@@ -12265,7 +12265,7 @@
 			(uuid "d90d0041-ad87-4e55-978e-a1df2816e33b")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0116")
 					(unit 1)
@@ -12392,7 +12392,7 @@
 			(uuid "b362a15b-27e1-4829-ac0e-ffb6d4df7451")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "C101")
 					(unit 1)
@@ -12471,7 +12471,7 @@
 			(uuid "865fbc87-a5e8-42ba-a5ac-a1f221c04fb0")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#FLG0102")
 					(unit 1)
@@ -12549,7 +12549,7 @@
 			(uuid "50d01b07-abf6-4136-97c9-c6b3fcde6dab")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0132")
 					(unit 1)
@@ -12654,7 +12654,7 @@
 			(uuid "3522a696-2f55-4a9e-a8c3-79c6cd583fad")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "D106")
 					(unit 1)
@@ -12733,7 +12733,7 @@
 			(uuid "cad30d2d-fa5f-4cde-bbcf-9570d0dec268")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#FLG0103")
 					(unit 1)
@@ -12810,7 +12810,7 @@
 			(uuid "83d0b9d6-59c9-4489-839b-ecddd3a26bbc")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0136")
 					(unit 1)
@@ -12888,7 +12888,7 @@
 			(uuid "6f26a9dc-f6c2-427a-a6a3-46db1f30ffbb")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0122")
 					(unit 1)
@@ -12967,7 +12967,7 @@
 			(uuid "418cc587-2fbc-4d3f-8a2b-bd5d5ca91e65")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0125")
 					(unit 1)
@@ -13046,7 +13046,7 @@
 			(uuid "142e9562-e5cb-41d8-8a7b-3085de12d6b2")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0135")
 					(unit 1)
@@ -13124,7 +13124,7 @@
 			(uuid "7ec7301c-cbcf-4376-8da0-0526d27e5e9a")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0107")
 					(unit 1)
@@ -13248,7 +13248,7 @@
 			(uuid "3c6bd49b-731e-4eed-af55-d2f40603e29a")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "R107")
 					(unit 1)
@@ -13326,7 +13326,7 @@
 			(uuid "e76d5035-3366-4480-bc7e-89564586825b")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0101")
 					(unit 1)
@@ -13476,7 +13476,7 @@
 			(uuid "4e6705e8-a376-44e9-aa48-ab62033f5dcb")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "U102")
 					(unit 1)
@@ -13602,7 +13602,7 @@
 			(uuid "9e7527f9-4f9f-428e-9ce0-0c873b588b1d")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "C109")
 					(unit 1)
@@ -13749,7 +13749,7 @@
 			(uuid "760852fe-8215-45a3-b458-d1dae4bc6d43")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "R103")
 					(unit 1)
@@ -13895,7 +13895,7 @@
 			(uuid "174c636b-df90-4039-8a8f-d97c27b6cce1")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "R104")
 					(unit 1)
@@ -13986,7 +13986,7 @@
 			(uuid "eec3b01e-94d3-4b15-a3c3-fda0d6281fcd")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "SW102")
 					(unit 1)
@@ -14064,7 +14064,7 @@
 			(uuid "85b0df53-d58a-4a06-99af-eb2e4f7a57a2")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0117")
 					(unit 1)
@@ -14211,7 +14211,7 @@
 			(uuid "628c5744-da16-4d9c-ae16-3faa8880070c")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "J101")
 					(unit 1)
@@ -14313,7 +14313,7 @@
 			(uuid "e7a9a589-bf13-429c-8d61-9b07c55b3a21")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "L101")
 					(unit 1)
@@ -14392,7 +14392,7 @@
 			(uuid "a8d0ad43-9530-4245-be34-4d0ade8debd8")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0134")
 					(unit 1)
@@ -14506,7 +14506,7 @@
 			(uuid "68b438fa-0229-4c30-80d5-0e1b8d355ec8")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "C102")
 					(unit 1)
@@ -14584,7 +14584,7 @@
 			(uuid "600198a1-42fa-4cd5-96da-cd0bb2e2abb7")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "#PWR0118")
 					(unit 1)
@@ -14699,7 +14699,7 @@
 			(uuid "8abca501-c8f5-4863-a7b1-7c446b6722c0")
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(reference "C103")
 					(unit 1)
@@ -14776,7 +14776,7 @@
 			)
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(page "2")
 				)
@@ -14882,7 +14882,7 @@
 			)
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(page "4")
 				)
@@ -14958,7 +14958,7 @@
 			)
 		)
 		(instances
-			(project "usb-stomp"
+			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146"
 					(page "3")
 				)

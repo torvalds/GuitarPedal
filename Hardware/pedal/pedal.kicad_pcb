@@ -647,7 +647,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/98be3ba3-e06f-40a8-aa72-0e2266e682be")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -798,7 +798,7 @@
 		(property ki_fp_filters "TO-???* *_Diode_* *SingleDiode* D_*")
 		(path "/41c26edf-1ab9-4b8e-bb8a-d42ab4b75551")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -1224,7 +1224,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/fca69ab1-59c5-4efb-95e5-daf8df353e75")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -3785,7 +3785,7 @@
 		(property ki_fp_filters "SOT?323*")
 		(path "/ba179437-0c06-4f10-b2aa-d8ec097cbc39")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -4263,7 +4263,7 @@
 		(property ki_fp_filters "TO-???* *_Diode_* *SingleDiode* D_*")
 		(path "/4833c6d7-1d50-412f-8cd3-10f00de56b5b")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -4687,7 +4687,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/4f73c597-9814-49df-a402-27734e866953")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -6470,7 +6470,7 @@
 		(property ki_fp_filters "VQFN*1EP*3x3mm*P0.5mm*")
 		(path "/e01dd004-1487-4123-a4d4-3bbe50dfe569")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -7121,7 +7121,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/e49def4e-54f1-4fb5-8a8a-b391a9e48951")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -7800,7 +7800,7 @@
 		(property ki_fp_filters "Choke_* *Coil* Inductor_* L_*")
 		(path "/f80e575b-1819-4247-a3d5-944348bfd98f")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -9378,7 +9378,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/fa144557-515b-4236-8330-595aacc95425")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -9525,7 +9525,7 @@
 		(property ki_fp_filters "WSON*1EP*2x2mm*P0.65*")
 		(path "/8ed3b2b5-2088-4495-848b-d83777a1413c")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -10598,7 +10598,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/78107175-416c-4ff8-91a5-cfcf8ecb367d")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -10892,7 +10892,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/00000000-0000-0000-0000-00005f09255d")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -11293,7 +11293,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/42a78bc2-6272-4d94-874d-14dde912d36d")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -11440,7 +11440,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/1e1f02a3-aee4-45ed-8e62-33789d513439")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -12034,7 +12034,7 @@
 		(property ki_fp_filters "RotaryEncoder*Switch*")
 		(path "/f5982753-66b2-4350-892a-e3cbc29a38c7")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -12608,7 +12608,7 @@
 		(property ki_fp_filters "LED* LED_SMD:* LED_THT:*")
 		(path "/71a15644-f6f7-4507-b543-b1cd32d5b9c6")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -12915,7 +12915,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/aee81284-7dc3-4d17-9152-7d638f702d39")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -15117,7 +15117,7 @@
 		(property ki_fp_filters "BarrelJack*")
 		(path "/51f067e6-4155-4fd5-8c94-10c10f659246")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -15394,7 +15394,7 @@
 		(property ki_fp_filters "SOT?323*")
 		(path "/b5e740e0-8fe7-4513-b4d0-8b1b09a1c038")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -15745,7 +15745,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/520a1fd5-5e3e-45ed-84fd-37be6accce4f")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -16366,7 +16366,7 @@
 		(property ki_fp_filters "USB*C*Receptacle*")
 		(path "/f6d1cb0c-01bf-4908-86e2-d4da4f4ae895")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -17874,7 +17874,7 @@
 		(property ki_fp_filters "TO-???* *_Diode_* *SingleDiode* D_*")
 		(path "/088118a7-4c04-4343-b354-4a30a2d8af9a")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -18670,7 +18670,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/df1306ed-7672-45e3-baa0-9b0851fbc624")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -19258,7 +19258,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/c341666b-4407-4038-8223-6bd369da28f4")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -19560,7 +19560,7 @@
 		(property ki_fp_filters "Jack*")
 		(path "/763f5827-454e-4009-ab03-808096fd6297")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -19822,7 +19822,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/2da07c44-9100-4137-8987-3db627b93cdc")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -19969,7 +19969,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/4612a82c-c42e-4706-a1d8-4cd26644c2de")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -20339,7 +20339,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/f099fb0d-4a17-4387-952e-a6ee797f215b")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -20486,7 +20486,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/a88a5991-7854-4357-9ab6-2b7b14571529")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -20929,7 +20929,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/e77f5d89-bb36-4d44-8e11-828664dd6135")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -21374,7 +21374,7 @@
 		(property ki_fp_filters "TO-???* *_Diode_* *SingleDiode* D_*")
 		(path "/cf906fa9-8acb-4d3e-b1dc-51bdc8611dde")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -21950,7 +21950,7 @@
 		)
 		(path "/563f196b-1e58-4c83-b5ec-6d4f29df5756")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")
@@ -24416,7 +24416,7 @@
 		(property ki_fp_filters "SOT?666*")
 		(path "/89671662-b76e-4744-a967-94e9ced315aa")
 		(sheetname "/")
-		(sheetfile "usb-stomp.kicad_sch")
+		(sheetfile "pedal.kicad_sch")
 		(units
 			(unit
 				(name "A")

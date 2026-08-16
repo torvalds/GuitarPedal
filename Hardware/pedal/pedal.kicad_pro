@@ -503,7 +503,7 @@
     "pinned_symbol_libs": []
   },
   "meta": {
-    "filename": "usb-stomp.kicad_pro",
+    "filename": "pedal.kicad_pro",
     "version": 3
   },
   "net_settings": {
@@ -882,8 +882,8 @@
     "subpart_id_separator": 0,
     "top_level_sheets": [
       {
-        "filename": "usb-stomp.kicad_sch",
-        "name": "usb-stomp",
+        "filename": "pedal.kicad_sch",
+        "name": "pedal",
         "uuid": "1cfc5ec2-6e92-4f8b-bcac-06388472f146"
       }
     ],
@@ -893,7 +893,7 @@
   "sheets": [
     [
       "1cfc5ec2-6e92-4f8b-bcac-06388472f146",
-      "usb-stomp"
+      "pedal"
     ],
     [
       "0240bdab-fe8b-4bf9-a98e-50b047dd7a9b",

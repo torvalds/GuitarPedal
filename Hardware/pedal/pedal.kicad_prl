@@ -60,7 +60,7 @@
     "ssh_key": ""
   },
   "meta": {
-    "filename": "usb-stomp.kicad_prl",
+    "filename": "pedal.kicad_prl",
     "version": 5
   },
   "net_inspector_panel": {
