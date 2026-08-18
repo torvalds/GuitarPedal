@@ -211,6 +211,12 @@
 	UniRoyal 0201WMF1001TEE
 	C270365
 
+# The don't-care 2k2: pull-ups, the BOOTSEL resistor.
+# Basic, so it costs nothing to place.
+2.2kΩ/50V/1%/0402:
+	UniRoyal 0402WGF2201TCE
+	C25879 basic
+
 # The 0402 series damper, and a Basic part unlike its 0201 sibling.
 33Ω/50V/1%/0402:
 	UniRoyal 0402WGF330JTCE
@@ -577,6 +583,13 @@ TLV76750/5V/WSON-6:
 	C2872569
 	Package_SON:WSON-6-1EP_2x2mm_P0.65mm_EP1x1.6mm
 	http://www.ti.com/lit/gpn/TLV767
+
+# A 8MB PSRAM chip in a USON-8L footprint
+APS6404L/3.3V/USON-8L:
+	AP-Memory APS6404L-3SQR-ZR
+	C3040877
+	Package_SON:Winbond_USON-8-1EP_3x2mm_P0.5mm_EP0.2x1.6mm
+	https://www.mouser.com/datasheet/2/1127/APM_PSRAM_QSPI_APS6404L_3SQR_v2_3_PKG-1954826.pdf
 
 # The 3-axis magnetic sensor on the rotary test board, U102 there, for
 # reading knob position off a magnet.  SPI, 12-bit.
