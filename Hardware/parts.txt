@@ -245,6 +245,13 @@
 	FOJAN FRC0402F1R00TS
 	C2909329
 
+# The same position on the minimal board, where the analog 5V rail is
+# VBUS through L101 rather than a buck's output.  Basic, so unlike the
+# 1Ω above it costs nothing to place.
+10Ω/50V/1%/0402:
+	UniRoyal 0402WGF100JTCE
+	C25077 basic
+
 # R104 on the rotary board, and the one resistor here whose exact value
 # is a program rather than a preference: it is the VSET resistor that
 # tells the TPS628438 to make 3.3V.  Checked in the netlist rather than
@@ -418,6 +425,61 @@ USB-C/2.0/16P/GT-USB-7010C:
 	CHECK: on the pads rather than 1.3mm the wrong way
 	JLC: offset +0.000 -1.305
 
+# The mid-mount version of the same receptacle, for when the connector
+# is on the underside and how far it hangs below the board matters.
+# JLCPCB files this mounting style under "Laminated board", which is not
+# a phrase that turns up in a search for "mid mount".  The body drops
+# into a 9.24 x 6.50mm notch cut into the board edge, so the footprint
+# carries Edge.Cuts and the board outline has to be broken by hand to
+# meet it - that is the part of fitting this that is not just placing a
+# footprint.
+#
+# The number on the end is the board thickness and it is not a
+# preference.  The body is 3.16mm tall on every one of these sheets and
+# its underside sits flush with the board's far face, so it stands
+# 3.16mm minus the thickness proud of the face it is soldered to: a
+# 1.6mm board recovers 1.6mm, which is the whole reason this is the
+# CB1.6.  SHOU HAN also sell C2906289 (0.8mm, 25293 in stock) and
+# C49287214 (1.0mm, 4419) - the 1.0mm one has neither EasyEDA data nor a
+# dimensional drawing, so nothing here could check it.
+#
+# Their own EasyEDA data draws the notch 9.000mm wide and 0.049mm off
+# centre, which is narrower than the 8.94mm body on one side.  Every
+# other number in it matches the datasheet to the micron - 4.00 between
+# the shell posts, 11.24 across them, 2.10 to the board edge, 4.60 and
+# 5.70 to the two ends of the contact row - and this one does not, so
+# ours uses the datasheet's 9.24 centred.
+#
+# The datasheet is wrong about the other pair of shell holes.  Its
+# recommended layout gives 1.80 for the pair near the board edge and
+# 0.80 for the pair behind them, but 0.80 is the pin and not its hole:
+# the side view draws each pin sitting in its hole, a 1.20 pin in a 1.80
+# one and a 0.80 pin in a 1.20 one, and measuring those tab outlines
+# against the 4.00 between the post centres gives 1.83 and 1.18.  A 0.80
+# hole for a 0.80 pin is a press fit, which is the tell.  So the far
+# holes here are 0.60 x 1.20.
+#
+# The contact row sits 0.20mm from the closed end of the notch, and that
+# is the part rather than our drawing of it: EasyEDA's pads against
+# EasyEDA's own outline give 0.2009, ours against the datasheet's notch
+# give 0.2000, and the datasheet's own arithmetic - 4.60 to the near
+# edge of the row, less 6.50 of notch depth minus the 2.10 to the board
+# edge - gives 0.20 with no EasyEDA involved.  It is exactly JLCPCB's
+# copper-to-edge floor with nothing spare, so a board taking this part
+# wants a local DRC exception rather than a shorter pad.  The notch
+# width does not enter into it; the tight edge is the end, not the
+# sides.  Stock 55004 on 2026-08-26.
+USB-C/2.0/16P/mid-mount/TYPE-C-16P-CB1.6:
+	SHOU HAN TYPE-C 16P CB1.6 073
+	C2906290
+	Mylib:TYPE-C-16P-CB1.6
+	https://atta.szlcsc.com/upload/public/pdf/source/20211021/35D048B933FA988260DD32545575C1A5.pdf
+	CHECK: our footprint is EasyEDA's to 0um, no rotation and no origin
+	CHECK: offset, so there is no JLC: line.  What that does not cover
+	CHECK: is the notch, which is not a pad - confirm in the fab
+	CHECK: preview that Edge.Cuts carries it and that the board outline
+	CHECK: is broken between its two sides
+
 # The audio jacks, TRRS with switched contacts.  TN and RN grounded, so
 # an empty jack shorts tip to ground.
 AudioJack/TRRS/PJ-320D:
@@ -475,6 +537,26 @@ ZX-QC1212/tactile/SMD:
 	C7470196
 	Mylib:ZX-QC1212
 
+# The BOOTSEL button on the minimal board, and the reason that board
+# needs no magnetic sensor: it sits on the underside with the rest of
+# the assembly, behind a hole in the bottom of the case, where a
+# footswitch-sized part could not go.  Two pads, 3.9 x 3.0mm body,
+# 1.6N, 100k cycles, and about 2mm tall - that last number is the one
+# the case has to be designed around, because the whole family shares
+# this footprint and differs in height.
+#
+# JLCPCB's package string is 'SMD,4x3mm'; written here without the
+# comma, since a comma is the one character the BOM column cannot
+# carry.  Basic, and stock is over 900k, so neither price nor supply is
+# a consideration.
+#
+# EasyEDA's pads land on ours - pad 1 at -2.185 against our -2.225,
+# same side, same numbering - so there is no JLC: line.
+TS-1088/tactile/1.6N/SMD-4x3mm:
+	XUNPU TS-1088-AR02016
+	C720477 basic
+	Button_Switch_SMD:SW_SPST_TS-1088-xR020
+
 ## Integrated circuits
 
 # The MCU.  QFN-60(7x7) in JLCPCB's words.
@@ -500,6 +582,28 @@ OPA2365/SOIC-8:
 	C130011
 	Package_SO:SOIC-8_3.9x4.9mm_P1.27mm
 	JLC: rotate 90
+
+# The same buffer in a fifth of the area - 2.9 x 1.6mm against the
+# 2365's 3.9 x 4.9mm - and what the minimal board uses.  20MHz of
+# gain-bandwidth against the 2365's 50MHz, which decides nothing for a
+# unity-gain buffer at audio, and 1.6mA per channel against 4.6mA,
+# which is 6mA off the analog rail.  9nV/rtHz at 1kHz, under the
+# 128nV/rtHz the 1M input resistor makes on its own; the 2365's
+# datasheet quotes noise only at 100kHz, so the two do not compare at a
+# frequency this circuit cares about.
+#
+# Supply 1.7V to 5.5V and absolute maximum 7V, where the 2365's
+# absolute maximum is 5.5V.  That matters here and not on the pedal
+# board: this one hangs off the 5V rail rather than 3.3V.
+#
+# EasyEDA's pad 1 lands on ours, so there is no JLC: line.  Stock was
+# 437 on 2026-08-25, which is the warning band rather than the
+# comfortable one - look before ordering.
+OPA2323/TSOT-23-8:
+	TI OPA2323IDDFR
+	C36686067
+	Package_TO_SOT_SMD:TSOT-23-8
+	https://www.ti.com/lit/ds/symlink/opa2323.pdf
 
 # 9V -> 5V.  Straps verified against SLVSAL5E in 111: DEF low selects
 # 5.0V, FSW low selects 2.5MHz, FB to AGND is what the fixed part wants.
@@ -584,12 +688,20 @@ TLV76750/5V/WSON-6:
 	Package_SON:WSON-6-1EP_2x2mm_P0.65mm_EP1x1.6mm
 	http://www.ti.com/lit/gpn/TLV767
 
-# A 8MB PSRAM chip in a USON-8L footprint
+# A 8MB PSRAM chip in a USON-8L footprint.
+#
+# EasyEDA draws the eight pads as two horizontal rows where ours are two
+# vertical columns, so their drawing wants a quarter turn.  Without the
+# line below, lcsc verify puts the part 1398um out against an 82um
+# land-pattern difference; with it, 0.  The part reached parts.txt in
+# 2525e4d, after the 2026-08-14 run that measured the correction on
+# every other part, so nothing has been ordered with it missing.
 APS6404L/3.3V/USON-8L:
 	AP-Memory APS6404L-3SQR-ZR
 	C3040877
 	Package_SON:Winbond_USON-8-1EP_3x2mm_P0.5mm_EP0.2x1.6mm
 	https://www.mouser.com/datasheet/2/1127/APM_PSRAM_QSPI_APS6404L_3SQR_v2_3_PKG-1954826.pdf
+	JLC: rotate 90
 
 # The 3-axis magnetic sensor on the rotary test board, U102 there, for
 # reading knob position off a magnet.  SPI, 12-bit.
@@ -620,3 +732,15 @@ TAC5112/VQFN-24:
 	C44853692
 	Mylib:TAC5112
 	https://www.ti.com/lit/ds/symlink/tac5112.pdf
+
+# A latching TMR switch
+# 'T' is the "continuous" version at 1.9uA, really 5kHz typical sample rate
+# 'D' is the 98 Gauss B_OP version (least sensitive)
+# Latching: move the magnet not closer, but *past* the sensor through
+# the board for on/off sensing
+KTM1331TD/latch/9Gs/continuous/SOT-23:
+	CONNTEK KTM1331TD-ST3
+	C7544656
+	Package_TO_SOT_SMD:SOT-23
+	https://wmsc.lcsc.com/wmsc/upload/file/pdf/v2/lcsc/2404011708_CONNTEK-KTM1331TD-ST3_C7544656.pdf
+	JLC: rotate 180

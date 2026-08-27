@@ -4442,7 +4442,7 @@
 				)
 			)
 		)
-		(property "Value" ""
+		(property "Value" "WS2812B-4020"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
