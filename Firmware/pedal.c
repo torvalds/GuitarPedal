@@ -24,18 +24,6 @@
 #define PIO0_I2S_RX_SM 1
 #define PIO0_WS2812_SM 2
 
-//
-// After the state machine numbering above, which it uses.
-//
-// Only on a board that has them.  pixels.h is the whole WS2812B driver
-// and is written against NR_LEDS and WS2812_GPIO, so on a board with a
-// plain PWM LED there is nothing here to compile - every caller is
-// already behind the same #ifdef.
-//
-#ifdef WS2812_GPIO
-#include "pixels.h"
-#endif
-
 // PIO1 runs one debounce state machine per switch, and the state
 // machine index is the switch id - see switch.h.  PIO2 has the one
 // rotary encoder.
@@ -51,6 +39,19 @@
 #include "Audio/fft.h"
 #include "Audio/analyze.h"
 #include "tac5112.h"
+
+//
+// After the state machine numbering above, which it uses.
+//
+// Only on a board that has them.  pixels.h is the whole WS2812B driver
+// and is written against NR_LEDS and WS2812_GPIO, so on a board with a
+// plain PWM LED there is nothing here to compile - every caller is
+// already behind the same #ifdef.
+//
+#ifdef WS2812_GPIO
+#include "pixels.h"
+#endif
+
 
 #include "midi/midi.h"
 #include "midi/uart.h"
@@ -335,7 +336,7 @@ int main()
 				tuner_silence();
 			}
 
-			update_ui();
+			update_ui(to_ms_since_boot(now));
 		}
 	}
 }

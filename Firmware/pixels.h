@@ -90,19 +90,6 @@ _Static_assert(RESET_WORDS * WORD_US >= 280, "reset gap too short for a V5 die")
 _Static_assert(PIXEL_WORDS < RING_WORDS, "no room left for a reset gap");
 _Static_assert((RING_WORDS & (RING_WORDS - 1)) == 0, "the DMA ring must be a power of two");
 
-//
-// How bright is bright.
-//
-// These sit a foot from your face on a desk and rather less than that
-// from your eyes when the pedal is on the floor.  Full white is both
-// unpleasant to look at and most of what a USB port will give you.
-// Applied before the table lookup, so what is in the ring is what
-// actually goes out.
-//
-#define PIXEL_BRIGHTNESS 24	// out of 255
-
-static unsigned int pixel_brightness = PIXEL_BRIGHTNESS;
-
 #define RGB(r, g, b) (((uint32_t)(r) << 16) | ((uint32_t)(g) << 8) | (uint32_t)(b))
 
 // Aligned to its own size, because the DMA wraps by masking, not counting.
@@ -119,20 +106,15 @@ static uint32_t pixel_ring[RING_WORDS] __attribute__((aligned(RING_WORDS * 4)));
 // to be rediscovered.  Anything that ever needs a frame to be atomic
 // needs a second buffer and a pointer swap, not a lock.
 //
-static void pixels_set(int led, uint32_t rgb)
+static void pixels_set(int led, float red, float green, float blue)
 {
 	if (led < 0 || led >= NR_LEDS)
 		return;
 
 	//
-	// Rounded, not truncated.  There are only PIXEL_BRIGHTNESS+1
-	// levels to land on, so the remainder is a real fraction of the
-	// range, and it is thrown away at the dim end where the eye's
-	// response is steepest.
-	//
-	unsigned int r = (((rgb >> 16) & 0xff) * pixel_brightness + 127) / 255;
-	unsigned int g = (((rgb >> 8) & 0xff) * pixel_brightness + 127) / 255;
-	unsigned int b = ((rgb & 0xff) * pixel_brightness + 127) / 255;
+	unsigned int r = lrintf(red * 255);
+	unsigned int g = lrintf(green * 255);
+	unsigned int b = lrintf(blue * 255);
 
 	uint32_t *w = pixel_ring + 3 * led;
 
@@ -145,7 +127,7 @@ static void pixels_set(int led, uint32_t rgb)
 static void pixels_clear(void)
 {
 	for (int i = 0; i < NR_LEDS; i++)
-		pixels_set(i, 0);
+		pixels_set(i, 0, 0, 0);
 }
 
 //

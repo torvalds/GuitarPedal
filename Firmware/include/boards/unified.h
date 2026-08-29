@@ -77,4 +77,4 @@
 // the knob test board independently arrived at the same pin.
 //
 #define WS2812_GPIO		25
-#define NR_LEDS			3
+#define NR_LEDS			5

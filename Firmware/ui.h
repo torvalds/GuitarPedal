@@ -439,26 +439,6 @@ static void handle_switch_bindings(void)
 }
 
 
-// Human perception isn't linear, but neither
-// is LED intensity, particularly since we're
-// typically driving the LED at the lower range
-// of the current range
-//
-//
-// Random map from 0..1 to 0..full that works for the LED I have
-// happened to pick.
-//
-// The full-scale value is a parameter because the smart LEDs want 255
-// where the PWM one wants 4096, and the *curve* is the part that has to
-// be shared.  Applying the setting linearly instead makes 10% come out
-// at 10% rather than at 3.2%, which is three times the light and looks
-// like the driver is broken.
-//
-static int led_pwm_mapping(float pwm, int full)
-{
-	return lrintf(pwm * sqrtf(pwm) * full);
-}
-
 //
 // Drive the one LED from the same status the host is given.
 //
@@ -487,65 +467,89 @@ static int led_pwm_mapping(float pwm, int full)
 // not of the caller, and on a board with smart LEDs there is no single
 // pin to name.  LED_GPIO does not even exist there.
 //
-static void set_led(bool on, uint8_t global, unsigned int chain)
-{
-	bool fault = global & (STATUS_DROPPED_MASK | STATUS_CLIPPED);
-	bool activity = (global & STATUS_FRONT_ATTN) || chain;
-
-	bool intense = fault || attention_preview || (on && activity);
-	float pwm = intense ? settings.led_intense : settings.led_pwm;
-
 #ifdef WS2812_GPIO
-	//
-	// A board with these has no plain LED to dim - the one it does
-	// have is across +5V and is a power indicator - so the PWM path
-	// below is not merely unnecessary here, it would drive a pin that
-	// is the stomp switch on this board.
-	//
-	// Same setting and same curve as the plain LED, because it is the
-	// same question and the pot for it already exists.
-	//
-	pixel_brightness = led_pwm_mapping(pwm, 255);
+static void set_led(unsigned int ms, bool on, uint8_t global, unsigned int chain)
+{
+	struct {
+		float r, g, b;
+	} LEDS[3] = { 0 };
 
-	//
-	// Three LEDs, three jobs, chosen to match where they sit: the
-	// chain runs left, centre-back, right, and the centre one is
-	// directly behind the stomp switch.
-	//
-	//	centre	in circuit or bypassed - the pedal LED
-	//	left	something is wrong, and which
-	//	right	the chain is doing something
-	//
-	// The attention preview is the exception: it is not a status, it
-	// is the pedal showing you how bright "intense" is so you can set
-	// it.  That needs one LED lit at that brightness and nothing more
-	// - three of them in white is all nine channels at once, which is
-	// three times the light and unpleasant to sit next to.  So it is
-	// the centre one, in amber, and the others go dark.
-	//
-	unsigned int dropped = global & STATUS_DROPPED_MASK;
-
-	if (attention_preview) {
-		pixels_set(0, 0);
-		pixels_set(1, RGB(255, 120, 0));
-		pixels_set(2, 0);
-	} else {
-		pixels_set(0, global & STATUS_CLIPPED ? RGB(255, 0, 0)
-			    : dropped                 ? RGB(255, 96, 0)
-						      : 0);
-		pixels_set(1, on ? RGB(0, 255, 0) : 0);
-		pixels_set(2, on && activity ? RGB(0, 64, 255) : 0);
+	// Generate a fixed point fraction of the phase at ~1Hz
+	unsigned int phase = ms * 2147483;
+	for (int i = 0; i < 3; i++) {
+		float f = 2*u32_to_fraction(phase);
+		if (f > 1.0)
+			f = 2 - f;
+		LEDS[i].b = f * settings.led_pwm;
+		phase += 0xffffffff / 5;
 	}
 
+	if (global & STATUS_CLIPPED)
+		LEDS[0].r = settings.led_intense;
+
+	if (global & STATUS_DROPPED_MASK)
+		LEDS[1].r = settings.led_intense;
+
+	if (on) {
+		LEDS[2].g = settings.led_pwm;
+
+		// Noise gate active?
+		if (global & STATUS_FRONT_ATTN)
+			LEDS[1].g = settings.led_pwm;
+
+		// Other effects active?
+		if (chain)
+			LEDS[0].g = settings.led_pwm;
+	}
+
+	if (attention_preview)
+		LEDS[2].g = settings.led_intense;
+
+	// Three LEDs or five - the five-LED version
+	// will just show a mirror image
+	pixels_set(0, LEDS[0].r, LEDS[0].g, LEDS[0].b);
+	pixels_set(1, LEDS[1].r, LEDS[1].g, LEDS[1].b);
+	pixels_set(2, LEDS[2].r, LEDS[2].g, LEDS[2].b);
+	pixels_set(3, LEDS[1].r, LEDS[1].g, LEDS[1].b);
+	pixels_set(4, LEDS[0].r, LEDS[0].g, LEDS[0].b);
+}
+
 #else
+
+// Human perception isn't linear, but neither
+// is LED intensity, particularly since we're
+// typically driving the LED at the lower range
+// of the current range
+//
+// Random map from 0..1 to 0..full that works for the LED I have
+// happened to pick.
+//
+// The full-scale value is a parameter because the smart LEDs want 255
+// where the PWM one wants 4096, and the *curve* is the part that has to
+// be shared.  Applying the setting linearly instead makes 10% come out
+// at 10% rather than at 3.2%, which is three times the light and looks
+// like the driver is broken.
+//
+static int led_pwm_mapping(float pwm, int full)
+{
+	return lrintf(pwm * sqrtf(pwm) * full);
+}
+
+
+static void set_led(unsigned int ms, bool on, uint8_t global, unsigned int chain)
+{
 	int level = 0;
+	bool fault = global & (STATUS_DROPPED_MASK | STATUS_CLIPPED);
+	bool activity = (global & STATUS_FRONT_ATTN) || chain;
+	bool intense = fault || attention_preview || (on && activity);
+	float pwm = intense ? settings.led_intense : settings.led_pwm;
 
 	if (on || intense)
 		level = led_pwm_mapping(pwm, PWM_WRAP);
 
 	pwm_set_gpio_level(LED_GPIO, level);
-#endif
 }
+#endif
 
 _Static_assert(MAX_ROUTED_EFFECTS <= 2 * STATUS_CHAIN_BITS,
 	"a chain this long needs a third status CC");
@@ -587,7 +591,7 @@ _Static_assert(MAX_ROUTED_EFFECTS <= 2 * STATUS_CHAIN_BITS,
 // otherwise stay lit for good - which is exactly what boost, compressor
 // and echo had been doing, unnoticed, because nothing read them.
 //
-static void show_status(void)
+static void show_status(unsigned int ms)
 {
 	unsigned int dropped = __atomic_exchange_n(&samples_dropped, 0,
 						   __ATOMIC_RELAXED);
@@ -605,7 +609,7 @@ static void show_status(void)
 			attn |= 1u << i;
 	}
 
-	set_led(!disable_all, global, attn);
+	set_led(ms, !disable_all, global, attn);
 
 	// A CC value is seven bits, so the chain needs two of them
 	uint8_t chain[2] = { attn & ((1u << STATUS_CHAIN_BITS) - 1),
@@ -670,9 +674,9 @@ static void show_status(void)
 // The switches are not read here - see handle_switch_bindings(), which
 // the main loop calls before deciding whether it is in tuner mode.
 //
-static void update_ui(void)
+static void update_ui(unsigned int ms)
 {
-	show_status();
+	show_status(ms);
 
 	if (attention_preview)
 		attention_preview--;
