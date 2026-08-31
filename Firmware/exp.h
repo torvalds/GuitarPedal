@@ -58,10 +58,10 @@
 // a release takes milliseconds.  Fine for a foot, worth knowing before
 // anyone reads these numbers as instantaneous.
 //
-// THIS BLOCKS CORE 0 for about 20ms, nearly all of it waiting for that
-// capacitor.  Acceptable for something a host asks for by hand and not
-// acceptable for anything periodic, which is the other reason the real
-// version cannot just call this in a loop.
+// A SWEEP TAKES ABOUT 24ms, nearly all of it waiting for that capacitor,
+// and it blocks nothing: exp_sweep_task() takes one step per call from
+// the main loop.  Which is also what a treadle will need, for the
+// opposite reason - it stops at the driven step and stays there.
 //
 #include "hardware/adc.h"
 
@@ -125,7 +125,6 @@ static void exp_pullups(void)
 	exp_idle();
 	gpio_pull_up(EXP_TIP_GPIO);
 	gpio_pull_up(EXP_RING_GPIO);
-	sleep_ms(EXP_SETTLE_PULLUP_MS);
 }
 
 //
@@ -149,7 +148,6 @@ static void exp_drain(unsigned int gpio)
 	gpio_init(gpio);
 	gpio_set_dir(gpio, GPIO_OUT);
 	gpio_put(gpio, 0);
-	sleep_ms(1);
 }
 
 //
@@ -161,18 +159,20 @@ static void exp_drain(unsigned int gpio)
 // charge of it.  Getting these the wrong way round reads the pin that is
 // driving, which is a very convincing 4095.
 //
-static void exp_drive(unsigned int drive_gpio, unsigned int read_gpio)
+static void exp_drive_begin(unsigned int drive_gpio, unsigned int read_gpio)
 {
 	exp_idle();
 	gpio_disable_pulls(drive_gpio);
 	gpio_disable_pulls(read_gpio);
-
 	exp_drain(read_gpio);
+}
+
+static void exp_drive_end(unsigned int drive_gpio, unsigned int read_gpio)
+{
 	adc_gpio_init(read_gpio);
 	gpio_init(drive_gpio);
 	gpio_set_dir(drive_gpio, GPIO_OUT);
 	gpio_put(drive_gpio, 1);
-	sleep_ms(EXP_SETTLE_DRIVEN_MS);
 }
 
 //
@@ -203,40 +203,115 @@ enum {
 //
 static void init_exp_switches(void);
 
-static void exp_probe(uint16_t out[EXP_NR_READINGS])
+//
+// The sweep, as a task rather than a blocking call.
+//
+// Every step has the same shape: put the pins in some state, wait for
+// the 22nF to settle, read.  The waiting is nearly all of the 24ms and
+// nothing needs the processor during it, so the main loop calls in and
+// each call either finds the deadline has not come or takes one step.
+//
+// The treadle will want this machinery for the opposite reason: it stops
+// at the driven step and reads that over and over instead of moving on.
+//
+enum {
+	EXP_SWEEP_IDLE = -2,	// nothing to do
+	EXP_SWEEP_DONE = -1,	// readings waiting to be picked up
+};
+
+static struct {
+	int step;
+	absolute_time_t due;
+	uint16_t out[EXP_NR_READINGS];
+} sweep = { .step = EXP_SWEEP_IDLE };
+
+// Ignored while one is running or while a result has not been read.
+static void exp_sweep_start(void)
 {
-	exp_idle();
-	sleep_ms(1);
-	out[EXP_FLOAT_RING] = exp_read(EXP_RING_ADC);
-	out[EXP_FLOAT_TIP] = exp_read(EXP_TIP_ADC);
+	if (sweep.step != EXP_SWEEP_IDLE)
+		return;
+	sweep.step = 0;
+	sweep.due = get_absolute_time();
+}
 
-	exp_pullups();
-	out[EXP_PULLUP_RING] = exp_read(EXP_RING_ADC);
-	out[EXP_PULLUP_TIP] = exp_read(EXP_TIP_ADC);
+static bool exp_sweep_ready(void)
+{
+	return sweep.step == EXP_SWEEP_DONE;
+}
 
-	exp_drive(EXP_TIP_GPIO, EXP_RING_GPIO);
-	out[EXP_DRIVETIP_RING] = exp_read(EXP_RING_ADC);
+static const uint16_t *exp_sweep_take(void)
+{
+	sweep.step = EXP_SWEEP_IDLE;
+	return sweep.out;
+}
 
-	exp_drive(EXP_RING_GPIO, EXP_TIP_GPIO);
-	out[EXP_DRIVERING_TIP] = exp_read(EXP_TIP_ADC);
+static void exp_next(unsigned int ms)
+{
+	sweep.due = delayed_by_ms(get_absolute_time(), ms);
+	sweep.step++;
+}
 
-	//
-	// Nothing to do with the jack.  If the two pins above read zero it
-	// is worth knowing whether that is the wiring or the converter, and
-	// the temperature sensor is the one input on this chip whose answer
-	// is known in advance: room temperature lands near 0.7V, which is
-	// about 890 counts.  A dead ADC reads 0 or 4095 here too.
-	//
-	adc_set_temp_sensor_enabled(true);
-	sleep_ms(1);
-	out[EXP_TEMPERATURE] = exp_read(ADC_TEMPERATURE_CHANNEL_NUM);
-	adc_set_temp_sensor_enabled(false);
+static void exp_sweep_task(void)
+{
+	if (sweep.step < 0)
+		return;
+	if (absolute_time_diff_us(get_absolute_time(), sweep.due) > 0)
+		return;
 
-	exp_idle();
+	switch (sweep.step) {
+	case 0:
+		exp_idle();
+		exp_next(1);
+		break;
+	case 1:
+		sweep.out[EXP_FLOAT_RING] = exp_read(EXP_RING_ADC);
+		sweep.out[EXP_FLOAT_TIP] = exp_read(EXP_TIP_ADC);
+		exp_pullups();
+		exp_next(EXP_SETTLE_PULLUP_MS);
+		break;
+	case 2:
+		sweep.out[EXP_PULLUP_RING] = exp_read(EXP_RING_ADC);
+		sweep.out[EXP_PULLUP_TIP] = exp_read(EXP_TIP_ADC);
+		exp_drive_begin(EXP_TIP_GPIO, EXP_RING_GPIO);
+		exp_next(1);
+		break;
+	case 3:
+		exp_drive_end(EXP_TIP_GPIO, EXP_RING_GPIO);
+		exp_next(EXP_SETTLE_DRIVEN_MS);
+		break;
+	case 4:
+		sweep.out[EXP_DRIVETIP_RING] = exp_read(EXP_RING_ADC);
+		exp_drive_begin(EXP_RING_GPIO, EXP_TIP_GPIO);
+		exp_next(1);
+		break;
+	case 5:
+		exp_drive_end(EXP_RING_GPIO, EXP_TIP_GPIO);
+		exp_next(EXP_SETTLE_DRIVEN_MS);
+		break;
+	case 6:
+		sweep.out[EXP_DRIVERING_TIP] = exp_read(EXP_TIP_ADC);
+		//
+		// Nothing to do with the jack.  If the two pins above
+		// read zero it is worth knowing whether that is the
+		// wiring or the converter, and the temperature sensor is
+		// the one input on this chip whose answer is known in
+		// advance: room temperature lands near 0.7V, which is
+		// about 890 counts.  A dead ADC reads 0 or 4095 here too.
+		//
+		adc_set_temp_sensor_enabled(true);
+		exp_next(1);
+		break;
+	default:
+		sweep.out[EXP_TEMPERATURE] = exp_read(ADC_TEMPERATURE_CHANNEL_NUM);
+		adc_set_temp_sensor_enabled(false);
+		exp_idle();
 
-	// Every step above took the pins for itself, so hand them back to
-	// whatever was using them.
-	init_exp_switches();
+		// Every step took the pins for itself, so hand them back
+		// to whatever was using them.
+		init_exp_switches();
+		sweep.step = EXP_SWEEP_DONE;
+		break;
+	}
 }
 
 //

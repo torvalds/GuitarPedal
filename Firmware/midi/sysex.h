@@ -287,6 +287,16 @@ static void sysex_send_exp(void)
 {
 	if (!send_exp_tx)
 		return;
+
+	//
+	// The sweep takes 24ms of settling, so it runs as a task in the
+	// main loop and this waits for it rather than for the pins.
+	// Starting one is ignored while one is already going.
+	//
+	if (!exp_sweep_ready()) {
+		exp_sweep_start();
+		return;
+	}
 	if (midi_tx_busy())
 		return;
 	send_exp_tx = false;
@@ -294,10 +304,8 @@ static void sysex_send_exp(void)
 	static const uint8_t hdr[] = { 0xF0, 0x7D, 0x0E };
 	static const uint8_t trailer[] = { 0xF7 };
 
-	uint16_t reading[EXP_NR_READINGS];
+	const uint16_t *reading = exp_sweep_take();
 	uint8_t body[3 + 2 * EXP_NR_READINGS];
-
-	exp_probe(reading);
 
 	body[0] = 3;				// layout version
 	for (int i = 0; i < EXP_NR_READINGS; i++) {

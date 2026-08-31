@@ -279,6 +279,7 @@ int main()
 		sysex_send_identity();
 		sysex_send_telemetry();
 #ifdef EXP_TIP_GPIO
+		exp_sweep_task();
 		sysex_send_exp();
 #endif
 		sysex_send_schema();
