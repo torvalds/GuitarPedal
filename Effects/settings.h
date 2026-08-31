@@ -18,7 +18,7 @@
 // The list must enumerate exp.h's storable accessories in its order -
 // asserted there.
 //
-// POT: "Exp Jack" ENUM(Nothing Footswitches Expression) = Nothing
+// POT: "Exp Jack" ENUM(Nothing Footswitches Expression Stomp+LED) = Nothing
 //
 // Which pot the app has to be able to find rather than merely show.  It
 // filters Control Change and Program Change by this, so the app has to

@@ -252,6 +252,7 @@ enum exp_accessory {
 	EXP_ACC_NONE,		// an empty jack, grounded by its own normalling
 	EXP_ACC_SWITCHES,	// footswitches shorting tip or ring to sleeve
 	EXP_ACC_TREADLE,	// a potentiometer on a TRS plug
+	EXP_ACC_STOMP_LED,	// one switch on the tip, an LED on the ring
 	EXP_ACC_UNKNOWN,	// something else, which is worth saying plainly
 };
 
@@ -264,6 +265,7 @@ enum exp_accessory {
 //
 //	empty jack		  69	  69	   0	   0
 //	dual-stomp, none down	4072	4070	  52	  57
+//	single-stomp + LED	2693	4070	  47	  57
 //	treadle, heel		 812	  69	   1	   0
 //	treadle, toe		1392	1392	3674	3674
 //
@@ -287,12 +289,26 @@ static int exp_classify(const uint16_t r[EXP_NR_READINGS])
 	if (r[EXP_DRIVERING_TIP] >= EXP_LOW || r[EXP_DRIVETIP_RING] >= EXP_LOW)
 		return EXP_ACC_TREADLE;
 
+	bool tip_open = r[EXP_PULLUP_TIP] >= EXP_HIGH;
+	bool ring_open = r[EXP_PULLUP_RING] >= EXP_HIGH;
+
+	//
+	// A plug whose ring reaches neither rail has something on it that
+	// is not a switch, and an LED is the one such thing that exists:
+	// it clamps the pull-up at its forward drop.  Worth telling apart
+	// from a pair of switches, because that ring is an output and
+	// sits below VIH - read as a switch it would be held down for
+	// ever.
+	//
+	if (tip_open && !ring_open && r[EXP_PULLUP_RING] >= EXP_LOW)
+		return EXP_ACC_STOMP_LED;
+
 	//
 	// One pin reaching the rail means a plug is in: an empty jack
 	// grounds both through its normalling contacts.  One is enough,
 	// because the other may be held down by a switch.
 	//
-	if (r[EXP_PULLUP_TIP] >= EXP_HIGH || r[EXP_PULLUP_RING] >= EXP_HIGH)
+	if (tip_open || ring_open)
 		return EXP_ACC_SWITCHES;
 
 	if (r[EXP_PULLUP_TIP] < EXP_LOW && r[EXP_PULLUP_RING] < EXP_LOW)
@@ -321,10 +337,15 @@ _Static_assert(ARRAY_SIZE(settings_exp_jack_enum) == EXP_ACC_UNKNOWN + 1,
 //
 static void init_exp_switches(void)
 {
-	if (settings.exp_jack != EXP_ACC_SWITCHES)
+	int last = NR_SWITCHES;
+
+	// The ring is an LED on that one, so it stops at the tip.
+	if (settings.exp_jack == EXP_ACC_STOMP_LED)
+		last = EXP_RING_SWITCH;
+	else if (settings.exp_jack != EXP_ACC_SWITCHES)
 		return;
 
-	for (int sw = NR_ONBOARD_SWITCHES; sw < NR_SWITCHES; sw++) {
+	for (int sw = NR_ONBOARD_SWITCHES; sw < last; sw++) {
 		init_sw_pin(pio1, switch_gpio[sw]);
 		debounce_program_init(pio1, sw, debounce_offset, switch_gpio[sw]);
 	}

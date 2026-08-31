@@ -43,7 +43,8 @@ NAMES = [
 ]
 
 # Must match enum exp_accessory in exp.h.
-ACCESSORY = ["nothing", "footswitches", "expression pedal", "something unrecognised"]
+ACCESSORY = ["nothing", "footswitches", "expression pedal", "stomp + LED",
+             "something unrecognised"]
 
 FULL_SCALE = 4095
 VREF = 3.3
