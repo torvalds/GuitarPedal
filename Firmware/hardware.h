@@ -185,10 +185,13 @@ static void probe_hardware(void)
 	if (hardware.legacy_codec || hardware.legacy_screen)
 		report_status("Early board: mono only");
 }
+static uint debounce_offset;
+
 static void init_sw_pins(void)
 {
 	PIO pio = pio1;
-	uint offset = pio_add_program(pio, &debounce_program);
+
+	debounce_offset = pio_add_program(pio, &debounce_program);
 
 	//
 	// Same PIO program for every switch, one state machine each,
@@ -196,9 +199,13 @@ static void init_sw_pins(void)
 	// switch N.  switch_irq() relies on that and has no other way
 	// to know which pin a fifo entry came from.
 	//
-	for (int sw = 0; sw < NR_SWITCHES; sw++) {
+	// Only the ones soldered to this board.  Anything on the
+	// expression jack is an accessory rather than bring-up, and waits
+	// for init_exp_switches() and the setting that decides it.
+	//
+	for (int sw = 0; sw < NR_ONBOARD_SWITCHES; sw++) {
 		init_sw_pin(pio, switch_gpio[sw]);
-		debounce_program_init(pio, sw, offset, switch_gpio[sw]);
+		debounce_program_init(pio, sw, debounce_offset, switch_gpio[sw]);
 	}
 
 	irq_set_exclusive_handler(PIO1_IRQ_0, switch_irq);

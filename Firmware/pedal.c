@@ -252,6 +252,9 @@ int main()
 	tac5112_init();
 
 	init_effects();
+#ifdef EXP_TIP_GPIO
+	init_exp_switches();	// wants settings.exp_jack, loaded just above
+#endif
 
 	multicore_launch_core1(audio_processing);
 

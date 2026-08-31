@@ -30,10 +30,15 @@
 // The gestures - what a binding is *from*.
 //
 // This lists the gestures that exist, not the ones that are imaginable.
-// The next board's jack carries either two more footswitches or an
-// analog expression pedal, and whichever it turns out to be becomes
-// more entries here; the wire format has a whole byte for the id, so
-// growing the list costs nothing but the entries.
+// The wire format has a whole byte for the id, so growing the list costs
+// nothing but the entries.
+//
+// Those values go into flash inside every saved rule, so renumbering
+// them later is a migration rather than an edit.  Physical controls
+// therefore stay at the bottom of the byte and leave the rest of it
+// alone: a remote sending MIDI is another source for this same table,
+// and whatever it ends up being numbered should not have to displace
+// anything already saved.
 //
 // Turning the rotary while pressing its shaft is deliberately not one
 // of these.  It used to select a pot, and it cannot coexist with a long
@@ -46,8 +51,14 @@ enum control_id {
 	CTRL_ROTARY_HOLD,
 	CTRL_STOMP_TAP,
 	CTRL_STOMP_HOLD,
+	CTRL_EXP_TIP_TAP,
+	CTRL_EXP_TIP_HOLD,
+	CTRL_EXP_RING_TAP,
+	CTRL_EXP_RING_HOLD,
 	NR_CONTROLS,
 };
+
+_Static_assert(NR_CONTROLS <= 32, "physical controls are crowding the id space");
 
 //
 // ...and what a binding is *to*.

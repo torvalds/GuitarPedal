@@ -201,6 +201,8 @@ enum {
 // somewhere near mid rail - but the pull-up pair answers the same
 // question by actually driving the pin, and that is the one to believe.
 //
+static void init_exp_switches(void);
+
 static void exp_probe(uint16_t out[EXP_NR_READINGS])
 {
 	exp_idle();
@@ -231,6 +233,10 @@ static void exp_probe(uint16_t out[EXP_NR_READINGS])
 	adc_set_temp_sensor_enabled(false);
 
 	exp_idle();
+
+	// Every step above took the pins for itself, so hand them back to
+	// whatever was using them.
+	init_exp_switches();
 }
 
 //
@@ -302,6 +308,27 @@ static int exp_classify(const uint16_t r[EXP_NR_READINGS])
 //
 _Static_assert(ARRAY_SIZE(settings_exp_jack_enum) == EXP_ACC_UNKNOWN + 1,
 	       "the Exp Jack pot and enum exp_accessory have drifted apart");
+
+//
+// The jack's two pins as switches, which they are only while the
+// setting says an accessory with switches on it is plugged in: a
+// treadle wants them for the ADC, and an empty jack grounds them, which
+// would read as held down for ever.
+//
+// Wants the settings loaded, so it runs after init_effects() rather
+// than with the rest of the bring-up - which means changing the setting
+// takes effect at the next boot.
+//
+static void init_exp_switches(void)
+{
+	if (settings.exp_jack != EXP_ACC_SWITCHES)
+		return;
+
+	for (int sw = NR_ONBOARD_SWITCHES; sw < NR_SWITCHES; sw++) {
+		init_sw_pin(pio1, switch_gpio[sw]);
+		debounce_program_init(pio1, sw, debounce_offset, switch_gpio[sw]);
+	}
+}
 
 static void exp_init(void)
 {
