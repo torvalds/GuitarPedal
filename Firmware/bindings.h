@@ -10,13 +10,20 @@
 // for, so the answer has to be set from something that can, and the
 // WebMIDI app is that something.
 //
-// Nothing here is saved.  The table is rebuilt from the defaults below
-// on every boot, and those defaults are exactly what the pedal did when
-// the gestures were hardcoded, so an unprogrammed pedal behaves as it
-// always has.  Persisting it waits for the storage rework, because the
-// layout should not be guessed at before the shape of what is stored
-// has settled - which is also what makes this testable on the old board
-// with the 2kbit part, where there is nowhere to save it to anyway.
+// A binding is saved at one of two levels, and read at three.  A scene
+// carries its own table and so does the pedal as a whole; the defaults
+// below are what is left when neither has anything to say, and they are
+// exactly what the pedal did when the gestures were hardcoded, so an
+// unprogrammed pedal behaves as it always has.
+//
+// resolve_rules() picks between them *per control*, not per rule: the
+// most specific level that mentions a control at all wins outright for
+// it, and the levels below are not consulted for that control again.
+// So a scene that binds the knob does not half-inherit the pedal's idea
+// of what the knob does - it replaces it - while leaving the pedal's
+// bindings for every other control alone.  That is what lets one kind
+// of control be a global fact and another a per-scene one without the
+// two arrangements interfering.
 //
 
 //
