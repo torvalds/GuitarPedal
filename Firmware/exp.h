@@ -233,6 +233,68 @@ static void exp_probe(uint16_t out[EXP_NR_READINGS])
 	exp_idle();
 }
 
+//
+// What the readings add up to.
+//
+// The probe answers in numbers because when it was written nobody knew
+// what to expect from them.  They have been seen now, so the pedal says
+// what it thinks is out there rather than leaving the host to keep a
+// second copy of the thresholds - and the pedal is the end that has to
+// act on the answer.
+//
+enum exp_accessory {
+	EXP_ACC_NONE,		// an empty jack, grounded by its own normalling
+	EXP_ACC_SWITCHES,	// footswitches shorting tip or ring to sleeve
+	EXP_ACC_TREADLE,	// a potentiometer on a TRS plug
+	EXP_ACC_UNKNOWN,	// something else, which is worth saying plainly
+};
+
+//
+// Below EXP_LOW a pin is at the bottom of its range - grounded, or a
+// wiper at its heel stop.  Above EXP_HIGH a pull-up reached the rail,
+// so nothing is shorting that pin to sleeve.
+//
+// Measured on unified/8736, pull-up ring/tip then the two driven rows:
+//
+//	empty jack		  69	  69	   0	   0
+//	dual-stomp, none down	4072	4070	  52	  57
+//	treadle, heel		 812	  69	   1	   0
+//	treadle, toe		1392	1392	3674	3674
+//
+// Every state clears the nearer threshold by more than 2.5x.  An empty
+// jack reads 69 rather than 0 because the pull-up drives through the
+// 1k series resistor into the normalling contact, which is the divider
+// the schematic predicts.
+//
+#define EXP_LOW		256
+#define EXP_HIGH	3500
+
+static int exp_classify(const uint16_t r[EXP_NR_READINGS])
+{
+	//
+	// A pot is the only thing out there that feeds a driven pin's
+	// voltage back to the other one, so this is the single positive
+	// test and it comes first.  A treadle parked at its heel stop
+	// feeds back nothing, which is why moving it is part of being
+	// found.
+	//
+	if (r[EXP_DRIVERING_TIP] >= EXP_LOW || r[EXP_DRIVETIP_RING] >= EXP_LOW)
+		return EXP_ACC_TREADLE;
+
+	//
+	// One pin reaching the rail means a plug is in: an empty jack
+	// grounds both through its normalling contacts.  One is enough,
+	// because the other may be held down by a switch.
+	//
+	if (r[EXP_PULLUP_TIP] >= EXP_HIGH || r[EXP_PULLUP_RING] >= EXP_HIGH)
+		return EXP_ACC_SWITCHES;
+
+	if (r[EXP_PULLUP_TIP] < EXP_LOW && r[EXP_PULLUP_RING] < EXP_LOW)
+		return EXP_ACC_NONE;
+
+	return EXP_ACC_UNKNOWN;
+}
+
 static void exp_init(void)
 {
 	adc_init();

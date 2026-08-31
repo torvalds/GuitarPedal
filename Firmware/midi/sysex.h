@@ -273,7 +273,9 @@ static uint16_t fraction_to_14bit(float f)
 //
 // Twelve bits will not fit in a SysEx data byte, so each reading goes
 // out as seven bits of high and seven of low.  Not a packing scheme,
-// just the only shape available.
+// just the only shape available.  The readings are followed by what the
+// pedal makes of them - see exp_classify() - so that both ends agree
+// without the host keeping its own copy of the thresholds.
 //
 #ifdef EXP_TIP_GPIO
 bool send_exp_tx = false;
@@ -289,15 +291,16 @@ static void sysex_send_exp(void)
 	static const uint8_t trailer[] = { 0xF7 };
 
 	uint16_t reading[EXP_NR_READINGS];
-	uint8_t body[1 + 2 * EXP_NR_READINGS];
+	uint8_t body[2 + 2 * EXP_NR_READINGS];
 
 	exp_probe(reading);
 
-	body[0] = 1;				// layout version
+	body[0] = 2;				// layout version
 	for (int i = 0; i < EXP_NR_READINGS; i++) {
 		body[1 + 2 * i] = (reading[i] >> 7) & 0x7f;
 		body[2 + 2 * i] = reading[i] & 0x7f;
 	}
+	body[1 + 2 * EXP_NR_READINGS] = exp_classify(reading);
 
 	sysex_tx_start();
 	sysex_stream_write(hdr, sizeof(hdr));

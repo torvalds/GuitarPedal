@@ -42,6 +42,9 @@ NAMES = [
     ("temperature", "ADC self-check, not the jack"),
 ]
 
+# Must match enum exp_accessory in exp.h.
+ACCESSORY = ["nothing", "footswitches", "expression pedal", "something unrecognised"]
+
 FULL_SCALE = 4095
 VREF = 3.3
 
@@ -82,17 +85,24 @@ def probe(port, wait=1.5):
         return None
     body = body[:end]
 
-    if not body or body[0] != 1:
+    if not body or body[0] < 1:
         return None
-    pairs = body[1:]
-    return [(pairs[j] << 7) | pairs[j + 1] for j in range(0, len(pairs) - 1, 2)]
+
+    # Append-only: the readings, then whatever later firmware added.
+    pairs = body[1:1 + 2 * len(NAMES)]
+    vals = [(pairs[j] << 7) | pairs[j + 1] for j in range(0, len(pairs) - 1, 2)]
+    tail = body[1 + 2 * len(NAMES):]
+    return vals, (tail[0] if tail else None)
 
 
-def show(vals):
+def show(vals, verdict):
     for (name, note), raw in zip(NAMES, vals):
         extra = f"  ({temp_c(raw):.1f} C)" if name == "temperature" else ""
         bar = "#" * round(24 * raw / FULL_SCALE)
         print(f"  {name:24} {raw:5}  {volts(raw):5.3f} V  {bar:<24}{extra}  {note}")
+    if verdict is not None:
+        name = ACCESSORY[verdict] if verdict < len(ACCESSORY) else f"? ({verdict})"
+        print(f"\n  the pedal reads this as: {name}")
 
 
 def main():
@@ -111,12 +121,12 @@ def main():
     print(f"exp-probe: {d['label']} (midi {d['port']})")
 
     if not args.watch:
-        vals = probe(d["port"])
-        if vals is None:
+        got = probe(d["port"])
+        if got is None:
             print("  no reply - is this firmware built with the probe in it?")
             return 1
         print()
-        show(vals)
+        show(*got)
         return 0
 
     #
@@ -131,10 +141,11 @@ def main():
     hi = [0] * 2
     try:
         while True:
-            vals = probe(d["port"], wait=0.35)
-            if vals is None:
+            got = probe(d["port"], wait=0.35)
+            if got is None:
                 print("  (no reply)")
                 continue
+            vals = got[0]
             a, b = vals[4], vals[5]
             lo = [min(lo[0], a), min(lo[1], b)]
             hi = [max(hi[0], a), max(hi[1], b)]
