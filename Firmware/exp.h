@@ -295,6 +295,14 @@ static int exp_classify(const uint16_t r[EXP_NR_READINGS])
 	return EXP_ACC_UNKNOWN;
 }
 
+//
+// The Exp Jack pot in settings.h stores one of these, so it has to list
+// exactly the ones that can be stored - every accessory but UNKNOWN,
+// which is something the probe reports and never something you set.
+//
+_Static_assert(ARRAY_SIZE(settings_exp_jack_enum) == EXP_ACC_UNKNOWN + 1,
+	       "the Exp Jack pot and enum exp_accessory have drifted apart");
+
 static void exp_init(void)
 {
 	adc_init();

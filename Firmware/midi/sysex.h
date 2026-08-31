@@ -275,7 +275,11 @@ static uint16_t fraction_to_14bit(float f)
 // out as seven bits of high and seven of low.  Not a packing scheme,
 // just the only shape available.  The readings are followed by what the
 // pedal makes of them - see exp_classify() - so that both ends agree
-// without the host keeping its own copy of the thresholds.
+// without the host keeping its own copy of the thresholds, and then by
+// what the Exp Jack setting currently says.  Those two disagreeing is
+// not an error: the setting is what the pedal runs from and the probe
+// only ever proposes, so showing both is how a host offers the change
+// rather than making it.
 //
 #ifdef EXP_TIP_GPIO
 bool send_exp_tx = false;
@@ -291,16 +295,17 @@ static void sysex_send_exp(void)
 	static const uint8_t trailer[] = { 0xF7 };
 
 	uint16_t reading[EXP_NR_READINGS];
-	uint8_t body[2 + 2 * EXP_NR_READINGS];
+	uint8_t body[3 + 2 * EXP_NR_READINGS];
 
 	exp_probe(reading);
 
-	body[0] = 2;				// layout version
+	body[0] = 3;				// layout version
 	for (int i = 0; i < EXP_NR_READINGS; i++) {
 		body[1 + 2 * i] = (reading[i] >> 7) & 0x7f;
 		body[2 + 2 * i] = reading[i] & 0x7f;
 	}
 	body[1 + 2 * EXP_NR_READINGS] = exp_classify(reading);
+	body[2 + 2 * EXP_NR_READINGS] = settings.exp_jack;
 
 	sysex_tx_start();
 	sysex_stream_write(hdr, sizeof(hdr));

@@ -92,17 +92,24 @@ def probe(port, wait=1.5):
     pairs = body[1:1 + 2 * len(NAMES)]
     vals = [(pairs[j] << 7) | pairs[j + 1] for j in range(0, len(pairs) - 1, 2)]
     tail = body[1 + 2 * len(NAMES):]
-    return vals, (tail[0] if tail else None)
+    return vals, tail
 
 
-def show(vals, verdict):
+def name_of(v):
+    return ACCESSORY[v] if v < len(ACCESSORY) else f"? ({v})"
+
+
+def show(vals, tail):
     for (name, note), raw in zip(NAMES, vals):
         extra = f"  ({temp_c(raw):.1f} C)" if name == "temperature" else ""
         bar = "#" * round(24 * raw / FULL_SCALE)
         print(f"  {name:24} {raw:5}  {volts(raw):5.3f} V  {bar:<24}{extra}  {note}")
-    if verdict is not None:
-        name = ACCESSORY[verdict] if verdict < len(ACCESSORY) else f"? ({verdict})"
-        print(f"\n  the pedal reads this as: {name}")
+    if len(tail) >= 1:
+        print(f"\n  probe says:   {name_of(tail[0])}")
+    if len(tail) >= 2:
+        print(f"  set to:       {name_of(tail[1])}")
+        if tail[0] != tail[1]:
+            print("  they disagree - the setting is what the pedal runs from")
 
 
 def main():

@@ -8,6 +8,18 @@
 // POT: "  ATTN" LINEAR(0 100) = 50 %
 // POT: "Tuning" ENUM(EADGBE DADGAD BEADGC EADG) = EADGBE
 //
+// What is plugged into the expression jack.  The pedal does not decide
+// this for itself: exp_probe() blocks core 0 for 20ms, so it runs when
+// a host asks and never on its own, and what it finds is a proposal
+// written here rather than something acted on directly.  This value is
+// what the pedal runs from, so it is also how you say "a treadle is
+// coming later" while sitting at a desk with nothing plugged in.
+//
+// The list must enumerate exp.h's storable accessories in its order -
+// asserted there.
+//
+// POT: "Exp Jack" ENUM(Nothing Footswitches Expression) = Nothing
+//
 // Which pot the app has to be able to find rather than merely show.  It
 // filters Control Change and Program Change by this, so the app has to
 // transmit on the same one or bypass, the tuner and scene changes stop
@@ -32,6 +44,7 @@ struct {
 	int midi_channel;
 	float led_pwm, led_intense;
 	int tuning;
+	int exp_jack;
 } settings;
 
 static void settings_init(unsigned char pot[10])
@@ -60,6 +73,7 @@ static void settings_init(unsigned char pot[10])
 	settings.led_intense = intense;
 
 	settings.tuning = pot[SETTINGS_TUNING];
+	settings.exp_jack = pot[SETTINGS_EXP_JACK];
 }
 
 //
