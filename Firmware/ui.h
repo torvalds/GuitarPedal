@@ -616,6 +616,9 @@ static void show_status(unsigned int ms)
 	}
 
 	set_led(ms, !disable_all, global, attn);
+#ifdef EXP_TIP_GPIO
+	exp_led_set(!disable_all);
+#endif
 
 	// A CC value is seven bits, so the chain needs two of them
 	uint8_t chain[2] = { attn & ((1u << STATUS_CHAIN_BITS) - 1),

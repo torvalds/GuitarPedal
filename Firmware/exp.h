@@ -201,7 +201,7 @@ enum {
 // somewhere near mid rail - but the pull-up pair answers the same
 // question by actually driving the pin, and that is the one to believe.
 //
-static void init_exp_switches(void);
+static void init_exp_pins(void);
 
 //
 // The sweep, as a task rather than a blocking call.
@@ -322,7 +322,7 @@ static void exp_sweep_task(void)
 
 		// Every step took the pins for itself, so hand them back
 		// to whatever was using them.
-		init_exp_switches();
+		init_exp_pins();
 		sweep.step = EXP_SWEEP_DONE;
 		break;
 	}
@@ -421,28 +421,45 @@ _Static_assert(ARRAY_SIZE(settings_exp_jack_enum) == EXP_ACC_UNKNOWN + 1,
 	       "the Exp Jack pot and enum exp_accessory have drifted apart");
 
 //
-// The jack's two pins as switches, which they are only while the
-// setting says an accessory with switches on it is plugged in: a
-// treadle wants them for the ADC, and an empty jack grounds them, which
-// would read as held down for ever.
+// The jack's pins, handed to whatever the setting says is on them.
 //
-// Wants the settings loaded, so it runs after init_effects() rather
-// than with the rest of the bring-up - which means changing the setting
-// takes effect at the next boot.
+// They are only switches while something says they are: the same two
+// pins are a treadle's wiper and supply, and an empty jack grounds them,
+// either of which reads as held down for ever.
 //
-static void init_exp_switches(void)
+// Called once the settings have loaded - so changing the setting takes
+// effect at the next boot - and again after every sweep, because each
+// step of a sweep takes both pins for itself.
+//
+static void init_exp_switch(int sw)
 {
-	int last = NR_SWITCHES;
+	init_sw_pin(pio1, switch_gpio[sw]);
+	debounce_program_init(pio1, sw, debounce_offset, switch_gpio[sw]);
+}
 
-	// The ring is an LED on that one, so it stops at the tip.
-	if (settings.exp_jack == EXP_ACC_STOMP_LED)
-		last = EXP_RING_SWITCH;
-	else if (settings.exp_jack != EXP_ACC_SWITCHES)
+//
+// Full brightness, and no setting for it.  194 fixes the current at
+// (3.3 - Vf)/1k on a board that is already made, so there is not much
+// of it to spend and dimming is not what is short.
+//
+static void exp_led_set(bool on)
+{
+	if (settings.exp_jack != EXP_ACC_STOMP_LED)
 		return;
+	pwm_set_gpio_level(EXP_RING_GPIO, on ? PWM_WRAP : 0);
+}
 
-	for (int sw = NR_ONBOARD_SWITCHES; sw < last; sw++) {
-		init_sw_pin(pio1, switch_gpio[sw]);
-		debounce_program_init(pio1, sw, debounce_offset, switch_gpio[sw]);
+static void init_exp_pins(void)
+{
+	switch (settings.exp_jack) {
+	case EXP_ACC_SWITCHES:
+		init_exp_switch(EXP_TIP_SWITCH);
+		init_exp_switch(EXP_RING_SWITCH);
+		break;
+	case EXP_ACC_STOMP_LED:
+		init_exp_switch(EXP_TIP_SWITCH);
+		init_one_pwm_pin(EXP_RING_GPIO);
+		break;
 	}
 }
 

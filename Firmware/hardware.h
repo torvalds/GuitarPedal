@@ -212,7 +212,8 @@ static void init_sw_pins(void)
 	irq_set_enabled(PIO1_IRQ_0, true);
 }
 
-#ifndef WS2812_GPIO
+// Any pin, not just an LED_GPIO: a board with smart LEDs still has an
+// expression jack that may have something to light on it.
 static void init_one_pwm_pin(int pin)
 {
 	unsigned int slice = pwm_gpio_to_slice_num(pin);
@@ -222,7 +223,6 @@ static void init_one_pwm_pin(int pin)
 	pwm_set_gpio_level(pin, 0);
 	pwm_set_enabled(slice, true);
 }
-#endif
 
 static void init_pwm_pins(void)
 {
