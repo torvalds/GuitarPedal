@@ -837,6 +837,35 @@ if (roleEff) {
     check('and sets the pot to nothing at all',
           !cmds().includes(0x03), JSON.stringify(sent));
 
+    //
+    // What the probe answered is about that one probe.  It used to stay
+    // on screen until the page was reloaded, so "cannot tell" read as a
+    // standing property of the jack rather than as one reply.
+    //
+    // F0 7D 0E, a layout version, seven readings of two bytes, then the
+    // verdict and what was configured - see sysex_send_exp().
+    //
+    const probeReply = (verdict, configured) => {
+        const m = new Array(21).fill(0);
+
+        m[0] = 0xF0; m[1] = 0x7D; m[2] = 0x0e; m[3] = 3;
+        m[18] = verdict; m[19] = configured; m[20] = 0xF7;
+        return m;
+    };
+    const said = () => descend(cardOf(roleEff))
+          .filter((n) => n.className === 'exp-detect-said')
+          .map((n) => n.textContent).join(' ');
+
+    // A verdict past the end of the names is the pedal's "cannot tell"
+    app.handleSysex(probeReply(pot.enum.length, 2));
+    check('a probe with no answer says so', /Cannot tell/.test(said()), said());
+
+    // ...and the pedal writing the setting itself moves the menu again
+    app.handleSysex([0xF0, 0x7D, 0x03, roleEff.id,
+                     roleEff.roles.EXPJACK + 1, 1, 0xF7]);
+    check('and stops saying it once the menu moves again',
+          !/Cannot tell/.test(said()), said());
+
     app.tap(null);
 }
 

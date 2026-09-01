@@ -429,14 +429,59 @@ static void fire_control(unsigned int ctrl)
 //
 #define TREADLE_MOVE 8
 
+//
+// The treadle gone, and whatever it was driving put back.
+//
+// Not a tidiness: an unplugged jack reads as a wiper at its heel stop,
+// because the normalling contacts ground the pin, so the last thing a
+// treadle does on the way out is drive everything it owns to minimum.
+// Pull a volume pedal out of a working rig and the rig goes to -40dB and
+// stays there, which looks exactly like the pedal having broken.
+//
+// Nothing can stop that happening - the reading is a legitimate treadle
+// position and there is no way to tell it from one until a probe says the
+// jack is empty, by which time it has already been acted on.  What can be
+// done is undoing it once that is known.
+//
+// Back to the default rather than to whatever it was before.  "Before"
+// would have to survive scene loads and rebinding to be worth anything,
+// and the default is already the answer to "where does this sit when
+// nothing is driving it" - the same one reset_effect() and an unrouted
+// effect give.  For Volume it is 0dB, which is the case that matters.
+//
+static void treadle_released(void)
+{
+	for (unsigned int i = 0; i < nr_rules; i++) {
+		struct rule *r = &rules[i];
+		unsigned int pot, eff_id;
+		struct effect *effect;
+
+		if (r->control != CTRL_EXP_TREADLE || r->action != ACT_POT)
+			continue;
+		if (!(effect = bind_target(r, &pot, &eff_id)))
+			continue;
+
+		set_target(effect, eff_id, pot, target_default(effect, pot));
+	}
+}
+
 static void treadle_moved(void)
 {
 	static int acted = -1;	// nowhere yet, so the first pass drives
+	static bool live;
 	int span = expression.toe - expression.heel;
 	int raw = exp_treadle_raw;
 
-	if (expression.accessory != EXP_ACC_TREADLE || span <= 0)
+	if (expression.accessory != EXP_ACC_TREADLE || span <= 0) {
+		if (live)
+			treadle_released();
+		live = false;
+
+		// So that plugging one back in drives on the first pass
+		acted = -1;
 		return;
+	}
+	live = true;
 
 	if (acted >= 0 && raw - acted < TREADLE_MOVE && acted - raw < TREADLE_MOVE)
 		return;

@@ -208,7 +208,24 @@ function expAutoOption(potDef, select, effId, potIdx) {
     const said = document.createElement('div');
     said.className = 'exp-detect-said';
 
+    //
+    // Whatever it says is about the last probe and nothing else, so
+    // anything that moves the menu afterwards clears it.  Two ways in:
+    // a person picking something, below, and the pedal writing the
+    // setting itself, which sets .value from script and fires no event -
+    // hence the hook rather than a listener.
+    //
+    // It used to stay up until the page was reloaded, which turned one
+    // answer to one question into a standing claim about the jack.
+    //
+    const chained = select.onValue;
+    select.onValue = () => {
+        if (chained) chained();
+        said.textContent = '';
+    };
+
     select.addEventListener('change', (e) => {
+        said.textContent = '';
         if (Number(e.target.value) !== potDef.enum.length)
             return;
 
@@ -218,6 +235,7 @@ function expAutoOption(potDef, select, effId, potIdx) {
 
             if (name === undefined) {
                 select.value = configured;
+                if (select.onValue) select.onValue();
                 said.textContent = 'Cannot tell \u2014 rock a treadle '
                                  + 'and try again.';
                 return;
