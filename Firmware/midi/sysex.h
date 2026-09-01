@@ -181,6 +181,10 @@ static void sysex_send_identity(void)
 	for (unsigned int i = 0, n = 0; i < NR_CONTROLS; i++) {
 		if (!controls[i].name)
 			continue;
+#ifdef EXP_TIP_GPIO
+		if (i >= CTRL_EXP_TIP_TAP && !exp_control_offered(i))
+			continue;
+#endif
 		sysex_write_str(n++ ? ",{\"id\":" : "{\"id\":");
 		sysex_write_num(i);
 		sysex_write_str(",\"name\":\"");

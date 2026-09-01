@@ -239,6 +239,11 @@ static bool exp_sweep_ready(void)
 	return sweep.step == EXP_SWEEP_DONE;
 }
 
+static bool exp_sweep_busy(void)
+{
+	return sweep.step >= 0;
+}
+
 static const uint16_t *exp_sweep_take(void)
 {
 	sweep.step = EXP_SWEEP_IDLE;
@@ -427,9 +432,9 @@ _Static_assert(ARRAY_SIZE(settings_exp_jack_enum) == EXP_ACC_UNKNOWN + 1,
 // pins are a treadle's wiper and supply, and an empty jack grounds them,
 // either of which reads as held down for ever.
 //
-// Called once the settings have loaded - so changing the setting takes
-// effect at the next boot - and again after every sweep, because each
-// step of a sweep takes both pins for itself.
+// Called once the settings have loaded, whenever the setting moves after
+// that, and again after every sweep - each step of a sweep takes both
+// pins for itself.
 //
 static void init_exp_switch(int sw)
 {
@@ -451,6 +456,19 @@ static void exp_led_set(bool on)
 
 static void init_exp_pins(void)
 {
+	//
+	// Take both back first.  The setting may have moved away from
+	// whatever had them, and a debounce state machine left running on
+	// a pin that is now an LED reads it as a switch held down - along
+	// with any press it was part-way through when it stopped.
+	//
+	for (int sw = NR_ONBOARD_SWITCHES; sw < NR_SWITCHES; sw++) {
+		pio_sm_set_enabled(pio1, sw, false);
+		switch_clear(sw);
+		switch_clear(LONGPRESS(sw));
+	}
+	exp_idle();
+
 	switch (settings.exp_jack) {
 	case EXP_ACC_SWITCHES:
 		init_exp_switch(EXP_TIP_SWITCH);
@@ -461,6 +479,56 @@ static void init_exp_pins(void)
 		init_one_pwm_pin(EXP_RING_GPIO);
 		break;
 	}
+}
+
+//
+// Which of the jack's controls this accessory actually has.
+//
+// Offering one that cannot work is worse than not offering it: with an
+// LED on the ring there is no switch there to bind, and a row that can
+// never do anything is indistinguishable from one that is broken.
+//
+static bool exp_control_offered(unsigned int id)
+{
+	switch (settings.exp_jack) {
+	case EXP_ACC_SWITCHES:
+		return true;
+	case EXP_ACC_STOMP_LED:
+		return id == CTRL_EXP_TIP_TAP || id == CTRL_EXP_TIP_HOLD;
+	default:
+		return false;
+	}
+}
+
+//
+// The setting is written by the app, so it moves while the pedal is
+// running and the pins have to follow it there and then.  Waiting for a
+// reboot means picking an accessory and finding nothing works, which is
+// indistinguishable from it being broken.
+//
+static bool exp_follow_setting(void)
+{
+	static int configured = -1;
+
+	if (settings.exp_jack == configured)
+		return false;
+
+	//
+	// Not while a sweep has the pins.  Handing them over mid-sweep
+	// puts a pull-up, a state machine or the LED's PWM on them
+	// underneath it, and every reading after that is of the pedal
+	// rather than of the accessory - a driven ring reads as the rail,
+	// which is a stomp box with an LED classified as two switches.
+	//
+	// Nothing is lost by waiting: the sweep hands the pins over
+	// itself when it finishes, and this runs on the pass after.
+	//
+	if (exp_sweep_busy())
+		return false;
+
+	configured = settings.exp_jack;
+	init_exp_pins();
+	return true;
 }
 
 static void exp_init(void)

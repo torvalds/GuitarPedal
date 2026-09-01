@@ -279,6 +279,12 @@ int main()
 		sysex_send_identity();
 		sysex_send_telemetry();
 #ifdef EXP_TIP_GPIO
+		//
+		// A different accessory is a different set of controls,
+		// and the host asked what they were once, at connect.
+		//
+		if (exp_follow_setting())
+			send_identity_tx = true;
 		exp_sweep_task();
 		sysex_send_exp();
 #endif
