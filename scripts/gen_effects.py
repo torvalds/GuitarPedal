@@ -542,6 +542,13 @@ def generate(audio_dir, out_h, out_js, out_md):
             "defMix": e_data['def_mix'],
             "mixLaw": e_data['mix_law'],
             # The schema is camelCase, the python is not
+            #
+            # Kept once rather than per scene, which is also what keeps
+            # it out of the chain.  Said here so the app does not have
+            # to infer it from a position, which was true of the only
+            # such effect there was.
+            #
+            "global": e_data['is_global'],
             "roles": e_data['roles'],
             "graph": [{"type": b['type'], "q": b['q']} if 'q' in b
                       else {"type": b['type'], "qPot": b['q_pot']}

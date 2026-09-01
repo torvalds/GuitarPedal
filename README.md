@@ -256,11 +256,13 @@ between scenes with no computer in sight.
 
 ## Audio effects
 
-Seventeen of them, plus two that are always there and can't be unrouted:
-the **Signal Chain** at the front, which is the input trim, the noise
-gate and the master volume ([measured](Documentation/effects/signal-chain.md)),
-and the **Settings** at the back, which is USB audio routing, MIDI
-channel, LED brightness and what the tuner is tuning to.
+Seventeen of them, plus three that are always there and can't be
+unrouted: the **Signal Chain** at the front, which is the input trim, the
+noise gate and the master volume
+([measured](Documentation/effects/signal-chain.md)), and behind them the
+**Settings**, which is USB audio routing, MIDI channel, LED brightness
+and what the tuner is tuning to, and the **Expression Jack**, which is
+what is plugged into it and where that thing's travel ends.
 
 They're listed in the order they run in by default.  This is an overview
 and not documentation - the app is the reference, because it gets the

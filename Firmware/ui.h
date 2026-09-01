@@ -432,20 +432,20 @@ static void fire_control(unsigned int ctrl)
 static void treadle_moved(void)
 {
 	static int acted = -1;	// nowhere yet, so the first pass drives
-	int span = treadle_hi - treadle_lo;
+	int span = expression.toe - expression.heel;
 	int raw = exp_treadle_raw;
 
-	if (settings.exp_jack != EXP_ACC_TREADLE || span <= 0)
+	if (expression.accessory != EXP_ACC_TREADLE || span <= 0)
 		return;
 
 	if (acted >= 0 && raw - acted < TREADLE_MOVE && acted - raw < TREADLE_MOVE)
 		return;
 	acted = raw;
 
-	if (raw < treadle_lo)
-		raw = treadle_lo;
-	else if (raw > treadle_hi)
-		raw = treadle_hi;
+	if (raw < expression.heel)
+		raw = expression.heel;
+	else if (raw > expression.toe)
+		raw = expression.toe;
 
 	for (unsigned int i = 0; i < nr_rules; i++) {
 		struct rule *r = &rules[i];
@@ -463,7 +463,7 @@ static void treadle_moved(void)
 		if (steps <= 0)
 			continue;
 
-		int want = (raw - treadle_lo) * 4 * steps / span;
+		int want = (raw - expression.heel) * 4 * steps / span;
 		int now = 4 * (target_value(effect, pot) - range.min);
 
 		if (want - now > TREADLE_DEADBAND || now - want > TREADLE_DEADBAND)

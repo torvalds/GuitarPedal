@@ -338,7 +338,7 @@ static void sysex_send_exp(void)
 		body[2 + 2 * i] = reading[i] & 0x7f;
 	}
 	body[1 + 2 * EXP_NR_READINGS] = exp_classify(reading);
-	body[2 + 2 * EXP_NR_READINGS] = settings.exp_jack;
+	body[2 + 2 * EXP_NR_READINGS] = expression.accessory;
 
 	sysex_tx_start();
 	sysex_stream_write(hdr, sizeof(hdr));
@@ -400,10 +400,10 @@ static void sysex_send_telemetry(void)
 #ifdef EXP_TIP_GPIO
 		exp_treadle_raw >> 7,		// where the treadle is, raw
 		exp_treadle_raw & 127,		// ...and the bits under it
-		treadle_lo >> 7,		// the travel it has been taught
-		treadle_lo & 127,
-		treadle_hi >> 7,
-		treadle_hi & 127,
+		expression.heel >> 7,		// the travel it has been taught
+		expression.heel & 127,
+		expression.toe >> 7,
+		expression.toe & 127,
 #endif
 	};
 

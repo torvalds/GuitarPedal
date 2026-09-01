@@ -253,7 +253,7 @@ int main()
 
 	init_effects();
 #ifdef EXP_TIP_GPIO
-	init_exp_pins();	// wants settings.exp_jack, loaded just above
+	init_exp_pins();	// wants expression.accessory, loaded just above
 #endif
 
 	multicore_launch_core1(audio_processing);

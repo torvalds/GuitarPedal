@@ -419,12 +419,12 @@ static int exp_classify(const uint16_t r[EXP_NR_READINGS])
 }
 
 //
-// The Exp Jack pot in settings.h stores one of these, so it has to list
+// The Accessory pot in expression.h stores one of these, so it has to list
 // exactly the ones that can be stored - every accessory but UNKNOWN,
 // which is something the probe reports and never something you set.
 //
-_Static_assert(ARRAY_SIZE(settings_exp_jack_enum) == EXP_ACC_UNKNOWN + 1,
-	       "the Exp Jack pot and enum exp_accessory have drifted apart");
+_Static_assert(ARRAY_SIZE(expjack_accessory_enum) == EXP_ACC_UNKNOWN + 1,
+	       "the Accessory pot and enum exp_accessory have drifted apart");
 
 //
 // The jack's pins, handed to whatever the setting says is on them.
@@ -450,7 +450,7 @@ static void init_exp_switch(int sw)
 //
 static void exp_led_set(bool on)
 {
-	if (settings.exp_jack != EXP_ACC_STOMP_LED)
+	if (expression.accessory != EXP_ACC_STOMP_LED)
 		return;
 	pwm_set_gpio_level(EXP_RING_GPIO, on ? PWM_WRAP : 0);
 }
@@ -461,17 +461,17 @@ static void exp_led_set(bool on)
 //
 static unsigned int exp_wiper_gpio(void)
 {
-	return settings.exp_type ? EXP_RING_GPIO : EXP_TIP_GPIO;
+	return expression.type ? EXP_RING_GPIO : EXP_TIP_GPIO;
 }
 
 static unsigned int exp_supply_gpio(void)
 {
-	return settings.exp_type ? EXP_TIP_GPIO : EXP_RING_GPIO;
+	return expression.type ? EXP_TIP_GPIO : EXP_RING_GPIO;
 }
 
 static int exp_wiper_adc(void)
 {
-	return settings.exp_type ? EXP_RING_ADC : EXP_TIP_ADC;
+	return expression.type ? EXP_RING_ADC : EXP_TIP_ADC;
 }
 
 //
@@ -486,29 +486,15 @@ static int exp_wiper_adc(void)
 //
 static uint16_t exp_treadle_raw;
 
-//
-// The travel the treadle is taken to have.  Full scale until a
-// calibration says otherwise, so an uncalibrated pedal reaches most of
-// its range rather than none of it.
-//
-// It moves only while a calibration is open.  A range that widens on
-// its own is a ratchet: too wide means the treadle stops reaching its
-// own ends, and nothing ever narrows it back, so one bad reading
-// permanently spoils a working setup.  A filter would slow that down
-// rather than stop it - and the reading an unplugged jack gives is not
-// a spike but a steady zero, held for as long as it is unplugged, which
-// any amount of filtering eventually believes.
-//
-static uint16_t treadle_lo = 0, treadle_hi = 4095;
-
 static void exp_treadle_task(void)
 {
-	if (settings.exp_jack != EXP_ACC_TREADLE)
+	if (expression.accessory != EXP_ACC_TREADLE)
 		return;
 	if (exp_sweep_busy())
 		return;		// the sweep has the pins
 	exp_treadle_raw = exp_read(exp_wiper_adc());
 }
+
 //
 // Learning the treadle's travel, and only while asked to.
 //
@@ -524,31 +510,62 @@ static void exp_treadle_task(void)
 //
 #define TREADLE_MIN_SPAN 1000
 
+//
+// A reading back to a pot setting, asked of the same accessor that
+// turns a pot setting into one - so the inverse follows the declared
+// range instead of repeating it, which is how the two would come to
+// disagree.
+//
+static unsigned char raw_to_pot(int raw, unsigned int idx)
+{
+	unsigned char probe[10] = { 0 };
+	float pct = raw * (100.0f / 4095.0f);
+	float lo, hi;
+	int v;
+
+	probe[idx] = 0;
+	lo = idx == EXPJACK_HEEL ? expjack_heel_pot(probe) : expjack_toe_pot(probe);
+	probe[idx] = 120;
+	hi = idx == EXPJACK_HEEL ? expjack_heel_pot(probe) : expjack_toe_pot(probe);
+
+	v = lrintf((pct - lo) * 120.0f / (hi - lo));
+	return v < 0 ? 0 : v > 120 ? 120 : v;
+}
+
 static void exp_calibrate_task(void)
 {
 	static bool learning;
-	static uint16_t prev;
-	uint16_t raw = exp_treadle_raw;
+	static int prev, lo, hi;
+	int raw = exp_treadle_raw;
 
-	if ((bool)settings.exp_range != learning) {
-		learning = settings.exp_range;
+	if ((bool)expression.learning != learning) {
+		learning = expression.learning;
 		if (learning) {
-			treadle_lo = 4095;
-			treadle_hi = 0;
-		} else if (treadle_hi - treadle_lo < TREADLE_MIN_SPAN) {
-			treadle_lo = 0;
-			treadle_hi = 4095;
+			lo = 4095;
+			hi = 0;
+		} else {
+			//
+			// Committed to the pots, so it is stored, drawn
+			// and editable by hand - and written once here
+			// rather than per sample while sweeping.
+			//
+			bool swept = hi - lo >= TREADLE_MIN_SPAN;
+
+			set_effect_pot(&expjack_effect, EXPJACK_HEEL,
+				       swept ? raw_to_pot(lo, EXPJACK_HEEL) : 0);
+			set_effect_pot(&expjack_effect, EXPJACK_TOE,
+				       swept ? raw_to_pot(hi, EXPJACK_TOE) : 120);
 		}
 		prev = raw;
 	}
 
-	if (!learning || settings.exp_jack != EXP_ACC_TREADLE)
+	if (!learning || expression.accessory != EXP_ACC_TREADLE)
 		return;
 
-	if (raw < treadle_lo && prev < treadle_lo)
-		treadle_lo = raw > prev ? raw : prev;
-	if (raw > treadle_hi && prev > treadle_hi)
-		treadle_hi = raw < prev ? raw : prev;
+	if (raw < lo && prev < lo)
+		lo = raw > prev ? raw : prev;
+	if (raw > hi && prev > hi)
+		hi = raw < prev ? raw : prev;
 	prev = raw;
 }
 
@@ -567,7 +584,7 @@ static void init_exp_pins(void)
 	}
 	exp_idle();
 
-	switch (settings.exp_jack) {
+	switch (expression.accessory) {
 	case EXP_ACC_SWITCHES:
 		init_exp_switch(EXP_TIP_SWITCH);
 		init_exp_switch(EXP_RING_SWITCH);
@@ -593,7 +610,7 @@ static void init_exp_pins(void)
 //
 static bool exp_control_offered(unsigned int id)
 {
-	switch (settings.exp_jack) {
+	switch (expression.accessory) {
 	case EXP_ACC_SWITCHES:
 		return id != CTRL_EXP_TREADLE;
 	case EXP_ACC_STOMP_LED:
@@ -615,7 +632,7 @@ static bool exp_follow_setting(void)
 {
 	static int configured = -1;
 
-	if (settings.exp_jack == configured)
+	if (expression.accessory == configured)
 		return false;
 
 	//
@@ -631,7 +648,7 @@ static bool exp_follow_setting(void)
 	if (exp_sweep_busy())
 		return false;
 
-	configured = settings.exp_jack;
+	configured = expression.accessory;
 	init_exp_pins();
 	return true;
 }
