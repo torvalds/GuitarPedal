@@ -523,6 +523,40 @@ static void exp_treadle_task(void)
 #define TREADLE_MIN_SPAN 1000
 
 //
+// And how a sweep says it is finished, so that nobody has to.
+//
+// Not a timer and not a count of swings, but a swing that taught it
+// nothing: reaching one end, then the other, then the first again with
+// the range unmoved throughout.  Somebody who rocks a treadle slowly and
+// carefully is still learning something on every pass and the window
+// stays open for as long as that is true, which a stopwatch could not
+// manage.
+//
+// It cannot tell "this treadle's travel is short" from "you did not push
+// it far enough", and nothing can - the ends of a pot are wherever the
+// mechanism stops. TREADLE_MIN_SPAN is the whole of the defence, the
+// same as it is for a window closed by hand.
+//
+// An end is the outer eighth of what has been seen so far, which moves
+// as the range grows and is meaningless until it is real - hence the
+// span test inside exp_treadle_end() rather than around it.
+//
+#define TREADLE_SETTLED	3
+
+static int exp_treadle_end(int raw, int lo, int hi)
+{
+	int span = hi - lo;
+
+	if (span < TREADLE_MIN_SPAN)
+		return 0;
+	if (raw <= lo + span / 8)
+		return -1;
+	if (raw >= hi - span / 8)
+		return 1;
+	return 0;
+}
+
+//
 // A reading back to a pot setting, asked of the same accessor that
 // turns a pot setting into one - so the inverse follows the declared
 // range instead of repeating it, which is how the two would come to
@@ -563,6 +597,8 @@ static void exp_calibrate_task(void)
 	static int prev, lo, hi;
 	static unsigned char want_lo = 0xff, want_hi = 0xff;
 	static unsigned char shown_lo = 0xff, shown_hi = 0xff;
+	static int at_end, quiet_ends;
+	static bool say_closed;
 	int raw = exp_treadle_raw;
 
 	if ((bool)expression.learning != learning) {
@@ -570,6 +606,8 @@ static void exp_calibrate_task(void)
 		if (learning) {
 			lo = 4095;
 			hi = 0;
+			at_end = 0;
+			quiet_ends = 0;
 
 			//
 			// Forget what the app has been told, so that
@@ -614,6 +652,9 @@ static void exp_calibrate_task(void)
 	// expjack_init() over there, and a sweep would be hundreds.
 	//
 	if (learning && expression.accessory == EXP_ACC_TREADLE) {
+		unsigned char was_lo = want_lo, was_hi = want_hi;
+		int end;
+
 		if (raw < lo && prev < lo)
 			lo = raw > prev ? raw : prev;
 		if (raw > hi && prev > hi)
@@ -622,19 +663,72 @@ static void exp_calibrate_task(void)
 
 		want_lo = raw_to_pot(lo, EXPJACK_HEEL);
 		want_hi = raw_to_pot(hi, EXPJACK_TOE);
+
+		//
+		// Anything learned starts the count again, so the ends
+		// only add up once the range has stopped moving.
+		//
+		// Measured in pot steps rather than converter counts,
+		// which is not a detail: a treadle held against its stop
+		// still dithers by a count or so, and "seen twice
+		// running" lets that widen the range a count at a time.
+		// A step is about thirty-four counts, so the setting has
+		// to actually change before this calls it learning -
+		// and it is the setting, not the reading, that the whole
+		// window exists to arrive at.
+		//
+		if (want_lo != was_lo || want_hi != was_hi) {
+			at_end = 0;
+			quiet_ends = 0;
+		}
+
+		end = exp_treadle_end(raw, lo, hi);
+		if (end && end != at_end) {
+			at_end = end;
+			quiet_ends++;
+		}
+
+		//
+		// Closed the way a hand closes it: by putting the switch
+		// back.  Exactly at the count rather than at or past it,
+		// so this happens once however long the foot keeps going
+		// - and the commit still comes from the transition above,
+		// once core 1 has read the pot back into expression.
+		//
+		if (quiet_ends == TREADLE_SETTLED) {
+			set_effect_pot(&expjack_effect, EXPJACK_CALIBRATE, 0);
+			say_closed = true;
+		}
 	}
 
-	if (want_lo == shown_lo && want_hi == shown_hi)
+	if (want_lo == shown_lo && want_hi == shown_hi && !say_closed)
 		return;
 
-	const uint8_t pair[4] = {
-		EXPJACK_HEEL + 1, want_lo,
-		EXPJACK_TOE + 1, want_hi,
-	};
+	//
+	// The switch goes in the same message when the pedal was the one
+	// that threw it, because a control that moves on its own is the
+	// one thing the app cannot work out for itself.  Not otherwise:
+	// a switch the host just set does not want telling about it.
+	//
+	uint8_t pairs[3 * 2];
+	int n = 0;
 
-	if (sysex_echo_pots(EXPJACK_EFFECT_ID, pair, 2)) {
+	if (say_closed) {
+		pairs[2 * n] = EXPJACK_CALIBRATE + 1;
+		pairs[2 * n + 1] = 0;
+		n++;
+	}
+	pairs[2 * n] = EXPJACK_HEEL + 1;
+	pairs[2 * n + 1] = want_lo;
+	n++;
+	pairs[2 * n] = EXPJACK_TOE + 1;
+	pairs[2 * n + 1] = want_hi;
+	n++;
+
+	if (sysex_echo_pots(EXPJACK_EFFECT_ID, pairs, n)) {
 		shown_lo = want_lo;
 		shown_hi = want_hi;
+		say_closed = false;
 	}
 }
 

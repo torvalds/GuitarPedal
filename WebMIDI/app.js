@@ -237,6 +237,11 @@ function expAutoOption(potDef, select, effId, potIdx) {
 // treadle rocked at a screen that says nothing looks exactly like a jack
 // that is not reading, which is what this is for.
 //
+// It does not say to switch it off afterwards, because the pedal does
+// that itself once a swing stops teaching it anything - and the switch
+// going off on its own is the message arriving, so saying it here as
+// well would be an instruction that is already carried out.
+//
 // Under the switch rather than in a dialog on purpose.  The two controls
 // worth watching while it happens are Heel and Toe, which move on their
 // own as the pedal learns - see exp_calibrate_task() - and a window over
@@ -250,7 +255,7 @@ function expCalibrateSaid(box) {
     // script fires nothing and the pedal can hold this switch too.
     box.onValue = () => {
         said.textContent = box.checked
-            ? 'Rock the treadle heel to toe, then switch this off.' : '';
+            ? 'Rock the treadle heel to toe a few times.' : '';
     };
     box.onValue();
 

@@ -48,11 +48,17 @@
 // unplugged jack does not give a spike but a steady zero, held for as
 // long as it is unplugged, which any filter eventually believes.
 //
+// Opened by hand and closed by either: the window shuts itself once a
+// swing has added nothing to what it knows, which is a different claim
+// from "it opens itself" and leaves the ratchet argument intact.
+//
 // POT: "Calibrate" BOOL = Off
 // NEEDS: ACCESSORY = Expression
-// INFO: Switch this on, rock the treadle end to end, and switch it off
-// INFO: again. Nothing else moves the range, so unplugging the pedal or
-// INFO: standing on it cannot spoil a setting that works.
+// INFO: Switch this on and rock the treadle end to end a few times. It
+// INFO: switches itself off once a swing has taught it nothing new, and
+// INFO: you can switch it off yourself at any point. Nothing else moves
+// INFO: the range, so unplugging the pedal or standing on it cannot
+// INFO: spoil a setting that works.
 //
 // Where that learning ends up, as a percentage of the converter's
 // range rather than in counts, because a percentage is a number
