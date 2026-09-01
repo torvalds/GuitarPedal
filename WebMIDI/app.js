@@ -218,6 +218,7 @@ function expAutoOption(potDef, select, effId, potIdx) {
                 return;
             }
             select.value = verdict;
+            if (select.onValue) select.onValue();
             said.textContent = '';
             sendSysex([SYSEX_CMD.PARAM_UPDATE, effId, potIdx + 1, verdict]);
         };
@@ -255,6 +256,58 @@ function expCalibrateSaid(box) {
 
     box.addEventListener('change', box.onValue);
     return said;
+}
+
+//
+// Controls that only mean something under some other control's setting.
+//
+// The effect says which - 'NEEDS: ACCESSORY = Expression' in the header,
+// carried through in the schema as a pot index and a value - so the app
+// does not have to recognise any particular effect to know that four of
+// the expression jack's five controls are about a treadle and do nothing
+// without one.  Its own DSP has always ignored them; this is the same
+// fact, told to the other end.
+//
+// Hidden rather than disabled.  A greyed-out row still asks to be read
+// and still has to be explained; a control that is not there is not a
+// question.  What makes that safe is that the pot it depends on is
+// always visible, so there is never a setting with nowhere to reach it
+// from.
+//
+// Wired after every pot of the effect exists, because a pot may be gated
+// by one declared below it.
+//
+function applyPotGates(effect, idx, potDivs) {
+    const watched = new Map();
+
+    effect.pots.forEach((pot, pIdx) => {
+        const div = potDivs[pIdx];
+        if (!pot.needs || !div)
+            return;
+
+        const gate = ccToElementMap.get(`eff-${idx}-pot-${pot.needs.pot}`);
+        if (!gate)
+            return;
+
+        if (!watched.has(gate))
+            watched.set(gate, []);
+        watched.get(gate).push(() => {
+            const at = gate.type === 'checkbox' ? (gate.checked ? 1 : 0)
+                                                : Number(gate.value);
+            div.classList.toggle('gated-off', at !== pot.needs.value);
+        });
+    });
+
+    watched.forEach((tests, gate) => {
+        const run = () => tests.forEach((t) => t());
+        const before = gate.onValue;
+
+        // Setting .value from script fires nothing, so the pedal's own
+        // writes and the Auto probe both come through here instead.
+        gate.onValue = () => { if (before) before(); run(); };
+        gate.addEventListener('change', run);
+        run();
+    });
 }
 
 function findMidiChannelPot() {
@@ -679,6 +732,7 @@ function applyPotValue(effId, potIdx, val) {
         if (el.onValue) el.onValue();
     } else if (el.tagName === 'SELECT') {
         el.value = val;
+        if (el.onValue) el.onValue();
     } else if (el.type === 'range') {
         el.value = val;
         const valDisplay = el.parentElement.querySelector('.pot-value');
@@ -3755,6 +3809,8 @@ function renderUI() {
             (eqFooter || controls).appendChild(mixDiv);
         }
 
+        const potDivs = [];
+
         effect.pots.forEach((pot, pIdx) => {
             const potIdKey = `eff-${idx}-pot-${pIdx}`;
 
@@ -3764,6 +3820,7 @@ function renderUI() {
 
             const potDiv = document.createElement('div');
             potDiv.className = 'pot-control';
+            potDivs[pIdx] = potDiv;
 
             const label = document.createElement('div');
             label.className = 'pot-label';
@@ -3905,6 +3962,8 @@ function renderUI() {
                 eqFooter.appendChild(potDiv);
             }
         });
+
+        applyPotGates(effect, idx, potDivs);
 
         if (isEq) {
             //

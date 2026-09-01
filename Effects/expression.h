@@ -18,6 +18,13 @@
 // INFO: What is on the jack. Auto asks the pedal to look, and writes
 // INFO: what it found here; you can also just say.
 //
+// Everything below this is about a treadle and does nothing without one,
+// so each of them says so and the app can stop drawing them.  The pedal
+// has always ignored them - exp_calibrate_task() gives up unless the
+// accessory is a treadle - which is exactly the kind of agreement that
+// only one half of ever gets updated, so it is written down once here
+// and both halves read it.
+//
 // Which contact an expression pedal drives, since the two conventions
 // disagree and a plug cannot say which it is.  Getting it wrong still
 // sweeps the full range, so "does it move" cannot pick between them -
@@ -25,6 +32,7 @@
 // half travel.
 //
 // POT: "Type" ENUM(Roland Yamaha) = Roland
+// NEEDS: ACCESSORY = Expression
 // INFO: Roland and Boss put the wiper on the tip; Yamaha and Korg put
 // INFO: it on the ring. If the treadle does everything in the first
 // INFO: half of its travel, it is the other one.
@@ -41,6 +49,7 @@
 // long as it is unplugged, which any filter eventually believes.
 //
 // POT: "Calibrate" BOOL = Off
+// NEEDS: ACCESSORY = Expression
 // INFO: Switch this on, rock the treadle end to end, and switch it off
 // INFO: again. Nothing else moves the range, so unplugging the pedal or
 // INFO: standing on it cannot spoil a setting that works.
@@ -56,7 +65,9 @@
 // each doubles what a 0..120 pot can carry: 0.5% a step.
 //
 // POT: "Heel" LINEAR(0 60) = 0 %
+// NEEDS: ACCESSORY = Expression
 // POT: "Toe" LINEAR(40 100) = 100 %
+// NEEDS: ACCESSORY = Expression
 //
 // Which pots the app has to be able to find rather than merely show: one
 // so that Auto can offer what the probe found, and one so that switching

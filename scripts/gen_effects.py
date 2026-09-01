@@ -241,6 +241,8 @@ def generate(audio_dir, out_h, out_js, out_md):
         # Match: // POT: "Name" CURVE(a b c) = 1.0 Unit
         pot_re = re.compile(r'//[ \t]*POT:[ \t]*"([^"]+)"[ \t]+(LINEAR|FREQUENCY|SQUARED|EXPONENTIAL|RAW|ENUM|BOOL)(?:\(([^)]+)\))?(?:[ \t]*=[ \t]*(\S+))?(?:[ \t]+(\S+))?[ \t]*$')
         info_re = re.compile(r'//[ \t]*INFO:[ \t]*(.*?)[ \t]*$')
+        needs_re = re.compile(r'//[ \t]*NEEDS:[ \t]*([A-Z0-9_]+)[ \t]*'
+                              r'=[ \t]*(\S+)[ \t]*$')
 
         pots = []
         open_pot = None     # the pot an INFO: line would belong to
@@ -265,6 +267,29 @@ def generate(audio_dir, out_h, out_js, out_md):
                     raise SystemExit(f"{header_path}:{lineno}: INFO: does not "
                                      f"follow a POT: line")
                 open_pot['info'].append(info.group(1))
+                continue
+
+            #
+            # When this control is worth showing at all.  'NEEDS:
+            # ACCESSORY = Expression' says the pot is meaningless
+            # unless the Accessory pot reads Expression, which is a
+            # fact about the effect and so belongs beside it - the app
+            # was the only thing that could know it, and the only way
+            # it could have known was by matching a name.
+            #
+            # Attached to the pot above it, exactly as INFO: is, and
+            # resolved once every pot has been seen: a pot may perfectly
+            # well be gated by one declared after it.
+            #
+            needs = needs_re.match(line)
+            if needs:
+                if not open_pot:
+                    raise SystemExit(f"{header_path}:{lineno}: NEEDS: does "
+                                     f"not follow a POT: line")
+                if open_pot['needs']:
+                    raise SystemExit(f"{header_path}:{lineno}: NEEDS: given "
+                                     f"twice for '{open_pot['label']}'")
+                open_pot['needs'] = (needs.group(1), needs.group(2), lineno)
                 continue
 
             m = pot_re.match(line)
@@ -319,6 +344,7 @@ def generate(audio_dir, out_h, out_js, out_md):
                 'enum': enum_list,
                 'default': default_val,
                 'info': [],
+                'needs': None,
             }
             pots.append(open_pot)
 
@@ -367,6 +393,26 @@ def generate(audio_dir, out_h, out_js, out_md):
         # be recounted every time the POT: lines above it moved.
         #
         by_ident = {pot['ident'].upper(): n for n, pot in enumerate(pots)}
+
+        for pot in pots:
+            if not pot['needs']:
+                continue
+            which, value, lineno = pot['needs']
+            if which not in by_ident:
+                raise SystemExit(f"{header_path}:{lineno}: NEEDS: '{which}' "
+                                 f"does not name one of this effect's pots "
+                                 f"({', '.join(by_ident) or 'it has none'})")
+            gate = pots[by_ident[which]]
+            if gate is pot:
+                raise SystemExit(f"{header_path}:{lineno}: NEEDS: '{which}' "
+                                 f"is the pot it would be gating")
+            if not gate['enum'] or value not in gate['enum']:
+                raise SystemExit(f"{header_path}:{lineno}: NEEDS: '{which}' "
+                                 f"has no value '{value}' "
+                                 f"({' '.join(gate['enum'] or []) or 'not an enumeration'})")
+            pot['needs'] = {'pot': by_ident[which],
+                            'value': gate['enum'].index(value)}
+
         graph_match = re.search(r'//[ \t]*GRAPH:[ \t]*([A-Z0-9._: \t]*)', content)
         graph = []
 
@@ -546,6 +592,7 @@ def generate(audio_dir, out_h, out_js, out_md):
                 "default": pot['default'],
                 "defaultPot": pot['pot_val'],
                 "enum": pot['enum'],
+                "needs": pot['needs'],
                 "info": pot['info']
             })
 

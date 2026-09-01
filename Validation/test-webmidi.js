@@ -45,9 +45,13 @@ function check(what, ok, detail) {
 //
 const byId = new Map();
 
-function element(id) {
+function element(id, tag) {
     const classes = new Set();
     const el = {
+        // The app asks, to tell a menu from a slider when a value
+        // arrives from the pedal - so a node with no tag is a node that
+        // silently takes neither path.
+        tagName: (tag || '').toUpperCase(),
         children: [],
         parentElement: null,
         style: {},
@@ -124,7 +128,7 @@ for (const m of fs.readFileSync(path.join(WEB, 'index.html'), 'utf8')
 
 global.document = {
     getElementById: (id) => byId.get(id) || null,
-    createElement: () => element(undefined),
+    createElement: (tag) => element(undefined, tag),
     // Enough of a node to be appended and to carry its text
     createTextNode: (text) => ({ textContent: text, parentElement: null }),
     querySelector: () => element('?'),
@@ -727,6 +731,34 @@ if (boolEff) {
 
     app.handleSysex([0xF0, 0x7D, 0x03, boolEff.id, boolPot + 1, 0, 0xF7]);
     check('and throw it back', boxes[0] && boxes[0].checked === false);
+
+    //
+    // A pot that says NEEDS: is drawn only while the pot it names reads
+    // the value it names.  Driven from the pedal's side, which is the
+    // half that fires no event of its own and so is the half that breaks.
+    //
+    const gated = boolEff.pots.filter((p) => p.needs);
+    const offNow = () => descend(cardOf(boolEff))
+          .filter((n) => n.classes.has('gated-off')).length;
+
+    check('the schema gates something on another pot', gated.length > 0);
+
+    if (gated.length) {
+        const gate = gated[0].needs;
+
+        check('a control whose condition is unmet is not drawn',
+              offNow() === gated.length, `${offNow()} of ${gated.length}`);
+
+        app.handleSysex([0xF0, 0x7D, 0x03, boolEff.id,
+                         gate.pot + 1, gate.value, 0xF7]);
+        check('and comes back when the pedal says the condition is met',
+              offNow() === 0, `${offNow()} still hidden`);
+
+        app.handleSysex([0xF0, 0x7D, 0x03, boolEff.id,
+                         gate.pot + 1, gate.value ? 0 : 1, 0xF7]);
+        check('and goes again when it stops being met',
+              offNow() === gated.length, `${offNow()} of ${gated.length}`);
+    }
 }
 
 //
