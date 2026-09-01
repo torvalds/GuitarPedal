@@ -99,8 +99,19 @@ function actionDef(v) {
 // end's job: a control that turns can only drive a parameter, and one
 // that clicks can do anything except that.
 //
+//
+// A knob and a treadle both hand over a value; a switch hands over a
+// moment.  Which of the two it is decides what is worth binding to it,
+// and the pedal is what says which.
+//
+function isContinuous(ctrl) {
+    const kind = controlDef(ctrl).kind;
+
+    return kind === 'turn' || kind === 'pedal';
+}
+
 function actionsFor(ctrl) {
-    return ACTIONS.filter(a => controlDef(ctrl).kind === 'turn'
+    return ACTIONS.filter(a => isContinuous(ctrl)
                           ? (a.v === ACT.NONE || a.v === ACT.POT)
                           : a.v !== ACT.POT);
 }
@@ -2270,7 +2281,7 @@ function valueControl(pot, val, onChange) {
 function newRule(ctrl) {
     const t = potTargets()[0];
 
-    if (controlDef(ctrl).kind === 'turn')
+    if (isContinuous(ctrl))
         return { control: ctrl, action: ACT.POT,
                  effect: t ? t.effId : 0, pot: t ? t.pot : 0, val: [0, 0] };
     return { control: ctrl, action: ACT.TOGGLE_POT,

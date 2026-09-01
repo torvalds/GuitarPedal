@@ -246,8 +246,23 @@ check('and is found by id rather than by position',
 //
 // Which actions are worth offering follows the kind the pedal gave.
 //
+app.handleIdentity(identity({ controls: [
+    { id: 0, name: 'Knob \u2014 turn', kind: 'turn' },
+    { id: 3, name: 'Footswitch \u2014 press', kind: 'click' },
+    { id: 9, name: 'Treadle', kind: 'pedal' },
+] }));
+
 const turnActs = app.actionsFor(0).map(a => a.v);
 const clickActs = app.actionsFor(3).map(a => a.v);
+const pedalActs = app.actionsFor(9).map(a => a.v);
+
+//
+// A treadle hands over a value just as a knob does, so it gets a knob's
+// actions.  It reads as neither 'turn' nor a click, which is exactly
+// how it came to be offered everything except the one thing that works.
+//
+check('a treadle is offered what a knob is offered',
+      pedalActs.length === turnActs.length && pedalActs.includes(1));
 check('something that turns can only drive a parameter',
       turnActs.length === 2 && turnActs.includes(1));
 check('and something that clicks can do anything else',
