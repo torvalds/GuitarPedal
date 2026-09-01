@@ -30,6 +30,20 @@
 // INFO: it on the ring. If the treadle feels like it does everything in
 // INFO: the first half of its travel, it is the other one.
 //
+// Learning the treadle's travel, which is not the same as its full
+// scale: the one measured here reaches 3673 of 4095, so a pedal taken
+// at face value gives away the top tenth of whatever it drives.
+//
+// Only while this says so.  A range that widens on its own is a
+// ratchet - too wide means the treadle stops reaching its own ends and
+// nothing ever narrows it back - so it moves inside a window somebody
+// opened and at no other time.
+//
+// POT: "Exp Range" ENUM(Keep Learning) = Keep
+// INFO: Set this to Learning, rock the treadle from end to end, and set
+// INFO: it back to Keep. Nothing else moves the range, so unplugging the
+// INFO: pedal or standing on it cannot spoil a setting that works.
+//
 // Which pot the app has to be able to find rather than merely show.  It
 // filters Control Change and Program Change by this, so the app has to
 // transmit on the same one or bypass, the tuner and scene changes stop
@@ -62,6 +76,7 @@ struct {
 	int tuning;
 	int exp_jack;
 	int exp_type;
+	int exp_range;
 } settings;
 
 static void settings_init(unsigned char pot[10])
@@ -92,6 +107,7 @@ static void settings_init(unsigned char pot[10])
 	settings.tuning = pot[SETTINGS_TUNING];
 	settings.exp_jack = pot[SETTINGS_EXP_JACK];
 	settings.exp_type = pot[SETTINGS_EXP_TYPE];
+	settings.exp_range = pot[SETTINGS_EXP_RANGE];
 }
 
 //

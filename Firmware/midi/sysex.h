@@ -399,7 +399,11 @@ static void sysex_send_telemetry(void)
 		load & 127,			// ...and the bits under it
 #ifdef EXP_TIP_GPIO
 		exp_treadle_raw >> 7,		// where the treadle is, raw
-		exp_treadle_raw & 127,		// ...before any range is known
+		exp_treadle_raw & 127,		// ...and the bits under it
+		treadle_lo >> 7,		// the travel it has been taught
+		treadle_lo & 127,
+		treadle_hi >> 7,
+		treadle_hi & 127,
 #endif
 	};
 

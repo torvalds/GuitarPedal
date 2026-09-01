@@ -287,6 +287,7 @@ int main()
 			send_identity_tx = true;
 		exp_sweep_task();
 		exp_treadle_task();
+		exp_calibrate_task();
 		treadle_moved();
 		sysex_send_exp();
 #endif

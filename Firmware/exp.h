@@ -509,6 +509,48 @@ static void exp_treadle_task(void)
 		return;		// the sweep has the pins
 	exp_treadle_raw = exp_read(exp_wiper_adc());
 }
+//
+// Learning the treadle's travel, and only while asked to.
+//
+// A new end has to be seen twice running before it is taken, and the
+// less extreme of the two is what is kept, so a single stray reading
+// can never set one.  Cheap, and the window is short enough that the
+// real protection is the window itself.
+//
+// Closing on a range too small to be a sweep puts full scale back
+// rather than keeping something unusable - that is what "you did not
+// actually rock it" looks like, and it should not leave the treadle
+// driving a tenth of a pot.
+//
+#define TREADLE_MIN_SPAN 1000
+
+static void exp_calibrate_task(void)
+{
+	static bool learning;
+	static uint16_t prev;
+	uint16_t raw = exp_treadle_raw;
+
+	if ((bool)settings.exp_range != learning) {
+		learning = settings.exp_range;
+		if (learning) {
+			treadle_lo = 4095;
+			treadle_hi = 0;
+		} else if (treadle_hi - treadle_lo < TREADLE_MIN_SPAN) {
+			treadle_lo = 0;
+			treadle_hi = 4095;
+		}
+		prev = raw;
+	}
+
+	if (!learning || settings.exp_jack != EXP_ACC_TREADLE)
+		return;
+
+	if (raw < treadle_lo && prev < treadle_lo)
+		treadle_lo = raw > prev ? raw : prev;
+	if (raw > treadle_hi && prev > treadle_hi)
+		treadle_hi = raw < prev ? raw : prev;
+	prev = raw;
+}
 
 static void init_exp_pins(void)
 {
