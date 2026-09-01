@@ -7,8 +7,16 @@ const SYSEX_CMD = {
     ROUTING_ORDER: 0x08,
     DIAGNOSTIC: 0x09,
     IDENTITY: 0x0a,
-    TELEMETRY: 0x0b
+    TELEMETRY: 0x0b,
+    EXP_PROBE: 0x0e
 };
+
+//
+// How many readings a probe reply carries before the two bytes that say
+// what it made of them.  Part of the layout the version byte names; the
+// reply is append-only, so anything later goes after these.
+//
+const EXP_READINGS = 7;
 
 //
 // Actions must match enum bind_action in bindings.h.  The controls come
@@ -156,6 +164,58 @@ let midiChannelRef = null;
 // channel 1 it would have got before. Nothing looks for the label any
 // more, which is the point.
 //
+//
+// Detection, as an extra entry in the setting rather than a control of
+// its own.
+//
+// Picking it is asking a question, so nothing is stored: the pedal is
+// probed, the answer is written to the setting, and the menu settles on
+// what was found.  What changed is the thing being looked at, which is
+// the whole of the feedback.
+//
+// A probe that cannot name what is out there leaves the setting alone.
+// EXP_ACC_NONE and EXP_ACC_UNKNOWN are different answers - an empty jack
+// against something unrecognised - and the case that produces the second
+// is a treadle at its heel stop, which feeds nothing back and is not
+// nothing.  Writing "Nothing" there would be confidently wrong and would
+// throw away whatever had been set by hand.
+//
+let expProbeSaw = null;
+
+function expAutoOption(potDef, select, effId, potIdx) {
+    const auto = document.createElement('option');
+
+    auto.value = potDef.enum.length;
+    auto.textContent = 'Auto';
+    select.appendChild(auto);
+
+    const said = document.createElement('div');
+    said.className = 'exp-detect-said';
+
+    select.addEventListener('change', (e) => {
+        if (Number(e.target.value) !== potDef.enum.length)
+            return;
+
+        said.textContent = 'Probing\u2026';
+        expProbeSaw = (verdict, configured) => {
+            const name = potDef.enum[verdict];
+
+            if (name === undefined) {
+                select.value = configured;
+                said.textContent = 'Cannot tell \u2014 rock a treadle '
+                                 + 'and try again.';
+                return;
+            }
+            select.value = verdict;
+            said.textContent = '';
+            sendSysex([SYSEX_CMD.PARAM_UPDATE, effId, potIdx + 1, verdict]);
+        };
+        sendSysex([SYSEX_CMD.EXP_PROBE]);
+    });
+
+    return said;
+}
+
 function findMidiChannelPot() {
     const idx = PEDAL_EFFECTS.findIndex(
         (e) => e.roles && e.roles.CHANNEL !== undefined);
@@ -655,6 +715,13 @@ function handleSysex(data) {
         case SYSEX_CMD.TELEMETRY:
             handleTelemetry(data);
             break;
+
+        case SYSEX_CMD.EXP_PROBE: {
+            const at = 3 + 1 + 2 * EXP_READINGS;
+            if (expProbeSaw && data.length > at + 1)
+                expProbeSaw(data[at], data[at + 1]);
+            break;
+        }
 
         case SYSEX_CMD.DIAGNOSTIC: {
             // Diagnostic Response
@@ -3657,6 +3724,10 @@ function renderUI() {
 
                 potDiv.appendChild(label);
                 potDiv.appendChild(select);
+
+                if (effect.roles && effect.roles.EXPJACK === pIdx)
+                    potDiv.appendChild(
+                        expAutoOption(pot, select, effect.id, pIdx));
             } else {
                 const valDisplay = document.createElement('div');
                 valDisplay.className = 'pot-value';

@@ -284,6 +284,21 @@ input:checked + .slider:before {
 }
 
 /*
+ * What the probe found, under the setting it is about.  Wraps rather
+ * than truncates: the one answer worth reading in full is the one that
+ * says it could not tell and why.
+ */
+/*
+ * Empty unless a probe could not name what it found, so the setting
+ * costs no room at all in the case that works.
+ */
+.exp-detect-said {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/*
  * A pot that can explain itself says so, faintly.  Dotted rather than
  * a cursor change, because half of these are used on a touchscreen
  * where there is no hover and no pointer to change.
