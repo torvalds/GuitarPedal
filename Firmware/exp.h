@@ -266,29 +266,43 @@ static void exp_sweep_task(void)
 	case 1:
 		sweep.out[EXP_FLOAT_RING] = exp_read(EXP_RING_ADC);
 		sweep.out[EXP_FLOAT_TIP] = exp_read(EXP_TIP_ADC);
+		//
+		// Empty both before pulling them up.  A pull-up can only
+		// pull up, so otherwise the reading starts from wherever
+		// the last thing to touch the pin left the capacitor -
+		// this sweep's own driven step and the accessory LED's
+		// PWM both leave it at the rail, and getting down from
+		// there is a discharge the pull-up opposes.  From zero
+		// it is charging, which is the one direction it can do.
+		//
+		exp_drain(EXP_RING_GPIO);
+		exp_drain(EXP_TIP_GPIO);
+		exp_next(1);
+		break;
+	case 2:
 		exp_pullups();
 		exp_next(EXP_SETTLE_PULLUP_MS);
 		break;
-	case 2:
+	case 3:
 		sweep.out[EXP_PULLUP_RING] = exp_read(EXP_RING_ADC);
 		sweep.out[EXP_PULLUP_TIP] = exp_read(EXP_TIP_ADC);
 		exp_drive_begin(EXP_TIP_GPIO, EXP_RING_GPIO);
 		exp_next(1);
 		break;
-	case 3:
+	case 4:
 		exp_drive_end(EXP_TIP_GPIO, EXP_RING_GPIO);
 		exp_next(EXP_SETTLE_DRIVEN_MS);
 		break;
-	case 4:
+	case 5:
 		sweep.out[EXP_DRIVETIP_RING] = exp_read(EXP_RING_ADC);
 		exp_drive_begin(EXP_RING_GPIO, EXP_TIP_GPIO);
 		exp_next(1);
 		break;
-	case 5:
+	case 6:
 		exp_drive_end(EXP_RING_GPIO, EXP_TIP_GPIO);
 		exp_next(EXP_SETTLE_DRIVEN_MS);
 		break;
-	case 6:
+	case 7:
 		sweep.out[EXP_DRIVERING_TIP] = exp_read(EXP_TIP_ADC);
 		//
 		// Nothing to do with the jack.  If the two pins above
@@ -382,6 +396,12 @@ static int exp_classify(const uint16_t r[EXP_NR_READINGS])
 	// One pin reaching the rail means a plug is in: an empty jack
 	// grounds both through its normalling contacts.  One is enough,
 	// because the other may be held down by a switch.
+	//
+	// A TRS cable with nothing on the far end lands here too, and
+	// that is right rather than a miss: an open tip and an open ring
+	// is exactly what a switch box with nothing pressed looks like.
+	// What makes an *empty jack* knowable is the normalling contacts,
+	// and a cable lifts them, so no probe can separate the two.
 	//
 	if (tip_open || ring_open)
 		return EXP_ACC_SWITCHES;
