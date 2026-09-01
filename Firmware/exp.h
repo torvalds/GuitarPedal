@@ -203,6 +203,7 @@ enum {
 //
 static void init_exp_pins(void);
 
+
 //
 // The sweep, as a task rather than a blocking call.
 //
@@ -485,6 +486,21 @@ static int exp_wiper_adc(void)
 //
 static uint16_t exp_treadle_raw;
 
+//
+// The travel the treadle is taken to have.  Full scale until a
+// calibration says otherwise, so an uncalibrated pedal reaches most of
+// its range rather than none of it.
+//
+// It moves only while a calibration is open.  A range that widens on
+// its own is a ratchet: too wide means the treadle stops reaching its
+// own ends, and nothing ever narrows it back, so one bad reading
+// permanently spoils a working setup.  A filter would slow that down
+// rather than stop it - and the reading an unplugged jack gives is not
+// a spike but a steady zero, held for as long as it is unplugged, which
+// any amount of filtering eventually believes.
+//
+static uint16_t treadle_lo = 0, treadle_hi = 4095;
+
 static void exp_treadle_task(void)
 {
 	if (settings.exp_jack != EXP_ACC_TREADLE)
@@ -537,9 +553,11 @@ static bool exp_control_offered(unsigned int id)
 {
 	switch (settings.exp_jack) {
 	case EXP_ACC_SWITCHES:
-		return true;
+		return id != CTRL_EXP_TREADLE;
 	case EXP_ACC_STOMP_LED:
 		return id == CTRL_EXP_TIP_TAP || id == CTRL_EXP_TIP_HOLD;
+	case EXP_ACC_TREADLE:
+		return id == CTRL_EXP_TREADLE;
 	default:
 		return false;
 	}

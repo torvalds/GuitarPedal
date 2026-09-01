@@ -55,6 +55,7 @@ enum control_id {
 	CTRL_EXP_TIP_HOLD,
 	CTRL_EXP_RING_TAP,
 	CTRL_EXP_RING_HOLD,
+	CTRL_EXP_TREADLE,
 	NR_CONTROLS,
 };
 
@@ -86,6 +87,7 @@ struct control_desc {
 
 #define CTRL_TURNS	"turn"
 #define CTRL_CLICKS	"click"
+#define CTRL_PEDAL	"pedal"
 
 static const struct control_desc controls[NR_CONTROLS] = {
 	[CTRL_ROTARY_TURN]	= { "Knob \\u2014 turn",		CTRL_TURNS  },
@@ -98,6 +100,7 @@ static const struct control_desc controls[NR_CONTROLS] = {
 	[CTRL_EXP_TIP_HOLD]	= { "Remote 1 \\u2014 hold",	CTRL_CLICKS },
 	[CTRL_EXP_RING_TAP]	= { "Remote 2 \\u2014 press",	CTRL_CLICKS },
 	[CTRL_EXP_RING_HOLD]	= { "Remote 2 \\u2014 hold",	CTRL_CLICKS },
+	[CTRL_EXP_TREADLE]	= { "Treadle",			CTRL_PEDAL  },
 #endif
 };
 

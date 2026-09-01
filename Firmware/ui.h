@@ -384,6 +384,95 @@ static void fire_control(unsigned int ctrl)
 	}
 }
 
+#ifdef EXP_TIP_GPIO
+//
+// Where the treadle is, as a value for whatever it drives.
+//
+// Absolute where the rotary is relative: a treadle *is* the setting
+// rather than a nudge to it, so quantising it is the whole of the work
+// - and quantising needs hysteresis.  The reading is steady to a count
+// in 4095, but a foot resting on a boundary is not, and one pot step is
+// under a percent of travel: plain rounding would flip between two
+// values for as long as the foot rested there, and send a message for
+// each flip.
+//
+// Having settled on a value, the input has to pass the midpoint and
+// then some before it moves.  A dead band of three quarter-steps leaves
+// half a step of overlap - 10 becomes 11 at 10.75 and goes back at
+// 10.25 - and it is in *steps* rather than counts, so a pot with four
+// positions gets a proportionally wider band, which is what a foot
+// needs and what a fine pot does not.
+//
+// Where the pot already is serves as the state this compares against,
+// so there is none of its own to keep or to get out of step.
+//
+#define TREADLE_DEADBAND 3	// quarter-steps, either side
+
+//
+// ...and it drives only when it moves, which is a different question
+// from whether it disagrees.
+//
+// A treadle that asserted its position on every pass would own whatever
+// it is bound to: the knob and the app could each set that pot and have
+// it stamped back a millisecond later, with nothing to show for it.  A
+// pedal sitting still is not asking for anything.
+//
+// It is also what makes an unplugged jack harmless.  The reading goes
+// to whatever the normalling contacts give and stays there, so it stops
+// asking rather than holding the pot at a value nobody chose.
+//
+// Eight counts is well clear of the one count of jitter, and well
+// inside a pot step - thirty counts on a fine one - so nothing is lost
+// by it.  A slow move accumulates, because this compares against where
+// the treadle was when it last drove something rather than against the
+// previous sample.
+//
+#define TREADLE_MOVE 8
+
+static void treadle_moved(void)
+{
+	static int acted = -1;	// nowhere yet, so the first pass drives
+	int span = treadle_hi - treadle_lo;
+	int raw = exp_treadle_raw;
+
+	if (settings.exp_jack != EXP_ACC_TREADLE || span <= 0)
+		return;
+
+	if (acted >= 0 && raw - acted < TREADLE_MOVE && acted - raw < TREADLE_MOVE)
+		return;
+	acted = raw;
+
+	if (raw < treadle_lo)
+		raw = treadle_lo;
+	else if (raw > treadle_hi)
+		raw = treadle_hi;
+
+	for (unsigned int i = 0; i < nr_rules; i++) {
+		struct rule *r = &rules[i];
+		unsigned int pot, eff_id;
+		struct effect *effect;
+
+		if (r->control != CTRL_EXP_TREADLE || r->action != ACT_POT)
+			continue;
+		if (!(effect = bind_target(r, &pot, &eff_id)))
+			continue;
+
+		const struct pot_range range = target_range(effect, pot);
+		int steps = range.max - range.min;
+
+		if (steps <= 0)
+			continue;
+
+		int want = (raw - treadle_lo) * 4 * steps / span;
+		int now = 4 * (target_value(effect, pot) - range.min);
+
+		if (want - now > TREADLE_DEADBAND || now - want > TREADLE_DEADBAND)
+			set_target(effect, eff_id, pot,
+				   range.min + (want + 2) / 4);
+	}
+}
+#endif
+
 //
 // Whatever the switches are bound to.
 //
