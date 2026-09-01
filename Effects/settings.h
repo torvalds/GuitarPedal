@@ -28,6 +28,12 @@
 //
 // ROLE: CHANNEL:MIDI_CH
 //
+// And which one the probe's answer is about, so the app can offer to
+// apply it.  Found by role for the same reason: the label is what a
+// person reads and is free to change.
+//
+// ROLE: EXPJACK:EXP_JACK
+//
 // Settings "effect" - dummy effect to save various settings
 //
 enum usb_output {
