@@ -61,6 +61,43 @@ enum control_id {
 _Static_assert(NR_CONTROLS <= 32, "physical controls are crowding the id space");
 
 //
+// What each control is, for a host that has to draw it.
+//
+// 'kind' is what decides which actions are worth offering: something
+// that turns can only drive a parameter, something that clicks can do
+// anything else.  Sent rather than assumed, so the app does not carry a
+// second copy of this list that agrees right up until it doesn't.
+//
+// A NULL name is a control this board does not have.  The ids are the
+// same everywhere either way - they travel in saved rules and over the
+// wire, so they are protocol rather than a property of the hardware.
+//
+// The names go out inside JSON over SysEx, which is 7-bit, so anything
+// above ASCII is written as the escape and decoded at the far end.
+//
+struct control_desc {
+	const char *name;
+	const char *kind;
+};
+
+#define CTRL_TURNS	"turn"
+#define CTRL_CLICKS	"click"
+
+static const struct control_desc controls[NR_CONTROLS] = {
+	[CTRL_ROTARY_TURN]	= { "Knob \\u2014 turn",		CTRL_TURNS  },
+	[CTRL_ROTARY_TAP]	= { "Knob \\u2014 press",		CTRL_CLICKS },
+	[CTRL_ROTARY_HOLD]	= { "Knob \\u2014 hold",		CTRL_CLICKS },
+	[CTRL_STOMP_TAP]	= { "Footswitch \\u2014 press",	CTRL_CLICKS },
+	[CTRL_STOMP_HOLD]	= { "Footswitch \\u2014 hold",	CTRL_CLICKS },
+#ifdef EXP_TIP_GPIO
+	[CTRL_EXP_TIP_TAP]	= { "Jack tip \\u2014 press",	CTRL_CLICKS },
+	[CTRL_EXP_TIP_HOLD]	= { "Jack tip \\u2014 hold",	CTRL_CLICKS },
+	[CTRL_EXP_RING_TAP]	= { "Jack ring \\u2014 press",	CTRL_CLICKS },
+	[CTRL_EXP_RING_HOLD]	= { "Jack ring \\u2014 hold",	CTRL_CLICKS },
+#endif
+};
+
+//
 // ...and what a binding is *to*.
 //
 // ACT_POT is the only one that means anything for a control that turns,

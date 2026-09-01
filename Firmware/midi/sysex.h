@@ -171,6 +171,27 @@ static void sysex_send_identity(void)
 	sysex_write_str("}");
 
 	//
+	// The controls this board has, so the app draws what is there
+	// rather than a list of its own.  Which ones exist depends on the
+	// board, and shortly on what is in the expression jack, so it
+	// belongs in this reply rather than in the schema - that one is a
+	// const string in flash and cannot know either.
+	//
+	sysex_write_str(",\"controls\":[");
+	for (unsigned int i = 0, n = 0; i < NR_CONTROLS; i++) {
+		if (!controls[i].name)
+			continue;
+		sysex_write_str(n++ ? ",{\"id\":" : "{\"id\":");
+		sysex_write_num(i);
+		sysex_write_str(",\"name\":\"");
+		sysex_write_str(controls[i].name);
+		sysex_write_str("\",\"kind\":\"");
+		sysex_write_str(controls[i].kind);
+		sysex_write_str("\"}");
+	}
+	sysex_write_str("]");
+
+	//
 	// What is in the save area, read now.  Nothing needs this to
 	// run; it is here so that slots planted with picotool can be
 	// asked about from a shell, which is the whole test rig for the
