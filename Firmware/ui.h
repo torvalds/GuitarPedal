@@ -498,6 +498,41 @@ static void handle_switch_bindings(void)
 #endif
 	};
 
+#ifdef EXP_TIP_GPIO
+	//
+	// Whether the accessory is still there, asked before its switches
+	// are acted on, because unplugging one looks exactly like holding
+	// one down.
+	//
+	// The normalling contacts ground both pins when the plug comes
+	// out, and a grounded pin is a held switch as far as debounce.pio
+	// can tell.  So exp_accessory_gone() asks only while something is
+	// held, which is the one state where a look costs nothing and the
+	// only one where the question arises.
+	//
+	// For a dual stomp the cost is that holding both switches at once
+	// is spent: it drops the accessory instead of firing the two hold
+	// rules.  There is no combined gesture to lose - the tip and the
+	// ring are separate controls - and no probe could tell a foot on
+	// both from an empty jack anyway, which is why this is the trade
+	// and not a bug.
+	//
+	// A stomp box with an LED pays nothing, because the LED answers
+	// the question outright: a held switch and an unplugged jack look
+	// the same on the tip and nothing like each other on the ring.
+	//
+	// This is about the accessory going away.  An accessory that was
+	// never named right in the first place is not this - nothing here
+	// can help, because a wrong answer does not announce itself.  That
+	// one is EXP_SETTLE_MS's job, which is to not conclude until the
+	// jack has stopped moving.
+	//
+	if (exp_accessory_gone()) {
+		exp_switches_dropped();
+		return;
+	}
+#endif
+
 	for (int i = 0; i < ARRAY_SIZE(gestures); i++) {
 		if (!switch_pressed(gestures[i].sw))
 			continue;

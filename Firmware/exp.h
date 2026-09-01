@@ -1023,6 +1023,180 @@ static bool exp_treadle_parked(void)
 	       exp_treadle_raw < EXP_LOW;
 }
 
+//
+// Has a switch box been pulled out?
+//
+// Both pins grounded, which is what the normalling contacts do to an
+// empty jack - and also what a foot on both switches does, and no probe
+// can tell those apart.  So this is not asked continuously.  It is asked
+// once, by handle_switch_bindings(), at the moment a long press arrives:
+// the plug coming out grounds the pins, a grounded pin is a held switch
+// as far as debounce.pio can tell, and a second later it says so.  The
+// unplugging announces itself, and this is the question worth asking
+// about the announcement.
+//
+// Costing nothing the rest of the time is the point.  A switch box that
+// is working was being swept every few seconds to find this out, and
+// every one of those sweeps invented a press - see exp_precharge().
+//
+static bool exp_switches_gone(void)
+{
+	//
+	// Not while a sweep has the pins.  Its drain step grounds both of
+	// them, which is this question's own yes - so a host asking for a
+	// probe while somebody holds a switch would drop the accessory
+	// out from under them.
+	//
+	if (exp_sweep_busy())
+		return false;
+
+	return expression.accessory == EXP_ACC_SWITCHES &&
+	       !gpio_get(EXP_TIP_GPIO) && !gpio_get(EXP_RING_GPIO);
+}
+
+//
+// Has a stomp box with an LED been pulled out?
+//
+// Its tip gives the same long press a dual stomp does, the normalling
+// contacts seeing to that - but a tip that is down is also just somebody
+// standing on the switch, so the ring has to say which.
+//
+// Not by looking for the LED's forward voltage.  An LED with no current
+// through it has none; it has whatever is put across it.  And nothing
+// about the load reaches the converter while the pedal is driving the pin
+// at all, because the output's 50 ohms swamps the 1k in series with the
+// jack - driven, the pin reads the rail whether there is an LED out there
+// or a dead short.
+//
+// So charge it and let go.  What is left a moment later is the whole of
+// the question: an LED holds the charge, blocking below its forward drop
+// and clamping above it, while the normalling contacts drain it through
+// that 1k in a couple of dozen microseconds.  Which is what exp_drain()'s
+// comment describes happening by accident to the float readings, used on
+// purpose instead - and it does not care which way round the LED is,
+// because a diode that never conducts holds the charge too.
+//
+static bool exp_stomp_led_gone(void)
+{
+	uint16_t held;
+
+	// Not while a sweep has the pins, and not for any other accessory
+	if (exp_sweep_busy())
+		return false;
+	if (expression.accessory != EXP_ACC_STOMP_LED)
+		return false;
+
+	//
+	// 50 ohms into 22nF, so the 200us exp_precharge() spends is some
+	// hundreds of time constants.  It lights the LED for that long if
+	// it was dark, which nobody is going to see.
+	//
+	exp_precharge(EXP_RING_GPIO);
+
+	//
+	// Let go - adc_gpio_init() takes the driver and the pulls off - and
+	// give the 1k against the same 22nF, 22us, twenty times over to
+	// take the charge away if there is anywhere for it to go.
+	//
+	adc_gpio_init(EXP_RING_GPIO);
+	busy_wait_us(500);
+	held = exp_read(EXP_RING_ADC);
+
+	exp_led_restore();
+	return held < EXP_LOW;
+}
+
+//
+// How long a switch has to be down before the pedal starts wondering
+// whether it is a switch at all, and how often it wonders again.
+//
+// Longer than a press and shorter than debounce.pio's own long press,
+// which is about 1.23s: 32 by 32 iterations of a loop that takes 12
+// cycles at 10kHz.  So a jack that has gone is dropped before the hold
+// rule it would otherwise fire.
+//
+#define EXP_HELD_MS	1000
+
+//
+// Has the accessory gone, asked while its switch is down?
+//
+// Only while it is down, because that is the one state a plugged-in
+// switch box shares with an empty jack, and the only time a look costs
+// nothing.  That much was the plan all along.
+//
+// But asked on a *level*, and asked again, where it used to hang off the
+// long press.  Two reasons, and the second is the one that bit:
+//
+// A long press fires once.  debounce.pio parks in quietzero afterwards
+// waiting for a release, and an unplugged jack never releases - so a tip
+// that was already grounded for some other reason has spent the only
+// notice there was, and the unplug that follows produces nothing at all.
+//
+// And what is out there can change underneath a pin that never moves.
+// Take a stomp box off the far end of its cable and put a treadle there
+// instead: the tip goes low, because the wiper sits on a track whose
+// ends are the grounded ring and sleeve, and it stays low through the
+// swap and through pulling the plug afterwards.  Only the ring can tell
+// those apart - a treadle's supply pin drains through the pot, an empty
+// jack's through nothing but the 1k - and only by being asked twice.
+//
+static bool exp_accessory_gone(void)
+{
+	static absolute_time_t next_look;
+	static bool down;
+	absolute_time_t now = get_absolute_time();
+	bool low;
+
+	if (exp_sweep_busy())
+		return false;
+
+	switch (expression.accessory) {
+	case EXP_ACC_SWITCHES:
+		low = !gpio_get(EXP_TIP_GPIO) && !gpio_get(EXP_RING_GPIO);
+		break;
+	case EXP_ACC_STOMP_LED:
+		// The ring is driving the LED, so it says what the pedal
+		// is doing rather than what is out there.
+		low = !gpio_get(EXP_TIP_GPIO);
+		break;
+	default:
+		return false;
+	}
+
+	if (!low) {
+		down = false;
+		return false;
+	}
+
+	if (!down) {
+		down = true;
+		next_look = delayed_by_ms(now, EXP_HELD_MS);
+	}
+	if (absolute_time_diff_us(now, next_look) > 0)
+		return false;
+	next_look = delayed_by_ms(now, EXP_HELD_MS);
+
+	return exp_switches_gone() || exp_stomp_led_gone();
+}
+
+//
+// Take it as gone, and let the probing find out what is really there.
+//
+// The pending gestures go with it, including the other switch's - both
+// pins were grounded together, so both state machines are a second into
+// the same long press and the second one would fire on this very pass.
+// exp_follow_setting() tears the state machines down, but not until the
+// next one.
+//
+static void exp_switches_dropped(void)
+{
+	for (int sw = NR_ONBOARD_SWITCHES; sw < NR_SWITCHES; sw++) {
+		switch_clear(sw);
+		switch_clear(LONGPRESS(sw));
+	}
+	exp_set_accessory(EXP_ACC_NONE);
+}
+
 // How often to look at a treadle that is parked. Not continuously: a
 // sweep every 24ms would mean a treadle that never reads anything else.
 #define EXP_RECHECK_MS	1000
