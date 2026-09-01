@@ -7,12 +7,34 @@
 //
 // GLOBAL
 //
-// What is out there.  The pedal does not decide this for itself: a
-// probe blocks nothing but takes 24ms of settling, so it runs when a
-// host asks and never on its own, and what it finds is a proposal
-// written here rather than something acted on.  This value is what the
-// pedal runs from, which is also how you say "a treadle is coming
-// later" while sitting at a desk with nothing plugged in.
+// Whether the pedal is allowed to answer the next question itself.
+//
+// Manual is the original bargain and is still the default: a probe runs
+// when a host asks and never otherwise, and what it finds is a proposal
+// rather than something acted on.  That is what lets you say "a treadle
+// is coming later" while sitting at a desk with nothing plugged in.
+//
+// Auto reports what is out there instead, and the difference is the
+// point: it says "a treadle is coming later" back to you as Nothing,
+// because nothing is what is on the jack.  It still never overwrites an
+// answer it cannot better - a reading consistent with what is set
+// confirms it, and "cannot tell" changes nothing at all - but a setting
+// it *can* better it will, including the one it started up with.
+//
+// So the two are not degrees of the same thing.  Manual holds what you
+// tell it; Auto tells you what is there.
+//
+// POT: "Detect" ENUM(Manual Auto) = Manual
+// INFO: Auto notices what you plug in and unplug, and will overrule a
+// INFO: setting that does not match. It waits for the readings to stop
+// INFO: moving before it decides, so push a plug all the way home in one
+// INFO: go: one left half in is a jack with an open tip and an open
+// INFO: ring, which is a footswitch, and it is not being fooled so much
+// INFO: as told. Unplug and replug it properly if that happens.
+//
+// What is out there.  In Manual this is the setting; in Auto it is both
+// that and the readout, because saying what is on the jack by hand is
+// also how you tell Auto to stop guessing.
 //
 // POT: "Accessory" ENUM(Nothing Footswitches Expression Stomp+LED) = Nothing
 // INFO: What is on the jack. Auto asks the pedal to look, and writes
@@ -86,6 +108,7 @@
 // The expression jack pseudo-effect - what is on it, and how to read it
 
 struct {
+	int detect;
 	int accessory;
 	int type;
 	int learning;
@@ -94,6 +117,7 @@ struct {
 
 static void expjack_init(unsigned char pot[10])
 {
+	expression.detect = pot[EXPJACK_DETECT];
 	expression.accessory = pot[EXPJACK_ACCESSORY];
 	expression.type = pot[EXPJACK_TYPE];
 	expression.learning = pot[EXPJACK_CALIBRATE];

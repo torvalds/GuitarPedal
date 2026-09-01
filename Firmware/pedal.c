@@ -290,6 +290,13 @@ int main()
 		exp_calibrate_task();
 		treadle_moved();
 		sysex_send_exp();
+		//
+		// After sysex_send_exp(), which is how the two of them
+		// share one sweep: a probe the host asked for is taken by
+		// the host, and this starts another.
+		//
+		exp_detect_task();
+		exp_tell_accessory();
 #endif
 		sysex_send_schema();
 		sysex_send_state_dump();

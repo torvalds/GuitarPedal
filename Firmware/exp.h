@@ -163,6 +163,34 @@ static void exp_drain(unsigned int gpio)
 }
 
 //
+// And the same in the other direction, before handing a pin to a switch.
+//
+// The pull-up that holds an idle switch high is the chip's own 56k, and
+// there is 22nF at the jack, so a pin released to it climbs for about
+// twelve milliseconds - EXP_SETTLE_PULLUP_MS is that number, and the
+// sweep waits it out for its own readings.  debounce.pio does not: it
+// opens with 'wait 0 jmppin', a *level*, so a state machine started on a
+// pin still on its way up decides the switch is held and reports a press
+// when the capacitor finally arrives.
+//
+// Which is one invented press per probe, on the tip, because the sweep's
+// last driven step leaves the ring charged and the tip drained.
+//
+// 50 ohms gets there in microseconds where 56k takes twelve
+// milliseconds, and 200us is a couple of hundred time constants of it.
+// It cannot hide a real press: a switch that is genuinely held pulls the
+// pin back down through its own 1k in about 22us, long before the
+// program's first sample a millisecond later.
+//
+static void exp_precharge(unsigned int gpio)
+{
+	gpio_init(gpio);
+	gpio_set_dir(gpio, GPIO_OUT);
+	gpio_put(gpio, 1);
+	busy_wait_us(200);
+}
+
+//
 // One pin driven high as the supply, the other read as the wiper.
 //
 // adc_gpio_init() on the pin being read, gpio_init() on the pin being
@@ -355,6 +383,15 @@ static void exp_sweep_task(void)
 // second copy of the thresholds - and the pedal is the end that has to
 // act on the answer.
 //
+//
+// The Detect pot, whose values are the pedal's own business rather than
+// something to compare a reading against.
+//
+enum {
+	EXP_DETECT_MANUAL,
+	EXP_DETECT_AUTO,
+};
+
 enum exp_accessory {
 	EXP_ACC_NONE,		// an empty jack, grounded by its own normalling
 	EXP_ACC_SWITCHES,	// footswitches shorting tip or ring to sleeve
@@ -520,6 +557,11 @@ static int exp_verdict(const uint16_t r[EXP_NR_READINGS])
 _Static_assert(ARRAY_SIZE(expjack_accessory_enum) == EXP_ACC_UNKNOWN + 1,
 	       "the Accessory pot and enum exp_accessory have drifted apart");
 
+// The same, for Detect - which has no "and something else" value, so the
+// names and the enum are simply the same length.
+_Static_assert(ARRAY_SIZE(expjack_detect_enum) - 1 == EXP_DETECT_AUTO + 1,
+	       "the Detect pot and its enum have drifted apart");
+
 //
 // The jack's pins, handed to whatever the setting says is on them.
 //
@@ -533,6 +575,7 @@ _Static_assert(ARRAY_SIZE(expjack_accessory_enum) == EXP_ACC_UNKNOWN + 1,
 //
 static void init_exp_switch(int sw)
 {
+	exp_precharge(switch_gpio[sw]);
 	init_sw_pin(pio1, switch_gpio[sw]);
 	debounce_program_init(pio1, sw, debounce_offset, switch_gpio[sw]);
 }
@@ -542,11 +585,27 @@ static void init_exp_switch(int sw)
 // (3.3 - Vf)/1k on a board that is already made, so there is not much
 // of it to spend and dimming is not what is short.
 //
+static bool exp_led_lit;
+
 static void exp_led_set(bool on)
 {
 	if (expression.accessory != EXP_ACC_STOMP_LED)
 		return;
+	exp_led_lit = on;
 	pwm_set_gpio_level(EXP_RING_GPIO, on ? PWM_WRAP : 0);
+}
+
+//
+// The same again, for something that borrowed the pin.
+//
+// init_one_pwm_pin() sets the level to zero, and update_ui() would put it
+// back on its next tick - but a lamp that blinks whenever somebody holds
+// the footswitch is not a thing to leave to the timing of another task.
+//
+static void exp_led_restore(void)
+{
+	init_one_pwm_pin(EXP_RING_GPIO);
+	pwm_set_gpio_level(EXP_RING_GPIO, exp_led_lit ? PWM_WRAP : 0);
 }
 
 //
@@ -836,7 +895,9 @@ static void init_exp_pins(void)
 		break;
 	case EXP_ACC_STOMP_LED:
 		init_exp_switch(EXP_TIP_SWITCH);
-		init_one_pwm_pin(EXP_RING_GPIO);
+		// ...with the lamp put back to whatever it was showing,
+		// since a sweep calls this on its way out.
+		exp_led_restore();
 		break;
 	case EXP_ACC_TREADLE:
 		// Parked driven, and left that way to be read from.
@@ -896,6 +957,245 @@ static bool exp_follow_setting(void)
 	configured = expression.accessory;
 	init_exp_pins();
 	return true;
+}
+
+//
+// EXPRESSION JACK, AUTOMATICALLY.  Everything below is the Auto setting
+// of the Detect pot, and does nothing at all in Manual.
+//
+// The whole of the policy is that a probe is only ever run when it costs
+// nothing, and that its answer is only ever taken when it is better than
+// what is already there.  exp_verdict() is the second half of that and
+// is shared with the host's own probe; this is the first half.
+//
+
+//
+// The pedal writing what is on the jack, having found out.
+//
+static void exp_set_accessory(int accessory)
+{
+	if (accessory != expression.accessory)
+		set_effect_pot(&expjack_effect, EXPJACK_ACCESSORY, accessory);
+}
+
+//
+// ...and telling the host, which is a separate job because it can fail.
+//
+// The transmit queue drops a message while it is busy and telemetry keeps
+// it busy several times a second, so one attempt is a coin toss - and
+// nothing else corrects it.  An accessory change sets the identity off,
+// but the app rebuilds its bindings from that without asking for the
+// state again, so a dropped echo leaves its menu showing an accessory the
+// pedal stopped believing in minutes ago.  Which looks exactly like
+// detection being stuck, and is not.
+//
+// So this keeps what the host has been told and says it again until it
+// lands, the same shape the calibration endpoints use.  Outside Auto too:
+// a stale picture is not better for being the host's own fault.
+//
+static void exp_tell_accessory(void)
+{
+	static int told = -1;
+	const uint8_t pair[2] = { EXPJACK_ACCESSORY + 1, expression.accessory };
+
+	if (told == expression.accessory)
+		return;
+	if (sysex_echo_pots(EXPJACK_EFFECT_ID, pair, 1))
+		told = expression.accessory;
+}
+
+//
+// Is a treadle sitting at the bottom of its travel?
+//
+// Which is when it may be probed, and only then.  A sweep takes the pins
+// and the treadle's value freezes for its length: invisible at the
+// bottom, where it already is and where the driven pin settles back to
+// the same place, and a hole in whatever it drives anywhere else.
+//
+// A treadle whose heel stop reads above EXP_LOW is a treadle whose
+// unplugging is never noticed.  That is a miss rather than a wrong
+// answer, and the same threshold decides "this pin is at the bottom of
+// its range" everywhere else here.
+//
+static bool exp_treadle_parked(void)
+{
+	return expression.accessory == EXP_ACC_TREADLE &&
+	       exp_treadle_raw < EXP_LOW;
+}
+
+// How often to look at a treadle that is parked. Not continuously: a
+// sweep every 24ms would mean a treadle that never reads anything else.
+#define EXP_RECHECK_MS	1000
+
+//
+// Whether a sweep may run at all without costing something.
+//
+// An empty jack has nothing to interrupt.  A treadle only while it is
+// parked, since a sweep freezes its value for its own length - invisible
+// at the bottom, a hole in whatever it drives anywhere else.  A switch
+// accessory only while nothing is held: restarting a state machine in
+// the middle of a press loses the quiet-until-release debounce.pio keeps
+// in quietzero, and the foot coming off would report a second time.
+//
+// The tip carries a switch on both switch accessories; the ring does on
+// a dual stomp and is the lamp on the other, and a lamp has no press to
+// lose.
+//
+static bool exp_probe_free(void)
+{
+	switch (expression.accessory) {
+	case EXP_ACC_NONE:
+		return true;
+	case EXP_ACC_TREADLE:
+		return exp_treadle_parked();
+	case EXP_ACC_SWITCHES:
+		return gpio_get(EXP_TIP_GPIO) && gpio_get(EXP_RING_GPIO);
+	case EXP_ACC_STOMP_LED:
+		return gpio_get(EXP_TIP_GPIO);
+	}
+	return false;
+}
+
+//
+// When detection is finished, which is not the same as when it has an
+// answer.
+//
+// Agreeing on a verdict was the wrong test.  A verdict is a bucket, and
+// a plug on its way into the jack sits in one for a long time while it
+// is still moving: the contacts leave the normalling contacts before
+// they meet the plug's conductors, so "tip open, ring open" happens
+// during an insertion and is also exactly a switch box at rest.  Eleven
+// consecutive sweeps agreeing it is a switch box said nothing at all
+// about whether the plug had arrived, and sampling more often or further
+// apart is the same wrong question asked again.
+//
+// What separates being inserted from inserted is that the readings stop
+// moving.  So that is the test, and it is about the world rather than
+// about our own name for it.
+//
+// EXP_STEADY is against about a count of jitter on this converter, and
+// the nearest two states this has to tell apart are 69 and 812.  There
+// is a lot of room in between.
+//
+#define EXP_STEADY	64
+#define EXP_SETTLE_MS	1000
+
+static bool exp_readings_alike(const uint16_t *a, const uint16_t *b)
+{
+	//
+	// The four that mean something.  The float pair is residual
+	// charge rather than a measurement - see the comment on the
+	// reading enum - and the temperature drifts and says nothing
+	// about the jack.
+	//
+	static const uint8_t worth[] = {
+		EXP_PULLUP_RING, EXP_PULLUP_TIP,
+		EXP_DRIVETIP_RING, EXP_DRIVERING_TIP,
+	};
+
+	for (unsigned int i = 0; i < ARRAY_SIZE(worth); i++) {
+		int moved = a[worth[i]] - b[worth[i]];
+
+		if (moved > EXP_STEADY || moved < -EXP_STEADY)
+			return false;
+	}
+	return true;
+}
+
+static void exp_detect_task(void)
+{
+	static uint16_t last[EXP_NR_READINGS];
+	static absolute_time_t steady_since, next_probe;
+	static bool settled;
+	absolute_time_t now = get_absolute_time();
+	unsigned int every = 0;
+
+	if (expression.detect != EXP_DETECT_AUTO)
+		return;
+
+	//
+	// Not in the middle of learning a treadle's travel.  The window
+	// is somebody standing on the pedal with a job half done, which
+	// is no time to start reconsidering what the pedal is.
+	//
+	// A reading already in hand is dropped rather than saved for
+	// afterwards: it would be stale by then, and a result nobody
+	// takes blocks every sweep after it - exp_sweep_start() does
+	// nothing until the last answer has been read.
+	//
+	if (expression.learning) {
+		if (exp_sweep_ready())
+			exp_sweep_take();
+		return;
+	}
+
+	//
+	// Whatever a sweep found.  sysex_send_exp() runs before this and
+	// takes the result it asked for, so whatever is still here is
+	// this task's - and if it took ours, the next pass starts another.
+	//
+	// exp_verdict() is the state machine: it confirms a reading
+	// consistent with what is set, names the jack when it is not, and
+	// answers UNKNOWN rather than guessing.  So finding, losing and
+	// changing an accessory are all the same line - once the jack has
+	// stopped moving under it.
+	//
+	if (exp_sweep_ready()) {
+		const uint16_t *now_read = exp_sweep_take();
+
+		if (!exp_readings_alike(now_read, last)) {
+			memcpy(last, now_read, sizeof(last));
+			steady_since = now;
+			settled = false;
+		} else if (!settled &&
+			   absolute_time_diff_us(steady_since, now) >
+			   EXP_SETTLE_MS * 1000) {
+			int found = exp_verdict(now_read);
+
+			if (found != EXP_ACC_UNKNOWN)
+				exp_set_accessory(found);
+			settled = true;
+		}
+	}
+
+	//
+	// Nothing below here may look at a pin the sweep is holding: what
+	// gpio_get() reads then is the sweep's own drain or pull-up, and
+	// exp_treadle_raw stopped being updated when the sweep started.
+	//
+	if (exp_sweep_busy())
+		return;
+
+	//
+	// And when to look.
+	//
+	// Until it has settled, as fast as the sweep will go, whatever is
+	// set - including at startup, where what is set came out of the
+	// globals and nobody has looked at it.  After that an empty jack
+	// keeps watching for something to arrive, a parked treadle is
+	// looked at now and again so that unplugging it is noticed, and a
+	// switch accessory is left alone: that one announces its own
+	// departure through the long press the normalling contacts make.
+	//
+	if (settled) {
+		switch (expression.accessory) {
+		case EXP_ACC_NONE:
+			break;
+		case EXP_ACC_TREADLE:
+			every = EXP_RECHECK_MS;
+			break;
+		default:
+			return;
+		}
+	}
+
+	if (!exp_probe_free())
+		return;
+	if (every && absolute_time_diff_us(now, next_probe) > 0)
+		return;
+	next_probe = delayed_by_ms(now, every);
+
+	exp_sweep_start();
 }
 
 static void exp_init(void)
