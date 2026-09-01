@@ -81,9 +81,31 @@ function element(id, tag) {
         insertBefore(c) { el.children.push(c); c.parentElement = el; return c; },
         removeChild(c) { return c; },
         remove() {},
-        addEventListener() {},
-        removeEventListener() {},
-        dispatchEvent() { return true; },
+        //
+        // Real, because a whole class of bug lives on this side of the
+        // line: what the app sends when somebody picks something.  With
+        // these stubbed, every test of a control is a test of how it was
+        // built and none of what it does.
+        //
+        addEventListener(type, fn) {
+            if (!el._on) el._on = new Map();
+            if (!el._on.has(type)) el._on.set(type, []);
+            el._on.get(type).push(fn);
+        },
+        removeEventListener(type, fn) {
+            const fns = el._on && el._on.get(type);
+            if (fns) fns.splice(fns.indexOf(fn), 1);
+        },
+        dispatchEvent(ev) {
+            const fns = el._on && el._on.get(ev.type);
+
+            // A copy: a handler is allowed to remove itself.
+            if (fns)
+                fns.slice().forEach((fn) => fn({ ...ev, target: el,
+                                                 stopPropagation() {},
+                                                 preventDefault() {} }));
+            return true;
+        },
         setAttribute() {},
         getAttribute() { return null; },
         // The same selector has to come back as the same node, or a
@@ -188,7 +210,19 @@ const src = fs.readFileSync(effectsJs, 'utf8') + '\n'
           + fs.readFileSync(path.join(WEB, 'app.js'), 'utf8') + '\n'
           + `;globalThis.__app = { ${WANT.join(', ')} };`
           + `;globalThis.__app.routing = () => currentRouting;`
-          + `;globalThis.__app.controls = () => CONTROLS;`;
+          + `;globalThis.__app.controls = () => CONTROLS;`
+          //
+          // What a control is wired to, and what it puts on the wire.
+          // sendSysex() drops everything while nothing is connected, so
+          // watching what the app sends means giving it somewhere to
+          // send to - and taking it away again, because a send arms a
+          // one-second diagnostic timer that would hold node open.
+          //
+          + `;globalThis.__app.el = (key) => ccToElementMap.get(key);`
+          + `;globalThis.__app.tap = (fn) => {`
+          + `   midiOutput = fn ? { send: fn } : null;`
+          + `   if (!fn && diagnosticTimeout) clearTimeout(diagnosticTimeout);`
+          + ` };`;
 
 //
 // The app logs as it goes, including from promises that settle after this
@@ -759,6 +793,51 @@ if (boolEff) {
         check('and goes again when it stops being met',
               offNow() === gated.length, `${offNow()} of ${gated.length}`);
     }
+}
+
+//
+// A menu entry that is not a value.
+//
+// 'Auto' on the expression jack asks the pedal to go and look, and sits
+// one past the end of the enum so that it cannot be mistaken for a
+// setting.  It was mistaken for one anyway: the menu's own change
+// handler sent whatever was picked, the pedal clamps a parameter to the
+// pot's largest valid value, and so "go and look" arrived as the last
+// name in the list.
+//
+// Driven by dispatching the event a person would cause, because the
+// whole of this bug is on that side: nothing about how the control was
+// built was wrong.
+//
+const roleEff = schema.find((e) => e.roles && e.roles.EXPJACK !== undefined);
+check('the schema has a menu with a command in it', roleEff !== undefined);
+
+if (roleEff) {
+    const pot = roleEff.pots[roleEff.roles.EXPJACK];
+    const menu = app.el(`eff-${schema.indexOf(roleEff)}-pot-${roleEff.roles.EXPJACK}`);
+    const sent = [];
+
+    // [F0 7D cmd ...] - the effect, the pot and the value follow the cmd
+    const cmds = () => sent.map((m) => m[2]);
+
+    app.tap((m) => sent.push(Array.from(m)));
+
+    menu.value = 1;
+    menu.dispatchEvent(new Event('change'));
+    check('picking a value sends it',
+          sent.length === 1 && sent[0][2] === 0x03 && sent[0][5] === 1,
+          JSON.stringify(sent));
+
+    sent.length = 0;
+    menu.value = pot.enum.length;
+    menu.dispatchEvent(new Event('change'));
+
+    check('picking the command asks the pedal to look',
+          cmds().includes(0x0e), cmds().join());
+    check('and sets the pot to nothing at all',
+          !cmds().includes(0x03), JSON.stringify(sent));
+
+    app.tap(null);
 }
 
 //

@@ -3892,6 +3892,25 @@ function renderUI() {
                 ccToElementMap.set(potIdKey, select);
                 select.addEventListener('change', (e) => {
                     const midiVal = parseInt(e.target.value);
+
+                    //
+                    // A menu is allowed to carry an entry that is not a
+                    // value.  'Auto' on the expression jack is one - it
+                    // asks the pedal to go and look, and sits one past
+                    // the end of the enum so that it cannot be mistaken
+                    // for a setting.
+                    //
+                    // Which it was, by this, every time it was picked.
+                    // The pedal clamps a parameter to the pot's largest
+                    // valid value, so "go and look" arrived as the last
+                    // name in the list - Stomp+LED - and the probe that
+                    // followed then reported that as what was
+                    // configured. One press, two wrong answers, and the
+                    // second one looked like a misread jack.
+                    //
+                    if (midiVal >= pot.enum.length)
+                        return;
+
                     sendSysex([SYSEX_CMD.PARAM_UPDATE, effect.id, pIdx+1, midiVal]);
                 });
 
