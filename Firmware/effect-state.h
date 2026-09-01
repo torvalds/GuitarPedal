@@ -99,8 +99,20 @@ typedef uint32_t routing_bitmap_t;
 
 _Static_assert(EFFECT_COUNT <= 32, "routing_bitmap_t is too narrow for this many effects");
 
-// Bits 1 .. EFFECT_COUNT-2, ie everything that can go in the chain.
-#define ROUTABLE_EFFECTS ((routing_bitmap_t)((1u << (EFFECT_COUNT - 1)) - 2))
+//
+// Everything that can go in the chain: all of them but the signal
+// chain, which always runs first and outside it, and anything kept
+// once rather than per scene - something stored once cannot be part of
+// an arrangement that is stored per scene.
+//
+// GLOBAL_EFFECTS comes from the headers rather than from a position in
+// this array.  It used to be "the last one", which was true of the only
+// one there was and would have been quietly wrong for the second.
+//
+#define ALL_EFFECTS ((routing_bitmap_t)((1u << EFFECT_COUNT) - 1))
+#define ROUTABLE_EFFECTS (ALL_EFFECTS & ~((routing_bitmap_t)1 | GLOBAL_EFFECTS))
+
+#define effect_is_global(i) (((GLOBAL_EFFECTS) >> (i)) & 1)
 
 static routing_bitmap_t routing_start(void)
 {

@@ -194,6 +194,17 @@ def generate(audio_dir, out_h, out_js, out_md):
             raise SystemExit(f"{header_path}: COPIES: {copies} - an effect "
                              f"that exists no times is a file you can delete")
 
+        #
+        # Where an effect's pots are kept.  Per scene unless it says
+        # otherwise, and saying otherwise also takes it out of the
+        # chain: something stored once cannot be part of an arrangement
+        # that is stored per scene.
+        #
+        # Declared rather than positional.  It used to be "the last
+        # effect", which was true of the only one there was.
+        #
+        is_global = re.search(r'//[ \t]*GLOBAL[ \t]*$', content, re.M) is not None
+
         def_mix_match = re.search(r'//\s*DEFAULT_MIX:\s*(\S+)', content)
         def_mix = float(def_mix_match.group(1)) if def_mix_match else 1.0
 
@@ -411,6 +422,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             'copies': copies,
             'graph': graph,
             'roles': roles,
+            'is_global': is_global,
             'full_name': full_name,
             'short_name': short_name,
             'priority': priority,
@@ -754,7 +766,16 @@ def generate(audio_dir, out_h, out_js, out_md):
             f.write(f"\t&{e_data['struct_name']},\n")
         f.write("};\n\n")
 
-        f.write(f"#define EFFECT_COUNT {len(effects_data)}\n\n")
+        f.write(f"#define EFFECT_COUNT {len(effects_data)}\n")
+
+        #
+        # Which of them are stored once rather than per scene.  A
+        # bitmask so that asking is one test wherever it is asked, and
+        # so that a second one costs a line in a header.
+        #
+        mask = sum(1 << i for i, e in enumerate(effects_data) if e['is_global'])
+        f.write(f"#define GLOBAL_EFFECTS 0x{mask:x}u\n")
+        f.write(f"#define GLOBAL_EFFECT_COUNT {bin(mask).count('1')}\n\n")
 
     # Generate midi_schema.h next to effect_map.h
     schema_path = os.path.join(os.path.dirname(out_h), "midi_schema.h")
