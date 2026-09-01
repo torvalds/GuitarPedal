@@ -21,9 +21,13 @@
 // hardware.h (the identity reply reports what the probe found), and
 // before ui.h, which calls sysex_echo_pot() and sysex_send_bindings().
 //
-// The one edge that does not fit that order is handle_midi_packet(): it
-// is declared in midi/midi.h and defined here, so that midi/uart.h and
-// usb-device.c can both reach it from where they are.
+// Two edges do not fit that order, and both are declared ahead of here
+// rather than reshuffling the list.  handle_midi_packet() is declared in
+// midi/midi.h, so that midi/uart.h and usb-device.c can both reach it
+// from where they are.  sysex_echo_pot() is declared in exp.h, which is
+// before this and has something to say while a treadle is being
+// calibrated - and only there, because it is static and usb-device.c has
+// no business hearing about it.
 //
 
 #include "midi_schema.h"
@@ -587,19 +591,42 @@ static void pot_batch_send(struct pot_batch *b)
 // dump carries the same value, so the app's picture repairs itself
 // without this having to be reliable.
 //
-static void sysex_echo_pot(int eff, int pot, int val)
+// Which is exactly why several pots at once has to be one call and not
+// several.  'Busy' means the queue is not empty, so the first of two
+// back-to-back echoes fills it and the second is dropped every single
+// time - not occasionally, every time, and always the same one.  A
+// treadle's calibration was sending Heel and then Toe, and Toe never
+// arrived once.  One message carrying both is what the batch format was
+// added for; the singular below is the one-pair case of it.
+//
+// The plural says whether it went, so a caller that can try again knows
+// whether it needs to.
+//
+static bool sysex_echo_pots(int eff, const uint8_t *pairs, int n)
 {
 	struct pot_batch batch;
 
 	if (midi_tx_busy())
-		return;
+		return false;
 
 	pot_batch_start(&batch, eff);
-	pot_batch_add(&batch, pot, val);
+	for (int i = 0; i < n; i++)
+		pot_batch_add(&batch, pairs[2 * i], pairs[2 * i + 1]);
 
 	sysex_tx_start();
 	pot_batch_send(&batch);
-	midi_tx_commit();
+
+	// Which is what committed, not what was queued: a transaction that
+	// ran out of room part way through rewinds, and a caller told 'yes'
+	// about that would never send it again.
+	return midi_tx_commit();
+}
+
+static void sysex_echo_pot(int eff, int pot, int val)
+{
+	const uint8_t pair[2] = { pot, val };
+
+	sysex_echo_pots(eff, pair, 1);
 }
 
 //

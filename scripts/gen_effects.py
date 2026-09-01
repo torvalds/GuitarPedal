@@ -114,7 +114,7 @@ def default_pot_value(pot):
     y = pot['default']
     curve = pot['curve']
 
-    if curve in ('RAW', 'ENUM'):
+    if curve == 'RAW' or pot['enum']:
         return int(round(y))
 
     a, b = 0.0, 1.0
@@ -239,7 +239,7 @@ def generate(audio_dir, out_h, out_js, out_md):
         # It also means a complaint can name the line it is about.
         #
         # Match: // POT: "Name" CURVE(a b c) = 1.0 Unit
-        pot_re = re.compile(r'//[ \t]*POT:[ \t]*"([^"]+)"[ \t]+(LINEAR|FREQUENCY|SQUARED|EXPONENTIAL|RAW|ENUM)(?:\(([^)]+)\))?(?:[ \t]*=[ \t]*(\S+))?(?:[ \t]+(\S+))?[ \t]*$')
+        pot_re = re.compile(r'//[ \t]*POT:[ \t]*"([^"]+)"[ \t]+(LINEAR|FREQUENCY|SQUARED|EXPONENTIAL|RAW|ENUM|BOOL)(?:\(([^)]+)\))?(?:[ \t]*=[ \t]*(\S+))?(?:[ \t]+(\S+))?[ \t]*$')
         info_re = re.compile(r'//[ \t]*INFO:[ \t]*(.*?)[ \t]*$')
 
         pots = []
@@ -274,8 +274,30 @@ def generate(audio_dir, out_h, out_js, out_md):
 
             p_label, p_curve, p_args, p_def, p_unit = m.groups()
 
+            #
+            # A switch is an enumeration whose two states are already
+            # named, and naming them again per pot is how one of them
+            # comes to read "Keep" while its control still draws as Off.
+            # So BOOL takes no arguments: the label on the switch is the
+            # pot's own name, and the states are what a switch's states
+            # are called.
+            #
             enum_list = None
-            if p_curve == 'ENUM' and p_args:
+            if p_curve == 'BOOL':
+                if p_args:
+                    raise SystemExit(f"{header_path}:{lineno}: BOOL takes no "
+                                     f"arguments - its states are Off and On")
+                enum_list = ['Off', 'On']
+            elif p_curve == 'ENUM':
+                #
+                # Refused rather than tolerated, because everything
+                # downstream now asks whether a pot has names rather than
+                # what its curve is called, and an ENUM without any is
+                # the one declaration where those two disagree.
+                #
+                if not p_args:
+                    raise SystemExit(f"{header_path}:{lineno}: ENUM needs its "
+                                     f"values naming - ENUM(One Two Three)")
                 enum_list = p_args.split()
 
             default_val = 0.0
@@ -507,10 +529,10 @@ def generate(audio_dir, out_h, out_js, out_md):
         for pot in e_data['pots']:
             min_v = 0.0
             max_v = 1.0
-            if pot['curve'] != 'ENUM' and len(pot['args']) >= 2:
+            if not pot['enum'] and len(pot['args']) >= 2:
                 min_v = float(pot['args'][0])
                 max_v = float(pot['args'][1])
-            elif pot['curve'] == 'ENUM' and pot['enum']:
+            elif pot['enum']:
                 max_v = float(len(pot['enum']) - 1)
 
             pot['pot_val'] = default_pot_value(pot)
@@ -602,7 +624,7 @@ def generate(audio_dir, out_h, out_js, out_md):
                 fn_name = f"{prefix}_{pot['ident'].lower()}_pot"
                 pot['fn_name'] = fn_name
 
-                if pot['curve'] == 'ENUM' and pot['enum']:
+                if pot['enum']:
                     enum_name = f"{prefix}_{pot['ident'].lower()}_enum"
                     pot['enum_name'] = enum_name
                     f.write(f"static const char *const {enum_name}[] = {{ ")
@@ -627,7 +649,7 @@ def generate(audio_dir, out_h, out_js, out_md):
                 val = f"pot[{pot['const']}]"
                 args_str = ", ".join(pot['args'])
                 sig = f"static inline float {fn_name}(const unsigned char pot[10])"
-                if pot['curve'] == 'RAW' or pot['curve'] == 'ENUM':
+                if pot['curve'] == 'RAW' or pot['enum']:
                     f.write(f"{sig} {{ return {val}; }}\n")
                 elif pot['curve'] == 'LINEAR':
                     f.write(f"{sig} {{ return linear_pot({val}, {args_str}); }}\n")
@@ -676,6 +698,14 @@ def generate(audio_dir, out_h, out_js, out_md):
             struct_name = f"{self_name}_effect"
             e_data['struct_name'] = struct_name
 
+            #
+            # Where this effect sits in effects[], which is what the
+            # wire calls it.  Emitted rather than counted at the call
+            # site for the reason a pot gets a constant: a number that
+            # means "the twentieth one" is right until an effect is
+            # added above it, and wrong silently.
+            #
+            f.write(f"#define {self_name.upper()}_EFFECT_ID {e_data['id']}\n")
             f.write(f"static struct effect {struct_name};\n")
 
             # Declare the two entry points ahead of the header, marked as
@@ -1020,7 +1050,7 @@ def generate(audio_dir, out_h, out_js, out_md):
         for e_idx, e_data in enumerate(effects_data):
             f.write(f"#### {e_data['full_name']} (ID: {e_data['id']})\n\n")
             for p_idx, pot in enumerate(e_data['pots']):
-                if pot['curve'] == 'ENUM' and pot['enum']:
+                if pot['enum']:
                     range_str = ", ".join([f"{i}={v}" for i, v in enumerate(pot['enum'])])
                     input_str = f"Index: {p_idx} (0-{len(pot['enum'])-1}, maps to: {range_str})"
                 elif pot['curve'] == 'RAW':

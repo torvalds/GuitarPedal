@@ -147,20 +147,22 @@ static void routing_end(routing_bitmap_t routable)
 }
 
 //
-// The two effects that always run, asked of ROUTABLE_EFFECTS rather than
+// The effects that always run, asked of ROUTABLE_EFFECTS rather than
 // spelled out again.
 //
 // Effect 0 is [CHAIN] - the trim, the gate and the master volume - which
-// runs ahead of the chain rather than in it, and the last is the settings
-// pseudo-effect, which is not an audio effect at all.  Neither is ever in
+// runs ahead of the chain rather than in it; the rest are the globals,
+// which are not audio effects at all.  None of them is ever in
 // effect_chain[], so "is it routed" is the wrong question to ask about
 // them and always gets the wrong answer.
 //
-// Derived from the routing bitmap instead of testing 0 and EFFECT_COUNT-1
-// by hand so that the two cannot drift apart: whatever is not routable is
-// what always runs, by construction.
+// Derived from the routing bitmap instead of counting from the ends by
+// hand so that the two cannot drift apart: whatever is not routable is
+// what always runs, by construction.  That is not a hypothetical tidiness
+// - this was written when there were exactly two and the second was the
+// last effect, and there are three now.
 //
-// Both happen to be exactly the effects declaring 'MIX: NONE' today, so
+// They happen to be exactly the effects declaring 'MIX: NONE' today, so
 // e->no_mix would answer this correctly - by coincidence.  Nothing stops
 // a routable effect from having no mix, and then it would not.
 //

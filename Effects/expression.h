@@ -40,10 +40,10 @@
 // unplugged jack does not give a spike but a steady zero, held for as
 // long as it is unplugged, which any filter eventually believes.
 //
-// POT: "Calibrate" ENUM(Keep Learning) = Keep
-// INFO: Set this to Learning, rock the treadle end to end, and set it
-// INFO: back to Keep. Nothing else moves the range, so unplugging the
-// INFO: pedal or standing on it cannot spoil a setting that works.
+// POT: "Calibrate" BOOL = Off
+// INFO: Switch this on, rock the treadle end to end, and switch it off
+// INFO: again. Nothing else moves the range, so unplugging the pedal or
+// INFO: standing on it cannot spoil a setting that works.
 //
 // Where that learning ends up, as a percentage of the converter's
 // range rather than in counts, because a percentage is a number
@@ -58,11 +58,13 @@
 // POT: "Heel" LINEAR(0 60) = 0 %
 // POT: "Toe" LINEAR(40 100) = 100 %
 //
-// Which pot the app has to be able to find rather than merely show, so
-// that Auto can offer what the probe found.  By role, because a label
-// is what a person reads and is free to change.
+// Which pots the app has to be able to find rather than merely show: one
+// so that Auto can offer what the probe found, and one so that switching
+// calibration on can say what to do next.  By role, because a label is
+// what a person reads and is free to change.
 //
 // ROLE: EXPJACK:ACCESSORY
+// ROLE: CALIBRATE:CALIBRATE
 //
 // The expression jack pseudo-effect - what is on it, and how to read it
 

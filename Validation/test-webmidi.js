@@ -671,6 +671,65 @@ check('storage that refuses to read still yields the default',
 app.setUiPref('eq.keepOrder', false);   // and refusing to write is not fatal
 
 //
+// A switch pot.  BOOL is drawn as a switch and ENUM as a menu, and the
+// difference is the curve rather than the number of names: the treadle's
+// Type has two of them and is still a menu, because neither of Roland
+// and Yamaha is the "off" one.
+//
+// Checked through the card's own DOM rather than through the map the app
+// keeps, because what went wrong before was the control that got built,
+// not the bookkeeping about it.
+//
+const descend = (el, out = []) => {
+    out.push(el);
+    el.children.forEach((c) => descend(c, out));
+    return out;
+};
+
+const boolEff = schema.find((e) => e.pots.some((p) => p.curve === 'BOOL'));
+check('the schema has a switch to check', boolEff !== undefined);
+
+if (boolEff) {
+    const boolPot = boolEff.pots.findIndex((p) => p.curve === 'BOOL');
+    const nodes = descend(cardOf(boolEff));
+    const boxes = nodes.filter((n) => n.type === 'checkbox');
+    const menus = nodes.filter((n) => n.className === 'enum-select');
+
+    check('a BOOL pot draws a switch',
+          boxes.length === 1, `${boxes.length} switches`);
+    check('and a two-name ENUM beside it still draws a menu',
+          menus.length === boolEff.pots.filter(
+              (p) => p.curve === 'ENUM' && p.enum).length,
+          `${menus.length} menus`);
+
+    //
+    // The pedal throwing it, which is both how a stored setting arrives
+    // and what a scene load looks like.  Setting .checked from script
+    // fires no event, so anything hanging off the switch has to be told
+    // separately - and the standing instruction is the thing that would
+    // be missed, because it is only wrong while nobody is calibrating.
+    //
+    const swDiv = boxes[0] && boxes[0].parentElement
+                           && boxes[0].parentElement.parentElement;
+    const saidOf = () => (swDiv || { children: [] }).children
+          .filter((c) => c.className === 'exp-detect-said')
+          .map((c) => c.textContent).join();
+
+    app.handleSysex([0xF0, 0x7D, 0x03, boolEff.id, boolPot + 1, 1, 0xF7]);
+    check('and the pedal can throw it', boxes[0] && boxes[0].checked === true);
+
+    if (boolEff.roles && boolEff.roles.CALIBRATE === boolPot) {
+        check('a switch the pedal acts on says what to do while it is on',
+              /treadle/.test(saidOf()), saidOf());
+        app.handleSysex([0xF0, 0x7D, 0x03, boolEff.id, boolPot + 1, 0, 0xF7]);
+        check('and stops saying it once it is off', saidOf() === '', saidOf());
+    }
+
+    app.handleSysex([0xF0, 0x7D, 0x03, boolEff.id, boolPot + 1, 0, 0xF7]);
+    check('and throw it back', boxes[0] && boxes[0].checked === false);
+}
+
+//
 // Firmware older than the flag does not say which effects are global,
 // and a cached copy of this app can meet one.  It gets what the rule
 // used to be: the last effect, which is what every schema without the

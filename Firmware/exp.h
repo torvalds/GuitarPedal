@@ -65,6 +65,18 @@
 //
 #include "hardware/adc.h"
 
+//
+// Defined in midi/sysex.h, which comes after this in pedal.c's include
+// list - it has to, because it reports what this decides.  Declared here
+// rather than there so that usb-device.c, which is the other translation
+// unit and includes midi/midi.h, is not told about a static function it
+// will never see a definition of.
+//
+// Learning a treadle's travel is the one thing on this side of that line
+// with something to say to the host while it is happening.
+//
+static bool sysex_echo_pots(int eff, const uint8_t *pairs, int n);
+
 #ifdef EXP_TIP_GPIO
 
 //
@@ -532,10 +544,25 @@ static unsigned char raw_to_pot(int raw, unsigned int idx)
 	return v < 0 ? 0 : v > 120 ? 120 : v;
 }
 
+//
+// Saying, as it goes, what it has learned.
+//
+// One place that tells the app, whatever the reason:
+// 'want' is the pair the app should be showing and 'shown' is the pair
+// it has been told, so a message the queue refused is simply still
+// pending next time round.  Nothing here has to be reliable on its own.
+//
+// The pair goes as one message rather than two calls.  Two would be one
+// endpoint arriving and the other never doing: midi_tx_busy() means the
+// queue is not empty, so the first echo fills it and the second is
+// dropped - every time, and always the same one.
+//
 static void exp_calibrate_task(void)
 {
 	static bool learning;
 	static int prev, lo, hi;
+	static unsigned char want_lo = 0xff, want_hi = 0xff;
+	static unsigned char shown_lo = 0xff, shown_hi = 0xff;
 	int raw = exp_treadle_raw;
 
 	if ((bool)expression.learning != learning) {
@@ -543,30 +570,72 @@ static void exp_calibrate_task(void)
 		if (learning) {
 			lo = 4095;
 			hi = 0;
+
+			//
+			// Forget what the app has been told, so that
+			// whatever this window ends up committing is
+			// sent even if it lands back on the old value.
+			//
+			shown_lo = 0xff;
+			shown_hi = 0xff;
 		} else {
 			//
 			// Committed to the pots, so it is stored, drawn
 			// and editable by hand - and written once here
 			// rather than per sample while sweeping.
 			//
+			// TREADLE_MIN_SPAN above is what "you did not
+			// actually rock it" looks like.
+			//
 			bool swept = hi - lo >= TREADLE_MIN_SPAN;
 
-			set_effect_pot(&expjack_effect, EXPJACK_HEEL,
-				       swept ? raw_to_pot(lo, EXPJACK_HEEL) : 0);
-			set_effect_pot(&expjack_effect, EXPJACK_TOE,
-				       swept ? raw_to_pot(hi, EXPJACK_TOE) : 120);
+			want_lo = swept ? raw_to_pot(lo, EXPJACK_HEEL) : 0;
+			want_hi = swept ? raw_to_pot(hi, EXPJACK_TOE) : 120;
+
+			set_effect_pot(&expjack_effect, EXPJACK_HEEL, want_lo);
+			set_effect_pot(&expjack_effect, EXPJACK_TOE, want_hi);
 		}
 		prev = raw;
 	}
 
-	if (!learning || expression.accessory != EXP_ACC_TREADLE)
+	//
+	// What it has learned so far, told to the app but not written to
+	// the pots.
+	//
+	// Told, because a window somebody has to close by hand is a
+	// window they have to be able to see working - rocking a treadle
+	// at a screen that shows nothing looks exactly like a jack that
+	// is not reading.
+	//
+	// Not written, because the stored pair is what the pedal falls
+	// back on: power lost half way through a sweep should leave the
+	// last calibration that worked rather than half of one.  It also
+	// keeps core 1 out of it - every set_effect_pot() is another
+	// expjack_init() over there, and a sweep would be hundreds.
+	//
+	if (learning && expression.accessory == EXP_ACC_TREADLE) {
+		if (raw < lo && prev < lo)
+			lo = raw > prev ? raw : prev;
+		if (raw > hi && prev > hi)
+			hi = raw < prev ? raw : prev;
+		prev = raw;
+
+		want_lo = raw_to_pot(lo, EXPJACK_HEEL);
+		want_hi = raw_to_pot(hi, EXPJACK_TOE);
+	}
+
+	if (want_lo == shown_lo && want_hi == shown_hi)
 		return;
 
-	if (raw < lo && prev < lo)
-		lo = raw > prev ? raw : prev;
-	if (raw > hi && prev > hi)
-		hi = raw < prev ? raw : prev;
-	prev = raw;
+	const uint8_t pair[4] = {
+		EXPJACK_HEEL + 1, want_lo,
+		EXPJACK_TOE + 1, want_hi,
+	};
+
+	if (sysex_echo_pots(EXPJACK_EFFECT_ID, pair, 2)) {
+		shown_lo = want_lo;
+		shown_hi = want_hi;
+	}
 }
 
 static void init_exp_pins(void)

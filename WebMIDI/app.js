@@ -227,6 +227,36 @@ function expAutoOption(potDef, select, effId, potIdx) {
     return said;
 }
 
+//
+// What to do while a calibration window is open.
+//
+// The pedal only widens the learned range while this switch is on, so
+// the switch is an instruction and not a button: throwing it does
+// nothing visible by itself, and what happens next is up to a foot.  A
+// treadle rocked at a screen that says nothing looks exactly like a jack
+// that is not reading, which is what this is for.
+//
+// Under the switch rather than in a dialog on purpose.  The two controls
+// worth watching while it happens are Heel and Toe, which move on their
+// own as the pedal learns - see exp_calibrate_task() - and a window over
+// the card would cover the only feedback there is.
+//
+function expCalibrateSaid(box) {
+    const said = document.createElement('div');
+    said.className = 'exp-detect-said';
+
+    // Also called from applyPotValue(), because setting .checked from
+    // script fires nothing and the pedal can hold this switch too.
+    box.onValue = () => {
+        said.textContent = box.checked
+            ? 'Rock the treadle heel to toe, then switch this off.' : '';
+    };
+    box.onValue();
+
+    box.addEventListener('change', box.onValue);
+    return said;
+}
+
 function findMidiChannelPot() {
     const idx = PEDAL_EFFECTS.findIndex(
         (e) => e.roles && e.roles.CHANNEL !== undefined);
@@ -646,6 +676,7 @@ function applyPotValue(effId, potIdx, val) {
 
     if (el.type === 'checkbox') {
         el.checked = (val > 0);
+        if (el.onValue) el.onValue();
     } else if (el.tagName === 'SELECT') {
         el.value = val;
     } else if (el.type === 'range') {
@@ -1142,7 +1173,7 @@ function potToValue(pot, val) {
     case 'SQUARED':     return pot.min + p * p * (pot.max - pot.min);
     case 'EXPONENTIAL': return pot.min * Math.pow(pot.max / pot.min, p);
     }
-    return val;                 // RAW and ENUM are already the value
+    return val;                 // RAW and anything named are the value
 }
 
 //
@@ -1151,7 +1182,7 @@ function potToValue(pot, val) {
 // there is, so anything finer is a number the pedal cannot be told.
 //
 function valueToPot(pot, y) {
-    if (pot.curve === 'RAW' || pot.curve === 'ENUM')
+    if (pot.curve === 'RAW' || pot.enum)
         return clampPot(Math.round(y));
 
     const a = pot.min, b = pot.max;
@@ -1300,7 +1331,7 @@ function formatFreqShort(freq) {
 function formatPotValue(pot, val) {
     const y = potToValue(pot, val);
     let displayStr = "";
-    if (pot.curve === 'RAW' || pot.curve === 'ENUM') {
+    if (pot.curve === 'RAW' || pot.enum) {
         displayStr = Math.round(y).toString();
     } else {
         // Drop trailing zeros, max 2 decimals
@@ -2258,8 +2289,14 @@ function bindingSummary(b) {
 }
 
 //
-// One number, drawn the way that pot's own control is drawn: a menu for
-// something enumerated, a slider and a readout for anything else.
+// One number: a menu for something whose values have names, a slider and
+// a readout for anything else.
+//
+// A switch gets the menu rather than a switch, which is the one place
+// this does not draw the pot's own control.  What is being picked here
+// is a value to *set*, and a switch showing On is indistinguishable from
+// a switch that has been asked to mean "set it on" - the menu says which
+// of the two states the rule chose, and keeps saying it.
 //
 // It has to be the pot's own units.  A raw 0-120 would make "toggle
 // between 40 and 80" unanswerable without doing the arithmetic that the
@@ -2269,7 +2306,7 @@ function valueControl(pot, val, onChange) {
     const wrap = document.createElement('div');
     wrap.className = 'binding-value';
 
-    if (pot && pot.curve === 'ENUM' && pot.enum && pot.enum.length) {
+    if (pot && pot.enum && pot.enum.length) {
         const sel = document.createElement('select');
         sel.className = 'menu-select';
         pot.enum.forEach((name, i) => {
@@ -3748,7 +3785,38 @@ function renderUI() {
 
             const initialVal = getInitialPotValue(pot);
 
-            if (pot.curve === 'ENUM' && pot.enum) {
+            //
+            // A switch, drawn as the header's bypass is drawn, because
+            // it is the same kind of thing: one state or the other, with
+            // the pot's own name as the label.  A two-item menu said the
+            // same and made you open it to find out which.
+            //
+            if (pot.curve === 'BOOL') {
+                const toggle = document.createElement('label');
+                toggle.className = 'switch';
+
+                const box = document.createElement('input');
+                box.type = 'checkbox';
+                box.checked = initialVal > 0;
+
+                const knob = document.createElement('span');
+                knob.className = 'slider round';
+
+                toggle.appendChild(box);
+                toggle.appendChild(knob);
+
+                ccToElementMap.set(potIdKey, box);
+                box.addEventListener('change', () => {
+                    sendSysex([SYSEX_CMD.PARAM_UPDATE, effect.id, pIdx+1,
+                               box.checked ? 1 : 0]);
+                });
+
+                potDiv.appendChild(label);
+                potDiv.appendChild(toggle);
+
+                if (effect.roles && effect.roles.CALIBRATE === pIdx)
+                    potDiv.appendChild(expCalibrateSaid(box));
+            } else if (pot.enum) {
                 const select = document.createElement('select');
                 select.className = 'enum-select';
                 pot.enum.forEach((optStr, idx) => {
