@@ -375,10 +375,15 @@ def generate(audio_dir, out_h, out_js, out_md):
         # Nothing here knows what a role means; that is the app's
         # business.  This only carries the fact that a pot has one.
         #
+        # Every ROLE: line, not just the first.  Roles are unrelated to
+        # each other and want their own comment, so they get written on
+        # separate lines - and a second line being quietly ignored is
+        # exactly the silence this is meant to be free of.
         roles = {}
-        role_match = re.search(r'//[ \t]*ROLE:[ \t]*([A-Z0-9_: \t]*)', content)
+        words = ' '.join(m.group(1) for m in
+                         re.finditer(r'//[ \t]*ROLE:[ \t]*([A-Z0-9_: \t]*)', content))
 
-        for word in role_match.group(1).split() if role_match else []:
+        for word in words.split():
             role, _, which = word.partition(':')
             if which not in by_ident:
                 raise SystemExit(f"{header_path}: ROLE: '{word}' does not name "
