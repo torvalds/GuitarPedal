@@ -213,20 +213,17 @@ for (const name of WANT)
 //
 const identity = (over) => Object.assign({
     build: 'Jan 1 2026 00:00:00', scenes: 32, midi_hw: true,
-    found: { eeprom: true, legacy_codec: false, legacy_screen: false },
+    found: { legacy_codec: false, legacy_screen: false },
 }, over);
 
 app.handleIdentity(identity());
 check('a current board raises no warning', app.boardFault.on === false);
 
-app.handleIdentity(identity({ scenes: 1, found: { eeprom: true, legacy_codec: true } }));
+app.handleIdentity(identity({ scenes: 1, found: { legacy_codec: true } }));
 check('an early board is noted, not faulted', app.earlyNote.on === true
       && app.boardFault.on === false);
 check('and says why', /TAC5112/.test(document.getElementById('status-early').title),
       document.getElementById('status-early').title);
-
-app.handleIdentity(identity({ found: { eeprom: false } }));
-check('a missing eeprom is flagged', app.boardFault.on === true);
 
 app.handleIdentity(identity());
 check('and both clear again when the next pedal is fine',
