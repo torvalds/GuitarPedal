@@ -82,6 +82,13 @@ _Static_assert(EFFECT_COUNT <= SCENE_MAX_EFFECTS,
 #define SCENE_VERSION 3
 
 //
+// The globals carry their own, because the two formats change for
+// different reasons and a scene has no business being thrown away by a
+// change to what is kept once.
+//
+#define GLOBALS_VERSION 1
+
+//
 // Keys are 'kind << 8 | index', so a new kind of saved thing costs
 // nothing to add later.
 //
@@ -111,11 +118,21 @@ struct scene_payload {
 	struct rule rules[MAX_RULES];
 };
 
+//
+// Room for more global effects than there are, so that declaring one
+// costs a line in a header rather than a save format.  Sized here and
+// asserted against what the headers actually ask for.
+//
+#define GLOBALS_MAX_EFFECTS 4
+
+_Static_assert(GLOBAL_EFFECT_COUNT <= GLOBALS_MAX_EFFECTS,
+	       "more effects are kept once than the globals slot has room for");
+
 struct globals_payload {
 	uint16_t version;
 	uint8_t nr_rules;
-	uint8_t pad;
-	struct scene_effect settings;
+	uint8_t nr_global;
+	struct scene_effect global[GLOBALS_MAX_EFFECTS];
 
 	//
 	// Which effect each rule target index means, and nothing else -
@@ -146,6 +163,9 @@ _Static_assert(offsetof(struct scene_payload, rules) == 24 + 32 * 24,
 
 _Static_assert(sizeof(struct scene_payload) <= SAVE_PAYLOAD_SIZE,
 	       "a scene does not fit in a slot");
+_Static_assert(offsetof(struct globals_payload, global) == 4, "globals at 4");
+_Static_assert(offsetof(struct globals_payload, effect_ids)
+	       == 4 + GLOBALS_MAX_EFFECTS * 24, "ids follow the effects");
 _Static_assert(sizeof(struct globals_payload) <= SAVE_PAYLOAD_SIZE,
 	       "the globals do not fit in a slot");
 
@@ -300,7 +320,7 @@ static bool load_scene(uint8_t scene_id)
 	// per-scene again.
 	//
 	for (int i = 0; i < EFFECT_COUNT; i++) {
-		if (effects[i] == &settings_effect)
+		if (effect_is_global(i))
 			continue;
 		reset_effect(effects[i]);
 	}
@@ -349,7 +369,7 @@ static bool load_scene(uint8_t scene_id)
 		// scene written before that stops being true does not get
 		// to apply what it kept.
 		//
-		if (eff == &settings_effect)
+		if (effect_is_global(i))
 			continue;
 		scene_load_effect(eff, &scene->effects[i]);
 		for (int n = 0; n < EFFECT_COUNT; n++) {
@@ -403,7 +423,7 @@ static bool save_scene(uint8_t scene_id)
 	//
 	scene->nr_effects = EFFECT_COUNT;
 	for (int i = 0; i < EFFECT_COUNT; i++) {
-		if (effects[i] == &settings_effect)
+		if (effect_is_global(i))
 			continue;
 		scene_save_effect(effects[i], &scene->effects[i]);
 	}
@@ -438,18 +458,36 @@ static bool load_globals(void)
 {
 	const struct globals_payload *globals;
 
-	reset_effect(&settings_effect);
+	for (int i = 0; i < EFFECT_COUNT; i++) {
+		if (effect_is_global(i))
+			reset_effect(effects[i]);
+	}
 
 	nr_global_rules = 0;
 
 	globals = save_read(GLOBALS_KEY);
-	if (!globals || globals->version != SCENE_VERSION) {
+	if (!globals || globals->version != GLOBALS_VERSION) {
 		resolve_rules();
 		return false;
 	}
 
-	if (settings_effect.id_hash == globals->settings.id_hash)
-		scene_load_effect(&settings_effect, &globals->settings);
+	//
+	// By hash rather than by position, for the reason a scene does
+	// it: which effects are kept once can change between the save
+	// and the load, and a global that is no longer one - or was
+	// never this build's - should be left at its defaults rather
+	// than handed somebody else's numbers.
+	//
+	for (int i = 0; i < globals->nr_global && i < GLOBALS_MAX_EFFECTS; i++) {
+		for (int n = 0; n < EFFECT_COUNT; n++) {
+			if (!effect_is_global(n))
+				continue;
+			if (effects[n]->id_hash != globals->global[i].id_hash)
+				continue;
+			scene_load_effect(effects[n], &globals->global[i]);
+			break;
+		}
+	}
 
 	uint8_t remap[SCENE_MAX_EFFECTS];
 
@@ -475,8 +513,13 @@ static bool save_globals(void)
 	struct globals_payload *globals;
 
 	globals = (struct globals_payload *)save_buffer();
-	globals->version = SCENE_VERSION;
-	scene_save_effect(&settings_effect, &globals->settings);
+	globals->version = GLOBALS_VERSION;
+	globals->nr_global = 0;
+	for (int i = 0; i < EFFECT_COUNT; i++) {
+		if (!effect_is_global(i))
+			continue;
+		scene_save_effect(effects[i], &globals->global[globals->nr_global++]);
+	}
 
 	for (int i = 0; i < EFFECT_COUNT; i++)
 		globals->effect_ids[i] = effects[i]->id_hash;

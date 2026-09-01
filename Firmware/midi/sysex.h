@@ -21,9 +21,13 @@
 // hardware.h (the identity reply reports what the probe found), and
 // before ui.h, which calls sysex_echo_pot() and sysex_send_bindings().
 //
-// The one edge that does not fit that order is handle_midi_packet(): it
-// is declared in midi/midi.h and defined here, so that midi/uart.h and
-// usb-device.c can both reach it from where they are.
+// Two edges do not fit that order, and both are declared ahead of here
+// rather than reshuffling the list.  handle_midi_packet() is declared in
+// midi/midi.h, so that midi/uart.h and usb-device.c can both reach it
+// from where they are.  sysex_echo_pot() is declared in exp.h, which is
+// before this and has something to say while a treadle is being
+// calibrated - and only there, because it is static and usb-device.c has
+// no business hearing about it.
 //
 
 #include "midi_schema.h"
@@ -171,6 +175,31 @@ static void sysex_send_identity(void)
 	sysex_write_str("}");
 
 	//
+	// The controls this board has, so the app draws what is there
+	// rather than a list of its own.  Which ones exist depends on the
+	// board, and shortly on what is in the expression jack, so it
+	// belongs in this reply rather than in the schema - that one is a
+	// const string in flash and cannot know either.
+	//
+	sysex_write_str(",\"controls\":[");
+	for (unsigned int i = 0, n = 0; i < NR_CONTROLS; i++) {
+		if (!controls[i].name)
+			continue;
+#ifdef EXP_TIP_GPIO
+		if (i >= CTRL_EXP_TIP_TAP && !exp_control_offered(i))
+			continue;
+#endif
+		sysex_write_str(n++ ? ",{\"id\":" : "{\"id\":");
+		sysex_write_num(i);
+		sysex_write_str(",\"name\":\"");
+		sysex_write_str(controls[i].name);
+		sysex_write_str("\",\"kind\":\"");
+		sysex_write_str(controls[i].kind);
+		sysex_write_str("\"}");
+	}
+	sysex_write_str("]");
+
+	//
 	// What is in the save area, read now.  Nothing needs this to
 	// run; it is here so that slots planted with picotool can be
 	// asked about from a shell, which is the whole test rig for the
@@ -273,7 +302,13 @@ static uint16_t fraction_to_14bit(float f)
 //
 // Twelve bits will not fit in a SysEx data byte, so each reading goes
 // out as seven bits of high and seven of low.  Not a packing scheme,
-// just the only shape available.
+// just the only shape available.  The readings are followed by what the
+// pedal makes of them - see exp_classify() - so that both ends agree
+// without the host keeping its own copy of the thresholds, and then by
+// what the Exp Jack setting currently says.  Those two disagreeing is
+// not an error: the setting is what the pedal runs from and the probe
+// only ever proposes, so showing both is how a host offers the change
+// rather than making it.
 //
 #ifdef EXP_TIP_GPIO
 bool send_exp_tx = false;
@@ -281,6 +316,16 @@ static void sysex_send_exp(void)
 {
 	if (!send_exp_tx)
 		return;
+
+	//
+	// The sweep takes 24ms of settling, so it runs as a task in the
+	// main loop and this waits for it rather than for the pins.
+	// Starting one is ignored while one is already going.
+	//
+	if (!exp_sweep_ready()) {
+		exp_sweep_start();
+		return;
+	}
 	if (midi_tx_busy())
 		return;
 	send_exp_tx = false;
@@ -288,16 +333,23 @@ static void sysex_send_exp(void)
 	static const uint8_t hdr[] = { 0xF0, 0x7D, 0x0E };
 	static const uint8_t trailer[] = { 0xF7 };
 
-	uint16_t reading[EXP_NR_READINGS];
-	uint8_t body[1 + 2 * EXP_NR_READINGS];
+	const uint16_t *reading = exp_sweep_take();
+	uint8_t body[3 + 2 * EXP_NR_READINGS];
 
-	exp_probe(reading);
-
-	body[0] = 1;				// layout version
+	body[0] = 3;				// layout version
 	for (int i = 0; i < EXP_NR_READINGS; i++) {
 		body[1 + 2 * i] = (reading[i] >> 7) & 0x7f;
 		body[2 + 2 * i] = reading[i] & 0x7f;
 	}
+	//
+	// What it is, and what it was said to be.  The first prefers the
+	// second when the reading is consistent with it - see
+	// exp_verify() - so asking a jack that already has a treadle on
+	// it answers "still a treadle" rather than giving up because the
+	// treadle happens to be parked at its heel stop.
+	//
+	body[1 + 2 * EXP_NR_READINGS] = exp_verdict(reading);
+	body[2 + 2 * EXP_NR_READINGS] = expression.accessory;
 
 	sysex_tx_start();
 	sysex_stream_write(hdr, sizeof(hdr));
@@ -349,13 +401,21 @@ static void sysex_send_telemetry(void)
 	uint16_t load = fraction_to_14bit(meter_load);
 
 	const uint8_t body[] = {
-		2,				// layout version
+		3,				// layout version
 		level_to_dbfs(meter_in),	// input peak, before Trim
 		level_to_dbfs(meter_floor),	// the quiet level under it
 		level_to_dbfs(meter_out),	// output peak, after Volume
 		fraction_to_byte(gate),		// 127 open, 0 fully closed
 		load >> 7,			// share of the sample period used
 		load & 127,			// ...and the bits under it
+#ifdef EXP_TIP_GPIO
+		exp_treadle_raw >> 7,		// where the treadle is, raw
+		exp_treadle_raw & 127,		// ...and the bits under it
+		expression.heel >> 7,		// the travel it has been taught
+		expression.heel & 127,
+		expression.toe >> 7,
+		expression.toe & 127,
+#endif
 	};
 
 	sysex_tx_start();
@@ -538,19 +598,42 @@ static void pot_batch_send(struct pot_batch *b)
 // dump carries the same value, so the app's picture repairs itself
 // without this having to be reliable.
 //
-static void sysex_echo_pot(int eff, int pot, int val)
+// Which is exactly why several pots at once has to be one call and not
+// several.  'Busy' means the queue is not empty, so the first of two
+// back-to-back echoes fills it and the second is dropped every single
+// time - not occasionally, every time, and always the same one.  A
+// treadle's calibration was sending Heel and then Toe, and Toe never
+// arrived once.  One message carrying both is what the batch format was
+// added for; the singular below is the one-pair case of it.
+//
+// The plural says whether it went, so a caller that can try again knows
+// whether it needs to.
+//
+static bool sysex_echo_pots(int eff, const uint8_t *pairs, int n)
 {
 	struct pot_batch batch;
 
 	if (midi_tx_busy())
-		return;
+		return false;
 
 	pot_batch_start(&batch, eff);
-	pot_batch_add(&batch, pot, val);
+	for (int i = 0; i < n; i++)
+		pot_batch_add(&batch, pairs[2 * i], pairs[2 * i + 1]);
 
 	sysex_tx_start();
 	pot_batch_send(&batch);
-	midi_tx_commit();
+
+	// Which is what committed, not what was queued: a transaction that
+	// ran out of room part way through rewinds, and a caller told 'yes'
+	// about that would never send it again.
+	return midi_tx_commit();
+}
+
+static void sysex_echo_pot(int eff, int pot, int val)
+{
+	const uint8_t pair[2] = { pot, val };
+
+	sysex_echo_pots(eff, pair, 1);
 }
 
 //

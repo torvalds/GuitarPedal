@@ -114,7 +114,7 @@ def default_pot_value(pot):
     y = pot['default']
     curve = pot['curve']
 
-    if curve in ('RAW', 'ENUM'):
+    if curve == 'RAW' or pot['enum']:
         return int(round(y))
 
     a, b = 0.0, 1.0
@@ -194,6 +194,17 @@ def generate(audio_dir, out_h, out_js, out_md):
             raise SystemExit(f"{header_path}: COPIES: {copies} - an effect "
                              f"that exists no times is a file you can delete")
 
+        #
+        # Where an effect's pots are kept.  Per scene unless it says
+        # otherwise, and saying otherwise also takes it out of the
+        # chain: something stored once cannot be part of an arrangement
+        # that is stored per scene.
+        #
+        # Declared rather than positional.  It used to be "the last
+        # effect", which was true of the only one there was.
+        #
+        is_global = re.search(r'//[ \t]*GLOBAL[ \t]*$', content, re.M) is not None
+
         def_mix_match = re.search(r'//\s*DEFAULT_MIX:\s*(\S+)', content)
         def_mix = float(def_mix_match.group(1)) if def_mix_match else 1.0
 
@@ -228,8 +239,10 @@ def generate(audio_dir, out_h, out_js, out_md):
         # It also means a complaint can name the line it is about.
         #
         # Match: // POT: "Name" CURVE(a b c) = 1.0 Unit
-        pot_re = re.compile(r'//[ \t]*POT:[ \t]*"([^"]+)"[ \t]+(LINEAR|FREQUENCY|SQUARED|EXPONENTIAL|RAW|ENUM)(?:\(([^)]+)\))?(?:[ \t]*=[ \t]*(\S+))?(?:[ \t]+(\S+))?[ \t]*$')
+        pot_re = re.compile(r'//[ \t]*POT:[ \t]*"([^"]+)"[ \t]+(LINEAR|FREQUENCY|SQUARED|EXPONENTIAL|RAW|ENUM|BOOL)(?:\(([^)]+)\))?(?:[ \t]*=[ \t]*(\S+))?(?:[ \t]+(\S+))?[ \t]*$')
         info_re = re.compile(r'//[ \t]*INFO:[ \t]*(.*?)[ \t]*$')
+        needs_re = re.compile(r'//[ \t]*NEEDS:[ \t]*([A-Z0-9_]+)[ \t]*'
+                              r'=[ \t]*(\S+)[ \t]*$')
 
         pots = []
         open_pot = None     # the pot an INFO: line would belong to
@@ -256,6 +269,29 @@ def generate(audio_dir, out_h, out_js, out_md):
                 open_pot['info'].append(info.group(1))
                 continue
 
+            #
+            # When this control is worth showing at all.  'NEEDS:
+            # ACCESSORY = Expression' says the pot is meaningless
+            # unless the Accessory pot reads Expression, which is a
+            # fact about the effect and so belongs beside it - the app
+            # was the only thing that could know it, and the only way
+            # it could have known was by matching a name.
+            #
+            # Attached to the pot above it, exactly as INFO: is, and
+            # resolved once every pot has been seen: a pot may perfectly
+            # well be gated by one declared after it.
+            #
+            needs = needs_re.match(line)
+            if needs:
+                if not open_pot:
+                    raise SystemExit(f"{header_path}:{lineno}: NEEDS: does "
+                                     f"not follow a POT: line")
+                if open_pot['needs']:
+                    raise SystemExit(f"{header_path}:{lineno}: NEEDS: given "
+                                     f"twice for '{open_pot['label']}'")
+                open_pot['needs'] = (needs.group(1), needs.group(2), lineno)
+                continue
+
             m = pot_re.match(line)
             if not m:
                 open_pot = None
@@ -263,8 +299,30 @@ def generate(audio_dir, out_h, out_js, out_md):
 
             p_label, p_curve, p_args, p_def, p_unit = m.groups()
 
+            #
+            # A switch is an enumeration whose two states are already
+            # named, and naming them again per pot is how one of them
+            # comes to read "Keep" while its control still draws as Off.
+            # So BOOL takes no arguments: the label on the switch is the
+            # pot's own name, and the states are what a switch's states
+            # are called.
+            #
             enum_list = None
-            if p_curve == 'ENUM' and p_args:
+            if p_curve == 'BOOL':
+                if p_args:
+                    raise SystemExit(f"{header_path}:{lineno}: BOOL takes no "
+                                     f"arguments - its states are Off and On")
+                enum_list = ['Off', 'On']
+            elif p_curve == 'ENUM':
+                #
+                # Refused rather than tolerated, because everything
+                # downstream now asks whether a pot has names rather than
+                # what its curve is called, and an ENUM without any is
+                # the one declaration where those two disagree.
+                #
+                if not p_args:
+                    raise SystemExit(f"{header_path}:{lineno}: ENUM needs its "
+                                     f"values naming - ENUM(One Two Three)")
                 enum_list = p_args.split()
 
             default_val = 0.0
@@ -286,6 +344,7 @@ def generate(audio_dir, out_h, out_js, out_md):
                 'enum': enum_list,
                 'default': default_val,
                 'info': [],
+                'needs': None,
             }
             pots.append(open_pot)
 
@@ -334,6 +393,26 @@ def generate(audio_dir, out_h, out_js, out_md):
         # be recounted every time the POT: lines above it moved.
         #
         by_ident = {pot['ident'].upper(): n for n, pot in enumerate(pots)}
+
+        for pot in pots:
+            if not pot['needs']:
+                continue
+            which, value, lineno = pot['needs']
+            if which not in by_ident:
+                raise SystemExit(f"{header_path}:{lineno}: NEEDS: '{which}' "
+                                 f"does not name one of this effect's pots "
+                                 f"({', '.join(by_ident) or 'it has none'})")
+            gate = pots[by_ident[which]]
+            if gate is pot:
+                raise SystemExit(f"{header_path}:{lineno}: NEEDS: '{which}' "
+                                 f"is the pot it would be gating")
+            if not gate['enum'] or value not in gate['enum']:
+                raise SystemExit(f"{header_path}:{lineno}: NEEDS: '{which}' "
+                                 f"has no value '{value}' "
+                                 f"({' '.join(gate['enum'] or []) or 'not an enumeration'})")
+            pot['needs'] = {'pot': by_ident[which],
+                            'value': gate['enum'].index(value)}
+
         graph_match = re.search(r'//[ \t]*GRAPH:[ \t]*([A-Z0-9._: \t]*)', content)
         graph = []
 
@@ -375,10 +454,15 @@ def generate(audio_dir, out_h, out_js, out_md):
         # Nothing here knows what a role means; that is the app's
         # business.  This only carries the fact that a pot has one.
         #
+        # Every ROLE: line, not just the first.  Roles are unrelated to
+        # each other and want their own comment, so they get written on
+        # separate lines - and a second line being quietly ignored is
+        # exactly the silence this is meant to be free of.
         roles = {}
-        role_match = re.search(r'//[ \t]*ROLE:[ \t]*([A-Z0-9_: \t]*)', content)
+        words = ' '.join(m.group(1) for m in
+                         re.finditer(r'//[ \t]*ROLE:[ \t]*([A-Z0-9_: \t]*)', content))
 
-        for word in role_match.group(1).split() if role_match else []:
+        for word in words.split():
             role, _, which = word.partition(':')
             if which not in by_ident:
                 raise SystemExit(f"{header_path}: ROLE: '{word}' does not name "
@@ -406,6 +490,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             'copies': copies,
             'graph': graph,
             'roles': roles,
+            'is_global': is_global,
             'full_name': full_name,
             'short_name': short_name,
             'priority': priority,
@@ -490,10 +575,10 @@ def generate(audio_dir, out_h, out_js, out_md):
         for pot in e_data['pots']:
             min_v = 0.0
             max_v = 1.0
-            if pot['curve'] != 'ENUM' and len(pot['args']) >= 2:
+            if not pot['enum'] and len(pot['args']) >= 2:
                 min_v = float(pot['args'][0])
                 max_v = float(pot['args'][1])
-            elif pot['curve'] == 'ENUM' and pot['enum']:
+            elif pot['enum']:
                 max_v = float(len(pot['enum']) - 1)
 
             pot['pot_val'] = default_pot_value(pot)
@@ -507,6 +592,7 @@ def generate(audio_dir, out_h, out_js, out_md):
                 "default": pot['default'],
                 "defaultPot": pot['pot_val'],
                 "enum": pot['enum'],
+                "needs": pot['needs'],
                 "info": pot['info']
             })
 
@@ -525,6 +611,13 @@ def generate(audio_dir, out_h, out_js, out_md):
             "defMix": e_data['def_mix'],
             "mixLaw": e_data['mix_law'],
             # The schema is camelCase, the python is not
+            #
+            # Kept once rather than per scene, which is also what keeps
+            # it out of the chain.  Said here so the app does not have
+            # to infer it from a position, which was true of the only
+            # such effect there was.
+            #
+            "global": e_data['is_global'],
             "roles": e_data['roles'],
             "graph": [{"type": b['type'], "q": b['q']} if 'q' in b
                       else {"type": b['type'], "qPot": b['q_pot']}
@@ -578,7 +671,7 @@ def generate(audio_dir, out_h, out_js, out_md):
                 fn_name = f"{prefix}_{pot['ident'].lower()}_pot"
                 pot['fn_name'] = fn_name
 
-                if pot['curve'] == 'ENUM' and pot['enum']:
+                if pot['enum']:
                     enum_name = f"{prefix}_{pot['ident'].lower()}_enum"
                     pot['enum_name'] = enum_name
                     f.write(f"static const char *const {enum_name}[] = {{ ")
@@ -603,7 +696,7 @@ def generate(audio_dir, out_h, out_js, out_md):
                 val = f"pot[{pot['const']}]"
                 args_str = ", ".join(pot['args'])
                 sig = f"static inline float {fn_name}(const unsigned char pot[10])"
-                if pot['curve'] == 'RAW' or pot['curve'] == 'ENUM':
+                if pot['curve'] == 'RAW' or pot['enum']:
                     f.write(f"{sig} {{ return {val}; }}\n")
                 elif pot['curve'] == 'LINEAR':
                     f.write(f"{sig} {{ return linear_pot({val}, {args_str}); }}\n")
@@ -652,6 +745,14 @@ def generate(audio_dir, out_h, out_js, out_md):
             struct_name = f"{self_name}_effect"
             e_data['struct_name'] = struct_name
 
+            #
+            # Where this effect sits in effects[], which is what the
+            # wire calls it.  Emitted rather than counted at the call
+            # site for the reason a pot gets a constant: a number that
+            # means "the twentieth one" is right until an effect is
+            # added above it, and wrong silently.
+            #
+            f.write(f"#define {self_name.upper()}_EFFECT_ID {e_data['id']}\n")
             f.write(f"static struct effect {struct_name};\n")
 
             # Declare the two entry points ahead of the header, marked as
@@ -749,7 +850,16 @@ def generate(audio_dir, out_h, out_js, out_md):
             f.write(f"\t&{e_data['struct_name']},\n")
         f.write("};\n\n")
 
-        f.write(f"#define EFFECT_COUNT {len(effects_data)}\n\n")
+        f.write(f"#define EFFECT_COUNT {len(effects_data)}\n")
+
+        #
+        # Which of them are stored once rather than per scene.  A
+        # bitmask so that asking is one test wherever it is asked, and
+        # so that a second one costs a line in a header.
+        #
+        mask = sum(1 << i for i, e in enumerate(effects_data) if e['is_global'])
+        f.write(f"#define GLOBAL_EFFECTS 0x{mask:x}u\n")
+        f.write(f"#define GLOBAL_EFFECT_COUNT {bin(mask).count('1')}\n\n")
 
     # Generate midi_schema.h next to effect_map.h
     schema_path = os.path.join(os.path.dirname(out_h), "midi_schema.h")
@@ -987,7 +1097,7 @@ def generate(audio_dir, out_h, out_js, out_md):
         for e_idx, e_data in enumerate(effects_data):
             f.write(f"#### {e_data['full_name']} (ID: {e_data['id']})\n\n")
             for p_idx, pot in enumerate(e_data['pots']):
-                if pot['curve'] == 'ENUM' and pot['enum']:
+                if pot['enum']:
                     range_str = ", ".join([f"{i}={v}" for i, v in enumerate(pot['enum'])])
                     input_str = f"Index: {p_idx} (0-{len(pot['enum'])-1}, maps to: {range_str})"
                 elif pot['curve'] == 'RAW':

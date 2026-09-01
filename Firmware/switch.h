@@ -12,15 +12,27 @@
 // spread across three files, where switch_pressed(4) tested a bit that
 // nothing ever set and nobody noticed.
 //
+// The two on the expression jack are only switches while something says
+// they are - see init_exp_switches().  They take the last two of pio1's
+// four state machines, which is the ceiling on this scheme.
 enum switch_id {
 	ROTARY_SWITCH,		// the rotary encoder's shaft, pressed down
 	STOMP_SWITCH,		// the footswitch
+	NR_ONBOARD_SWITCHES,	// the ones that are soldered down
+#ifdef EXP_TIP_GPIO
+	EXP_TIP_SWITCH = NR_ONBOARD_SWITCHES,	// an accessory's, on the tip
+	EXP_RING_SWITCH,			// and on the ring
+#endif
 	NR_SWITCHES,
 };
 
 static const unsigned char switch_gpio[NR_SWITCHES] = {
 	[ROTARY_SWITCH]	= ROTARY_SW_GPIO,
 	[STOMP_SWITCH]	= STOMP_GPIO,
+#ifdef EXP_TIP_GPIO
+	[EXP_TIP_SWITCH]	= EXP_TIP_GPIO,
+	[EXP_RING_SWITCH]	= EXP_RING_GPIO,
+#endif
 };
 
 //

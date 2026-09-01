@@ -252,6 +252,9 @@ int main()
 	tac5112_init();
 
 	init_effects();
+#ifdef EXP_TIP_GPIO
+	init_exp_pins();	// wants expression.accessory, loaded just above
+#endif
 
 	multicore_launch_core1(audio_processing);
 
@@ -276,7 +279,24 @@ int main()
 		sysex_send_identity();
 		sysex_send_telemetry();
 #ifdef EXP_TIP_GPIO
+		//
+		// A different accessory is a different set of controls,
+		// and the host asked what they were once, at connect.
+		//
+		if (exp_follow_setting())
+			send_identity_tx = true;
+		exp_sweep_task();
+		exp_treadle_task();
+		exp_calibrate_task();
+		treadle_moved();
 		sysex_send_exp();
+		//
+		// After sysex_send_exp(), which is how the two of them
+		// share one sweep: a probe the host asked for is taken by
+		// the host, and this starts another.
+		//
+		exp_detect_task();
+		exp_tell_accessory();
 #endif
 		sysex_send_schema();
 		sysex_send_state_dump();

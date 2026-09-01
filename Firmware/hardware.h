@@ -185,10 +185,13 @@ static void probe_hardware(void)
 	if (hardware.legacy_codec || hardware.legacy_screen)
 		report_status("Early board: mono only");
 }
+static uint debounce_offset;
+
 static void init_sw_pins(void)
 {
 	PIO pio = pio1;
-	uint offset = pio_add_program(pio, &debounce_program);
+
+	debounce_offset = pio_add_program(pio, &debounce_program);
 
 	//
 	// Same PIO program for every switch, one state machine each,
@@ -196,16 +199,21 @@ static void init_sw_pins(void)
 	// switch N.  switch_irq() relies on that and has no other way
 	// to know which pin a fifo entry came from.
 	//
-	for (int sw = 0; sw < NR_SWITCHES; sw++) {
+	// Only the ones soldered to this board.  Anything on the
+	// expression jack is an accessory rather than bring-up, and waits
+	// for init_exp_switches() and the setting that decides it.
+	//
+	for (int sw = 0; sw < NR_ONBOARD_SWITCHES; sw++) {
 		init_sw_pin(pio, switch_gpio[sw]);
-		debounce_program_init(pio, sw, offset, switch_gpio[sw]);
+		debounce_program_init(pio, sw, debounce_offset, switch_gpio[sw]);
 	}
 
 	irq_set_exclusive_handler(PIO1_IRQ_0, switch_irq);
 	irq_set_enabled(PIO1_IRQ_0, true);
 }
 
-#ifndef WS2812_GPIO
+// Any pin, not just an LED_GPIO: a board with smart LEDs still has an
+// expression jack that may have something to light on it.
 static void init_one_pwm_pin(int pin)
 {
 	unsigned int slice = pwm_gpio_to_slice_num(pin);
@@ -215,7 +223,6 @@ static void init_one_pwm_pin(int pin)
 	pwm_set_gpio_level(pin, 0);
 	pwm_set_enabled(slice, true);
 }
-#endif
 
 static void init_pwm_pins(void)
 {

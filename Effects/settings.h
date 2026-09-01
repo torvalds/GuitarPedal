@@ -1,6 +1,11 @@
 // NAME: Settings [SETTINGS]
 // PRIORITY: 130
 // MIX: NONE		// it isn't an effect, and there is nothing to mix
+//
+// Kept once rather than per scene: what it holds is true of the pedal
+// and not of any one sound.
+//
+// GLOBAL
 // POT: "USB L/R Out" ENUM(None Wet Dry Wet/Dry) = Dry
 // POT: "USB L/R In" ENUM(Off Pre-FX Mix) = Off
 // POT: "MIDI Ch" ENUM(Omni Ch1 Ch2 Ch3 Ch4 Ch5 Ch6 Ch7 Ch8 Ch9 Ch10 Ch11 Ch12 Ch13 Ch14 Ch15 Ch16) = Omni

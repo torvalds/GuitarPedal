@@ -284,10 +284,35 @@ input:checked + .slider:before {
 }
 
 /*
+ * What the probe found, under the setting it is about.  Wraps rather
+ * than truncates: the one answer worth reading in full is the one that
+ * says it could not tell and why.
+ */
+/*
+ * Empty unless a probe could not name what it found, so the setting
+ * costs no room at all in the case that works.
+ */
+.exp-detect-said {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/*
  * A pot that can explain itself says so, faintly.  Dotted rather than
  * a cursor change, because half of these are used on a touchscreen
  * where there is no hover and no pointer to change.
  */
+/*
+ * A control whose NEEDS: is not met - see applyPotGates().  Gone rather
+ * than greyed: an expression jack with a footswitch on it has no heel
+ * and no toe, and a row that is present but refuses to do anything is a
+ * question somebody has to answer for themselves.
+ */
+.pot-control.gated-off {
+  display: none;
+}
+
 .pot-control.has-info > .pot-label {
   text-decoration: underline dotted;
   text-underline-offset: 0.2em;

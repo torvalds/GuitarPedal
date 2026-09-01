@@ -45,9 +45,13 @@ function check(what, ok, detail) {
 //
 const byId = new Map();
 
-function element(id) {
+function element(id, tag) {
     const classes = new Set();
     const el = {
+        // The app asks, to tell a menu from a slider when a value
+        // arrives from the pedal - so a node with no tag is a node that
+        // silently takes neither path.
+        tagName: (tag || '').toUpperCase(),
         children: [],
         parentElement: null,
         style: {},
@@ -77,9 +81,31 @@ function element(id) {
         insertBefore(c) { el.children.push(c); c.parentElement = el; return c; },
         removeChild(c) { return c; },
         remove() {},
-        addEventListener() {},
-        removeEventListener() {},
-        dispatchEvent() { return true; },
+        //
+        // Real, because a whole class of bug lives on this side of the
+        // line: what the app sends when somebody picks something.  With
+        // these stubbed, every test of a control is a test of how it was
+        // built and none of what it does.
+        //
+        addEventListener(type, fn) {
+            if (!el._on) el._on = new Map();
+            if (!el._on.has(type)) el._on.set(type, []);
+            el._on.get(type).push(fn);
+        },
+        removeEventListener(type, fn) {
+            const fns = el._on && el._on.get(type);
+            if (fns) fns.splice(fns.indexOf(fn), 1);
+        },
+        dispatchEvent(ev) {
+            const fns = el._on && el._on.get(ev.type);
+
+            // A copy: a handler is allowed to remove itself.
+            if (fns)
+                fns.slice().forEach((fn) => fn({ ...ev, target: el,
+                                                 stopPropagation() {},
+                                                 preventDefault() {} }));
+            return true;
+        },
         setAttribute() {},
         getAttribute() { return null; },
         // The same selector has to come back as the same node, or a
@@ -124,7 +150,7 @@ for (const m of fs.readFileSync(path.join(WEB, 'index.html'), 'utf8')
 
 global.document = {
     getElementById: (id) => byId.get(id) || null,
-    createElement: () => element(undefined),
+    createElement: (tag) => element(undefined, tag),
     // Enough of a node to be appended and to carry its text
     createTextNode: (text) => ({ textContent: text, parentElement: null }),
     querySelector: () => element('?'),
@@ -171,7 +197,8 @@ const WANT = ['handleIdentity', 'populateScenePicker', 'updateSceneLabels',
               'renderAttention', 'handleTelemetry', 'handleSysex',
               'routeEffect', 'unrouteEffect',
               'potToValue', 'valueToPot', 'clampToNeighbours', 'pileAt',
-              'uiPref', 'setUiPref'];
+              'uiPref', 'setUiPref',
+              'controlDef', 'actionsFor'];
 
 //
 // The chain is a list held in a variable rather than anything the dom
@@ -182,7 +209,20 @@ const WANT = ['handleIdentity', 'populateScenePicker', 'updateSceneLabels',
 const src = fs.readFileSync(effectsJs, 'utf8') + '\n'
           + fs.readFileSync(path.join(WEB, 'app.js'), 'utf8') + '\n'
           + `;globalThis.__app = { ${WANT.join(', ')} };`
-          + `;globalThis.__app.routing = () => currentRouting;`;
+          + `;globalThis.__app.routing = () => currentRouting;`
+          + `;globalThis.__app.controls = () => CONTROLS;`
+          //
+          // What a control is wired to, and what it puts on the wire.
+          // sendSysex() drops everything while nothing is connected, so
+          // watching what the app sends means giving it somewhere to
+          // send to - and taking it away again, because a send arms a
+          // one-second diagnostic timer that would hold node open.
+          //
+          + `;globalThis.__app.el = (key) => ccToElementMap.get(key);`
+          + `;globalThis.__app.tap = (fn) => {`
+          + `   midiOutput = fn ? { send: fn } : null;`
+          + `   if (!fn && diagnosticTimeout) clearTimeout(diagnosticTimeout);`
+          + ` };`;
 
 //
 // The app logs as it goes, including from promises that settle after this
@@ -211,24 +251,68 @@ for (const name of WANT)
 //
 const identity = (over) => Object.assign({
     build: 'Jan 1 2026 00:00:00', scenes: 32, midi_hw: true,
-    found: { eeprom: true, legacy_codec: false, legacy_screen: false },
+    found: { legacy_codec: false, legacy_screen: false },
 }, over);
 
 app.handleIdentity(identity());
 check('a current board raises no warning', app.boardFault.on === false);
 
-app.handleIdentity(identity({ scenes: 1, found: { eeprom: true, legacy_codec: true } }));
+app.handleIdentity(identity({ scenes: 1, found: { legacy_codec: true } }));
 check('an early board is noted, not faulted', app.earlyNote.on === true
       && app.boardFault.on === false);
 check('and says why', /TAC5112/.test(document.getElementById('status-early').title),
       document.getElementById('status-early').title);
 
-app.handleIdentity(identity({ found: { eeprom: false } }));
-check('a missing eeprom is flagged', app.boardFault.on === true);
-
 app.handleIdentity(identity());
 check('and both clear again when the next pedal is fine',
       app.boardFault.on === false && app.earlyNote.on === false);
+
+//
+// The controls come from the pedal, so a board with a different set of
+// them needs no change here.  The ids are not positions: a board without
+// an expression jack sends five and they are not numbered 0 to 4.
+//
+app.handleIdentity(identity({ controls: [
+    { id: 0, name: 'Knob \u2014 turn', kind: 'turn' },
+    { id: 3, name: 'Footswitch \u2014 press', kind: 'click' },
+    { id: 5, name: 'Jack tip \u2014 press', kind: 'click' },
+] }));
+check('the control list is the pedal\u0027s', app.controls().length === 3);
+check('and is found by id rather than by position',
+      app.controlDef(5).name === 'Jack tip \u2014 press');
+
+//
+// Which actions are worth offering follows the kind the pedal gave.
+//
+app.handleIdentity(identity({ controls: [
+    { id: 0, name: 'Knob \u2014 turn', kind: 'turn' },
+    { id: 3, name: 'Footswitch \u2014 press', kind: 'click' },
+    { id: 9, name: 'Treadle', kind: 'pedal' },
+] }));
+
+const turnActs = app.actionsFor(0).map(a => a.v);
+const clickActs = app.actionsFor(3).map(a => a.v);
+const pedalActs = app.actionsFor(9).map(a => a.v);
+
+//
+// A treadle hands over a value just as a knob does, so it gets a knob's
+// actions.  It reads as neither 'turn' nor a click, which is exactly
+// how it came to be offered everything except the one thing that works.
+//
+check('a treadle is offered what a knob is offered',
+      pedalActs.length === turnActs.length && pedalActs.includes(1));
+check('something that turns can only drive a parameter',
+      turnActs.length === 2 && turnActs.includes(1));
+check('and something that clicks can do anything else',
+      clickActs.length > 2 && !clickActs.includes(1));
+
+//
+// A rule can name a control the pedal did not describe - an older app
+// against a newer pedal.  Drawing it as something beats throwing.
+//
+check('an unknown control still draws', app.controlDef(99).name === 'Control 99');
+
+app.handleIdentity(identity());
 
 //
 // How many scenes there are comes from the pedal, so the picker has to be
@@ -299,13 +383,22 @@ check('the schema declares channel steering once, not per effect',
 
 //
 // Steering means nothing for an effect that is never handed to
-// do_effect_step(), and those are exactly the two that anchor the chain.
+// do_effect_step(), and those are the ones that anchor the chain: the
+// signal chain, and anything the pedal keeps once rather than per
+// scene.
 //
-check('only the routable effects are steerable',
-      schema.filter((e) => e.steerable).length === schema.length - 2 &&
-      !schema[0].steerable && !schema[schema.length - 1].steerable);
+// Asked of the schema rather than counted off the ends.  "The first and
+// the last" was true while there was one global effect, and this test
+// went on asserting it after there were two - which made it agree with
+// the bug rather than catch it.
+//
+const anchors = schema.filter((e, i) => i === 0 || e.global);
+const routable = schema.filter((e, i) => i !== 0 && !e.global);
 
-const routable = schema.slice(1, -1);
+check('there is more than one way to anchor the chain',
+      anchors.length >= 2 && anchors.length + routable.length === schema.length);
+check('only the routable effects are steerable',
+      routable.every((e) => e.steerable) && anchors.every((e) => !e.steerable));
 const pool = document.getElementById('effect-pool');
 
 // [label, chip grid], or hidden with nothing in it at all
@@ -322,9 +415,8 @@ check('nothing is routed until the pedal says so',
 check('and the cards for those are parked',
       routable.every((e) => cardOf(e).classes.has('parked')));
 check('while the anchors are not chips and not parked',
-      !chipNames().includes(schema[0].name)
-      && !cardOf(schema[0]).classes.has('parked')
-      && !cardOf(schema[schema.length - 1]).classes.has('parked'));
+      anchors.every((e) => !chipNames().includes(e.name)
+                    && !cardOf(e).classes.has('parked')));
 
 // Two of them routed, in an order that is not the schema's
 const routed = [routable[2], routable[0]];
@@ -615,6 +707,192 @@ global.localStorage = {
 check('storage that refuses to read still yields the default',
       app.uiPref('eq.keepOrder', true) === true);
 app.setUiPref('eq.keepOrder', false);   // and refusing to write is not fatal
+
+//
+// A switch pot.  BOOL is drawn as a switch and ENUM as a menu, and the
+// difference is the curve rather than the number of names: the treadle's
+// Type has two of them and is still a menu, because neither of Roland
+// and Yamaha is the "off" one.
+//
+// Checked through the card's own DOM rather than through the map the app
+// keeps, because what went wrong before was the control that got built,
+// not the bookkeeping about it.
+//
+const descend = (el, out = []) => {
+    out.push(el);
+    el.children.forEach((c) => descend(c, out));
+    return out;
+};
+
+const boolEff = schema.find((e) => e.pots.some((p) => p.curve === 'BOOL'));
+check('the schema has a switch to check', boolEff !== undefined);
+
+if (boolEff) {
+    const boolPot = boolEff.pots.findIndex((p) => p.curve === 'BOOL');
+    const nodes = descend(cardOf(boolEff));
+    const boxes = nodes.filter((n) => n.type === 'checkbox');
+    const menus = nodes.filter((n) => n.className === 'enum-select');
+
+    check('a BOOL pot draws a switch',
+          boxes.length === 1, `${boxes.length} switches`);
+    check('and a two-name ENUM beside it still draws a menu',
+          menus.length === boolEff.pots.filter(
+              (p) => p.curve === 'ENUM' && p.enum).length,
+          `${menus.length} menus`);
+
+    //
+    // The pedal throwing it, which is both how a stored setting arrives
+    // and what a scene load looks like.  Setting .checked from script
+    // fires no event, so anything hanging off the switch has to be told
+    // separately - and the standing instruction is the thing that would
+    // be missed, because it is only wrong while nobody is calibrating.
+    //
+    const swDiv = boxes[0] && boxes[0].parentElement
+                           && boxes[0].parentElement.parentElement;
+    const saidOf = () => (swDiv || { children: [] }).children
+          .filter((c) => c.className === 'exp-detect-said')
+          .map((c) => c.textContent).join();
+
+    app.handleSysex([0xF0, 0x7D, 0x03, boolEff.id, boolPot + 1, 1, 0xF7]);
+    check('and the pedal can throw it', boxes[0] && boxes[0].checked === true);
+
+    if (boolEff.roles && boolEff.roles.CALIBRATE === boolPot) {
+        check('a switch the pedal acts on says what to do while it is on',
+              /treadle/.test(saidOf()), saidOf());
+        app.handleSysex([0xF0, 0x7D, 0x03, boolEff.id, boolPot + 1, 0, 0xF7]);
+        check('and stops saying it once it is off', saidOf() === '', saidOf());
+    }
+
+    app.handleSysex([0xF0, 0x7D, 0x03, boolEff.id, boolPot + 1, 0, 0xF7]);
+    check('and throw it back', boxes[0] && boxes[0].checked === false);
+
+    //
+    // A pot that says NEEDS: is drawn only while the pot it names reads
+    // the value it names.  Driven from the pedal's side, which is the
+    // half that fires no event of its own and so is the half that breaks.
+    //
+    const gated = boolEff.pots.filter((p) => p.needs);
+    const offNow = () => descend(cardOf(boolEff))
+          .filter((n) => n.classes.has('gated-off')).length;
+
+    check('the schema gates something on another pot', gated.length > 0);
+
+    if (gated.length) {
+        const gate = gated[0].needs;
+
+        check('a control whose condition is unmet is not drawn',
+              offNow() === gated.length, `${offNow()} of ${gated.length}`);
+
+        app.handleSysex([0xF0, 0x7D, 0x03, boolEff.id,
+                         gate.pot + 1, gate.value, 0xF7]);
+        check('and comes back when the pedal says the condition is met',
+              offNow() === 0, `${offNow()} still hidden`);
+
+        app.handleSysex([0xF0, 0x7D, 0x03, boolEff.id,
+                         gate.pot + 1, gate.value ? 0 : 1, 0xF7]);
+        check('and goes again when it stops being met',
+              offNow() === gated.length, `${offNow()} of ${gated.length}`);
+    }
+}
+
+//
+// A menu entry that is not a value.
+//
+// 'Auto' on the expression jack asks the pedal to go and look, and sits
+// one past the end of the enum so that it cannot be mistaken for a
+// setting.  It was mistaken for one anyway: the menu's own change
+// handler sent whatever was picked, the pedal clamps a parameter to the
+// pot's largest valid value, and so "go and look" arrived as the last
+// name in the list.
+//
+// Driven by dispatching the event a person would cause, because the
+// whole of this bug is on that side: nothing about how the control was
+// built was wrong.
+//
+const roleEff = schema.find((e) => e.roles && e.roles.EXPJACK !== undefined);
+check('the schema has a menu with a command in it', roleEff !== undefined);
+
+if (roleEff) {
+    const pot = roleEff.pots[roleEff.roles.EXPJACK];
+    const menu = app.el(`eff-${schema.indexOf(roleEff)}-pot-${roleEff.roles.EXPJACK}`);
+    const sent = [];
+
+    // [F0 7D cmd ...] - the effect, the pot and the value follow the cmd
+    const cmds = () => sent.map((m) => m[2]);
+
+    app.tap((m) => sent.push(Array.from(m)));
+
+    menu.value = 1;
+    menu.dispatchEvent(new Event('change'));
+    check('picking a value sends it',
+          sent.length === 1 && sent[0][2] === 0x03 && sent[0][5] === 1,
+          JSON.stringify(sent));
+
+    sent.length = 0;
+    menu.value = pot.enum.length;
+    menu.dispatchEvent(new Event('change'));
+
+    check('picking the command asks the pedal to look',
+          cmds().includes(0x0e), cmds().join());
+    check('and sets the pot to nothing at all',
+          !cmds().includes(0x03), JSON.stringify(sent));
+
+    //
+    // What the probe answered is about that one probe.  It used to stay
+    // on screen until the page was reloaded, so "cannot tell" read as a
+    // standing property of the jack rather than as one reply.
+    //
+    // F0 7D 0E, a layout version, seven readings of two bytes, then the
+    // verdict and what was configured - see sysex_send_exp().
+    //
+    const probeReply = (verdict, configured) => {
+        const m = new Array(21).fill(0);
+
+        m[0] = 0xF0; m[1] = 0x7D; m[2] = 0x0e; m[3] = 3;
+        m[18] = verdict; m[19] = configured; m[20] = 0xF7;
+        return m;
+    };
+    const said = () => descend(cardOf(roleEff))
+          .filter((n) => n.className === 'exp-detect-said')
+          .map((n) => n.textContent).join(' ');
+
+    // A verdict past the end of the names is the pedal's "cannot tell"
+    app.handleSysex(probeReply(pot.enum.length, 2));
+    check('a probe with no answer says so', /Cannot tell/.test(said()), said());
+
+    // ...and the pedal writing the setting itself moves the menu again
+    app.handleSysex([0xF0, 0x7D, 0x03, roleEff.id,
+                     roleEff.roles.EXPJACK + 1, 1, 0xF7]);
+    check('and stops saying it once the menu moves again',
+          !/Cannot tell/.test(said()), said());
+
+    app.tap(null);
+}
+
+//
+// Firmware older than the flag does not say which effects are global,
+// and a cached copy of this app can meet one.  It gets what the rule
+// used to be: the last effect, which is what every schema without the
+// flag meant.
+//
+// Last in the file because it replaces the schema everything above is
+// written against.
+//
+const older = JSON.parse(schemaJson);
+(Array.isArray(older) ? older : older.effects)
+    .forEach((e) => { delete e.global; });
+app.handleSysex(asSysex(0x02, JSON.stringify(older)));
+
+const oldPool = document.getElementById('effect-pool');
+const oldChips = oldPool.classes.has('hidden') ? []
+      : oldPool.children[oldPool.children.length - 1]
+               .children.map((c) => c.textContent);
+const lastCard = document.getElementById(`effect-${schema.length - 1}`);
+
+check('a schema with no flag still keeps its last effect out of the chain',
+      !oldChips.includes(schema[schema.length - 1].name)
+      && !lastCard.classes.has('parked'),
+      oldChips.join());
 
 if (failures) {
     say(`test-webmidi: ${failures} failure(s)`);

@@ -10,23 +10,35 @@
 // for, so the answer has to be set from something that can, and the
 // WebMIDI app is that something.
 //
-// Nothing here is saved.  The table is rebuilt from the defaults below
-// on every boot, and those defaults are exactly what the pedal did when
-// the gestures were hardcoded, so an unprogrammed pedal behaves as it
-// always has.  Persisting it waits for the storage rework, because the
-// layout should not be guessed at before the shape of what is stored
-// has settled - which is also what makes this testable on the old board
-// with the 2kbit part, where there is nowhere to save it to anyway.
+// A binding is saved at one of two levels, and read at three.  A scene
+// carries its own table and so does the pedal as a whole; the defaults
+// below are what is left when neither has anything to say, and they are
+// exactly what the pedal did when the gestures were hardcoded, so an
+// unprogrammed pedal behaves as it always has.
+//
+// resolve_rules() picks between them *per control*, not per rule: the
+// most specific level that mentions a control at all wins outright for
+// it, and the levels below are not consulted for that control again.
+// So a scene that binds the knob does not half-inherit the pedal's idea
+// of what the knob does - it replaces it - while leaving the pedal's
+// bindings for every other control alone.  That is what lets one kind
+// of control be a global fact and another a per-scene one without the
+// two arrangements interfering.
 //
 
 //
 // The gestures - what a binding is *from*.
 //
 // This lists the gestures that exist, not the ones that are imaginable.
-// The next board's jack carries either two more footswitches or an
-// analog expression pedal, and whichever it turns out to be becomes
-// more entries here; the wire format has a whole byte for the id, so
-// growing the list costs nothing but the entries.
+// The wire format has a whole byte for the id, so growing the list costs
+// nothing but the entries.
+//
+// Those values go into flash inside every saved rule, so renumbering
+// them later is a migration rather than an edit.  Physical controls
+// therefore stay at the bottom of the byte and leave the rest of it
+// alone: a remote sending MIDI is another source for this same table,
+// and whatever it ends up being numbered should not have to displace
+// anything already saved.
 //
 // Turning the rotary while pressing its shaft is deliberately not one
 // of these.  It used to select a pot, and it cannot coexist with a long
@@ -39,7 +51,57 @@ enum control_id {
 	CTRL_ROTARY_HOLD,
 	CTRL_STOMP_TAP,
 	CTRL_STOMP_HOLD,
+	CTRL_EXP_TIP_TAP,
+	CTRL_EXP_TIP_HOLD,
+	CTRL_EXP_RING_TAP,
+	CTRL_EXP_RING_HOLD,
+	CTRL_EXP_TREADLE,
 	NR_CONTROLS,
+};
+
+_Static_assert(NR_CONTROLS <= 32, "physical controls are crowding the id space");
+
+//
+// What each control is, for a host that has to draw it.
+//
+// 'kind' is what decides which actions are worth offering: something
+// that turns can only drive a parameter, something that clicks can do
+// anything else.  Sent rather than assumed, so the app does not carry a
+// second copy of this list that agrees right up until it doesn't.
+//
+// Named for what a person plugs in rather than for the contact it lands
+// on: "jack tip" is true and means nothing to anyone who did not draw
+// the schematic.
+//
+// A NULL name is a control this board does not have.  The ids are the
+// same everywhere either way - they travel in saved rules and over the
+// wire, so they are protocol rather than a property of the hardware.
+//
+// The names go out inside JSON over SysEx, which is 7-bit, so anything
+// above ASCII is written as the escape and decoded at the far end.
+//
+struct control_desc {
+	const char *name;
+	const char *kind;
+};
+
+#define CTRL_TURNS	"turn"
+#define CTRL_CLICKS	"click"
+#define CTRL_PEDAL	"pedal"
+
+static const struct control_desc controls[NR_CONTROLS] = {
+	[CTRL_ROTARY_TURN]	= { "Knob \\u2014 turn",		CTRL_TURNS  },
+	[CTRL_ROTARY_TAP]	= { "Knob \\u2014 press",		CTRL_CLICKS },
+	[CTRL_ROTARY_HOLD]	= { "Knob \\u2014 hold",		CTRL_CLICKS },
+	[CTRL_STOMP_TAP]	= { "Footswitch \\u2014 press",	CTRL_CLICKS },
+	[CTRL_STOMP_HOLD]	= { "Footswitch \\u2014 hold",	CTRL_CLICKS },
+#ifdef EXP_TIP_GPIO
+	[CTRL_EXP_TIP_TAP]	= { "Remote 1 \\u2014 press",	CTRL_CLICKS },
+	[CTRL_EXP_TIP_HOLD]	= { "Remote 1 \\u2014 hold",	CTRL_CLICKS },
+	[CTRL_EXP_RING_TAP]	= { "Remote 2 \\u2014 press",	CTRL_CLICKS },
+	[CTRL_EXP_RING_HOLD]	= { "Remote 2 \\u2014 hold",	CTRL_CLICKS },
+	[CTRL_EXP_TREADLE]	= { "Treadle",			CTRL_PEDAL  },
+#endif
 };
 
 //

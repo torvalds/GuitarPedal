@@ -7,17 +7,21 @@ const SYSEX_CMD = {
     ROUTING_ORDER: 0x08,
     DIAGNOSTIC: 0x09,
     IDENTITY: 0x0a,
-    TELEMETRY: 0x0b
+    TELEMETRY: 0x0b,
+    EXP_PROBE: 0x0e
 };
 
 //
-// What the pedal's own controls do.  Must match enum control_id and
-// enum bind_action in bindings.h.
+// How many readings a probe reply carries before the two bytes that say
+// what it made of them.  Part of the layout the version byte names; the
+// reply is append-only, so anything later goes after these.
 //
-// There is no schema for these the way there is for effects, and there
-// should not be: the set of gestures is fixed by what the hardware
-// physically has, so it changes when a board does rather than when an
-// effect header does.
+const EXP_READINGS = 7;
+
+//
+// Actions must match enum bind_action in bindings.h.  The controls come
+// from the pedal - which ones exist depends on the board and on what is
+// in its expression jack, so it is not ours to know.
 //
 const SYSEX_SET_BINDING = 0x0c;
 const SYSEX_BINDINGS = 0x0d;
@@ -55,13 +59,16 @@ const BIND_FOLLOW = 0x7f;
 //
 const MIX_POT_DEF = { name: 'Mix', curve: 'LINEAR', min: 0, max: 100, unit: '%' };
 
-const CONTROLS = [
-    { name: 'Knob \u2014 turn',        turns: true  },
-    { name: 'Knob \u2014 press',       turns: false },
-    { name: 'Knob \u2014 hold',        turns: false },
-    { name: 'Footswitch \u2014 press', turns: false },
-    { name: 'Footswitch \u2014 hold',  turns: false }
-];
+let CONTROLS = [];
+
+//
+// A control the pedal did not describe still has to draw as something,
+// because a rule naming it is already on the screen.
+//
+function controlDef(id) {
+    return CONTROLS.find(c => c.id === id)
+        || { id, name: `Control ${id}`, kind: 'click' };
+}
 
 //
 // 'target' is whether the action names a parameter, and 'follow' is
@@ -92,8 +99,19 @@ function actionDef(v) {
 // end's job: a control that turns can only drive a parameter, and one
 // that clicks can do anything except that.
 //
+//
+// A knob and a treadle both hand over a value; a switch hands over a
+// moment.  Which of the two it is decides what is worth binding to it,
+// and the pedal is what says which.
+//
+function isContinuous(ctrl) {
+    const kind = controlDef(ctrl).kind;
+
+    return kind === 'turn' || kind === 'pedal';
+}
+
 function actionsFor(ctrl) {
-    return ACTIONS.filter(a => CONTROLS[ctrl].turns
+    return ACTIONS.filter(a => isContinuous(ctrl)
                           ? (a.v === ACT.NONE || a.v === ACT.POT)
                           : a.v !== ACT.POT);
 }
@@ -157,6 +175,182 @@ let midiChannelRef = null;
 // channel 1 it would have got before. Nothing looks for the label any
 // more, which is the point.
 //
+//
+// Detection, as an extra entry in the setting rather than a control of
+// its own.
+//
+// Picking it is asking a question, so nothing is stored: the pedal is
+// probed, the answer is written to the setting, and the menu settles on
+// what was found.  What changed is the thing being looked at, which is
+// the whole of the feedback.
+//
+// A probe that cannot name what is out there leaves the setting alone.
+// EXP_ACC_NONE and EXP_ACC_UNKNOWN are different answers - an empty jack
+// against something unrecognised - and writing "Nothing" for the second
+// would be confidently wrong and would throw away whatever had been set
+// by hand.
+//
+// The case that used to produce it most often was a treadle at its heel
+// stop, which feeds nothing back.  The pedal now confirms a setting the
+// reading is consistent with rather than naming the jack from scratch,
+// so that one comes back "still a treadle" - see exp_verify().  To make
+// it start over, set the accessory to Nothing and ask again.
+//
+let expProbeSaw = null;
+
+function expAutoOption(potDef, select, effId, potIdx) {
+    const auto = document.createElement('option');
+
+    auto.value = potDef.enum.length;
+    auto.textContent = 'Auto';
+    select.appendChild(auto);
+
+    const said = document.createElement('div');
+    said.className = 'exp-detect-said';
+
+    //
+    // Whatever it says is about the last probe and nothing else, so
+    // anything that moves the menu afterwards clears it.  Two ways in:
+    // a person picking something, below, and the pedal writing the
+    // setting itself, which sets .value from script and fires no event -
+    // hence the hook rather than a listener.
+    //
+    // It used to stay up until the page was reloaded, which turned one
+    // answer to one question into a standing claim about the jack.
+    //
+    const chained = select.onValue;
+    select.onValue = () => {
+        if (chained) chained();
+        said.textContent = '';
+    };
+
+    select.addEventListener('change', (e) => {
+        said.textContent = '';
+        if (Number(e.target.value) !== potDef.enum.length)
+            return;
+
+        said.textContent = 'Probing\u2026';
+        expProbeSaw = (verdict, configured) => {
+            const name = potDef.enum[verdict];
+
+            if (name === undefined) {
+                select.value = configured;
+                if (select.onValue) select.onValue();
+                said.textContent = 'Cannot tell \u2014 rock a treadle '
+                                 + 'and try again.';
+                return;
+            }
+            select.value = verdict;
+            if (select.onValue) select.onValue();
+
+            //
+            // Nothing moved, so nothing showed.  The pedal confirms what
+            // is already set when the reading is consistent with it, and
+            // a menu settling on the value it was already on is not
+            // feedback - so this is the one answer that has to be said
+            // out loud rather than shown.
+            //
+            if (verdict === configured) {
+                said.textContent = `Still ${name}.`;
+                return;
+            }
+
+            said.textContent = '';
+            sendSysex([SYSEX_CMD.PARAM_UPDATE, effId, potIdx + 1, verdict]);
+        };
+        sendSysex([SYSEX_CMD.EXP_PROBE]);
+    });
+
+    return said;
+}
+
+//
+// What to do while a calibration window is open.
+//
+// The pedal only widens the learned range while this switch is on, so
+// the switch is an instruction and not a button: throwing it does
+// nothing visible by itself, and what happens next is up to a foot.  A
+// treadle rocked at a screen that says nothing looks exactly like a jack
+// that is not reading, which is what this is for.
+//
+// It does not say to switch it off afterwards, because the pedal does
+// that itself once a swing stops teaching it anything - and the switch
+// going off on its own is the message arriving, so saying it here as
+// well would be an instruction that is already carried out.
+//
+// Under the switch rather than in a dialog on purpose.  The two controls
+// worth watching while it happens are Heel and Toe, which move on their
+// own as the pedal learns - see exp_calibrate_task() - and a window over
+// the card would cover the only feedback there is.
+//
+function expCalibrateSaid(box) {
+    const said = document.createElement('div');
+    said.className = 'exp-detect-said';
+
+    // Also called from applyPotValue(), because setting .checked from
+    // script fires nothing and the pedal can hold this switch too.
+    box.onValue = () => {
+        said.textContent = box.checked
+            ? 'Rock the treadle heel to toe a few times.' : '';
+    };
+    box.onValue();
+
+    box.addEventListener('change', box.onValue);
+    return said;
+}
+
+//
+// Controls that only mean something under some other control's setting.
+//
+// The effect says which - 'NEEDS: ACCESSORY = Expression' in the header,
+// carried through in the schema as a pot index and a value - so the app
+// does not have to recognise any particular effect to know that four of
+// the expression jack's five controls are about a treadle and do nothing
+// without one.  Its own DSP has always ignored them; this is the same
+// fact, told to the other end.
+//
+// Hidden rather than disabled.  A greyed-out row still asks to be read
+// and still has to be explained; a control that is not there is not a
+// question.  What makes that safe is that the pot it depends on is
+// always visible, so there is never a setting with nowhere to reach it
+// from.
+//
+// Wired after every pot of the effect exists, because a pot may be gated
+// by one declared below it.
+//
+function applyPotGates(effect, idx, potDivs) {
+    const watched = new Map();
+
+    effect.pots.forEach((pot, pIdx) => {
+        const div = potDivs[pIdx];
+        if (!pot.needs || !div)
+            return;
+
+        const gate = ccToElementMap.get(`eff-${idx}-pot-${pot.needs.pot}`);
+        if (!gate)
+            return;
+
+        if (!watched.has(gate))
+            watched.set(gate, []);
+        watched.get(gate).push(() => {
+            const at = gate.type === 'checkbox' ? (gate.checked ? 1 : 0)
+                                                : Number(gate.value);
+            div.classList.toggle('gated-off', at !== pot.needs.value);
+        });
+    });
+
+    watched.forEach((tests, gate) => {
+        const run = () => tests.forEach((t) => t());
+        const before = gate.onValue;
+
+        // Setting .value from script fires nothing, so the pedal's own
+        // writes and the Auto probe both come through here instead.
+        gate.onValue = () => { if (before) before(); run(); };
+        gate.addEventListener('change', run);
+        run();
+    });
+}
+
 function findMidiChannelPot() {
     const idx = PEDAL_EFFECTS.findIndex(
         (e) => e.roles && e.roles.CHANNEL !== undefined);
@@ -576,8 +770,10 @@ function applyPotValue(effId, potIdx, val) {
 
     if (el.type === 'checkbox') {
         el.checked = (val > 0);
+        if (el.onValue) el.onValue();
     } else if (el.tagName === 'SELECT') {
         el.value = val;
+        if (el.onValue) el.onValue();
     } else if (el.type === 'range') {
         el.value = val;
         const valDisplay = el.parentElement.querySelector('.pot-value');
@@ -619,6 +815,22 @@ function handleSysex(data) {
                 const parsed = JSON.parse(jsonStr);
                 PEDAL_EFFECTS = Array.isArray(parsed) ? parsed : parsed.effects;
                 PEDAL_STEERING = Array.isArray(parsed) ? null : parsed.steering;
+
+                //
+                // Which effects are global is the pedal's to say, and
+                // older firmware does not.  Absent, not false: a schema
+                // that carries the flag carries it on every effect, so
+                // one missing key means the whole idea is missing.
+                //
+                // Fall back to what the rule used to be: the last
+                // effect.  Released firmware without the flag has one
+                // global effect and it sorts last, so this is not a
+                // guess about those - it is the same answer they used
+                // to get from the app counting positions itself.
+                //
+                if (PEDAL_EFFECTS.length && !PEDAL_EFFECTS.some((e) => 'global' in e))
+                    PEDAL_EFFECTS[PEDAL_EFFECTS.length - 1].global = true;
+
                 effectIdMap.clear();
                 PEDAL_EFFECTS.forEach((e, idx) => effectIdMap.set(e.id, idx));
                 renderUI();
@@ -656,6 +868,13 @@ function handleSysex(data) {
         case SYSEX_CMD.TELEMETRY:
             handleTelemetry(data);
             break;
+
+        case SYSEX_CMD.EXP_PROBE: {
+            const at = 3 + 1 + 2 * EXP_READINGS;
+            if (expProbeSaw && data.length > at + 1)
+                expProbeSaw(data[at], data[at + 1]);
+            break;
+        }
 
         case SYSEX_CMD.DIAGNOSTIC: {
             // Diagnostic Response
@@ -709,21 +928,20 @@ function handleSysex(data) {
                 pedalRules = list;
                 haveRules = true;
             }
+
+            //
+            // A write is echoed at the level it was written, but it
+            // changes what the control ends up doing as well - and that
+            // is the table drawn for anything the scene is silent
+            // about.  Without asking again, removing a rule leaves the
+            // old one on screen as an inherited row: greyed, doing
+            // nothing, and looking like it survived.
+            //
+            if (level === RULES_SCENE || level === RULES_GLOBAL)
+                sendSysex([SYSEX_BINDINGS, RULES_EFFECTIVE]);
+
             renderBindings();
             renderKnobHint();
-            break;
-        }
-
-        // Raw eeprom cache, 64 bytes as ASCII hex. Ask for it with
-        // dumpEeprom(n) from the console; n counts 64-byte blocks.
-        case 0x0f: {
-            let hex = '';
-            for (let i = 4; i < data.length - 1; i++)
-                hex += String.fromCharCode(data[i]);
-            const off = data[3] * 64;
-            const bytes = hex.match(/../g) || [];
-            console.log(`[EEPROM ${off.toString(16).padStart(4, '0')}] ` +
-                        bytes.join(' '));
             break;
         }
 
@@ -1050,7 +1268,7 @@ function potToValue(pot, val) {
     case 'SQUARED':     return pot.min + p * p * (pot.max - pot.min);
     case 'EXPONENTIAL': return pot.min * Math.pow(pot.max / pot.min, p);
     }
-    return val;                 // RAW and ENUM are already the value
+    return val;                 // RAW and anything named are the value
 }
 
 //
@@ -1059,7 +1277,7 @@ function potToValue(pot, val) {
 // there is, so anything finer is a number the pedal cannot be told.
 //
 function valueToPot(pot, y) {
-    if (pot.curve === 'RAW' || pot.curve === 'ENUM')
+    if (pot.curve === 'RAW' || pot.enum)
         return clampPot(Math.round(y));
 
     const a = pot.min, b = pot.max;
@@ -1208,7 +1426,7 @@ function formatFreqShort(freq) {
 function formatPotValue(pot, val) {
     const y = potToValue(pot, val);
     let displayStr = "";
-    if (pot.curve === 'RAW' || pot.curve === 'ENUM') {
+    if (pot.curve === 'RAW' || pot.enum) {
         displayStr = Math.round(y).toString();
     } else {
         // Drop trailing zeros, max 2 decimals
@@ -1708,8 +1926,26 @@ let effectPool = null;
 // right place and merely shows a stale label, which is honest: a stale
 // label is what is running.
 //
+//
+// Effects that are not part of the chain and cannot be moved into it:
+// the signal chain, which always runs first and outside it, and
+// anything the pedal keeps once rather than per scene.
+//
+// The pedal says which are global.  It used to be "the last one", which
+// was true while there was only one.
+//
 function isAnchorEffect(idx) {
-    return idx === 0 || idx === PEDAL_EFFECTS.length - 1;
+    const e = PEDAL_EFFECTS[idx];
+
+    return idx === 0 || (e && e.global);
+}
+
+//
+// The same question asked for a list rather than for one effect: the
+// anchors that come after the chain, in the order they are drawn.
+//
+function trailingAnchors() {
+    return PEDAL_EFFECTS.filter((e, idx) => idx !== 0 && e.global);
 }
 
 //
@@ -1976,6 +2212,8 @@ document.addEventListener('visibilitychange', updateTelemetryPolling);
 //
 function handleIdentity(id) {
     pedalIdentity = id;
+    CONTROLS = id.controls || [];
+    renderBindings();
 
     const found = id.found || {};
     const notes = [`Firmware built ${id.build || 'unknown'}.`];
@@ -2016,15 +2254,6 @@ function handleIdentity(id) {
     document.getElementById('identity-info').textContent =
         notes.concat(wrong, early).join(' ');
 }
-
-//
-// Bench tool, on window so it can be driven from the console.
-//
-window.dumpEeprom = function (blk = 0, count = 1) {
-    for (let i = 0; i < count; i++)
-        setTimeout(() => sendSysex([0x0e, blk + i]), i * 50);
-};
-
 
 //
 // Send the whole table.  Nothing optimistic happens here: the pedal
@@ -2132,8 +2361,7 @@ function potTargets() {
     if (PEDAL_EFFECTS.length)
         add(PEDAL_EFFECTS[0].id);
     currentRouting.forEach(add);
-    if (PEDAL_EFFECTS.length > 1)
-        add(PEDAL_EFFECTS[PEDAL_EFFECTS.length - 1].id);
+    trailingAnchors().forEach((e) => add(e.id));
 
     return out;
 }
@@ -2156,8 +2384,14 @@ function bindingSummary(b) {
 }
 
 //
-// One number, drawn the way that pot's own control is drawn: a menu for
-// something enumerated, a slider and a readout for anything else.
+// One number: a menu for something whose values have names, a slider and
+// a readout for anything else.
+//
+// A switch gets the menu rather than a switch, which is the one place
+// this does not draw the pot's own control.  What is being picked here
+// is a value to *set*, and a switch showing On is indistinguishable from
+// a switch that has been asked to mean "set it on" - the menu says which
+// of the two states the rule chose, and keeps saying it.
 //
 // It has to be the pot's own units.  A raw 0-120 would make "toggle
 // between 40 and 80" unanswerable without doing the arithmetic that the
@@ -2167,7 +2401,7 @@ function valueControl(pot, val, onChange) {
     const wrap = document.createElement('div');
     wrap.className = 'binding-value';
 
-    if (pot && pot.curve === 'ENUM' && pot.enum && pot.enum.length) {
+    if (pot && pot.enum && pot.enum.length) {
         const sel = document.createElement('select');
         sel.className = 'menu-select';
         pot.enum.forEach((name, i) => {
@@ -2212,7 +2446,7 @@ function valueControl(pot, val, onChange) {
 function newRule(ctrl) {
     const t = potTargets()[0];
 
-    if (CONTROLS[ctrl].turns)
+    if (isContinuous(ctrl))
         return { control: ctrl, action: ACT.POT,
                  effect: t ? t.effId : 0, pot: t ? t.pot : 0, val: [0, 0] };
     return { control: ctrl, action: ACT.TOGGLE_POT,
@@ -2383,10 +2617,12 @@ function renderBindings() {
     // here would claim every control does nothing, which is a specific
     // and wrong answer to a question we have not asked yet.
     //
-    if (!haveRules || !PEDAL_EFFECTS.length)
+    if (!haveRules || !PEDAL_EFFECTS.length || !CONTROLS.length)
         return;
 
-    CONTROLS.forEach((ctrl, c) => {
+    CONTROLS.forEach(ctrl => {
+        const c = ctrl.id;
+
         const group = document.createElement('div');
         group.className = 'rule-group';
 
@@ -2673,13 +2909,12 @@ function applyRouting(routeIds) {
     // The chain bits are by position, so what they mean just changed
     renderAttention();
 
-    // Front anchor, then the chain in order, then the back anchor
+    // Front anchor, then the chain in order, then the globals
     const order = [];
     if (PEDAL_EFFECTS.length)
         order.push(PEDAL_EFFECTS[0].id);
     routeIds.forEach(id => order.push(id));
-    if (PEDAL_EFFECTS.length > 1)
-        order.push(PEDAL_EFFECTS[PEDAL_EFFECTS.length - 1].id);
+    trailingAnchors().forEach((e) => order.push(e.id));
 
     const placed = new Set(order);
 
@@ -2819,7 +3054,7 @@ function renderUI() {
         title.style.display = 'flex';
         title.style.alignItems = 'center';
 
-        // The two anchors are not in the chain, so there is nothing to
+        // The anchors are not in the chain, so there is nothing to
         // reorder them relative to and no handle on them
         if (!isAnchorEffect(idx)) {
             title.innerHTML = `<span class="drag-handle">≡</span>
@@ -3615,6 +3850,8 @@ function renderUI() {
             (eqFooter || controls).appendChild(mixDiv);
         }
 
+        const potDivs = [];
+
         effect.pots.forEach((pot, pIdx) => {
             const potIdKey = `eff-${idx}-pot-${pIdx}`;
 
@@ -3624,6 +3861,7 @@ function renderUI() {
 
             const potDiv = document.createElement('div');
             potDiv.className = 'pot-control';
+            potDivs[pIdx] = potDiv;
 
             const label = document.createElement('div');
             label.className = 'pot-label';
@@ -3645,7 +3883,38 @@ function renderUI() {
 
             const initialVal = getInitialPotValue(pot);
 
-            if (pot.curve === 'ENUM' && pot.enum) {
+            //
+            // A switch, drawn as the header's bypass is drawn, because
+            // it is the same kind of thing: one state or the other, with
+            // the pot's own name as the label.  A two-item menu said the
+            // same and made you open it to find out which.
+            //
+            if (pot.curve === 'BOOL') {
+                const toggle = document.createElement('label');
+                toggle.className = 'switch';
+
+                const box = document.createElement('input');
+                box.type = 'checkbox';
+                box.checked = initialVal > 0;
+
+                const knob = document.createElement('span');
+                knob.className = 'slider round';
+
+                toggle.appendChild(box);
+                toggle.appendChild(knob);
+
+                ccToElementMap.set(potIdKey, box);
+                box.addEventListener('change', () => {
+                    sendSysex([SYSEX_CMD.PARAM_UPDATE, effect.id, pIdx+1,
+                               box.checked ? 1 : 0]);
+                });
+
+                potDiv.appendChild(label);
+                potDiv.appendChild(toggle);
+
+                if (effect.roles && effect.roles.CALIBRATE === pIdx)
+                    potDiv.appendChild(expCalibrateSaid(box));
+            } else if (pot.enum) {
                 const select = document.createElement('select');
                 select.className = 'enum-select';
                 pot.enum.forEach((optStr, idx) => {
@@ -3659,11 +3928,34 @@ function renderUI() {
                 ccToElementMap.set(potIdKey, select);
                 select.addEventListener('change', (e) => {
                     const midiVal = parseInt(e.target.value);
+
+                    //
+                    // A menu is allowed to carry an entry that is not a
+                    // value.  'Auto' on the expression jack is one - it
+                    // asks the pedal to go and look, and sits one past
+                    // the end of the enum so that it cannot be mistaken
+                    // for a setting.
+                    //
+                    // Which it was, by this, every time it was picked.
+                    // The pedal clamps a parameter to the pot's largest
+                    // valid value, so "go and look" arrived as the last
+                    // name in the list - Stomp+LED - and the probe that
+                    // followed then reported that as what was
+                    // configured. One press, two wrong answers, and the
+                    // second one looked like a misread jack.
+                    //
+                    if (midiVal >= pot.enum.length)
+                        return;
+
                     sendSysex([SYSEX_CMD.PARAM_UPDATE, effect.id, pIdx+1, midiVal]);
                 });
 
                 potDiv.appendChild(label);
                 potDiv.appendChild(select);
+
+                if (effect.roles && effect.roles.EXPJACK === pIdx)
+                    potDiv.appendChild(
+                        expAutoOption(pot, select, effect.id, pIdx));
             } else {
                 const valDisplay = document.createElement('div');
                 valDisplay.className = 'pot-value';
@@ -3730,6 +4022,8 @@ function renderUI() {
                 eqFooter.appendChild(potDiv);
             }
         });
+
+        applyPotGates(effect, idx, potDivs);
 
         if (isEq) {
             //

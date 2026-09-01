@@ -384,6 +384,140 @@ static void fire_control(unsigned int ctrl)
 	}
 }
 
+#ifdef EXP_TIP_GPIO
+//
+// Where the treadle is, as a value for whatever it drives.
+//
+// Absolute where the rotary is relative: a treadle *is* the setting
+// rather than a nudge to it, so quantising it is the whole of the work
+// - and quantising needs hysteresis.  The reading is steady to a count
+// in 4095, but a foot resting on a boundary is not, and one pot step is
+// under a percent of travel: plain rounding would flip between two
+// values for as long as the foot rested there, and send a message for
+// each flip.
+//
+// Having settled on a value, the input has to pass the midpoint and
+// then some before it moves.  A dead band of three quarter-steps leaves
+// half a step of overlap - 10 becomes 11 at 10.75 and goes back at
+// 10.25 - and it is in *steps* rather than counts, so a pot with four
+// positions gets a proportionally wider band, which is what a foot
+// needs and what a fine pot does not.
+//
+// Where the pot already is serves as the state this compares against,
+// so there is none of its own to keep or to get out of step.
+//
+#define TREADLE_DEADBAND 3	// quarter-steps, either side
+
+//
+// ...and it drives only when it moves, which is a different question
+// from whether it disagrees.
+//
+// A treadle that asserted its position on every pass would own whatever
+// it is bound to: the knob and the app could each set that pot and have
+// it stamped back a millisecond later, with nothing to show for it.  A
+// pedal sitting still is not asking for anything.
+//
+// It is also what makes an unplugged jack harmless.  The reading goes
+// to whatever the normalling contacts give and stays there, so it stops
+// asking rather than holding the pot at a value nobody chose.
+//
+// Eight counts is well clear of the one count of jitter, and well
+// inside a pot step - thirty counts on a fine one - so nothing is lost
+// by it.  A slow move accumulates, because this compares against where
+// the treadle was when it last drove something rather than against the
+// previous sample.
+//
+#define TREADLE_MOVE 8
+
+//
+// The treadle gone, and whatever it was driving put back.
+//
+// Not a tidiness: an unplugged jack reads as a wiper at its heel stop,
+// because the normalling contacts ground the pin, so the last thing a
+// treadle does on the way out is drive everything it owns to minimum.
+// Pull a volume pedal out of a working rig and the rig goes to -40dB and
+// stays there, which looks exactly like the pedal having broken.
+//
+// Nothing can stop that happening - the reading is a legitimate treadle
+// position and there is no way to tell it from one until a probe says the
+// jack is empty, by which time it has already been acted on.  What can be
+// done is undoing it once that is known.
+//
+// Back to the default rather than to whatever it was before.  "Before"
+// would have to survive scene loads and rebinding to be worth anything,
+// and the default is already the answer to "where does this sit when
+// nothing is driving it" - the same one reset_effect() and an unrouted
+// effect give.  For Volume it is 0dB, which is the case that matters.
+//
+static void treadle_released(void)
+{
+	for (unsigned int i = 0; i < nr_rules; i++) {
+		struct rule *r = &rules[i];
+		unsigned int pot, eff_id;
+		struct effect *effect;
+
+		if (r->control != CTRL_EXP_TREADLE || r->action != ACT_POT)
+			continue;
+		if (!(effect = bind_target(r, &pot, &eff_id)))
+			continue;
+
+		set_target(effect, eff_id, pot, target_default(effect, pot));
+	}
+}
+
+static void treadle_moved(void)
+{
+	static int acted = -1;	// nowhere yet, so the first pass drives
+	static bool live;
+	int span = expression.toe - expression.heel;
+	int raw = exp_treadle_raw;
+
+	if (expression.accessory != EXP_ACC_TREADLE || span <= 0) {
+		if (live)
+			treadle_released();
+		live = false;
+
+		// So that plugging one back in drives on the first pass
+		acted = -1;
+		return;
+	}
+	live = true;
+
+	if (acted >= 0 && raw - acted < TREADLE_MOVE && acted - raw < TREADLE_MOVE)
+		return;
+	acted = raw;
+
+	if (raw < expression.heel)
+		raw = expression.heel;
+	else if (raw > expression.toe)
+		raw = expression.toe;
+
+	for (unsigned int i = 0; i < nr_rules; i++) {
+		struct rule *r = &rules[i];
+		unsigned int pot, eff_id;
+		struct effect *effect;
+
+		if (r->control != CTRL_EXP_TREADLE || r->action != ACT_POT)
+			continue;
+		if (!(effect = bind_target(r, &pot, &eff_id)))
+			continue;
+
+		const struct pot_range range = target_range(effect, pot);
+		int steps = range.max - range.min;
+
+		if (steps <= 0)
+			continue;
+
+		int want = (raw - expression.heel) * 4 * steps / span;
+		int now = 4 * (target_value(effect, pot) - range.min);
+
+		if (want - now > TREADLE_DEADBAND || now - want > TREADLE_DEADBAND)
+			set_target(effect, eff_id, pot,
+				   range.min + (want + 2) / 4);
+	}
+}
+#endif
+
 //
 // Whatever the switches are bound to.
 //
@@ -401,7 +535,48 @@ static void handle_switch_bindings(void)
 		{ LONGPRESS(ROTARY_SWITCH),	CTRL_ROTARY_HOLD },
 		{ STOMP_SWITCH,			CTRL_STOMP_TAP },
 		{ LONGPRESS(STOMP_SWITCH),	CTRL_STOMP_HOLD },
+#ifdef EXP_TIP_GPIO
+		{ EXP_TIP_SWITCH,		CTRL_EXP_TIP_TAP },
+		{ LONGPRESS(EXP_TIP_SWITCH),	CTRL_EXP_TIP_HOLD },
+		{ EXP_RING_SWITCH,		CTRL_EXP_RING_TAP },
+		{ LONGPRESS(EXP_RING_SWITCH),	CTRL_EXP_RING_HOLD },
+#endif
 	};
+
+#ifdef EXP_TIP_GPIO
+	//
+	// Whether the accessory is still there, asked before its switches
+	// are acted on, because unplugging one looks exactly like holding
+	// one down.
+	//
+	// The normalling contacts ground both pins when the plug comes
+	// out, and a grounded pin is a held switch as far as debounce.pio
+	// can tell.  So exp_accessory_gone() asks only while something is
+	// held, which is the one state where a look costs nothing and the
+	// only one where the question arises.
+	//
+	// For a dual stomp the cost is that holding both switches at once
+	// is spent: it drops the accessory instead of firing the two hold
+	// rules.  There is no combined gesture to lose - the tip and the
+	// ring are separate controls - and no probe could tell a foot on
+	// both from an empty jack anyway, which is why this is the trade
+	// and not a bug.
+	//
+	// A stomp box with an LED pays nothing, because the LED answers
+	// the question outright: a held switch and an unplugged jack look
+	// the same on the tip and nothing like each other on the ring.
+	//
+	// This is about the accessory going away.  An accessory that was
+	// never named right in the first place is not this - nothing here
+	// can help, because a wrong answer does not announce itself.  That
+	// one is EXP_SETTLE_MS's job, which is to not conclude until the
+	// jack has stopped moving.
+	//
+	if (exp_accessory_gone()) {
+		exp_switches_dropped();
+		return;
+	}
+#endif
 
 	for (int i = 0; i < ARRAY_SIZE(gestures); i++) {
 		if (!switch_pressed(gestures[i].sw))
@@ -610,6 +785,9 @@ static void show_status(unsigned int ms)
 	}
 
 	set_led(ms, !disable_all, global, attn);
+#ifdef EXP_TIP_GPIO
+	exp_led_set(!disable_all);
+#endif
 
 	// A CC value is seven bits, so the chain needs two of them
 	uint8_t chain[2] = { attn & ((1u << STATUS_CHAIN_BITS) - 1),
