@@ -689,6 +689,22 @@ function handleSysex(data) {
                 const parsed = JSON.parse(jsonStr);
                 PEDAL_EFFECTS = Array.isArray(parsed) ? parsed : parsed.effects;
                 PEDAL_STEERING = Array.isArray(parsed) ? null : parsed.steering;
+
+                //
+                // Which effects are global is the pedal's to say, and
+                // older firmware does not.  Absent, not false: a schema
+                // that carries the flag carries it on every effect, so
+                // one missing key means the whole idea is missing.
+                //
+                // Fall back to what the rule used to be: the last
+                // effect.  Released firmware without the flag has one
+                // global effect and it sorts last, so this is not a
+                // guess about those - it is the same answer they used
+                // to get from the app counting positions itself.
+                //
+                if (PEDAL_EFFECTS.length && !PEDAL_EFFECTS.some((e) => 'global' in e))
+                    PEDAL_EFFECTS[PEDAL_EFFECTS.length - 1].global = true;
+
                 effectIdMap.clear();
                 PEDAL_EFFECTS.forEach((e, idx) => effectIdMap.set(e.id, idx));
                 renderUI();
@@ -1784,8 +1800,26 @@ let effectPool = null;
 // right place and merely shows a stale label, which is honest: a stale
 // label is what is running.
 //
+//
+// Effects that are not part of the chain and cannot be moved into it:
+// the signal chain, which always runs first and outside it, and
+// anything the pedal keeps once rather than per scene.
+//
+// The pedal says which are global.  It used to be "the last one", which
+// was true while there was only one.
+//
 function isAnchorEffect(idx) {
-    return idx === 0 || idx === PEDAL_EFFECTS.length - 1;
+    const e = PEDAL_EFFECTS[idx];
+
+    return idx === 0 || (e && e.global);
+}
+
+//
+// The same question asked for a list rather than for one effect: the
+// anchors that come after the chain, in the order they are drawn.
+//
+function trailingAnchors() {
+    return PEDAL_EFFECTS.filter((e, idx) => idx !== 0 && e.global);
 }
 
 //
@@ -2201,8 +2235,7 @@ function potTargets() {
     if (PEDAL_EFFECTS.length)
         add(PEDAL_EFFECTS[0].id);
     currentRouting.forEach(add);
-    if (PEDAL_EFFECTS.length > 1)
-        add(PEDAL_EFFECTS[PEDAL_EFFECTS.length - 1].id);
+    trailingAnchors().forEach((e) => add(e.id));
 
     return out;
 }
@@ -2744,13 +2777,12 @@ function applyRouting(routeIds) {
     // The chain bits are by position, so what they mean just changed
     renderAttention();
 
-    // Front anchor, then the chain in order, then the back anchor
+    // Front anchor, then the chain in order, then the globals
     const order = [];
     if (PEDAL_EFFECTS.length)
         order.push(PEDAL_EFFECTS[0].id);
     routeIds.forEach(id => order.push(id));
-    if (PEDAL_EFFECTS.length > 1)
-        order.push(PEDAL_EFFECTS[PEDAL_EFFECTS.length - 1].id);
+    trailingAnchors().forEach((e) => order.push(e.id));
 
     const placed = new Set(order);
 
@@ -2890,7 +2922,7 @@ function renderUI() {
         title.style.display = 'flex';
         title.style.alignItems = 'center';
 
-        // The two anchors are not in the chain, so there is nothing to
+        // The anchors are not in the chain, so there is nothing to
         // reorder them relative to and no handle on them
         if (!isAnchorEffect(idx)) {
             title.innerHTML = `<span class="drag-handle">≡</span>

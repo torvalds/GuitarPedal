@@ -345,13 +345,22 @@ check('the schema declares channel steering once, not per effect',
 
 //
 // Steering means nothing for an effect that is never handed to
-// do_effect_step(), and those are exactly the two that anchor the chain.
+// do_effect_step(), and those are the ones that anchor the chain: the
+// signal chain, and anything the pedal keeps once rather than per
+// scene.
 //
-check('only the routable effects are steerable',
-      schema.filter((e) => e.steerable).length === schema.length - 2 &&
-      !schema[0].steerable && !schema[schema.length - 1].steerable);
+// Asked of the schema rather than counted off the ends.  "The first and
+// the last" was true while there was one global effect, and this test
+// went on asserting it after there were two - which made it agree with
+// the bug rather than catch it.
+//
+const anchors = schema.filter((e, i) => i === 0 || e.global);
+const routable = schema.filter((e, i) => i !== 0 && !e.global);
 
-const routable = schema.slice(1, -1);
+check('there is more than one way to anchor the chain',
+      anchors.length >= 2 && anchors.length + routable.length === schema.length);
+check('only the routable effects are steerable',
+      routable.every((e) => e.steerable) && anchors.every((e) => !e.steerable));
 const pool = document.getElementById('effect-pool');
 
 // [label, chip grid], or hidden with nothing in it at all
@@ -368,9 +377,8 @@ check('nothing is routed until the pedal says so',
 check('and the cards for those are parked',
       routable.every((e) => cardOf(e).classes.has('parked')));
 check('while the anchors are not chips and not parked',
-      !chipNames().includes(schema[0].name)
-      && !cardOf(schema[0]).classes.has('parked')
-      && !cardOf(schema[schema.length - 1]).classes.has('parked'));
+      anchors.every((e) => !chipNames().includes(e.name)
+                    && !cardOf(e).classes.has('parked')));
 
 // Two of them routed, in an order that is not the schema's
 const routed = [routable[2], routable[0]];
@@ -661,6 +669,31 @@ global.localStorage = {
 check('storage that refuses to read still yields the default',
       app.uiPref('eq.keepOrder', true) === true);
 app.setUiPref('eq.keepOrder', false);   // and refusing to write is not fatal
+
+//
+// Firmware older than the flag does not say which effects are global,
+// and a cached copy of this app can meet one.  It gets what the rule
+// used to be: the last effect, which is what every schema without the
+// flag meant.
+//
+// Last in the file because it replaces the schema everything above is
+// written against.
+//
+const older = JSON.parse(schemaJson);
+(Array.isArray(older) ? older : older.effects)
+    .forEach((e) => { delete e.global; });
+app.handleSysex(asSysex(0x02, JSON.stringify(older)));
+
+const oldPool = document.getElementById('effect-pool');
+const oldChips = oldPool.classes.has('hidden') ? []
+      : oldPool.children[oldPool.children.length - 1]
+               .children.map((c) => c.textContent);
+const lastCard = document.getElementById(`effect-${schema.length - 1}`);
+
+check('a schema with no flag still keeps its last effect out of the chain',
+      !oldChips.includes(schema[schema.length - 1].name)
+      && !lastCard.classes.has('parked'),
+      oldChips.join());
 
 if (failures) {
     say(`test-webmidi: ${failures} failure(s)`);
