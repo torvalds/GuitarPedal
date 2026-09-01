@@ -454,6 +454,46 @@ static void exp_led_set(bool on)
 	pwm_set_gpio_level(EXP_RING_GPIO, on ? PWM_WRAP : 0);
 }
 
+//
+// Which pin is which, for a treadle.  Roland and Boss put the wiper on
+// the tip and drive the ring; Yamaha and Korg are the other way about.
+//
+static unsigned int exp_wiper_gpio(void)
+{
+	return settings.exp_type ? EXP_RING_GPIO : EXP_TIP_GPIO;
+}
+
+static unsigned int exp_supply_gpio(void)
+{
+	return settings.exp_type ? EXP_TIP_GPIO : EXP_RING_GPIO;
+}
+
+static int exp_wiper_adc(void)
+{
+	return settings.exp_type ? EXP_RING_ADC : EXP_TIP_ADC;
+}
+
+//
+// Where the treadle is, read where it stands rather than swept for.
+//
+// The pins park driven, so nothing is being reconfigured between
+// samples and nothing has to settle: the only filter left is the 22nF,
+// which against the worst case of a 100k pot at mid travel is about
+// 570us.  A foot takes tens of milliseconds, so the capacitor is not
+// what decides how quickly this follows - the sampling rate is, which
+// is why it runs from the main loop rather than the 25Hz tick.
+//
+static uint16_t exp_treadle_raw;
+
+static void exp_treadle_task(void)
+{
+	if (settings.exp_jack != EXP_ACC_TREADLE)
+		return;
+	if (exp_sweep_busy())
+		return;		// the sweep has the pins
+	exp_treadle_raw = exp_read(exp_wiper_adc());
+}
+
 static void init_exp_pins(void)
 {
 	//
@@ -477,6 +517,11 @@ static void init_exp_pins(void)
 	case EXP_ACC_STOMP_LED:
 		init_exp_switch(EXP_TIP_SWITCH);
 		init_one_pwm_pin(EXP_RING_GPIO);
+		break;
+	case EXP_ACC_TREADLE:
+		// Parked driven, and left that way to be read from.
+		exp_drive_begin(exp_supply_gpio(), exp_wiper_gpio());
+		exp_drive_end(exp_supply_gpio(), exp_wiper_gpio());
 		break;
 	}
 }

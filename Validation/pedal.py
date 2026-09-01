@@ -464,6 +464,9 @@ def telemetry(p, in_port=None, wait=1.5):
     #
     if len(body) >= 7:
         out["load14"] = (body[5] << 7) | body[6]
+    # ...and from layout 3, where the treadle is, raw and unscaled.
+    if len(body) >= 9:
+        out["treadle"] = (body[7] << 7) | body[8]
     return out
 
 

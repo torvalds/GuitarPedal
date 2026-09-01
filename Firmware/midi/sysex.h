@@ -390,13 +390,17 @@ static void sysex_send_telemetry(void)
 	uint16_t load = fraction_to_14bit(meter_load);
 
 	const uint8_t body[] = {
-		2,				// layout version
+		3,				// layout version
 		level_to_dbfs(meter_in),	// input peak, before Trim
 		level_to_dbfs(meter_floor),	// the quiet level under it
 		level_to_dbfs(meter_out),	// output peak, after Volume
 		fraction_to_byte(gate),		// 127 open, 0 fully closed
 		load >> 7,			// share of the sample period used
 		load & 127,			// ...and the bits under it
+#ifdef EXP_TIP_GPIO
+		exp_treadle_raw >> 7,		// where the treadle is, raw
+		exp_treadle_raw & 127,		// ...before any range is known
+#endif
 	};
 
 	sysex_tx_start();

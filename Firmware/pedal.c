@@ -286,6 +286,7 @@ int main()
 		if (exp_follow_setting())
 			send_identity_tx = true;
 		exp_sweep_task();
+		exp_treadle_task();
 		sysex_send_exp();
 #endif
 		sysex_send_schema();

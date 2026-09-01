@@ -20,6 +20,16 @@
 //
 // POT: "Exp Jack" ENUM(Nothing Footswitches Expression Stomp+LED) = Nothing
 //
+// Which contact an expression pedal drives, since the two conventions
+// disagree and a plug cannot say which it is.  Getting it wrong still
+// sweeps, so "does it move" cannot pick between them - what the wrong
+// one loses is the shape, reaching 92% of its range by half travel.
+//
+// POT: "Exp Type" ENUM(Roland Yamaha) = Roland
+// INFO: Roland and Boss put the wiper on the tip; Yamaha and Korg put
+// INFO: it on the ring. If the treadle feels like it does everything in
+// INFO: the first half of its travel, it is the other one.
+//
 // Which pot the app has to be able to find rather than merely show.  It
 // filters Control Change and Program Change by this, so the app has to
 // transmit on the same one or bypass, the tuner and scene changes stop
@@ -51,6 +61,7 @@ struct {
 	float led_pwm, led_intense;
 	int tuning;
 	int exp_jack;
+	int exp_type;
 } settings;
 
 static void settings_init(unsigned char pot[10])
@@ -80,6 +91,7 @@ static void settings_init(unsigned char pot[10])
 
 	settings.tuning = pot[SETTINGS_TUNING];
 	settings.exp_jack = pot[SETTINGS_EXP_JACK];
+	settings.exp_type = pot[SETTINGS_EXP_TYPE];
 }
 
 //
