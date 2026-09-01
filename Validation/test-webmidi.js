@@ -171,7 +171,8 @@ const WANT = ['handleIdentity', 'populateScenePicker', 'updateSceneLabels',
               'renderAttention', 'handleTelemetry', 'handleSysex',
               'routeEffect', 'unrouteEffect',
               'potToValue', 'valueToPot', 'clampToNeighbours', 'pileAt',
-              'uiPref', 'setUiPref'];
+              'uiPref', 'setUiPref',
+              'controlDef', 'actionsFor'];
 
 //
 // The chain is a list held in a variable rather than anything the dom
@@ -182,7 +183,8 @@ const WANT = ['handleIdentity', 'populateScenePicker', 'updateSceneLabels',
 const src = fs.readFileSync(effectsJs, 'utf8') + '\n'
           + fs.readFileSync(path.join(WEB, 'app.js'), 'utf8') + '\n'
           + `;globalThis.__app = { ${WANT.join(', ')} };`
-          + `;globalThis.__app.routing = () => currentRouting;`;
+          + `;globalThis.__app.routing = () => currentRouting;`
+          + `;globalThis.__app.controls = () => CONTROLS;`;
 
 //
 // The app logs as it goes, including from promises that settle after this
@@ -229,6 +231,38 @@ check('a missing eeprom is flagged', app.boardFault.on === true);
 app.handleIdentity(identity());
 check('and both clear again when the next pedal is fine',
       app.boardFault.on === false && app.earlyNote.on === false);
+
+//
+// The controls come from the pedal, so a board with a different set of
+// them needs no change here.  The ids are not positions: a board without
+// an expression jack sends five and they are not numbered 0 to 4.
+//
+app.handleIdentity(identity({ controls: [
+    { id: 0, name: 'Knob \u2014 turn', kind: 'turn' },
+    { id: 3, name: 'Footswitch \u2014 press', kind: 'click' },
+    { id: 5, name: 'Jack tip \u2014 press', kind: 'click' },
+] }));
+check('the control list is the pedal\u0027s', app.controls().length === 3);
+check('and is found by id rather than by position',
+      app.controlDef(5).name === 'Jack tip \u2014 press');
+
+//
+// Which actions are worth offering follows the kind the pedal gave.
+//
+const turnActs = app.actionsFor(0).map(a => a.v);
+const clickActs = app.actionsFor(3).map(a => a.v);
+check('something that turns can only drive a parameter',
+      turnActs.length === 2 && turnActs.includes(1));
+check('and something that clicks can do anything else',
+      clickActs.length > 2 && !clickActs.includes(1));
+
+//
+// A rule can name a control the pedal did not describe - an older app
+// against a newer pedal.  Drawing it as something beats throwing.
+//
+check('an unknown control still draws', app.controlDef(99).name === 'Control 99');
+
+app.handleIdentity(identity());
 
 //
 // How many scenes there are comes from the pedal, so the picker has to be

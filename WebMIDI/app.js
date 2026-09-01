@@ -11,13 +11,9 @@ const SYSEX_CMD = {
 };
 
 //
-// What the pedal's own controls do.  Must match enum control_id and
-// enum bind_action in bindings.h.
-//
-// There is no schema for these the way there is for effects, and there
-// should not be: the set of gestures is fixed by what the hardware
-// physically has, so it changes when a board does rather than when an
-// effect header does.
+// Actions must match enum bind_action in bindings.h.  The controls come
+// from the pedal - which ones exist depends on the board and on what is
+// in its expression jack, so it is not ours to know.
 //
 const SYSEX_SET_BINDING = 0x0c;
 const SYSEX_BINDINGS = 0x0d;
@@ -55,13 +51,16 @@ const BIND_FOLLOW = 0x7f;
 //
 const MIX_POT_DEF = { name: 'Mix', curve: 'LINEAR', min: 0, max: 100, unit: '%' };
 
-const CONTROLS = [
-    { name: 'Knob \u2014 turn',        turns: true  },
-    { name: 'Knob \u2014 press',       turns: false },
-    { name: 'Knob \u2014 hold',        turns: false },
-    { name: 'Footswitch \u2014 press', turns: false },
-    { name: 'Footswitch \u2014 hold',  turns: false }
-];
+let CONTROLS = [];
+
+//
+// A control the pedal did not describe still has to draw as something,
+// because a rule naming it is already on the screen.
+//
+function controlDef(id) {
+    return CONTROLS.find(c => c.id === id)
+        || { id, name: `Control ${id}`, kind: 'click' };
+}
 
 //
 // 'target' is whether the action names a parameter, and 'follow' is
@@ -93,7 +92,7 @@ function actionDef(v) {
 // that clicks can do anything except that.
 //
 function actionsFor(ctrl) {
-    return ACTIONS.filter(a => CONTROLS[ctrl].turns
+    return ACTIONS.filter(a => controlDef(ctrl).kind === 'turn'
                           ? (a.v === ACT.NONE || a.v === ACT.POT)
                           : a.v !== ACT.POT);
 }
@@ -1976,6 +1975,8 @@ document.addEventListener('visibilitychange', updateTelemetryPolling);
 //
 function handleIdentity(id) {
     pedalIdentity = id;
+    CONTROLS = id.controls || [];
+    renderBindings();
 
     const found = id.found || {};
     const notes = [`Firmware built ${id.build || 'unknown'}.`];
@@ -2212,7 +2213,7 @@ function valueControl(pot, val, onChange) {
 function newRule(ctrl) {
     const t = potTargets()[0];
 
-    if (CONTROLS[ctrl].turns)
+    if (controlDef(ctrl).kind === 'turn')
         return { control: ctrl, action: ACT.POT,
                  effect: t ? t.effId : 0, pot: t ? t.pot : 0, val: [0, 0] };
     return { control: ctrl, action: ACT.TOGGLE_POT,
@@ -2383,10 +2384,12 @@ function renderBindings() {
     // here would claim every control does nothing, which is a specific
     // and wrong answer to a question we have not asked yet.
     //
-    if (!haveRules || !PEDAL_EFFECTS.length)
+    if (!haveRules || !PEDAL_EFFECTS.length || !CONTROLS.length)
         return;
 
-    CONTROLS.forEach((ctrl, c) => {
+    CONTROLS.forEach(ctrl => {
+        const c = ctrl.id;
+
         const group = document.createElement('div');
         group.className = 'rule-group';
 
