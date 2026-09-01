@@ -68,6 +68,10 @@ _Static_assert(NR_CONTROLS <= 32, "physical controls are crowding the id space")
 // anything else.  Sent rather than assumed, so the app does not carry a
 // second copy of this list that agrees right up until it doesn't.
 //
+// Named for what a person plugs in rather than for the contact it lands
+// on: "jack tip" is true and means nothing to anyone who did not draw
+// the schematic.
+//
 // A NULL name is a control this board does not have.  The ids are the
 // same everywhere either way - they travel in saved rules and over the
 // wire, so they are protocol rather than a property of the hardware.
@@ -90,10 +94,10 @@ static const struct control_desc controls[NR_CONTROLS] = {
 	[CTRL_STOMP_TAP]	= { "Footswitch \\u2014 press",	CTRL_CLICKS },
 	[CTRL_STOMP_HOLD]	= { "Footswitch \\u2014 hold",	CTRL_CLICKS },
 #ifdef EXP_TIP_GPIO
-	[CTRL_EXP_TIP_TAP]	= { "Jack tip \\u2014 press",	CTRL_CLICKS },
-	[CTRL_EXP_TIP_HOLD]	= { "Jack tip \\u2014 hold",	CTRL_CLICKS },
-	[CTRL_EXP_RING_TAP]	= { "Jack ring \\u2014 press",	CTRL_CLICKS },
-	[CTRL_EXP_RING_HOLD]	= { "Jack ring \\u2014 hold",	CTRL_CLICKS },
+	[CTRL_EXP_TIP_TAP]	= { "Remote 1 \\u2014 press",	CTRL_CLICKS },
+	[CTRL_EXP_TIP_HOLD]	= { "Remote 1 \\u2014 hold",	CTRL_CLICKS },
+	[CTRL_EXP_RING_TAP]	= { "Remote 2 \\u2014 press",	CTRL_CLICKS },
+	[CTRL_EXP_RING_HOLD]	= { "Remote 2 \\u2014 hold",	CTRL_CLICKS },
 #endif
 };
 
