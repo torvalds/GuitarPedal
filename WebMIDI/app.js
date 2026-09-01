@@ -708,6 +708,18 @@ function handleSysex(data) {
                 pedalRules = list;
                 haveRules = true;
             }
+
+            //
+            // A write is echoed at the level it was written, but it
+            // changes what the control ends up doing as well - and that
+            // is the table drawn for anything the scene is silent
+            // about.  Without asking again, removing a rule leaves the
+            // old one on screen as an inherited row: greyed, doing
+            // nothing, and looking like it survived.
+            //
+            if (level === RULES_SCENE || level === RULES_GLOBAL)
+                sendSysex([SYSEX_BINDINGS, RULES_EFFECTIVE]);
+
             renderBindings();
             renderKnobHint();
             break;
