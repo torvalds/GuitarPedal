@@ -725,19 +725,6 @@ function handleSysex(data) {
             break;
         }
 
-        // Raw eeprom cache, 64 bytes as ASCII hex. Ask for it with
-        // dumpEeprom(n) from the console; n counts 64-byte blocks.
-        case 0x0f: {
-            let hex = '';
-            for (let i = 4; i < data.length - 1; i++)
-                hex += String.fromCharCode(data[i]);
-            const off = data[3] * 64;
-            const bytes = hex.match(/../g) || [];
-            console.log(`[EEPROM ${off.toString(16).padStart(4, '0')}] ` +
-                        bytes.join(' '));
-            break;
-        }
-
         case SYSEX_CMD.ROUTING_ORDER: {
             // Routing order
             const routeIds = [];
@@ -2029,15 +2016,6 @@ function handleIdentity(id) {
     document.getElementById('identity-info').textContent =
         notes.concat(wrong, early).join(' ');
 }
-
-//
-// Bench tool, on window so it can be driven from the console.
-//
-window.dumpEeprom = function (blk = 0, count = 1) {
-    for (let i = 0; i < count; i++)
-        setTimeout(() => sendSysex([0x0e, blk + i]), i * 50);
-};
-
 
 //
 // Send the whole table.  Nothing optimistic happens here: the pedal
