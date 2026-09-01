@@ -431,6 +431,88 @@ static int exp_classify(const uint16_t r[EXP_NR_READINGS])
 }
 
 //
+// Is what is out there still consistent with what somebody said it was?
+//
+// A different question from exp_classify(), and a much easier one.
+// Naming a jack from a reading means picking one of five, and the pot
+// that gives the only positive test goes quiet at its heel stop.
+// Confirming a name means ruling it out, and a reading no rule can name
+// is usually still perfectly consistent with something: 812/69 is what a
+// heel-down treadle looks like, and nothing else on the list looks like
+// it except a stomp whose switch happens to be held at that moment.
+//
+// Asymmetric on purpose.  This can confirm a wrong answer somebody
+// typed; it cannot invent one.  To make the pedal start over, set the
+// accessory to Nothing - which is also the only state anything automatic
+// discovers from.
+//
+static bool exp_verify(const uint16_t r[EXP_NR_READINGS], int accessory)
+{
+	bool tip_open = r[EXP_PULLUP_TIP] >= EXP_HIGH;
+	bool ring_open = r[EXP_PULLUP_RING] >= EXP_HIGH;
+	bool tip_low = r[EXP_PULLUP_TIP] < EXP_LOW;
+	bool ring_low = r[EXP_PULLUP_RING] < EXP_LOW;
+
+	switch (accessory) {
+	case EXP_ACC_NONE:
+		//
+		// The normalling contacts and nothing else.  A plug lifts
+		// them, so anything off the bottom is a plug - but a
+		// switch box with everything held down reads the same,
+		// and nothing here can say otherwise.
+		//
+		return tip_low && ring_low;
+
+	case EXP_ACC_SWITCHES:
+		//
+		// Each pin is a switch: open, or shorted to sleeve.  A pin
+		// resting anywhere between the two has something on it
+		// that is not a switch.
+		//
+		return (tip_open || tip_low) && (ring_open || ring_low);
+
+	case EXP_ACC_STOMP_LED:
+		//
+		// The LED clamps the ring's pull-up at its forward drop,
+		// which is the whole of the evidence and is there whether
+		// or not the switch is down.
+		//
+		return !ring_open && !ring_low && (tip_open || tip_low);
+
+	case EXP_ACC_TREADLE:
+		//
+		// A wiper feeding a driven pin's voltage back is proof,
+		// and the only proof there is - but it is gone at the heel
+		// stop, where the wiper sits at sleeve and feeds nothing.
+		// What is left there is the supply pin, still a divider
+		// against the pull-up and so reading neither rail while
+		// the wiper reads the bottom.
+		//
+		// Either pin may be either: the two conventions disagree
+		// about which, and this does not have to care.
+		//
+		if (r[EXP_DRIVERING_TIP] >= EXP_LOW ||
+		    r[EXP_DRIVETIP_RING] >= EXP_LOW)
+			return true;
+		return (tip_low && !ring_low && !ring_open) ||
+		       (ring_low && !tip_low && !tip_open);
+	}
+	return false;
+}
+
+//
+// What to call what is out there, given what has already been said about
+// it.  Confirming beats guessing, and the cases where they differ are
+// exactly the readings where guessing has nothing to go on.
+//
+static int exp_verdict(const uint16_t r[EXP_NR_READINGS])
+{
+	if (exp_verify(r, expression.accessory))
+		return expression.accessory;
+	return exp_classify(r);
+}
+
+//
 // The Accessory pot in expression.h stores one of these, so it has to list
 // exactly the ones that can be stored - every accessory but UNKNOWN,
 // which is something the probe reports and never something you set.

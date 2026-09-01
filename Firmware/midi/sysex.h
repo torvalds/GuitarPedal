@@ -341,7 +341,14 @@ static void sysex_send_exp(void)
 		body[1 + 2 * i] = (reading[i] >> 7) & 0x7f;
 		body[2 + 2 * i] = reading[i] & 0x7f;
 	}
-	body[1 + 2 * EXP_NR_READINGS] = exp_classify(reading);
+	//
+	// What it is, and what it was said to be.  The first prefers the
+	// second when the reading is consistent with it - see
+	// exp_verify() - so asking a jack that already has a treadle on
+	// it answers "still a treadle" rather than giving up because the
+	// treadle happens to be parked at its heel stop.
+	//
+	body[1 + 2 * EXP_NR_READINGS] = exp_verdict(reading);
 	body[2 + 2 * EXP_NR_READINGS] = expression.accessory;
 
 	sysex_tx_start();

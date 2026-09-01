@@ -186,10 +186,15 @@ let midiChannelRef = null;
 //
 // A probe that cannot name what is out there leaves the setting alone.
 // EXP_ACC_NONE and EXP_ACC_UNKNOWN are different answers - an empty jack
-// against something unrecognised - and the case that produces the second
-// is a treadle at its heel stop, which feeds nothing back and is not
-// nothing.  Writing "Nothing" there would be confidently wrong and would
-// throw away whatever had been set by hand.
+// against something unrecognised - and writing "Nothing" for the second
+// would be confidently wrong and would throw away whatever had been set
+// by hand.
+//
+// The case that used to produce it most often was a treadle at its heel
+// stop, which feeds nothing back.  The pedal now confirms a setting the
+// reading is consistent with rather than naming the jack from scratch,
+// so that one comes back "still a treadle" - see exp_verify().  To make
+// it start over, set the accessory to Nothing and ask again.
 //
 let expProbeSaw = null;
 
@@ -219,6 +224,19 @@ function expAutoOption(potDef, select, effId, potIdx) {
             }
             select.value = verdict;
             if (select.onValue) select.onValue();
+
+            //
+            // Nothing moved, so nothing showed.  The pedal confirms what
+            // is already set when the reading is consistent with it, and
+            // a menu settling on the value it was already on is not
+            // feedback - so this is the one answer that has to be said
+            // out loud rather than shown.
+            //
+            if (verdict === configured) {
+                said.textContent = `Still ${name}.`;
+                return;
+            }
+
             said.textContent = '';
             sendSysex([SYSEX_CMD.PARAM_UPDATE, effId, potIdx + 1, verdict]);
         };
