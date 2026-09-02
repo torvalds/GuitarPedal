@@ -18,25 +18,6 @@ void boost_init(unsigned char pot[10])
 	biquad_lpf(&boost.highcut, boost_highcut_pot(pot)*1000, 0.707);
 }
 
-
-static float fold(float in, float level)
-{
-	float fold_scale = 0.5;
-	boost_effect.intense = 1;
-	for (;;) {
-		float over = (in - level) * fold_scale;
-
-		in = level - over;
-		if (in >= -level)
-			return in;
-
-		over = (in + level) * fold_scale;
-		in = - level - over;
-		if (in <= level)
-			return in;
-	}
-}
-
 static float boost_step(float in)
 {
 	float out = in * boost.mult;
@@ -44,10 +25,15 @@ static float boost_step(float in)
 	out = biquad_step(&boost.basscut, out);
 	out = biquad_step(&boost.highcut, out);
 
-	if (out > boost.level)
-		out = fold(out, boost.level);
-	else if (out < -boost.level)
-		out = -fold(-out, boost.level);
+	float level = boost.level;
+	for (;;) {
+		float val = fabsf(out);
+		if (val <= level)
+			break;
 
+		boost_effect.intense = 1;
+		val = (3*level - val) / 2;
+		out = signbit(out) ? -val : val;
+	}
 	return out;
 }

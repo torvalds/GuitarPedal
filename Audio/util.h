@@ -35,6 +35,8 @@ static inline long int lrintf(float x)
 	return (long int)rintf(x);
 }
 
+#define signbit(x) __builtin_signbit(x)
+
 #define log10f(x) (log2f(x)/LOG2_10)
 
 #define TWO_POW_32 (4294967296.0f)
