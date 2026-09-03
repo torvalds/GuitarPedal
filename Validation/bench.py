@@ -190,10 +190,28 @@ def thd_db(y, f0, n=WINDOW):
 
 
 def gain_db(y, x):
-    """Best-fit gain, so a phase shift is not read as a level change."""
+    """Complex gain: how much bigger, and how much later.
+
+    Least squares in the frequency domain, weighted by the stimulus'
+    own spectrum, which for a bin-exact tone is exactly Y[k]/X[k] at
+    the tone and for a bit-exact pipe is exactly 1.
+
+    This used to be the real projection (x @ y)/(x @ x), described as
+    "best-fit gain, so a phase shift is not read as a level change".
+    It is the in-phase half - A*cos(phi) - so a phase shift was the one
+    thing it did read as a level change, and a filter at 90 degrees
+    measured as silence.  It put a bass rolloff 5.6 dB too steep into
+    Documentation/effects/klon.md before anything noticed, because
+    every other caller measures where the phase is near zero.
+
+    Returns (dB, complex gain).  The phase is worth having on its own:
+    nothing else here can measure it.
+    """
     x = np.asarray(x, dtype=np.float64)
     y = np.asarray(y, dtype=np.float64)[-len(x):]
-    g = (x @ y) / (x @ x)
+    X = np.fft.rfft(x)
+    Y = np.fft.rfft(y)
+    g = (np.conj(X) @ Y) / (np.conj(X) @ X)
     return 20 * np.log10(abs(g) + 1e-30), g
 
 
@@ -316,7 +334,8 @@ def measure(args, f0=MID_HZ, dbfs=-18.0, warmup=None, n=WINDOW):
     out["dbfs"] = dbfs
     out.update(rolloff(left, f0, n))
     out["alias_db"] = alias_db(left, f0, n)
-    out["gain_db"], _ = gain_db(left, x)
+    out["gain_db"], g = gain_db(left, x)
+    out["phase_deg"] = float(np.degrees(np.angle(g)))
 
     mean, spread = cycles(left, f0, n)
     out["cycle_spread_db"] = 20 * np.log10(spread / (np.abs(mean).max() + 1e-30) + 1e-30)
