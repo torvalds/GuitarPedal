@@ -1,0 +1,7 @@
+# What 'make enclosure' produces.  The models themselves are the .py and
+# the .scad beside them; these are build output and are scoped to this
+# directory rather than ignored tree-wide, because Hardware/symbols/ is
+# full of .step files that are checked in on purpose.
+*.step
+*.3mf
+*.stl

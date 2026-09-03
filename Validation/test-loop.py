@@ -245,11 +245,10 @@ def main():
         return 0
 
     TONE = tone_id()
-    n = pedal.effect_count()
-    if TONE is None or not n:
+    SETTINGS = pedal.settings_effect()
+    if TONE is None or SETTINGS is None:
         print("test-loop: SKIPPED - no Test Tone effect in the built map")
         return 0
-    SETTINGS = n - 1
 
     print("test-loop: " + ", ".join(
         "%s (card %s, midi %s)" % (d["label"], d["card"], d["port"])

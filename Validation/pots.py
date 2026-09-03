@@ -69,6 +69,29 @@ def _raw_defaults():
     return out
 
 
+def labels(effect):
+    """An effect's pot labels, in the order the header declares them.
+
+    Which is also SysEx pot order shifted by one, because pot 0 there is
+    the mix.  Asking beats a table of constants per effect for the same
+    reason settings_effect() beats counting: the header moves and the
+    constants do not.
+    """
+    return [lab for (eff, lab) in _DECLARED if eff == effect]
+
+
+def defaults(effect):
+    """{label: raw 0..120} as the generator computed each declared default.
+
+    For putting a board into the state the bench starts from.  A test
+    that sets only the pots it cares about is measuring those pots plus
+    whatever the last person left behind.
+    """
+    raw = _raw_defaults()
+    return {lab: raw[(effect, lab)] for lab in labels(effect)
+            if (effect, lab) in raw}
+
+
 def to_pot(effect, label, value):
     """The 0..120 the firmware stores for an engineering value."""
     spec = _DECLARED.get((effect, label))

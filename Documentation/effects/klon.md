@@ -38,13 +38,13 @@ xychart-beta
     title "Output against Gain, -18 dBFS in"
     x-axis "Gain, %" [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
     y-axis "Gain, dB" -5 --> 25
-    line [-0.83, -0.62, 1.52, 5.6, 10.14, 14.13, 17.28, 19.4, 19.81, 19.95, 20.01]
+    line [-0.81, -0.6, 1.55, 5.65, 10.19, 14.18, 17.34, 19.46, 19.87, 19.99, 20.04]
 ```
 
 Two things worth reading off those. **The output curve flattens after about
 0.7** — the last third of the knob is almost all distortion and almost no
 level, which is what you want from a drive pedal and is a fair reproduction of
-the real thing. And **at Gain 0 the effect is essentially a wire**, −0.83 dB
+the real thing. And **at Gain 0 the effect is essentially a wire**, −0.81 dB
 and −138.5 dB THD, so it can be left in the chain switched down.
 
 ## The Treble control
@@ -57,11 +57,11 @@ xychart-beta
     title "Treble 0.0 blue, Treble 1.0 orange, at Gain 0.5"
     x-axis "Hz" [20, 40, 80, 160, 320, 640, "1.3k", "2.6k", "5.1k", "10k", "20k"]
     y-axis "dB" 0 --> 24
-    line [4.6, 11.38, 14.21, 15.07, 15.27, 15.13, 13.66, 9.64, 8.32, 7.2, 5.89]
-    line [4.38, 11.17, 14.01, 14.88, 15.1, 15.21, 17.34, 21.77, 20.89, 19.45, 17.9]
+    line [10.13, 13.36, 14.74, 15.16, 15.27, 15.22, 14.35, 10.83, 8.87, 7.55, 5.92]
+    line [10.13, 13.37, 14.75, 15.19, 15.39, 15.87, 19.6, 21.78, 20.93, 19.59, 17.93]
 ```
 
-The two ends differ by about 12 dB above 2 kHz and are within 0.3 dB of each
+The two ends differ by 11 to 12 dB above 2 kHz and are within 0.15 dB of each
 other below 640 Hz, so it is a treble control and not a tilt. The peak at
 2 kHz on the bright setting is the 1.7 kHz presence filter riding on the
 shelf, which is why it sits above its own centre frequency. The model doubles
@@ -91,14 +91,14 @@ gain knob moves the frequency response as a side effect:
 xychart-beta
     title "Gain 0.0 blue, Gain 1.0 orange, Treble 0.5, normalised"
     x-axis "Hz" [20, 40, 80, 160, 320, 640, "1.3k", "2.6k", "5.1k", "10k", "20k"]
-    y-axis "dB, relative to 320 Hz" -14 --> 4
-    line [-0.1, -0.06, -0.05, -0.04, 0.0, 0.15, 1.54, 0.98, 0.09, -0.02, -0.04]
-    line [-12.66, -4.36, -1.22, -0.28, 0.0, 0.22, 1.64, 0.78, -0.62, -2.06, -3.63]
+    y-axis "dB, relative to 320 Hz" -6 --> 4
+    line [-0.08, -0.06, -0.05, -0.04, 0.0, 0.18, 1.65, 1.09, 0.11, -0.03, -0.05]
+    line [-5.09, -1.91, -0.57, -0.14, 0.0, 0.21, 1.65, 0.96, -0.46, -1.86, -3.68]
 ```
 
 At Gain 0 the response is flat to 20 Hz and flat to 20 kHz — no coupling
 capacitor and no bandwidth limit anywhere. At Gain 1.0 the same filters are
-fully present, 12.7 dB down at 20 Hz and 3.6 dB down at 20 kHz. On the real
+fully present, 5.1 dB down at 20 Hz and 3.7 dB down at 20 kHz. On the real
 Centaur both halves come off the same input buffer through the same coupling
 cap, so the split happens after the input stage, not before it. One character
 in the source — blending `pre` instead of `in` — but it changes the voicing at

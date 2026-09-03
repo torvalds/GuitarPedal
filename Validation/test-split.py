@@ -122,8 +122,7 @@ def main():
           f"one BOOTSEL trip")
     plant([(0, merged), (1, kept)], picotool, newest + 10)
 
-    n = pedal.effect_count()
-    pedal.wet_dry(p, n - 1)
+    pedal.wet_dry(p, pedal.settings_effect())
 
     merge_db, wet, dry = measure(p, card, 0, 440.0)
     keep_db, _, _ = measure(p, card, 1, 440.0)

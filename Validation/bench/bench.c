@@ -220,6 +220,29 @@ static unsigned char pot_value(struct effect *e, int idx, const char *text)
 }
 
 //
+// A mix is 0..120 whatever the effect is, and it is not a pot.
+//
+// This used to go through pot_value() with an index of zero, which
+// bounded the mix against whatever the *first* pot happened to accept
+// and named that pot in the error.  Every effect had a 0..120 pot in
+// that slot, so it read correctly and did the right thing for years -
+// until an effect turned up whose first pot is an enumeration, and
+// "--mix Cabinet=120" was refused as out of range for a five-way
+// switch it had nothing to do with.
+//
+static unsigned char mix_value(struct effect *e, const char *text)
+{
+	char *end;
+	long v = strtol(text, &end, 0);
+
+	if (end == text || *end)
+		die("'%s' is not a number\n", text);
+	if (v < 0 || v > 120)
+		die("%s mix takes 0..120, not %ld\n", e->name, v);
+	return (unsigned char) v;
+}
+
+//
 // --list, which is how you find out what the other options accept.
 //
 static void list_effects(void)
@@ -456,7 +479,7 @@ int main(int argc, char **argv)
 			if (nr_mixes >= (int)ARRAY_SIZE(mixes))
 				die("too many --mix\n");
 			mixes[nr_mixes].e = find_effect(buf);
-			mixes[nr_mixes].val = pot_value(mixes[nr_mixes].e, 0, eq);
+			mixes[nr_mixes].val = mix_value(mixes[nr_mixes].e, eq);
 			nr_mixes++;
 			continue;
 		}

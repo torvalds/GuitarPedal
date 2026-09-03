@@ -184,6 +184,63 @@ def wav(path):
     return d.reshape(-1, 2).astype(np.float64) / 2**31
 
 
+def decode(path, seconds=None, offset=None):
+    """A recording from disk as mono float at RATE, and where it starts.
+
+    Anything ffmpeg reads, which is the point: the material worth putting
+    through a cab sim is rarely already a 48k mono wav.
+
+    'offset' of None means find the music - see find_onset().  'seconds'
+    of None means all of it.
+    """
+    cmd = ["ffmpeg", "-v", "error"]
+    if offset is not None:
+        cmd += ["-ss", str(offset)]
+        if seconds is not None:
+            cmd += ["-t", str(seconds)]
+    cmd += ["-i", path, "-ac", "1", "-ar", str(RATE), "-f", "f32le", "-"]
+    out = subprocess.run(cmd, check=True, stdout=subprocess.PIPE).stdout
+    x = np.frombuffer(out, dtype=np.float32).astype(np.float64)
+    if offset is not None:
+        return x, float(offset)
+
+    start = find_onset(x)
+    end = len(x) if seconds is None else min(start + int(seconds * RATE), len(x))
+    return x[start:end], start / RATE
+
+
+def find_onset(x, margin_db=30.0, hold=0.1, lead=0.1):
+    """Where the playing starts, in samples.
+
+    A recording of an instrument usually opens with the room, the hum and
+    somebody picking the thing up, and none of that is a fair thing to
+    measure or to listen to.  Worse when takes are level-matched, because
+    then a passage that is mostly noise floor comes back as *loud* noise
+    floor.  Inputs/Dry-Guitar.wav does not start playing until 13.6 s.
+
+    The threshold is relative to the *loudest* 20 ms of the recording
+    rather than absolute, so it does not care how hot the file is.  It
+    has to hold for 'hold' seconds, or one click of a lead touching a
+    jack picks the start; and it backs off by 'lead' so the first note
+    keeps its attack.  Measured on the two recordings in the tree,
+    anything from peak-20 dB to peak-40 dB picks the same moment to
+    within a fifth of a second, so the exact margin is not delicate.
+    """
+    b = RATE // 50                                 # 20 ms
+    n = len(x) // b
+    if n < 2:
+        return 0
+    e = np.sqrt((x[:n * b].reshape(n, b) ** 2).mean(axis=1))
+    db = 20 * np.log10(e + 1e-12)
+    loud = db > db.max() - margin_db
+
+    run = max(int(hold * 50), 1)
+    for i in range(len(loud) - run):
+        if loud[i:i + run].all():
+            return max(0, int((i / 50.0 - lead) * RATE))
+    return 0
+
+
 def peak(x):
     return float(np.abs(x).max())
 
