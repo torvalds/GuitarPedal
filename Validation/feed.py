@@ -29,6 +29,7 @@ import argparse
 import os
 import subprocess
 import sys
+import time
 
 import numpy as np
 
@@ -41,8 +42,16 @@ import pots as P
 RATE = 48000
 HERE = os.path.dirname(os.path.abspath(__file__))
 
-# SysEx pot numbers: 0 is the mix, so an effect's own pots start at 1.
-CAB_CABINET, CAB_DRIVE, CAB_RESONANCE, CAB_AXIS = 1, 2, 3, 4
+#
+# Thrown away at each end of the passage before anything is
+# measured.  The first 250 ms is wrong in every run - the effect
+# is still crossfading in over EFF_ENABLE_STEPS and the capture
+# stream is still opening - and the ends do not correspond anyway,
+# the bench starting from a settled filter and the board from
+# whatever it was doing.
+#
+EDGE = RATE // 3
+
 ROWS = ["Small-Combo", "American-1x12", "British-4x12",
         "Modern-4x12", "Bass-15"]
 
@@ -121,6 +130,50 @@ def capture_busy(card):
         return True
 
 
+def sub_sample(a, b, guard=4800):
+    """Line b up with a to a fraction of a sample, by fitting the delay.
+
+    Worth doing because the stakes are high and invisible: on this
+    material a *purely* fractional offset of 0.05 samples, with nothing
+    else wrong at all, leaves a residual 48.5 dB below the signal, and
+    0.2 samples leaves 36.4.  A null taken on a sloppy alignment is a
+    measurement of the alignment.
+
+    On the USB path it comes out at exactly zero, every time, which is
+    the answer rather than a disappointment: in over USB, through the
+    DSP, out over USB is a digital path end to end and nobody resamples
+    it.  That is worth having measured rather than assumed, and it stops
+    being true the moment this is pointed at the analog loop.
+
+    The delay goes on 'a' as a phase ramp, which is exact for a band-
+    limited signal.  'guard' samples are dropped from each end because
+    that ramp is circular and the wrap does not belong in the residual -
+    and because the ends do not correspond anyway: the bench starts from
+    a settled filter and the capture starts from a stream opening.
+    Trimming them is what took the null from -52 dB to the noise floor,
+    which was briefly and wrongly credited to this function.
+    """
+    n = len(a)
+    A = np.fft.rfft(a)
+    k = np.arange(len(A))
+    c = slice(guard, n - guard)
+    bc = b[c]
+    bb = float(np.dot(bc, bc))
+
+    def resid(d):
+        aa = np.fft.irfft(A * np.exp(-2j * np.pi * k * d / n), n)[c]
+        g = float(np.dot(aa, bc) / max(np.dot(aa, aa), 1e-30))
+        r = bc - g * aa
+        return float(np.dot(r, r) / max(bb, 1e-30)), g
+
+    best = min((resid(d)[0], d) for d in np.arange(-0.6, 0.6, 0.02))[1]
+    best = min((resid(d)[0], d)
+               for d in np.arange(best - 0.02, best + 0.02, 0.0005))[1]
+    _, g = resid(best)
+    aa = np.fft.irfft(A * np.exp(-2j * np.pi * k * best / n), n)
+    return best, g, aa
+
+
 def verify(args, card, p, dry):
     """Play a passage in, capture it back, and null it against the bench.
 
@@ -134,47 +187,62 @@ def verify(args, card, p, dry):
         sys.exit("feed: no Cabinet in the built map - is build/ current?")
 
     row = ROWS.index(args.row)
-    raw = {k: P.to_pot("Cabinet", k, v) for k, v in
-           (("Drive", args.drive), ("Resonance", args.resonance),
-            ("Axis", args.axis))}
-    gate = P.to_pot("Signal Chain", "Gate", -100.0)
-
-    pedal.set_pot(p, settings, pedal.SETTINGS_USB_IN, pedal.USB_IN_PRE_FX)
-    pedal.set_pot(p, settings, pedal.SETTINGS_USB_OUT, pedal.USB_OUT_WET)
-    pedal.set_pot(p, pedal.CHAIN, pedal.CHAIN_GATE, gate)
-    pedal.set_routing(p, cab)
-    pedal.set_pot(p, cab, 0, 120)                       # mix, fully wet
-    pedal.set_pot(p, cab, CAB_CABINET, row)
-    pedal.set_pot(p, cab, CAB_DRIVE, raw["Drive"])
-    pedal.set_pot(p, cab, CAB_RESONANCE, raw["Resonance"])
-    pedal.set_pot(p, cab, CAB_AXIS, raw["Axis"])
-
-    busy = capture_busy(card)
-    if busy:
-        sys.exit(f"feed: card {card}'s capture stream is already running"
-                 f"{' - held by ' + busy if busy is not True else ''}.\n"
-                 f"      arecord wants the raw device to itself, so stop the "
-                 f"loopback first.\n"
-                 f"      (Playback is a separate stream, which is why the "
-                 f"plain loop works anyway.)")
-
-    print("this replaces the pedal's live routing and pot values; the scene")
-    print("on flash is untouched, so a program change puts it back.")
 
     #
-    # The floor first, with nothing being sent: whatever the analog input
-    # is picking up goes through the same chain and comes back on the
-    # same capture, and the null cannot beat it.  Reporting the null
-    # without it would be reporting the room.
+    # Put both effects where the bench starts from, pot by pot, and only
+    # then change the ones under test.
     #
-    print("measuring the floor with nothing playing...")
-    floor = audio.capture(2.0, card)[:, 0]
-    floor_db = 20 * np.log10(audio.rms(floor) + 1e-30)
+    # Setting just the interesting pots is what the first version did,
+    # and it measured this machine's Signal Chain defaults against
+    # whatever Trim and Volume the last session had left on the board.
+    # Trim lands *ahead* of the nonlinearity, so that is not a level
+    # error to be divided out afterwards - it is a different signal - and
+    # it read as a 9.3 dB gain difference and a null of only -25 dB.
+    #
+    def pots_of(effect_id, effect_name, override=()):
+        order = P.labels(effect_name)
+        want = dict(P.defaults(effect_name))
+        want.update(override)
+        return [(0x03, effect_id, order.index(lab) + 1, raw)
+                for lab, raw in want.items()]
+
+    #
+    # One invocation rather than nineteen.  send() falls back to
+    # aplaymidi when the raw device is taken - which it is whenever the
+    # web app is open - and that costs about two seconds a message.
+    #
+    pedal.send_many(
+        p,
+        (0x03, settings, pedal.SETTINGS_USB_IN, pedal.USB_IN_PRE_FX),
+        (0x03, settings, pedal.SETTINGS_USB_OUT, pedal.USB_OUT_WET),
+        *pots_of(pedal.CHAIN, "Signal Chain", {"Gate": 0}),
+        (0x08, cab),                                    # routing: the cab alone
+        (0x03, cab, 0, 120),                            # mix, fully wet
+        *pots_of(cab, "Cabinet", {
+            "Cabinet": row,
+            "Drive": P.to_pot("Cabinet", "Drive", args.drive),
+            "Resonance": P.to_pot("Cabinet", "Resonance", args.resonance),
+            "Axis": P.to_pot("Cabinet", "Axis", args.axis),
+        }),
+    )
+
+    #
+    # And then wait, because routing an effect in crossfades it over
+    # EFF_ENABLE_STEPS - a tenth of a second - and a passage that starts
+    # inside that fade is not the passage the bench computed.
+    #
+    # This was learned by deleting it.  An earlier version measured the
+    # noise floor in a separate capture first, which happened to give the
+    # fade all the time it needed; folding the floor into the main
+    # capture removed the delay along with it and the null went from -60
+    # dB to -26, which reads exactly like a broken effect.
+    #
+    time.sleep(0.5)
 
     blob = stereo_s32(dry)
     seconds = len(dry) / RATE
 
-    got = audio.capture(seconds + 1.0, card,
+    got = audio.capture(seconds + 2.0, card,
                         during=lambda: player(card, blob, 1))[:, 0]
 
     want, _, info = B.run(bench_args(args, row), dry.astype(np.float32),
@@ -192,6 +260,25 @@ def verify(args, card, p, dry):
         sys.exit(f"feed: could not find the passage in the capture "
                  f"(lag {lag}, capture {len(got)}, passage {len(want)})")
     y = got[lag:lag + len(want)]
+
+    #
+    # The floor comes out of this same capture, after the passage has
+    # finished, rather than out of a capture of its own.
+    #
+    # Because it is not stationary.  An instrument left plugged in picks
+    # up whatever the room and the mains are doing at that moment, and
+    # measuring it a few seconds earlier gave a null that moved 5.6 dB
+    # between two runs with nothing changed - which reads as the pedal
+    # being inconsistent when it is the room being a room.  A quarter of
+    # a second of guard, so the passage's own tail is not counted as
+    # noise.
+    #
+    quiet = got[lag + len(want) + RATE // 4:]
+    if len(quiet) < RATE // 10:
+        sys.exit("feed: no quiet tail in the capture to measure the floor "
+                 "against - ask for a shorter --seconds")
+    floor = quiet
+    floor_db = 20 * np.log10(audio.rms(floor) + 1e-30)
 
     #
     # And again at the far end, over a small search window centred on
@@ -214,21 +301,86 @@ def verify(args, card, p, dry):
     else:
         late_note = f"{late:+d} samples"
 
-    g = float(np.dot(y, want) / max(np.dot(want, want), 1e-30))
-    resid = y - g * want
-    null = 20 * np.log10(audio.rms(resid) / max(audio.rms(want), 1e-30) + 1e-30)
+    #
+    # Null block by block, each aligned on its own.
+    #
+    # Because the endpoint is asynchronous: the host sends at its clock
+    # and the board consumes at its own, and when the two have drifted a
+    # whole sample apart something has to give one back.  Everything
+    # before that instant lines up and everything after it is off by one,
+    # which as a single whole-passage null reads as the pedal being
+    # wrong.  Measured per 250 ms, a run with a slip in it is -45 dB for
+    # four seconds and then -21 dB for the rest; a run without one holds
+    # -60 throughout.
+    #
+    # So a slip is not noise to be averaged away or a fault to be fixed -
+    # it is the interface working as designed - and the honest summary is
+    # the typical block plus a count of how many times it happened.
+    #
+    blk = RATE // 2
+    nb = (len(want) - 2 * EDGE) // blk
+    if nb < 2:
+        sys.exit("feed: passage too short to block up - raise --seconds")
+
+    lags, nulls, gains = [], [], []
+    for i in range(nb):
+        o = EDGE + i * blk
+        a, b = want[o:o + blk], y[o:o + blk]
+        fine = align(a, b, 8)
+        b2 = y[o + fine:o + fine + blk]
+        if len(b2) < blk:
+            break
+        frac, g, aligned = sub_sample(a, b2, guard=blk // 8)
+        c = slice(blk // 8, blk - blk // 8)
+        r = b2[c] - g * aligned[c]
+        lags.append(fine)
+        gains.append(g)
+        nulls.append(20 * np.log10(audio.rms(r) / max(audio.rms(a[c]), 1e-30)
+                                   + 1e-30))
+
+    nulls = np.array(nulls)
+    slips = int(np.count_nonzero(np.diff(lags)))
+    null = float(np.median(nulls))
+    g = float(np.median(gains))
+    sig = max(audio.rms(want[EDGE:EDGE + nb * blk]), 1e-30)
+    resid_rms = sig * 10 ** (null / 20.0)
+    excess = resid_rms ** 2 - audio.rms(floor) ** 2
+    beyond = (10 * np.log10(max(excess, 1e-30) / sig ** 2)
+              if excess > 0 else None)
+
+    #
+    # The floor in the same units as the null, because that is the
+    # comparison worth making and dBFS is not: what matters is not how
+    # quiet the room is, it is how quiet it is *relative to the passage*,
+    # since that is the level the residual is measured against.
+    #
+    # Pre-FX adds to the input jack, so an instrument left plugged in
+    # contributes here even when nobody is playing it.
+    #
+    floor_rel = 20 * np.log10(audio.rms(floor) / sig + 1e-30)
 
     print()
-    print(f"  latency          {lag} samples, {1000.0*lag/RATE:.2f} ms")
-    print(f"  drift over {seconds:.0f}s   {late_note}")
-    print(f"  level            {20*np.log10(abs(g)+1e-30):+.2f} dB")
-    print(f"  analog floor    {floor_db:7.1f} dBFS")
-    print(f"  null            {null:7.1f} dB below the signal")
+    print(f"  latency         {lag:5d} samples, {1000.0*lag/RATE:.2f} ms")
+    print(f"  clock slips     {slips:5d} in {nb} half-second blocks")
+    print(f"  drift over {seconds:.0f}s  {late_note}")
+    print(f"  level           {20*np.log10(abs(g)+1e-30):+6.2f} dB")
+    print(f"  analog floor    {floor_db:6.1f} dBFS, "
+          f"{floor_rel:.1f} dB below the signal")
+    print(f"  null            {null:6.1f} dB below the signal "
+          f"(median block; worst {nulls.max():.1f}, best {nulls.min():.1f})")
     print(f"  bench clipped    {info.get('clipped', 0):.0f}")
     print()
-    print("The two are the same source compiled twice, so what is left is")
-    print("the converters, the analog input summing in, and float32 landing")
-    print("differently on two instruction sets.")
+    if beyond is None or beyond < floor_rel:
+        print("The null is at the analog floor: what is left over is no")
+        print("bigger than what the input jack was picking up with nothing")
+        print("playing, so this measures the room and not the pedal.")
+        print("Unplug the instrument to see past it.")
+    else:
+        print(f"Taking the floor out leaves {beyond:.1f} dB below the signal.")
+        print("The two are the same source through two compilers for two")
+        print("instruction sets, reaching each other over USB - so what is")
+        print("left is float32 landing differently, and whatever the host and")
+        print("the board disagree about at the edges of the passage.")
 
 
 def bench_args(args, row):
