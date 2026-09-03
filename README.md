@@ -305,5 +305,7 @@ from anything I typed here.
  - **Test Tone** - sine, triangle, saw or noise at a known level and
    frequency.  It replaces the input rather than adding to it, which is
    what lets the pedal measure itself.
- - **Cab Sim** - a speaker cabinet: resonance, presence, where the mic is
-   pointed, and some cone breakup.
+ - **Cabinet** - a speaker cone as a moving mass rather than as a filter,
+   integrated at the sample rate.  Pick one of five cabinets and it knows
+   the rest of itself; the knobs are how hard the amp drives it, how much
+   the amp lets its resonance bloom, and where the mic is pointed.
