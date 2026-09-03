@@ -2,6 +2,16 @@
 *.s
 build/
 
+# Test files for audio
+*.wav
+*.bin
+
+# Browser interface test files
+/*.html
+
+# Python environment leftovers
+__pycache__/
+
 # Which board this particular tree is about - one line, per-developer,
 # and deliberately not the same answer for everybody.
 board.local
