@@ -91,9 +91,9 @@ def main():
     # same instant, so anything below can subtract one from the other
     # without aligning them first.
     #
-    n = pedal.effect_count()
-    if n:
-        pedal.wet_dry(p, n - 1)
+    settings = pedal.settings_effect()
+    if settings is not None:
+        pedal.wet_dry(p, settings)
 
     d = audio.trim(audio.capture(args.seconds, card))
     wet, dry = d[:, 0], d[:, 1]

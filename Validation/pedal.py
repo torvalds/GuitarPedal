@@ -27,11 +27,20 @@ HEADER = bytes([0xF0, 0x7D])
 CHAIN = 0
 CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME = 1, 4, 5
 
-# The settings pseudo-effect is last, and what is wanted from it is the
-# USB output mode: 3 is Wet/Dry, which puts the processed signal on the
-# left and the untouched input on the right.
+# The settings pseudo-effect, in SysEx pot numbering.  Ask
+# settings_effect() which effect it *is* - it is not the last one and has
+# not been since something was given a priority above it.
 SETTINGS_USB_OUT = 1
-USB_OUT_WET_DRY = 3
+SETTINGS_USB_IN = 2
+
+# ENUM(None Wet Dry Wet/Dry).  Wet/Dry puts the processed signal on the
+# left and the untouched input on the right.
+USB_OUT_NONE, USB_OUT_WET, USB_OUT_DRY, USB_OUT_WET_DRY = 0, 1, 2, 3
+
+# ENUM(Off Pre-FX Mix).  Pre-FX *adds* the USB input to the analog input
+# ahead of the signal chain - it does not replace it - so whatever the
+# input jack is picking up sums in with it.
+USB_IN_OFF, USB_IN_PRE_FX, USB_IN_MIX = 0, 1, 2
 
 
 def ports(match=""):
@@ -489,6 +498,27 @@ def save_scene(p, scene):
 def wet_dry(p, settings_effect):
     """Put the processed signal and the raw input side by side."""
     set_pot(p, settings_effect, SETTINGS_USB_OUT, USB_OUT_WET_DRY)
+
+
+def settings_effect(map_h="../build/effect_map.h"):
+    """Which effect the settings are, declared rather than counted.
+
+    This used to be effect_count() - 1 in every caller, which was true of
+    the firmware it was written against and stopped being true the moment
+    anything took a priority above the settings.  Nothing failed when it
+    did: the pot write landed on a real effect and set a real pot, and
+    everything downstream measured the wrong thing and reported no error.
+
+    Same mistake effect_always_runs() in Firmware/effect-state.h exists to
+    prevent, made again on the host side.  The generator has always
+    emitted the answer.
+    """
+    try:
+        text = open(map_h).read()
+    except OSError:
+        return None
+    m = re.search(r"#define SETTINGS_EFFECT_ID (\d+)", text)
+    return int(m.group(1)) if m else None
 
 
 def effect_count(map_h="../build/effect_map.h"):
