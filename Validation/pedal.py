@@ -500,6 +500,41 @@ def wet_dry(p, settings_effect):
     set_pot(p, settings_effect, SETTINGS_USB_OUT, USB_OUT_WET_DRY)
 
 
+def elf_build(elf="../build/pedal-unified.elf"):
+    """The build stamp compiled into an elf, as the identity reply says it.
+
+    The firmware builds "{\"build\":\"" __DATE__ " " __TIME__ "\"" into
+    the reply to SysEx 0x0a, so the same literal is sitting in the binary
+    and the two can simply be compared.  That is the cheap way to answer
+    "is the board running what this tree just built" - which is the
+    question underneath every pot index in here, because an effect map
+    that has changed renumbers everything after the change and a pot
+    write to the wrong effect fails completely silently.
+    """
+    try:
+        blob = open(elf, "rb").read()
+    except OSError:
+        return None
+    m = re.search(rb'\{"build":"([^"]*)"', blob)
+    return m.group(1).decode() if m else None
+
+
+def effect_id(short_name, map_h="../build/effect_map.h"):
+    """Which effect a short name is, out of the generated map.
+
+    The generator emits one of these per effect - CAB_EFFECT_ID,
+    TESTTONE_EFFECT_ID - so the answer is declared rather than counted.
+    See settings_effect() for what counting cost.
+    """
+    try:
+        text = open(map_h).read()
+    except OSError:
+        return None
+    m = re.search(r"#define %s_EFFECT_ID (\d+)" % re.escape(short_name.upper()),
+                  text)
+    return int(m.group(1)) if m else None
+
+
 def settings_effect(map_h="../build/effect_map.h"):
     """Which effect the settings are, declared rather than counted.
 

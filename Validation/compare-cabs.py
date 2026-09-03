@@ -32,64 +32,13 @@ import sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import audio
 import bench as B
 import pots as P
 
 FS = 48000
 HERE = os.path.dirname(os.path.abspath(__file__))
 GATE = ["--pot", "Signal Chain:Gate=0"]
-
-
-def decode(path, seconds, offset):
-    """ffmpeg to mono float32 at 48k - the same trick analyse-compressor uses.
-
-    'offset' of None means find the music, which is what the default is.
-    """
-    cmd = ["ffmpeg", "-v", "error"]
-    if offset is not None:
-        cmd += ["-ss", str(offset), "-t", str(seconds)]
-    cmd += ["-i", path, "-ac", "1", "-ar", str(FS), "-f", "f32le", "-"]
-    out = subprocess.run(cmd, check=True, stdout=subprocess.PIPE).stdout
-    x = np.frombuffer(out, dtype=np.float32).astype(np.float64)
-    if offset is not None:
-        return x, offset
-
-    start = find_onset(x)
-    end = min(start + int(seconds * FS), len(x))
-    return x[start:end], start / FS
-
-
-def find_onset(x, margin_db=30.0, hold=0.1, lead=0.1):
-    """Where the playing starts, in samples.
-
-    A recording of an instrument usually opens with the room, the hum and
-    somebody picking the thing up, and none of that is a fair thing to
-    put a cab sim in front of: it is matched to the same RMS as every
-    other take, so a passage that is mostly noise floor comes back as
-    loud noise floor.  Inputs/Dry-Guitar.wav does not start playing until
-    13.6 s, and this script's old hardcoded 8 s landed squarely in it.
-
-    The threshold is relative to the *loudest* 20 ms of the recording
-    rather than absolute, so it does not care how hot the file is.  It
-    has to hold for 'hold' seconds, or one click of a lead touching a
-    jack picks the start; and it backs off by 'lead' so the first note
-    keeps its attack.  Measured on the two recordings in the tree,
-    anything from peak-20 dB to peak-40 dB picks the same moment to
-    within a fifth of a second, so the exact margin is not delicate.
-    """
-    b = FS // 50                                   # 20 ms
-    n = len(x) // b
-    if n < 2:
-        return 0
-    e = np.sqrt((x[:n * b].reshape(n, b) ** 2).mean(axis=1))
-    db = 20 * np.log10(e + 1e-12)
-    loud = db > db.max() - margin_db
-
-    run = max(int(hold * 50), 1)
-    for i in range(len(loud) - run):
-        if loud[i:i + run].all():
-            return max(0, int((i / 50.0 - lead) * FS))
-    return 0
 
 
 ROWS = ["Small-Combo", "American-1x12", "British-4x12",
@@ -231,7 +180,7 @@ def main():
             pre += ["--pot", f"{args.pre}:{kv}"]
 
     off = None if args.offset == "auto" else float(args.offset)
-    dry, off = decode(args.source, args.seconds, off)
+    dry, off = audio.decode(args.source, args.seconds, off)
     dry = dry / max(np.abs(dry).max(), 1e-9) * args.peak
     print(f"source: {os.path.basename(args.source)} "
           f"{off:.1f}..{off + len(dry) / FS:.1f}s"
