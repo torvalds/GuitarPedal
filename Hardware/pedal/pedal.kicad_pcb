@@ -219,6 +219,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/cbade749-9dbf-4d76-961b-34168e39d4f2")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -372,6 +378,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/bd33a401-d774-4e6e-b39c-8ac70f805b2f")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -525,6 +537,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/868f899f-3759-4624-97b0-9b7d93841909")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -678,6 +696,12 @@
 		(path "/98be3ba3-e06f-40a8-aa72-0e2266e682be")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -823,6 +847,12 @@
 		(path "/41c26edf-1ab9-4b8e-bb8a-d42ab4b75551")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -1108,6 +1138,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/b02f7183-968b-4389-a471-324e058951f3")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -1261,6 +1297,12 @@
 		(path "/fca69ab1-59c5-4efb-95e5-daf8df353e75")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -1416,6 +1458,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/6ced7127-deab-401c-9ac0-30ab2a51215a")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -1571,6 +1619,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/0d9478ed-0105-43cd-8b53-0932f32ff215")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -1724,6 +1778,12 @@
 		(path "/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b/9531f3c5-eb91-4984-bab2-b6e3180b5eae")
 		(sheetname "/MIDI/")
 		(sheetfile "midi.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -1879,6 +1939,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/676bbd59-7bbb-4266-b41d-bcc0fd9e98ba")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -2032,6 +2098,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/328fd5d8-1b85-4c4d-8040-4049596b9ad3")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -2178,6 +2250,12 @@
 		(path "/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b/f65e58c4-a45b-4b5a-88a1-642fbe591599")
 		(sheetname "/MIDI/")
 		(sheetfile "midi.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2" "4" "3")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -2476,6 +2554,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/913e4e63-cd24-42db-afbd-09a49214f713")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -2629,6 +2713,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/4b798a4b-4293-4093-bc77-48f1c7e22f57")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -2782,6 +2872,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/5fb29ec2-b54b-4ab0-9fdb-422f36113ce4")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -2939,6 +3035,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/6e3b6580-ed36-49b9-9fe4-04ec7b6a257b")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -3092,6 +3194,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/62f1c18f-00cb-4fb5-9e37-9ec0fde46cb1")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -3245,6 +3353,12 @@
 		(path "/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b/5cb72f23-ff25-4502-bf6d-c88b9dbdc787")
 		(sheetname "/MIDI/")
 		(sheetfile "midi.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -3392,6 +3506,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/81e348e1-3934-4f0a-8519-29002821c05e")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "S" "R" "RN" "T" "TN")
+			)
+		)
 		(attr through_hole)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_rect
@@ -3659,6 +3779,12 @@
 		(path "/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b/fed0b09b-d69b-416b-8304-27ded9593f95")
 		(sheetname "/MIDI/")
 		(sheetfile "midi.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -3812,6 +3938,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/00000000-0000-0000-0000-00005eef00bb")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -3965,6 +4097,12 @@
 		(path "/ba179437-0c06-4f10-b2aa-d8ec097cbc39")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "3" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -4316,6 +4454,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/d9d9f62b-fc6a-4b3f-aae9-29165a4a93cc")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_circle
@@ -4442,6 +4586,12 @@
 		(path "/4833c6d7-1d50-412f-8cd3-10f00de56b5b")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -4725,6 +4875,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/b18e4ea4-c1bd-4bb2-b977-10b99eb73540")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -4878,6 +5034,12 @@
 		(path "/4f73c597-9814-49df-a402-27734e866953")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -5030,6 +5192,17 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/7596cb9b-74cb-4805-a258-855c85e34e97")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "46" "49" "50" "48" "47" "60" "57" "59" "58" "55" "56" "21" "22"
+					"26" "24" "25" "39" "23" "6" "54" "45" "38" "61" "30" "20" "11" "1"
+					"53" "44" "52" "51" "2" "3" "4" "5" "7" "8" "9" "10" "12" "13" "14"
+					"15" "16" "17" "18" "19" "27" "28" "29" "31" "32" "33" "34" "35" "36"
+					"37" "40" "41" "42" "43"
+				)
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -6185,6 +6358,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/1e0bd118-b5e5-4002-9de8-3419ffcc8dd8")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -6338,6 +6517,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/8f9b08aa-fdca-4364-a38e-e3427e515279")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "6" "4" "7" "3" "5" "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -6680,6 +6865,14 @@
 		(path "/e01dd004-1487-4123-a4d4-3bbe50dfe569")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "13" "9" "8" "7" "12" "11" "10" "17" "16" "15" "6" "3" "2" "1"
+					"14" "4" "5"
+				)
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -7335,6 +7528,12 @@
 		(path "/e49def4e-54f1-4fb5-8a8a-b391a9e48951")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -7488,6 +7687,20 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/9782f6cd-fd6e-4cfe-9bf3-bc5971d742e9")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "3" "2" "1")
+			)
+			(unit
+				(name "B")
+				(pins "5" "6" "7")
+			)
+			(unit
+				(name "C")
+				(pins "8" "4")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -7865,6 +8078,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/0ca2cc81-acdd-4b85-97f6-8e31cfd1e641")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -8012,6 +8231,12 @@
 		(path "/f80e575b-1819-4247-a3d5-944348bfd98f")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -8162,6 +8387,12 @@
 		(path "/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b/aad140bf-bb18-4ecf-99a4-cc35cfc4deaf")
 		(sheetname "/MIDI/")
 		(sheetfile "midi.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "S" "R2" "R1" "T")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_rect
@@ -8416,6 +8647,12 @@
 		(path "/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b/8f486f9c-20f2-44cb-832e-9d5a9b101208")
 		(sheetname "/MIDI/")
 		(sheetfile "midi.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -8569,6 +8806,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/6e746af5-d799-41c4-b6c6-4419157f3afb")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -8715,6 +8958,12 @@
 		(path "/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b/e0796a63-0a51-4678-8c37-46b38bd7fd7e")
 		(sheetname "/MIDI/")
 		(sheetfile "midi.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2" "4" "3")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -9013,6 +9262,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/5fde728b-60bf-40e6-8e30-860b5b87a14a")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -9159,6 +9414,12 @@
 		(path "/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b/71ae18d0-8c34-4e62-b221-4932b1f42eed")
 		(sheetname "/MIDI/")
 		(sheetfile "midi.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2" "4" "3")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -9457,6 +9718,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/03edbae6-40fc-4389-9c7f-4ed5c69968a7")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -9610,6 +9877,12 @@
 		(path "/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b/a530b115-593a-4a43-ae9d-b441b68100d2")
 		(sheetname "/MIDI/")
 		(sheetfile "midi.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -9763,6 +10036,12 @@
 		(path "/fa144557-515b-4236-8330-595aacc95425")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -9916,6 +10195,12 @@
 		(path "/8ed3b2b5-2088-4495-848b-d83777a1413c")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "6" "4" "7" "3" "5" "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -10258,6 +10543,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/9c77ddd7-0f01-4a10-8d25-561e0b821e2b")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -10411,6 +10702,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/01d5191b-3182-4c5c-b474-ad7f8ebcc5db")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -10564,6 +10861,12 @@
 		(path "/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b/9f706930-a5e0-4fe7-96da-5098c055a06d")
 		(sheetname "/MIDI/")
 		(sheetfile "midi.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -10717,6 +11020,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/100d8571-a9e8-4bae-8312-52aa7ac38044")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -10872,6 +11181,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/4ba9b287-d890-4a88-8c3a-7be86e928e06")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -11025,6 +11340,12 @@
 		(path "/78107175-416c-4ff8-91a5-cfcf8ecb367d")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -11178,6 +11499,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/077035ff-96a2-4c83-8079-6b7e02a10184")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -11324,6 +11651,12 @@
 		(path "/5c1e31b8-0eb9-421c-8d08-fe1dbe183374")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr through_hole)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_rect
@@ -11453,6 +11786,12 @@
 		(path "/00000000-0000-0000-0000-00005f09255d")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -11600,6 +11939,12 @@
 		(path "/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b/bd63979d-e6a8-432b-9494-1fa43d572772")
 		(sheetname "/MIDI/")
 		(sheetfile "midi.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "S" "R2" "R1" "T")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_rect
@@ -11854,6 +12199,12 @@
 		(path "/42a78bc2-6272-4d94-874d-14dde912d36d")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -12007,6 +12358,12 @@
 		(path "/1e1f02a3-aee4-45ed-8e62-33789d513439")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -12160,6 +12517,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/00fc0edc-bf21-4872-919b-63fbee7caad6")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -12313,6 +12676,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/434ffbb1-db57-45b1-93a7-fc8cb7dd4a13")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -12468,6 +12837,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/ab0569da-95a3-4e45-96e5-9b0b665003d9")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -12554,14 +12929,14 @@
 			)
 		)
 	)
-	(footprint "Rotary_Encoder:RotaryEncoder_Alps_EC11E-Switch_Vertical_H20mm"
+	(footprint "Mylib:RotaryEncoder_EC11-Switch_Vertical_H20mm"
 		(layer "F.Cu")
 		(uuid "7c0eea3a-a8d8-4685-9c8b-99a7cc4b3ab9")
-		(at 97.5 112.75 90)
+		(at 100 105.25 90)
 		(descr "Alps rotary encoder, EC11E... with switch, vertical shaft, http://www.alps.com/prod/info/E/HTML/Encoder/Incremental/EC11/EC11E15204A3.html")
 		(tags "rotary encoder")
 		(property "Reference" "SW103"
-			(at 2.8 -4.7 90)
+			(at -4.7 -7.2 90)
 			(layer "F.SilkS")
 			(hide yes)
 			(uuid "363f640a-1b8f-4be7-996c-eaf5abdf7968")
@@ -12573,7 +12948,7 @@
 			)
 		)
 		(property "Value" "RotaryEncoder_Switch_MP"
-			(at 7.5 10.4 90)
+			(at 0 7.9 90)
 			(layer "F.Fab")
 			(uuid "506048bc-c3f7-401e-aa74-d6e0becfb46a")
 			(effects
@@ -12584,7 +12959,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 0 0 90)
+			(at -7.5 -2.5 90)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
@@ -12597,7 +12972,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 0 0 90)
+			(at -7.5 -2.5 90)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
@@ -12613,11 +12988,17 @@
 		(path "/f5982753-66b2-4350-892a-e3cbc29a38c7")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "A" "C" "B" "MP" "S1" "S2")
+			)
+		)
 		(attr through_hole)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
-			(start 13.6 -3.4)
-			(end 13.6 -1)
+			(start 6.1 -5.9)
+			(end 6.1 -3.5)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12626,8 +13007,8 @@
 			(uuid "b2260824-7168-4247-afea-30e731d37e86")
 		)
 		(fp_line
-			(start 9.5 -3.4)
-			(end 13.6 -3.4)
+			(start 2 -5.9)
+			(end 6.1 -5.9)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12636,8 +13017,8 @@
 			(uuid "1b7d562e-2d19-4b21-9619-5093dc85908c")
 		)
 		(fp_line
-			(start 5.5 -3.4)
-			(end 1.4 -3.4)
+			(start -2 -5.9)
+			(end -6.1 -5.9)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12646,8 +13027,8 @@
 			(uuid "11201270-a589-45ad-b643-a177afb0b4ec")
 		)
 		(fp_line
-			(start 1.4 -3.4)
-			(end 1.4 8.4)
+			(start -6.1 -5.9)
+			(end -6.1 5.9)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12656,8 +13037,8 @@
 			(uuid "549e1426-5f2e-490d-91c7-23a4eaed1d6b")
 		)
 		(fp_line
-			(start 0.3 -1.6)
-			(end 0 -1.3)
+			(start -7.2 -4.1)
+			(end -7.5 -3.8)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12666,8 +13047,8 @@
 			(uuid "c5a9bc01-b35e-4b92-89a0-9677f9852e38")
 		)
 		(fp_line
-			(start -0.3 -1.6)
-			(end 0.3 -1.6)
+			(start -7.8 -4.1)
+			(end -7.2 -4.1)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12676,8 +13057,8 @@
 			(uuid "72696a6c-e5fc-4258-87ea-0e2155adb551")
 		)
 		(fp_line
-			(start 0 -1.3)
-			(end -0.3 -1.6)
+			(start -7.5 -3.8)
+			(end -7.8 -4.1)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12686,8 +13067,8 @@
 			(uuid "a2a59dfd-60dd-4917-8e68-56f52b01fff1")
 		)
 		(fp_line
-			(start 13.6 1.2)
-			(end 13.6 3.8)
+			(start 6.1 -1.3)
+			(end 6.1 1.3)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12696,8 +13077,8 @@
 			(uuid "0ad2c8cc-fc0f-4120-80a2-fc3338007209")
 		)
 		(fp_line
-			(start 7.5 2)
-			(end 7.5 3)
+			(start 0 -0.5)
+			(end 0 0.5)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12706,8 +13087,8 @@
 			(uuid "a03d2311-66d1-4475-8224-13ae323c255d")
 		)
 		(fp_line
-			(start 7 2.5)
-			(end 8 2.5)
+			(start -0.5 0)
+			(end 0.5 0)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12716,8 +13097,8 @@
 			(uuid "05fb3e92-fa0f-4112-b300-99234526a56b")
 		)
 		(fp_line
-			(start 13.6 6)
-			(end 13.6 8.4)
+			(start 6.1 3.5)
+			(end 6.1 5.9)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12726,8 +13107,8 @@
 			(uuid "791dcf76-4c0f-4307-94c5-044f8fcba08d")
 		)
 		(fp_line
-			(start 13.6 8.4)
-			(end 9.5 8.4)
+			(start 6.1 5.9)
+			(end 2 5.9)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12736,8 +13117,8 @@
 			(uuid "03aea2fb-f1b0-4312-bcab-4d0a19eeb8ac")
 		)
 		(fp_line
-			(start 5.5 8.4)
-			(end 1.4 8.4)
+			(start -2 5.9)
+			(end -6.1 5.9)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12746,8 +13127,8 @@
 			(uuid "478cdcf9-5e25-40f8-b012-2524aee65d30")
 		)
 		(fp_circle
-			(center 7.5 2.5)
-			(end 10.5 2.5)
+			(center 0 0)
+			(end 3 0)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12757,8 +13138,8 @@
 			(uuid "62960937-a070-48a6-bf58-cc53fffb2407")
 		)
 		(fp_line
-			(start -1.5 -4.6)
-			(end 16 -4.6)
+			(start -9 -7.1)
+			(end 8.5 -7.1)
 			(stroke
 				(width 0.05)
 				(type solid)
@@ -12767,8 +13148,8 @@
 			(uuid "77eacc06-d8bb-46cc-a0b2-b1ee14577f90")
 		)
 		(fp_line
-			(start -1.5 -4.6)
-			(end -1.5 9.6)
+			(start -9 -7.1)
+			(end -9 7.1)
 			(stroke
 				(width 0.05)
 				(type solid)
@@ -12777,8 +13158,8 @@
 			(uuid "6afd0add-ac3e-4464-81eb-1a985cbeb1be")
 		)
 		(fp_line
-			(start 16 9.6)
-			(end 16 -4.6)
+			(start 8.5 7.1)
+			(end 8.5 -7.1)
 			(stroke
 				(width 0.05)
 				(type solid)
@@ -12787,8 +13168,8 @@
 			(uuid "0c7ed13e-5f46-44c3-a5b5-b9f4cc3990e2")
 		)
 		(fp_line
-			(start 16 9.6)
-			(end -1.5 9.6)
+			(start 8.5 7.1)
+			(end -9 7.1)
 			(stroke
 				(width 0.05)
 				(type solid)
@@ -12797,8 +13178,8 @@
 			(uuid "61498db7-9f2a-4ad1-9960-451fd60827a1")
 		)
 		(fp_line
-			(start 13.5 -3.3)
-			(end 13.5 8.3)
+			(start 6 -5.8)
+			(end 6 5.8)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12807,8 +13188,8 @@
 			(uuid "8fea985a-1ba9-4a33-a7b5-0a57cd47e543")
 		)
 		(fp_line
-			(start 2.5 -3.3)
-			(end 13.5 -3.3)
+			(start -5 -5.8)
+			(end 6 -5.8)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12817,8 +13198,8 @@
 			(uuid "720e9b9f-7e65-4d6a-9fc1-865d2395bd4e")
 		)
 		(fp_line
-			(start 1.5 -2.2)
-			(end 2.5 -3.3)
+			(start -6 -4.7)
+			(end -5 -5.8)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12827,8 +13208,8 @@
 			(uuid "1950db9b-3d86-4d31-916f-b03abd9dcd0d")
 		)
 		(fp_line
-			(start 7.5 -0.5)
-			(end 7.5 5.5)
+			(start 0 -3)
+			(end 0 3)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12837,8 +13218,8 @@
 			(uuid "2ceda99c-a320-4d45-8eb1-a88b88ae9af2")
 		)
 		(fp_line
-			(start 4.5 2.5)
-			(end 10.5 2.5)
+			(start -3 0)
+			(end 3 0)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12847,8 +13228,8 @@
 			(uuid "49d38496-a30d-42eb-8841-5539ec598aa4")
 		)
 		(fp_line
-			(start 13.5 8.3)
-			(end 1.5 8.3)
+			(start 6 5.8)
+			(end -6 5.8)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12857,8 +13238,8 @@
 			(uuid "ed983dda-2ecf-4f87-908e-6f23a1bfa494")
 		)
 		(fp_line
-			(start 1.5 8.3)
-			(end 1.5 -2.2)
+			(start -6 5.8)
+			(end -6 -4.7)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12867,8 +13248,8 @@
 			(uuid "fa1a54e0-ee36-48a0-83a6-da9dbdaadadc")
 		)
 		(fp_circle
-			(center 7.5 2.5)
-			(end 10.5 2.5)
+			(center 0 0)
+			(end 3 0)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12878,7 +13259,7 @@
 			(uuid "6ff18f37-f63a-4471-8213-ee50aee7a094")
 		)
 		(fp_text user "${REFERENCE}"
-			(at 11.1 6.3 90)
+			(at 3.6 3.8 90)
 			(layer "F.Fab")
 			(uuid "788b1674-cd0d-4d3d-bdd1-c3d82cb92f47")
 			(effects
@@ -12889,7 +13270,7 @@
 			)
 		)
 		(pad "A" thru_hole rect
-			(at 0 0 90)
+			(at -7.5 -2.5 90)
 			(size 2 2)
 			(drill 1)
 			(layers "*.Cu" "*.Mask")
@@ -12900,7 +13281,7 @@
 			(uuid "ee74e527-37d2-4136-b50a-30bd1832eb3a")
 		)
 		(pad "B" thru_hole circle
-			(at 0 5 90)
+			(at -7.5 2.5 90)
 			(size 2 2)
 			(drill 1)
 			(layers "*.Cu" "*.Mask")
@@ -12911,7 +13292,7 @@
 			(uuid "0d8445c5-9cf4-41a7-bf33-8fdb78af30e0")
 		)
 		(pad "C" thru_hole circle
-			(at 0 2.5 90)
+			(at -7.5 0 90)
 			(size 2 2)
 			(drill 1)
 			(layers "*.Cu" "*.Mask")
@@ -12922,7 +13303,7 @@
 			(uuid "df1084d7-ff48-4183-b46e-939517f4dba6")
 		)
 		(pad "MP" thru_hole rect
-			(at 7.5 -3.1 90)
+			(at 0 -5.6 90)
 			(size 3.2 2)
 			(drill oval 2.8 1.5)
 			(layers "*.Cu" "*.Mask")
@@ -12933,7 +13314,7 @@
 			(uuid "56ed75dd-93e2-42e7-a0fc-630e782eba8c")
 		)
 		(pad "MP" thru_hole rect
-			(at 7.5 8.1 90)
+			(at 0 5.6 90)
 			(size 3.2 2)
 			(drill oval 2.8 1.5)
 			(layers "*.Cu" "*.Mask")
@@ -12944,7 +13325,7 @@
 			(uuid "c54ce267-0f26-4b99-99d6-b42ce9073c32")
 		)
 		(pad "S1" thru_hole circle
-			(at 14.5 5 90)
+			(at 7 2.5 90)
 			(size 2 2)
 			(drill 1)
 			(layers "*.Cu" "*.Mask")
@@ -12955,7 +13336,7 @@
 			(uuid "8e672326-e967-42e0-8f44-dbc32b141784")
 		)
 		(pad "S2" thru_hole circle
-			(at 14.5 0 90)
+			(at 7 -2.5 90)
 			(size 2 2)
 			(drill 1)
 			(layers "*.Cu" "*.Mask")
@@ -12966,7 +13347,7 @@
 			(uuid "916da4c9-5749-4459-af9f-abe80a0cd6e7")
 		)
 		(embedded_fonts no)
-		(model "${KICAD10_3DMODEL_DIR}/Rotary_Encoder.3dshapes/RotaryEncoder_Alps_EC11E-Switch_Vertical_H20mm.step"
+		(model "${KIPRJMOD}/symbols/external/SW-TH_EC11XXXXXXXX.step"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -12974,7 +13355,7 @@
 				(xyz 1 1 1)
 			)
 			(rotate
-				(xyz 0 0 0)
+				(xyz 0 0 90)
 			)
 		)
 	)
@@ -13045,6 +13426,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/e08e2585-7664-4f9d-90c7-623183e9e0f4")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -13198,6 +13585,12 @@
 		(path "/71a15644-f6f7-4507-b543-b1cd32d5b9c6")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_circle
@@ -13364,6 +13757,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/0fc8fa62-9f19-44cc-aaef-28aa8eb46c64")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -13517,6 +13916,12 @@
 		(path "/aee81284-7dc3-4d17-9152-7d638f702d39")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -13670,6 +14075,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/6eba0417-ffce-46e2-8b43-6d203247c26f")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -13815,6 +14226,12 @@
 		(path "/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b/6bbe0829-f62b-49c0-b038-01a9c2d152b3")
 		(sheetname "/MIDI/")
 		(sheetfile "midi.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -14098,6 +14515,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/efcc5142-4cdf-4bcb-9e1a-d1d6e83cb24d")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -14251,6 +14674,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/ea50cfb9-a5a0-4b99-835e-afeddaa627c0")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -14404,6 +14833,12 @@
 		(path "/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b/7b6be133-c192-4ca1-b9d4-2412d19d6a90")
 		(sheetname "/MIDI/")
 		(sheetfile "midi.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -14559,6 +14994,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/6530a521-3d90-4374-9b76-cef4b1715eaa")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -14714,6 +15155,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/9e076fe7-4950-44dc-b9f7-510f410a1079")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -14867,6 +15314,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/00000000-0000-0000-0000-00005eef0994")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -15020,6 +15473,12 @@
 		(path "/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b/4bc36d22-f0a3-4428-9be9-c91917fdba91")
 		(sheetname "/MIDI/")
 		(sheetfile "midi.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -15173,6 +15632,12 @@
 		(path "/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b/70940f20-a274-41a4-badb-85e11066a56e")
 		(sheetname "/MIDI/")
 		(sheetfile "midi.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -15326,6 +15791,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/78192798-0e78-4d89-820f-b57ad09e09ef")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -15473,6 +15944,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/d59bc6c8-fc3f-4932-b5b5-137d6c99619a")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -15631,6 +16108,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/6d893b4f-bbc3-41e0-bfc0-4d7513c14e60")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -15784,6 +16267,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/3ef5ac6c-f23d-49e6-8d38-d5a38429c435")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -15931,6 +16420,12 @@
 		(path "/51f067e6-4155-4fd5-8c94-10c10f659246")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "3" "2")
+			)
+		)
 		(attr through_hole)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_rect
@@ -16066,6 +16561,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/b6faff38-c0e7-4614-9e5b-da705f33bcae")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -16219,6 +16720,12 @@
 		(path "/b5e740e0-8fe7-4513-b4d0-8b1b09a1c038")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "3" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -16576,6 +17083,12 @@
 		(path "/c60b9ea3-dead-452c-9301-8dbb902305be")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "3" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -16933,6 +17446,12 @@
 		(path "/520a1fd5-5e3e-45ed-84fd-37be6accce4f")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -17086,6 +17605,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/9a80b644-c760-4d92-afe1-c8453d235658")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -17240,6 +17765,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/dd0fdcaf-56ed-460c-beac-ca6cbfc74af7")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2" "4" "3")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -17419,6 +17950,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/b94d9932-299c-49bf-8500-744318bbcc19")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -17566,6 +18103,14 @@
 		(path "/f6d1cb0c-01bf-4908-86e2-d4da4f4ae895")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "SH" "B1" "B12" "A1" "A12" "A9" "B4" "B9" "A4" "A5" "B5" "A7" "B7"
+					"A6" "B6" "A8" "B8"
+				)
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -17946,6 +18491,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/00000000-0000-0000-0000-00005eef0473")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -18099,6 +18650,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/8ca2a8d7-b8ce-4ff0-8cdb-5cd6740618b5")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -18252,6 +18809,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/972c6631-9fa8-4f7f-9432-5cb8b4007e8e")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -18405,6 +18968,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/f8e6e3c5-d783-4f7e-9568-47a2863d5b1c")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -18560,6 +19129,12 @@
 		(path "/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b/54779cf7-8afd-4b59-9b32-9b836ce4562d")
 		(sheetname "/MIDI/")
 		(sheetfile "midi.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "3" "6" "4" "5")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -18957,6 +19532,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/afc5815d-d894-4cd1-ba9b-a5ec9f40998e")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -19102,6 +19683,12 @@
 		(path "/088118a7-4c04-4343-b354-4a30a2d8af9a")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -19378,6 +19965,12 @@
 		(path "/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b/499c5b2a-2f07-4a2d-b9c1-2a7644806ecb")
 		(sheetname "/MIDI/")
 		(sheetfile "midi.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2" "4" "3")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -19676,6 +20269,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/b7adf8ee-2bca-4d94-9e08-bbbbc245c6b0")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -19829,6 +20428,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/b85e8b20-3462-45af-9e8b-d79af303753a")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -19982,6 +20587,12 @@
 		(path "/df1306ed-7672-45e3-baa0-9b0851fbc624")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -20135,6 +20746,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/864db307-876a-4a43-a082-187d484c2304")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -20288,6 +20905,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/b0b0a539-c986-4f90-a74f-68933d84eaae")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -20441,6 +21064,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/00000000-0000-0000-0000-00005eeee897")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -20594,6 +21223,12 @@
 		(path "/c341666b-4407-4038-8223-6bd369da28f4")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -20749,6 +21384,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/b32e6fee-aa21-47ce-a7ac-21211d15a1ec")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -20896,6 +21537,12 @@
 		(path "/763f5827-454e-4009-ab03-808096fd6297")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "S" "R" "RN" "T" "TN")
+			)
+		)
 		(attr through_hole)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_rect
@@ -21163,6 +21810,12 @@
 		(path "/2da07c44-9100-4137-8987-3db627b93cdc")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -21316,6 +21969,12 @@
 		(path "/4612a82c-c42e-4706-a1d8-4cd26644c2de")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -21462,6 +22121,12 @@
 		(path "/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b/50b946cf-02e4-464f-92a4-2093feff96c8")
 		(sheetname "/MIDI/")
 		(sheetfile "midi.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2" "4" "3")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -21758,6 +22423,12 @@
 		(path "/f099fb0d-4a17-4387-952e-a6ee797f215b")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -21911,6 +22582,12 @@
 		(path "/a88a5991-7854-4357-9ab6-2b7b14571529")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -22064,6 +22741,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/790856c7-adbd-4263-bf18-b20e896f995f")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -22219,6 +22902,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/541b6e1e-f75e-4b13-bd7d-6095099f7fe7")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -22372,6 +23061,12 @@
 		(path "/e77f5d89-bb36-4d44-8e11-828664dd6135")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -22525,6 +23220,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/e0b619cd-cab1-4749-8144-0f584484198c")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "6" "5" "2" "3" "7" "8" "4" "9")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -22880,6 +23581,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/5b07b6e9-b25f-4cf3-92a9-857e618b08a1")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -23033,6 +23740,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/00000000-0000-0000-0000-00005eef89b3")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -23186,6 +23899,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/d3e65cfc-7a4c-4df3-ad20-67a5959ab338")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -23339,6 +24058,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/40b3ada1-0c3b-450b-a374-4196673514d2")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -23485,6 +24210,12 @@
 		(path "/563f196b-1e58-4c83-b5ec-6d4f29df5756")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr through_hole)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_rect
@@ -23607,6 +24338,14 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/e1bc4d9a-4871-49e2-a05e-ba0791ecbfed")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "14" "15" "16" "17" "18" "2" "3" "4" "5" "11" "23" "6" "A1" "A2"
+					"A3" "A4" "24" "PAD" "1" "20" "19" "21" "22" "13" "7" "8" "9" "10" "12"
+				)
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -24121,6 +24860,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/75b91789-8bd9-4be6-9ba5-e215c5ec731a")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -24274,6 +25019,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/64d5dc7e-cdf7-4c35-8e60-9ab312d5f274")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -24421,6 +25172,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/806e0d90-5d89-493c-bcbd-de875804a944")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "S" "R" "RN" "T" "TN")
+			)
+		)
 		(attr through_hole)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_rect
@@ -24688,6 +25445,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/31a2f483-7c43-4c50-aaad-d9026b210a3e")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -24841,6 +25604,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/d9bf5b71-e949-4b0f-ad5c-178224345862")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -24996,6 +25765,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/631a6b7d-fdf9-4202-b283-1e6ccc6ad482")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -25149,6 +25924,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/a3ee406b-742c-43c0-9160-ed40745fac03")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -25302,6 +26083,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/98eef63b-5e4a-4d4c-9a88-b0434a206403")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -25455,6 +26242,12 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/7a1ab94d-3670-407a-a75e-0e0b31cac790")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -25608,6 +26401,12 @@
 		(path "/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b/3bc16330-ca1d-4265-bbf6-41ff500b2c27")
 		(sheetname "/MIDI/")
 		(sheetfile "midi.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "2" "5" "3" "1" "4")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -26002,6 +26801,12 @@
 		(path "/0240bdab-fe8b-4bf9-a98e-50b047dd7a9b/6dda1ead-1475-4222-9f67-163161964350")
 		(sheetname "/MIDI/")
 		(sheetfile "midi.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -26147,6 +26952,12 @@
 		(path "/89671662-b76e-4744-a967-94e9ced315aa")
 		(sheetname "/")
 		(sheetfile "pedal.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "3" "5" "2" "6" "4")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -26432,6 +27243,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/8560a723-1343-4e00-8e06-27cfd5a20a6a")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -26587,6 +27404,12 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/65a4d691-ccf2-4b21-bd63-b9481636b3d7")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
+		(units
+			(unit
+				(name "A")
+				(pins "1" "2")
+			)
+		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
