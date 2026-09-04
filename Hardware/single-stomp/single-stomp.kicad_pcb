@@ -185,12 +185,6 @@
 		(path "/8450bd81-9ec0-45e1-a4c0-a5af17950cab")
 		(sheetname "/")
 		(sheetfile "single-stomp.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr through_hole)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_rect
@@ -303,16 +297,22 @@
 				)
 			)
 		)
+		(property "KiLib_Generator" "LED/THT"
+			(at 0 0 90)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "a7853c68-f5f6-47a4-8dd2-0b4ac44e2704")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
 		(property ki_fp_filters "LED* LED_SMD:* LED_THT:*")
 		(path "/8ee3faa6-5ab1-4329-97c0-02519884f955")
 		(sheetname "/")
 		(sheetfile "single-stomp.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr through_hole)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -514,12 +514,6 @@
 		(path "/763f5827-454e-4009-ab03-808096fd6297")
 		(sheetname "/")
 		(sheetfile "single-stomp.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "S" "R" "RN" "T" "TN")
-			)
-		)
 		(attr through_hole)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_rect
@@ -648,9 +642,9 @@
 			)
 		)
 		(pad "R" thru_hole oval
-			(at -11.1 -7.23 90)
+			(at -11.1 -7.115 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "/EXP_R")
@@ -658,9 +652,9 @@
 			(uuid "fc3e2488-097d-45d8-ba98-c08ddd59caa3")
 		)
 		(pad "RN" thru_hole oval
-			(at -11.1 4.2 90)
+			(at -11.1 4.085 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "GND")
@@ -668,29 +662,29 @@
 			(uuid "721ca748-f831-4309-a4d9-9e3748bc732c")
 		)
 		(pad "S" thru_hole oval
-			(at -4.75 -7.23 90)
+			(at -4.7 -7.115 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
-			(layers "*.Cu" "*.Mask")
-			(remove_unused_layers no)
-			(net "GND")
-			(pintype "passive")
-			(uuid "60b5639c-8c1e-47e5-ab88-0dee500260ef")
-		)
-		(pad "S" thru_hole oval
-			(at -4.75 4.2 90)
-			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "GND")
 			(pintype "passive")
 			(uuid "dfedd165-a817-48ac-93c1-c1b1580115f8")
 		)
-		(pad "T" thru_hole oval
-			(at -17.45 -7.23 90)
+		(pad "S" thru_hole oval
+			(at -4.7 4.085 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
+			(layers "*.Cu" "*.Mask")
+			(remove_unused_layers no)
+			(net "GND")
+			(pintype "passive")
+			(uuid "60b5639c-8c1e-47e5-ab88-0dee500260ef")
+		)
+		(pad "T" thru_hole oval
+			(at -17.5 -7.115 90)
+			(size 3 1.5)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "/EXP_T")
@@ -698,9 +692,9 @@
 			(uuid "a510c249-3f8e-4929-a22c-d2fbb474cb4a")
 		)
 		(pad "TN" thru_hole oval
-			(at -17.45 4.2 90)
+			(at -17.5 4.085 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "GND")
@@ -708,15 +702,15 @@
 			(uuid "a322eb26-221a-4240-95f7-52d50e0cc8c6")
 		)
 		(embedded_fonts no)
-		(model "NRJ6HM-1-PRE.step"
+		(model "${KIPRJMOD}/symbols/external/AUDIO-TH_PJ-611E_1.step"
 			(offset
-				(xyz 0 0 0)
+				(xyz -0.5 0 6.5)
 			)
 			(scale
 				(xyz 1 1 1)
 			)
 			(rotate
-				(xyz 0 0 0)
+				(xyz 0 0 -90)
 			)
 		)
 	)
