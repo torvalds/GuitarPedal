@@ -324,4 +324,15 @@
 		(uuid "354b1962-9a02-49f4-9b38-b7a50b0133ce")
 	)
 	(embedded_fonts no)
+	(model "${KIPRJMOD}/symbols/external/USB-C-SMD_SHOU_TYPE-C-16P-CB1.6.step"
+		(offset
+			(xyz 0 -1.775 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
 )

@@ -254,4 +254,15 @@
 		(uuid "315f8a2b-bc47-4ff5-b5f4-edfca941c4dd")
 	)
 	(embedded_fonts no)
+	(model "${KIPRJMOD}/symbols/external/LED-SMD_WS2812B-4020.step"
+		(offset
+			(xyz 2.14 1.55 1.55)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
 )

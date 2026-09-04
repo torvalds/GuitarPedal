@@ -126,4 +126,15 @@
 		(uuid "73717f50-f93f-4360-bb92-7bd3eae7127f")
 	)
 	(embedded_fonts no)
+	(model "${KIPRJMOD}/symbols/external/L0806.step"
+		(offset
+			(xyz 0 0 0.475)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
 )

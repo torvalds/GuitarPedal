@@ -221,9 +221,9 @@
 		(uuid "8a9e2c70-3582-46a0-92c9-d0e2f73577c0")
 	)
 	(embedded_fonts no)
-	(model "${KIPRJMOD}/Mylib.pretty/PJ-320D.step"
+	(model "${KIPRJMOD}/symbols/external/AUDIO-SMD_PJ-320D-1.step"
 		(offset
-			(xyz 0 0 0)
+			(xyz -0.5 0 3.1)
 		)
 		(scale
 			(xyz 1 1 1)

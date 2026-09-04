@@ -388,4 +388,15 @@
 		(uuid "244f8634-d67d-491a-9628-e0d173ae35d9")
 	)
 	(embedded_fonts no)
+	(model "${KIPRJMOD}/symbols/external/VQFN-24_L4.0-W4.0-P0.50-BL-EP2.1_1.step"
+		(offset
+			(xyz 0 0 0.01)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
 )
