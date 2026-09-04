@@ -1,0 +1,15 @@
+#
+# Third-party 3D models, and nothing in here is committed.
+#
+# The part manufacturers draw these; EasyEDA, LCSC and the vendors' own
+# sites serve them for use in a design, which is not the same as a
+# licence to redistribute them - and this repository is public.  So the
+# footprints refer to them and the geometry stays out.
+#
+# KiCad does not render a model it cannot find, and does not error, so a
+# clone gets a 3D view missing those parts rather than anything broken.
+# To fill it in, fetch each part's STEP from its LCSC page or from the
+# manufacturer and drop it here under the name the footprint asks for -
+# grep for 'model' in the .kicad_mod to see which name that is.
+#
+external/
