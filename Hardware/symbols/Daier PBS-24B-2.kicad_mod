@@ -109,4 +109,15 @@
 		(uuid "955e2440-0c6d-4201-9d06-f892725b6df4")
 	)
 	(embedded_fonts no)
+	(model "${KIPRJMOD}/symbols/PBS-24B-2.step"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
 )

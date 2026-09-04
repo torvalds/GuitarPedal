@@ -246,6 +246,17 @@
 			(uuid "14db9572-f43a-46a5-b955-c06f46ecf648")
 		)
 		(embedded_fonts no)
+		(model "${KIPRJMOD}/symbols/PBS-24B-2.step"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
+		)
 	)
 	(footprint "Mylib:Daier PBS-24B-2"
 		(layer "F.Cu")
@@ -367,6 +378,17 @@
 			(uuid "bec8498f-6b7f-4797-aed3-f718b564c0c1")
 		)
 		(embedded_fonts no)
+		(model "${KIPRJMOD}/symbols/PBS-24B-2.step"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
+		)
 	)
 	(footprint "Mylib:NRJ6HM-1-PRE"
 		(layer "F.Cu")

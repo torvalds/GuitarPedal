@@ -11718,6 +11718,17 @@
 			(uuid "86695ee2-b297-48e8-9cf8-cea492302765")
 		)
 		(embedded_fonts no)
+		(model "${KIPRJMOD}/symbols/PBS-24B-2.step"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
+		)
 	)
 	(footprint "Capacitor_SMD:C_0603_1608Metric"
 		(layer "F.Cu")
@@ -24277,6 +24288,17 @@
 			(uuid "4129bdf4-870d-41b9-9e84-3526a041f35f")
 		)
 		(embedded_fonts no)
+		(model "${KIPRJMOD}/symbols/PBS-24B-2.step"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
+		)
 	)
 	(footprint "Mylib:TAC5242"
 		(layer "F.Cu")
