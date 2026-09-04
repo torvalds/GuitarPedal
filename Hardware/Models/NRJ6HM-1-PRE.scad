@@ -6,8 +6,14 @@ silver = [0.75,0.75,0.75];
 epsilon = 0.001;
 
 // The model is centered on the barrel
-pins = [ [-17.45,7.23],  [ -11.1,7.23 ], [-4.75,7.23], 
-	 [-17.45,-4.2], [-11.1,-4.2], [-4.75,-4.2 ] ];
+//
+// The pins are the footprint's, with y negated because OpenSCAD is y-up
+// and KiCad is y-down.  They were measured with calipers originally and
+// were out by 50um on the column pitch and 115um on the row spacing;
+// these are the corrected numbers, taken from the part's own data via
+// EasyEDA - 6.400 pitch, 11.200 rows.
+pins = [ [-17.5,7.115],  [ -11.1,7.115 ], [-4.7,7.115],
+	 [-17.5,-4.085], [-11.1,-4.085], [-4.7,-4.085 ] ];
 
 module body()
 {
