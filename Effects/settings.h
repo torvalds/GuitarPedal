@@ -7,7 +7,11 @@
 //
 // GLOBAL
 // POT: "USB L/R Out" ENUM(None Wet Dry Wet/Dry) = Wet
-// POT: "USB L/R In" ENUM(Off Pre-FX Mix) = Off
+// POT: "USB L/R In" ENUM(Off Pre-FX Mix Replace) = Off
+// INFO: What the host's audio does when it arrives. Pre-FX adds it to
+// INFO: the jack and Mix adds it to the output; Replace ignores the jack
+// INFO: entirely, which is the one to use when measuring, because
+// INFO: whatever is plugged in is otherwise part of the answer.
 // POT: "MIDI Ch" ENUM(Omni Ch1 Ch2 Ch3 Ch4 Ch5 Ch6 Ch7 Ch8 Ch9 Ch10 Ch11 Ch12 Ch13 Ch14 Ch15 Ch16) = Omni
 // POT: "LED" LINEAR(0 100) = 10 %
 // POT: "  ATTN" LINEAR(0 100) = 50 %
@@ -27,8 +31,16 @@ enum usb_output {
 	LR_None, LR_Wet, LR_Dry, LR_WetDry,
 };
 
+//
+// Appended rather than slotted in beside Pre-FX where it belongs.
+//
+// The value is stored, and this enum's order is what it is stored as -
+// so putting Replace second would silently turn every saved Mix into a
+// Replace.  That is issue 71's shape: a checksum that is a plain sum
+// cannot tell a reordering from the values it was given.
+//
 enum usb_input {
-	USB_IN_OFF, USB_IN_PRE_FX, USB_IN_MIX
+	USB_IN_OFF, USB_IN_PRE_FX, USB_IN_MIX, USB_IN_REPLACE
 };
 
 struct {
