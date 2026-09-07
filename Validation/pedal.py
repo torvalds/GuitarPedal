@@ -40,7 +40,7 @@ USB_OUT_NONE, USB_OUT_WET, USB_OUT_DRY, USB_OUT_WET_DRY = 0, 1, 2, 3
 # ENUM(Off Pre-FX Mix).  Pre-FX *adds* the USB input to the analog input
 # ahead of the signal chain - it does not replace it - so whatever the
 # input jack is picking up sums in with it.
-USB_IN_OFF, USB_IN_PRE_FX, USB_IN_MIX = 0, 1, 2
+USB_IN_OFF, USB_IN_PRE_FX, USB_IN_MIX, USB_IN_REPLACE = 0, 1, 2, 3
 
 
 def ports(match=""):
@@ -384,16 +384,14 @@ def program_change(p, scene, channel=1):
     time.sleep(0.5)
 
 
-def enter_bootsel(p, channel=1):
-    """CC 20 value 126 - the way in without touching the board.
-
-    There is no picotool reset interface on this device, so this is the
-    only way to get it into BOOTSEL from software.  MIDI_CC_MAP.md has
-    the number frozen for exactly this reason.
-    """
+#
+# CC 20 is bypass on 127 and BOOTSEL on 126, so the two live together and
+# the one-off byte between them is worth having in one place.
+#
+def _cc(p, number, value, channel=1):
     tmp = tempfile.NamedTemporaryFile(suffix=".mid", delete=False)
     try:
-        ev = bytes([0x00, 0xB0 | (channel - 1), 20, 126,
+        ev = bytes([0x00, 0xB0 | (channel - 1), number, value,
                     0x00, 0xFF, 0x2F, 0x00])
         hdr = bytes([0x4D, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, 0, 0x60])
         tmp.write(hdr + b"MTrk" + len(ev).to_bytes(4, "big") + ev)
@@ -402,6 +400,39 @@ def enter_bootsel(p, channel=1):
                        capture_output=True)
     finally:
         os.unlink(tmp.name)
+
+
+def set_bypass(p, on, channel=1):
+    """CC 20: 127 enables the chain, 0 bypasses it.
+
+    Worth sending explicitly at the top of any measurement rather than
+    assuming.  A bypassed pedal crossfades the whole chain away, so a
+    routed effect looks dead and a patch cable from the output back to
+    the input closes a unity feedback loop that reads as a wild
+    frequency-dependent gain - two symptoms that both look like firmware
+    bugs and are not.  The state is on the wire in the SysEx dump but as
+    a *channel* message, which every parser in here steps over; that is
+    issue 253, and this is the way round it until it is fixed.
+
+    The tell, if it is ever in doubt: with the chain bypassed, muting
+    Signal Chain's Volume changes nothing, because bypass discards
+    volume along with everything else.
+
+    aplaymidi rather than the raw device, because the raw device is
+    taken whenever the web app is open and this has to work anyway.
+    """
+    _cc(p, 20, 127 if on else 0, channel)
+    time.sleep(0.2)
+
+
+def enter_bootsel(p, channel=1):
+    """CC 20 value 126 - the way in without touching the board.
+
+    There is no picotool reset interface on this device, so this is the
+    only way to get it into BOOTSEL from software.  MIDI_CC_MAP.md has
+    the number frozen for exactly this reason.
+    """
+    _cc(p, 20, 126, channel)
 
 
 def identity(p, in_port=None, wait=2.0):
@@ -533,6 +564,31 @@ def effect_id(short_name, map_h="../build/effect_map.h"):
     m = re.search(r"#define %s_EFFECT_ID (\d+)" % re.escape(short_name.upper()),
                   text)
     return int(m.group(1)) if m else None
+
+
+def pot_index(short_name, label, map_h="../build/effect_map.h"):
+    """Which pot a label is, out of the generated enum.
+
+    The generator emits 'enum <prefix>_pot' from the POT: lines, so the
+    index is declared and does not have to be counted off the header -
+    which matters because reordering POT: lines is free in the source
+    and silently renumbers anything that counted.
+
+    The +1 is the mix: SysEx 0x03 takes pot 0 as the mix and 1-10 as the
+    effect's own, where the enum numbers only the effect's own.
+    """
+    try:
+        text = open(map_h).read()
+    except OSError:
+        return None
+    m = re.search(r"enum %s_pot \{(.*?)\}" % re.escape(short_name.lower()),
+                  text, re.S)
+    if not m:
+        return None
+    want = "%s_%s" % (short_name.upper(),
+                      re.sub(r"[^0-9A-Za-z]+", "_", label).strip("_").upper())
+    names = [n.strip().rstrip(",") for n in m.group(1).split("\n") if n.strip()]
+    return names.index(want) + 1 if want in names else None
 
 
 def settings_effect(map_h="../build/effect_map.h"):

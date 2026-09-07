@@ -614,10 +614,21 @@ static inline void __audio_func(single_sample)(float mix)
 	sample_t in = process_input(sample);
 	sample_t usb_in = get_usb_audio_input();
 
-	// We need to do the USB input as stereo too
+	//
+	// We need to do the USB input as stereo too.
+	//
+	// Pre-FX *adds* to the jack, which is what you want when playing
+	// along with something and is a trap when measuring: whatever is
+	// plugged in is part of the answer, and an open jack's noise is a
+	// floor a null test cannot get below.  Replace ignores the jack, so
+	// what comes out is a function of what the host sent and nothing
+	// else.
+	//
 	if (settings.usb_input == USB_IN_PRE_FX) {
 		in.left += usb_in.left;
 		in.right += usb_in.right;
+	} else if (settings.usb_input == USB_IN_REPLACE) {
+		in = usb_in;
 	}
 
 	//

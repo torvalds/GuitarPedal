@@ -19,13 +19,30 @@
 #
 # Measured across four boots, which is what that buys:
 #
-#   empty chain      9.577 .. 9.614 %
-#   reverb routed   31.624 .. 31.691 %     std 0.014 %
+#   empty chain      6.238 .. 6.299 %
+#   reverb routed   20.857 .. 21.083 %
 #
 # So (routed - empty) from a single reading is meaningful, and -b N is
 # for confidence rather than for averaging anything away.  The empty
 # reading is printed beside it because a baseline that has moved is the
 # first sign that something outside this has changed.
+#
+# EVERY NUMBER HERE HAS A CLOCK ON IT, AND THIS ONE'S IS 230.4 MHz
+#
+# The load is a fraction of a fixed 48 kHz sample period, so it scales
+# straight with the clock: the same effect reads 1.5x higher on a
+# 153.6 MHz build.  That is exact rather than approximate for anything
+# on the audio core, because check-audio.py guarantees the audio core
+# reads no flash, so its cycle count does not depend on XIP or on wait
+# states - only on how many cycles there are to spend.
+#
+# The figures above were 9.577 .. 9.614 % and 31.624 .. 31.691 % when
+# they were written on 2026-08-11, which was 153.6 MHz; 2ae46cb took the
+# clock back up to 230.4 and they moved.  Left as a warning rather than
+# quietly overwritten: main is still at 153.6, so a reading taken there
+# and a reading taken here are not the same measurement, and the first
+# thing to check when a number here surprises somebody is which clock it
+# came off.
 #
 # Numbers taken before either change are not comparable at this
 # precision: with a microsecond timer the idle reading sat in one of two
@@ -90,7 +107,13 @@ DEFAULT = [11]          # Reverb
 # on the baseline below - and put back by the program change at the end,
 # the same way the routing is.
 #
-SETTINGS = 18
+# Asked rather than written down.  It has already moved once, from 18 to
+# 19, when an effect went in above it - and a pinned setting that
+# silently pins some other effect's pot instead is a baseline that has
+# quietly stopped being the baseline.  See settings_effect()'s
+# docstring, and check-effect-ids.py, which is what finds the ones that
+# get written down anyway.
+SETTINGS = pedal.settings_effect()
 USB_OUT_POT = 1
 USB_OUT_NONE = 0
 STEP_PCT = 100.0 / 16383   # what one telemetry step is worth, 14-bit
@@ -202,12 +225,18 @@ def reboot(p):
     time.sleep(7)
 
 
-def one_pass(p, ids, n=6):
+def one_pass(p, ids, n=6, pots=()):
     pedal.set_pot(p, SETTINGS, USB_OUT_POT, USB_OUT_NONE)
     pedal.set_routing(p)
     time.sleep(SETTLE)
     empty = sample_loads(p, n)
     pedal.set_routing(p, *ids)
+    #
+    # After routing, not before: routing an effect in runs its ->init(),
+    # which would otherwise land on top of these and put the pots back.
+    #
+    for eff, num, val in pots:
+        pedal.set_pot(p, eff, num, val)
     time.sleep(SETTLE)
     routed = sample_loads(p, n)
     pedal.set_routing(p)
@@ -216,12 +245,26 @@ def one_pass(p, ids, n=6):
 
 def main():
     args = sys.argv[1:]
-    boots, target = 1, None
-    while args and args[0] in ("-b", "-t"):
+    boots, target, pots = 1, None, []
+    while args and args[0] in ("-b", "-t", "-p"):
         if args[0] == "-b":
             boots = int(args[1])
-        else:
+        elif args[0] == "-t":
             target = args[1]
+        else:
+            #
+            # -p EFFECT:POT=RAW, so a load can be attributed to a
+            # setting rather than only to an effect.  One pot can be
+            # most of what an effect costs - an oversampling factor is
+            # the obvious case, but [RAT]'s Mode picks a different clamp
+            # table - and nothing else here could say so.
+            #
+            spec, _, val = args[1].partition("=")
+            short, _, num = spec.partition(":")
+            eid = pedal.effect_id(short)
+            if eid is None:
+                sys.exit("measure-load: no effect [%s]" % short)
+            pots.append((eid, int(num), int(val)))
         args = args[2:]
     ids = [int(a) for a in args] or DEFAULT
 
@@ -258,7 +301,7 @@ def main():
         if k:
             reboot(p)
             p = pedal.port()
-        empty, routed = one_pass(p, ids)
+        empty, routed = one_pass(p, ids, pots=pots)
         if not routed:
             print("  %4d   no reply" % (k + 1))
             continue
