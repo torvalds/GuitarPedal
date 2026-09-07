@@ -286,6 +286,13 @@ from anything I typed here.
    germanium diodes, and the clean/dirty blend that tracks the gain
    knob.  Originally by Bryan Leavelle.
    [Measured](Documentation/effects/klon.md).
+ - **Rat Sketch** - a ProCo RAT, from the Aion FX Helios clone.  One
+   op-amp with up to 67dB and several decibels an octave of treble
+   emphasis inside the feedback, then diodes to ground, then the one
+   backwards Filter knob.  Three clipping modes, because the pedal has
+   three.  The op-amp saturates inside its own loop and the diodes are
+   solved rather than approximated, which is where its second harmonic
+   comes from.  [Measured](Documentation/effects/rat.md).
  - **Phaser**, **Flanger** and **Vibrato** - the modulation three.  All
    simple, all a delay line and an LFO wearing different hats.
  - **Tape Echo** - the Echo King from Cleveland Music Co, a model of the
