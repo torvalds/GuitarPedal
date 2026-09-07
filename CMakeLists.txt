@@ -144,6 +144,35 @@ math(EXPR SAVE_AREA_OFFSET "${FLASH_SIZE_BYTES} - ${SAVE_AREA_SIZE}"
 # XIP switched off.  check-audio.py enforces both halves.
 #
 
+#
+# [RAT]'s clipping node, solved at build time.
+#
+# A diode equation is a logarithm and a Newton solve, and the node it
+# describes cannot move while a note is playing - so it is solved here,
+# at every point of a table, and the audio core does an index and a lerp.
+#
+# The constants come out of the effect rather than out of the netlist,
+# which is worth saying because it is the opposite of the usual rule:
+# they were fitted to the pedal on the bench, and the netlist's diodes
+# are a generic part with different numbers.  So the effect owns them,
+# the generator reads them out of it, and rat.h is a build input.
+#
+# Generated only when the effect that includes it is present, so a tree
+# without [RAT] needs neither the header nor the generator.
+#
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Effects/rat.h")
+	set(RAT_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/Effects/rat.h")
+	set(RAT_CLAMP_HEADER "${CMAKE_CURRENT_BINARY_DIR}/rat_clamp.h")
+	add_custom_command(
+		OUTPUT "${RAT_CLAMP_HEADER}"
+		COMMAND "${SCRIPT_DIR}/rat_clamp.py"
+			"${RAT_HEADER}"
+			-o "${RAT_CLAMP_HEADER}"
+		DEPENDS "${SCRIPT_DIR}/rat_clamp.py" "${RAT_HEADER}"
+	)
+	list(APPEND PEDAL_GENERATED "${RAT_CLAMP_HEADER}")
+endif()
+
 # Math table generation
 set(POW2_STEP_SHIFT 8)
 set(POW2_HEADER "${CMAKE_CURRENT_BINARY_DIR}/pow2.h")
