@@ -1,0 +1,356 @@
+ProCo RAT, as the Aion FX Helios clones it
+*
+* One op-amp with a great deal of gain, a diode clamp on its output, a
+* one-pole treble cut and a JFET follower.  That is the whole pedal, and
+* it is the reason it is here: it is a distortion whose character comes
+* from where things clip rather than from a network of transistors.
+*
+* PROVENANCE
+*
+*   the whole circuit    Aion FX "Helios Vintage Distortion", kit
+*                        documentation 1.1.2 (2026-01-05), page 25.
+*
+* This is the pedal on the bench, so it is the one clone worth having a
+* netlist of - it can be measured rather than argued about.  It is not a
+* stock RAT: the Helios adds the Sweep control, which puts up to 1k in
+* series with the 47R that sets the gain, and gives a three-way Mode
+* switch where a RAT has one diode pair.  Both are named below.
+*
+* The three revisions of the PCB (1.0.1, 1.1.0, 1.1.2) changed an
+* indicator LED resistor, renamed a part and renamed the switch on the
+* silkscreen.  Nothing in the signal path moved, so which board this is
+* does not matter.
+*
+* THE UNIT ON THE BENCH
+*
+* A netlist describes a design; the numbers below were fitted against
+* one soldered instance of it, and those are different things.  What was
+* read off that instance, on 2026-09-06:
+*
+*   op-amp               OP07CP, TI logo
+*   follower JFET        PN4303 - the schematic draws a 2N5457
+*   adapter              9.30 V, off load
+*   supply at pin 7      9.09 V
+*   bias, at pin 6       4.549 V   (pin 3 reads 4.13 - see below)
+*   JFET source          2.443 V into the 10k
+*
+* The bias is read at the output and not at the + input on purpose.  The
+* divider is 50k of source impedance and the meter to hand has about
+* half a megohm on it, which takes 400 mV out of the answer - and 400 mV
+* of bias offset is, by coincidence, almost exactly what would explain
+* the output asymmetry this file models as unequal rails.  Probing the
+* output instead gives the same voltage from a low impedance, and the
+* two agreeing to four millivolts is also the proof that nothing is
+* loading the node.
+*
+* Every fitted number below was taken with the pedal set to Distortion
+* noon, Filter noon, Sweep minimum, Level maximum, and the Mode switch
+* toward the Level knob - which is one silicon pair each way, confirmed
+* against the netlist's three clamps at 0.27 dB rms where the other two
+* sit at 6.93 and 4.84.
+*
+* THE OP-AMP IS AN OP07, AND ITS LIMITS ARE THE PEDAL
+*
+* A million of gain, and then three limits that all matter here: a
+* gain-bandwidth of 420 kHz, a slew rate of 0.3 V/us, and an output that
+* cannot reach the supply.  The stage asks for up to 67 dB and is
+* against a rail long before the diodes have anything to do, so both
+* clipping mechanisms are live at once and the rails set the shape at
+* high Drive.
+*
+* The part is an OP07CP, read off the board.  460 kHz is inside its
+* spec - 0.6 MHz typical, 0.4 minimum - and is fitted to the pedal
+* rather than taken from the datasheet, on a small-signal sweep through
+* the pedal's own loop at Distortion noon, at a level checked to be in
+* the linear region.  Re-run with fit-netlist.py against
+* rat-d12-lo.json:
+*
+*	40 Hz - 16 kHz, deck against pedal
+*	  a hundred gigahertz of gain-bandwidth        6.26 dB rms
+*	  380 kHz                                      1.42 dB rms
+*	  420 kHz                                      0.89 dB rms
+*	  460 kHz                                      0.55 dB rms
+*	  500 kHz                                      0.59 dB rms
+*	  at 14 kHz                          19.7 dB -> 0.03 dB
+*
+* This said 420 kHz until now, and it was true when it was written.
+* 783b456 measured the supply at the op-amp's own pin instead of working
+* it back from the input jack - 9.09 V rather than an assumed 8.6 - and
+* refitted vsup, swing_lo and gbw together in one commit.  The rails
+* moving moved the best fit for the gain-bandwidth with them, from 420
+* to 460, and only the .param line was updated.  Which is the ordinary
+* way a comment goes wrong: not by being careless, but by being right
+* about a fit that was then redone.
+*
+* WHAT IS LEFT, AND WHERE
+*
+* Against the pedal at Distortion noon, Filter noon, Sweep minimum,
+* Level maximum, one silicon pair, on 2026-09-06:
+*
+*	small signal, 40 Hz - 16 kHz        0.62 dB rms
+*	  and at 220 Hz                     0.23 dB
+*	harmonics where it clips, H2 H3 H4  within 0.4 dB
+*	output level once it clips          0.96 dB low
+*
+* That last one is the only structured residual left and it is not the
+* small-signal gain, because the unclipped end of the same ladder is
+* inside a quarter of a decibel.  It is the height of the clamp.  Which
+* of the diode model, the follower's gain and the output network is
+* responsible cannot be told apart from the output alone - the three
+* enter as one product - and separating them needs a probe on the clamp
+* node itself.  Fitting any one of them to this number would silently
+* absorb the other two.
+*
+* The small-signal residual has a shape rather than an offset: about a
+* decibel of tilt between 220 Hz and 1760 Hz, which is where C5 and C6
+* set the pre-emphasis corners and is the first thing a tolerance sweep
+* should be pointed at.
+*
+* 'dist', 'filter', 'sweep' and 'volume' are resistance fractions of
+* their tracks, not knob rotations: the pots are audio taper and the
+* mapping from a knob to a fraction belongs to whatever is driving this.
+*
+.param dist=0.5
+.param filter=0.5
+.param sweep=0.0
+*
+* Mode: 0 is the switch's centre position and leaves only the LEDs, 1 is
+* one 1N914 each way, 2 is two in series each way.  The LED pair is
+* wired straight to the node and is in circuit in all three, so what the
+* switch really picks is a ceiling of about 1.75 V, 1.15 V or 0.6 V.
+*
+.param mode=1
+*
+* The supply, measured at the op-amp's own V+ pin rather than reasoned
+* about from the input jack.
+*
+* This was 8.6 V, worked out as nine volts less what a Schottky and a
+* 47R ought to drop.  Both halves of that were wrong the same way.  The
+* adapter reads 9.3 V rather than 9, which guitar supplies commonly do -
+* they are built to still deliver nine at a load, so they sit high at a
+* small one - and the protection then drops about 0.2 V rather than the
+* 0.4 that was assumed.  Pin 7 reads 9.09 V, half a volt above the
+* figure this deck was using.
+*
+* The lesson is cheaper than the arithmetic: the supply a pedal actually
+* runs on is one probe, and a nominal voltage minus a textbook drop is
+* two guesses that do not have to cancel.
+*
+* The divider then puts the + input at half of that, and the output pin
+* confirms it - 4.549 V measured against 4.545 predicted, which is also
+* the check that nothing is loading the bias node.  Reading it at the +
+* input instead gives 4.13, because that node is 50k of source
+* impedance and a meter with half a megohm on it takes 400 mV out of
+* the answer.  The output pin is the low-impedance copy of the same
+* voltage and is the one to probe.
+*
+.param vsup=9.09
+*
+* The op-amp's gain-bandwidth and slew rate, which the ideal version of
+* this deck did not have.  470 kHz is inside an OP07's spec (0.6 MHz
+* typical, 0.4 minimum) and 0.3 V/us is its datasheet slew.
+*
+*
+* How close the output gets to each rail, separately.  An op-amp does
+* not swing equally both ways, and at a Distortion where the stage is
+* hard against its rails that is the whole of the asymmetry.
+*
+*
+* The follower's JFET, as parameters rather than as a part number.
+*
+* Measured on the bench: the source sits at 2.443 V into the 10k, and
+* the part is marked PN4303 - not the 2N5457 the schematic draws.  The
+* model card here biased to 1.179 V, which is the other regime
+* entirely.  Vto and Beta are not both determined by one bias reading,
+* so Vto is set at the middle of the part's range and Beta solved for
+* the voltage that was measured.
+*
+.param jvto=-3.5
+.param jbeta=217u
+*
+* THE TWO RAILS ARE NOT THE SAME DISTANCE AWAY
+*
+* How close the output gets to each rail, and it is not the same both
+* ways: 2.0 V from the bottom and 1.5 V from the top, into the kilohm
+* and the clamp that this stage drives.
+*
+* Fitted to the pedal at Distortion noon, where the op-amp is hard into
+* the clamp for most of every cycle.  A symmetric version cannot produce
+* what is measured there at all - the two half cycles differ by 1.37 dB
+* and the second harmonic sits at -17 dB, where symmetric rails give
+* 0.10 dB and put it at -59.  With these two numbers the harmonics land
+* within 0.2 dB of the pedal's:
+*
+*	           H2      H3      H4
+*	  pedal   -17.3   -10.4   -17.9
+*	  deck    -17.1   -10.4   -17.7
+*
+* The obvious alternative was checked and is not the answer.  A bias
+* divider sitting off half supply would produce the same signature, and
+* it is not off - see the bench readings above.  So this is the output
+* stage.
+*
+* Which the datasheet supports, having been read afterwards rather than
+* before.  The OP07 does not specify its swing tightly, but its curves
+* put the output within about a volt of the positive rail and nearer two
+* of the negative - the same asymmetry, the same way round, and
+* bracketing the 1.5 and 2.0 fitted here.  That is worth more than the
+* fit on its own: the direction was the part that looked wrong, since a
+* bipolar output stage is usually the other way about.
+*
+.param swing_lo=2.0
+.param swing_hi=1.5
+.param gbw=460k
+.param slew=0.3meg
+
+.subckt OPAMP inp inn out params: vlo=0 vhi=9 gbw=470k a0=1e6 slew=0.3meg
+*
+* A transconductance into a capacitor, which is what an op-amp is.
+*
+*   gm*Verr, current-limited  ->  Cc  ->  output limited to the rails
+*
+* Small signal that is a0 with one pole at gbw/a0, so the closed loop
+* corner lands at gbw over whatever gain the network is asking for.
+* Large signal it is a slew rate, because the cap charges at imax/Cc
+* once the input stage has run out of current - which is the half of an
+* op-amp that a bare pole does not have, and the half that decides what
+* a clipped edge looks like.
+*
+.param cc=1n
+.param mid={(vhi+vlo)/2}
+.param half={(vhi-vlo)/2}
+.param gm={2*3.141592653589793*gbw*cc}
+.param imax={slew*cc}
+Vmid nmid 0  {mid}
+Rp   np  nmid {a0/gm}
+Cp   np  0    {cc}
+Bg   0   np   I = {imax}*tanh({gm}/{imax}*(V(inp)-V(inn)))
+*
+* The limit is centred on the input, and not on the middle of the two
+* rails.
+*
+* Where the output sits at rest is decided by the feedback, which at DC
+* is unity around this network, so it sits at whatever the bias divider
+* puts on the + input.  Centring the limiter halfway between the rails
+* instead moves that quiescent point as soon as the two rails differ -
+* 4.3 V to 4.5 V for the swing fitted here - and then the asymmetry
+* being modelled is partly the model's own offset.
+*
+* So the headroom is measured from the input each way, which is what an
+* op-amp actually has.
+*
+Bout out 0    V = V(inp) + (V(np) > V(inp)
++                 ? ({vhi}-V(inp))*tanh((V(np)-V(inp))/({vhi}-V(inp)))
++                 : (V(inp)-{vlo})*tanh((V(np)-V(inp))/(V(inp)-{vlo})))
+.ends
+
+Vva  va   0   DC {vsup}
+Vin  in   0   DC 0 AC 1
+
+* ---- bias, half the supply.
+R10  va   vb  100k
+R11  vb   0   100k
+C13  vb   0   47u
+
+* ---- the gain stage.  Non-inverting, so it cannot go below unity, and
+*      the feedback leg is what every RAT argument is about:
+*
+*        gain = 1 + Rdist / ( (R3 + Sweep + 1/sC5) || (R4 + 1/sC6) )
+*
+*      Two RC legs in parallel, so the gain is frequency-dependent on
+*      purpose: 4.7uF into 560R lifts everything above 60 Hz, 2.2uF into
+*      47R lifts everything above 1.5 kHz again, and the result is a
+*      pre-emphasis that is why a RAT is not just a loud fuzz.  C4 puts
+*      the top back down at 1/(2 pi Rdist 100p).
+*
+RPD  in   0   2.2meg
+C1   in   a   22n
+R1   vb   a   1meg
+R2   a    p   1k
+C2   p    0   1n
+R3   n    sw3 47
+Rsw  sw3  swb {max(sweep*1k, 0.1)}
+C5   swb  0   2.2u
+R4   n    r4b 560
+C6   r4b  0   4.7u
+Rdst n    o1  {max(dist*100k, 0.1)}
+C4   n    o1  100p
+XIC1 p n o1 OPAMP vlo={swing_lo} vhi={vsup-swing_hi} gbw={gbw} slew={slew}
+
+* ---- the clamp.  R5 is the only thing between an op-amp output at its
+*      rail and a diode, so it is what turns a voltage into the current
+*      the diodes have to eat, and it is why the clipping is soft at the
+*      corner and hard past it.
+C7   o1   c7b 4.7u
+R5   c7b  cl  1k
+D8   cl   0   LEDRED
+D9   0    cl  LEDRED
+Rm3  cl   m3  {mode == 1 ? 0.1 : 1e12}
+D2   m3   0   D1N914
+D3   0    m3  D1N914
+Rm1  cl   m1  {mode == 2 ? 0.1 : 1e12}
+D4   0    x4  D1N914
+D5   x4   m1  D1N914
+D6   m1   x7  D1N914
+D7   x7   0   D1N914
+
+* ---- Filter, a rheostat in front of one pole.  0 ohms puts the corner
+*      at 1/(2 pi 1k5 3n3) = 32 kHz and the whole track puts it at
+*      475 Hz, so this control spans six octaves and does nothing else.
+Rflt cl   fp  {max(filter*100k, 10)}
+R6   fp   f6  1.5k
+C8   f6   0   3.3n
+
+* ---- the output follower.  A JFET source follower and a volume pot.
+*
+*      The schematic draws a 2N5457 and the kit ships a J112 or a
+*      PN4303, which bias to quite different source voltages - 1.2 V
+*      against 2.8 V into 10k - and so have quite different room to
+*      swing down.  The 2N5457 is used here because it is what the
+*      schematic says; if the follower turns out to be clipping at
+*      playing levels then which part is actually fitted stops being a
+*      detail, and that is worth knowing either way.
+C9   f6   g   22n
+R7   g    0   1meg
+J1   va   g   s  J2N5457
+R8   s    0   10k
+C10  s    out 1u
+*
+* Volume at maximum, so the wiper is the top of the track.  The model
+* applies Volume as a gain at the end, so what has to be here is not the
+* wiper position but the loading the pot puts on the stage before it.
+Rvol out  0   100k
+Rld  out  0   1meg
+
+* ---- Devices.
+*
+* The clipping diodes, stiffer than the generic card they started with.
+*
+* All six measured 0.700 V on a meter's diode range, within two
+* millivolts of each other - which also rules out diode mismatch as a
+* source of the output asymmetry this file models at the op-amp.
+*
+* The card was IS=2.52e-9, which is 0.584 V at a milliamp.  What the
+* meter actually injects is not known - a diode range is usually near
+* 1 mA and specified only as a maximum - so the reading bounds IS rather
+* than fixing it: 0.5 mA would mean 9.7e-11, 2 mA would mean 3.88e-10.
+* The value here is the 1 mA reading, taken because it is the ordinary
+* one and not because it fits best; 2 mA fits better, and choosing it
+* would be picking the assumption that flatters the answer.
+*
+* It takes the clipped output level from 0.94 dB below the pedal to
+* 0.53.  What is left is shared between this, the follower's gain and
+* the output network, which enter the clipped level as one product and
+* cannot be separated from outside.
+*
+.param dis=1.94e-10
+.model D1N914 D (IS={dis} N=1.752)
+*
+* A red LED as a diode with a big ideality factor and a small series
+* resistance: 1.81 V at 1 mA, 1.70 V at 100 uA, which is the shape a
+* 3 mm red one has where this circuit uses it.
+.model LEDRED D (IS=1e-19 N=1.9 RS=3)
+.model J2N5457 NJF (VTO={jvto} BETA={jbeta} LAMBDA=2.3m RD=1 RS=1
++                   CGD=2.5p CGS=3p PB=1 IS=1e-14)
+
+.end
