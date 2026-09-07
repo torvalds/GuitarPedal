@@ -97,7 +97,17 @@ def run(args, x, warmup=WINDOW * 2):
     p = subprocess.run([BENCH] + list(args), input=buf.tobytes(),
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if p.returncode:
-        raise BenchError(p.stderr.decode().strip())
+        #
+        # A bench that died on a signal says nothing on stderr, so the
+        # error was an empty string and the traceback was the only clue
+        # that anything had happened.  Name the signal.
+        #
+        why = p.stderr.decode().strip()
+        if p.returncode < 0:
+            why = why or ("killed by signal %d - the bench crashed rather "
+                          "than complained" % -p.returncode)
+        raise BenchError(why or "exit %d, and nothing on stderr"
+                         % p.returncode)
 
     y = np.frombuffer(p.stdout, dtype=np.float32).reshape(-1, 2)
     y = y[warmup:]
@@ -357,3 +367,90 @@ def describe(m):
             "p %5.2f (pow %.3f exp %.3f)  cyc %6.1f dB" %
             (m["dbfs"], m["gain_db"], m["thd_db"], m["alias_db"],
              m["p"], m["r2_pow"], m["r2_exp"], m["cycle_spread_db"]))
+
+
+#
+# A second bench, built from a git ref, so two versions of the pedal can
+# be compared in one run.
+#
+# THE REFERENCE IS A REF, NOT A FILE
+#
+# Nothing binary is committed.  A checked-in waveform goes stale against
+# the thing it describes and nothing says so; built from a ref, the
+# question being asked is exactly "does this still match the commit we
+# agreed was right", which is the question.
+#
+# Neither of these is specific to one effect, and the second one is not
+# even bench-specific in spirit: it is that a measurement taken against a
+# stale bench reported a completely convincing wrong answer, which is why
+# it refuses rather than warning.
+#
+def sh(cmd, cwd=None):
+    r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+    if r.returncode:
+        raise BenchError("%s\n%s%s" % (" ".join(cmd), r.stdout, r.stderr))
+    return r.stdout.strip()
+
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+TREE = os.path.dirname(HERE)
+
+
+def refuse_if_stale(binary=None):
+    """Refuse rather than warn: see issue 144."""
+    binary = binary or BENCH
+    if not os.path.exists(binary):
+        raise BenchError("%s is not built; run 'make bench'" % binary)
+    built = os.path.getmtime(binary)
+    newest, culprit = 0.0, None
+    for sub in ("Effects", "Audio", "Firmware", "Validation/bench", "scripts"):
+        for root, _dirs, files in os.walk(os.path.join(TREE, sub)):
+            if "pico-sdk" in root or "tinyusb" in root or "/ref" in root:
+                continue
+            for f in files:
+                if not f.endswith((".h", ".c", ".py")):
+                    continue
+                m = os.path.getmtime(os.path.join(root, f))
+                if m > newest:
+                    newest, culprit = m, os.path.join(root, f)
+    if newest > built:
+        raise BenchError("%s is older than %s\n  run 'make bench' - issue 144"
+                         % (os.path.relpath(binary, TREE),
+                            os.path.relpath(culprit, TREE)))
+
+
+def reference_bench(ref, quiet=False):
+    """Build (or reuse) a bench from 'ref', cached by commit id."""
+    cache = os.path.join(HERE, "bench", "ref")
+    sha = sh(["git", "rev-parse", ref], cwd=TREE)
+    work = os.path.join(cache, sha[:12])
+    binary = os.path.join(work, "Validation", "bench", "bench")
+    if os.path.exists(binary):
+        return binary, sha
+    os.makedirs(cache, exist_ok=True)
+    if not quiet:
+        print("building the reference bench from %s (%s)..." % (ref, sha[:12]))
+    sh(["git", "worktree", "add", "--detach", work, sha], cwd=TREE)
+    sh(["make", "bench"], cwd=os.path.join(work, "Validation"))
+    return binary, sha
+
+
+def through(binary, args, x, warmup=None):
+    """Push 'x' through a particular bench binary.
+
+    Returns (y, info).  The info is not optional garnish: 'clipped' is
+    the count of samples the output stage ran out of scale on, and a
+    level measured on a signal that clipped is measuring the ceiling
+    rather than the pedal.  A caller that ignores it will get a clean,
+    confident number for the wrong quantity - which is issue 316.
+    """
+    global BENCH
+
+    keep = BENCH
+    try:
+        BENCH = binary
+        y, _r, info = run(args, x, warmup=settle(4.0) if warmup is None
+                          else warmup)
+    finally:
+        BENCH = keep
+    return np.asarray(y, dtype=np.float64)[-len(x):], info

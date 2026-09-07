@@ -1,5 +1,12 @@
 CC = gcc
-CFLAGS = -Wall -O2 -I.. -I../Firmware -I../build/ \
+#
+# -I../Firmware/midi because test-midi-cin.c says #include "midi.h" and
+# that header is a directory further down.  It was missing, and invisible
+# with it: a built test-midi-cin sitting in the tree is newer than its
+# source, so make never rebuilds it and 'make check' passes.  It only
+# fails from a clean checkout, which is the one place it matters.
+#
+CFLAGS = -Wall -O2 -I.. -I../Firmware -I../Firmware/midi -I../build/ \
 	 -ffast-math -fsingle-precision-constant -Wfloat-conversion
 
 visualize: test-fft
@@ -29,7 +36,15 @@ test-midi-cin: test-midi-cin.c
 # past the things that only exist on an M33.
 #
 BENCH_GEN = bench/gen
-BENCH_HDRS = $(BENCH_GEN)/effect_map.h $(BENCH_GEN)/pow2.h \
+#
+# The math tables belong to Audio/util.h and are wanted whatever is in
+# Effects/.  rat_clamp.h belongs to one effect and is generated only when
+# that effect is here to include it, so a tree without [RAT] builds the
+# bench without reaching for its generator.
+#
+BENCH_CLAMP = $(if $(wildcard ../Effects/rat.h),$(BENCH_GEN)/rat_clamp.h)
+BENCH_HDRS = $(BENCH_GEN)/effect_map.h $(BENCH_CLAMP) \
+	     $(BENCH_GEN)/pow2.h \
 	     $(BENCH_GEN)/log2.h $(BENCH_GEN)/quarter_sine.h
 BENCH_CFLAGS = -Wall -Wno-unused-function -O2 \
 	       -ffast-math -fsingle-precision-constant -Wfloat-conversion \
@@ -42,6 +57,19 @@ $(BENCH_GEN)/effect_map.h: $(wildcard ../Effects/*.h) \
 	python3 ../scripts/gen_effects.py ../Effects/ \
 		$(BENCH_GEN)/effect_map.h $(BENCH_GEN)/effects.js \
 		$(BENCH_GEN)/dummy_map.md
+
+#
+# [RAT]'s clipping node, solved at every point of a table.
+#
+# The diode constants come out of the effect rather than out of the
+# netlist, which is the opposite of the rule above and is deliberate:
+# they were fitted to the pedal and the netlist's are not the same
+# numbers.  rat_clamp.py says why at length.  rat.h is therefore a build
+# input and is listed as one.
+#
+$(BENCH_GEN)/rat_clamp.h: ../scripts/rat_clamp.py ../Effects/rat.h
+	@mkdir -p $(BENCH_GEN)
+	python3 $< ../Effects/rat.h -o $@
 
 $(BENCH_GEN)/pow2.h: ../scripts/pow2.py
 	@mkdir -p $(BENCH_GEN)
@@ -116,6 +144,21 @@ check-biquad: bench/coeff
 check-analysis: bench/bench
 	./check-analysis.py
 
+#
+# There is deliberately no check- target for compare-spice.py.
+#
+# It is the level under all of this - ngspice on a netlist, the only
+# thing here that is not our own arithmetic checking our own arithmetic -
+# but it reports rather than passes: the answer is six numbers between
+# 0.9 and 1.5 dB, and what those mean is a judgement about how much a
+# simplification gave up.  A check- target that cannot fail is worse than
+# no target, because it gets read as a green light.  Run it by hand:
+#
+#	./compare-spice.py rat
+#
+# and it needs the ngspice front-end on the path, which is the one
+# dependency in this directory that is not python or a compiler.
+#
 #
 # The other half of the bench: whether it agrees with a real pedal.
 #
@@ -220,9 +263,10 @@ check-reboot:
 	./test-reboot.py $(if $(TARGET),--target $(TARGET)) \
 			 $(if $(JSON),--json $(JSON)) $(BOOTARGS)
 
-check: test-midi-cin bench/coeff
+check: test-midi-cin bench/coeff bench/gen/effect_map.h
 	./test-midi-cin
 	./test-biquad.py
+	./check-effect-ids.py
 ifeq ($(NODE),)
 	@echo "test-webmidi: SKIPPED - no node in PATH"
 else

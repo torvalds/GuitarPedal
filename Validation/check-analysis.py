@@ -56,6 +56,70 @@ def series_in(path):
     return out
 
 
+#
+# A page can draw its curves as images instead of as mermaid, and
+# rat.md does: mermaid has no logarithmic axis, ties one x label to one
+# data point, and cannot overlay a measurement of the pedal on a curve
+# of the model.  ISSUES 148 argued against images and the argument was
+# about the *numbers*, not the pictures - a curve in a diff is not
+# legible, and if the measurement only exists inside a PNG then nothing
+# can tell when it has gone stale.
+#
+# So an image page keeps its numbers as a table and this checks those
+# instead.  The picture got better and the record stayed text.
+#
+# Opt-in, by an HTML comment above the table, because "a table of
+# numbers" is not the same thing as "a measurement": rat.md also has a
+# table of fitted diode parameters and one of loads read off the pedal,
+# and neither can be reproduced by running a script on a laptop.
+# Guessing from the shape of the data would have failed both.
+#
+MEASURED = re.compile(r"^\s*<!--\s*measured\s*$")
+COMMENT_END = re.compile(r"^\s*-->\s*$")
+
+
+def tables_in(path):
+    """Rows of a table inside a '<!-- measured ... -->' block.
+
+    Inside a comment, not beside the figure, and that is the whole
+    design.  A reader wants the picture; a reader does not want eleven
+    columns of decibels underneath it, and the first version of rat.md
+    had exactly that and it read as noise.  But the numbers still have
+    to be *in the page* rather than only inside a PNG, or nothing can
+    tell when the code has moved underneath the drawing - which is
+    ISSUES 148's point and the reason this function exists.
+
+    A comment is text.  It diffs, it greps, and it renders as nothing.
+
+    The header and the |---| under it are skipped by counting, not by
+    looking: a header of frequencies is a row of numbers too, and would
+    otherwise be read as a series that no measurement matches.
+    """
+    out, armed, row = [], False, 0
+    for n, text in enumerate(path.read_text().split("\n"), 1):
+        if MEASURED.match(text):
+            armed, row = True, 0
+            continue
+        if COMMENT_END.match(text):
+            armed = False
+            continue
+        if not armed or not text.strip().startswith("|"):
+            continue
+        row += 1
+        if row <= 2:
+            continue
+        cells = [c.strip() for c in text.strip().strip("|").split("|")]
+        vals = []
+        for c in cells[1:]:
+            if not re.fullmatch(r"-?\d+\.?\d*", c):
+                vals = None
+                break
+            vals.append((float(c), len(c.partition(".")[2])))
+        if vals:
+            out.append((n, vals))
+    return out
+
+
 def matches(measured, written):
     """Every measurement rounds to the figure the page prints.
 
@@ -204,9 +268,9 @@ def check(path):
         return 1
 
     have = bracketed(r.stdout) + columns_of(r.stdout)
-    want = series_in(path)
+    want = series_in(path) + tables_in(path)
     if not want:
-        print(f"check-analysis: {path.name} has no mermaid series to check")
+        print(f"check-analysis: {path.name} has no series to check")
         return 0
 
     bad = 0

@@ -4,3 +4,35 @@ test-midi-cin
 bench/bench
 bench/coeff
 bench/gen
+#
+# The rate experiments build one bench per factor - bench-os4, bench192 -
+# and shoot-loop.py writes its wavs and its page beside them.  All of
+# them are throwaways of a particular afternoon.
+#
+bench/bench-*
+bench/bench[0-9]*
+#
+# bench.reference_bench() builds an old commit's bench in a throwaway
+# worktree here, cached by commit id, which is what --model takes.
+# 'git worktree prune' after deleting one.
+#
+bench/ref/
+spice-cache/
+distortion-shootout.html
+distortion-shootout-*.wav
+#
+# compare-spice.py --waves, and whatever was drawn beside it while
+# chasing one afternoon's defect.
+#
+waves-*.png
+#
+# Bench captures: a few megabytes of samples belonging to one pedal on
+# one evening.  capture-rat.py makes them and draw-rat.py reads them;
+# neither the samples nor the figures drawn from them are committed.
+# The figures that are on the page are, as PNGs - a page has to read
+# correctly from a clone, and the scripts say how to remake the rest.
+#
+rat-*.json
+rat-*.html
+rat-*.wav
+figures/

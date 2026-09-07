@@ -26,7 +26,9 @@
 # and the script measures it rather than assuming it.
 #
 import argparse
+import glob
 import os
+import re
 import subprocess
 import sys
 import time
@@ -54,6 +56,58 @@ EDGE = RATE // 3
 
 ROWS = ["Small-Combo", "American-1x12", "British-4x12",
         "Modern-4x12", "Bass-15"]
+
+
+def display_name(short):
+    """"CAB" -> "Cabinet", out of the same headers pots.py reads.
+
+    The board wants the short name, because that is what the generated
+    map declares an id for; pots.py wants the display name, because that
+    is what a POT: line is under.  One lookup rather than a table, for
+    the same reason labels() asks the header rather than holding
+    constants: the headers move and a table does not.
+    """
+    for path in sorted(glob.glob(os.path.join(HERE, "..", "Effects", "*.h"))):
+        with open(path) as f:
+            m = re.search(r"^// NAME:\s*(.+?)\s*\[(\w+)\]\s*$", f.read(), re.M)
+        if m and m.group(2) == short:
+            return m.group(1)
+    return None
+
+
+def under_test(args):
+    """What --verify is measuring: (short name, display name, {label: raw}).
+
+    The overrides come out in raw 0..120 because both consumers want them
+    that way - the board is sent raw, and bench_args() has P.arg() to go
+    back the other way for the bench's command line.
+    """
+    short = args.effect.upper()
+    name = display_name(short)
+    if name is None:
+        sys.exit(f"feed: no effect header declares [{short}]")
+
+    over = {}
+    if short == "CAB":
+        #
+        # The cabinet's own options, kept because they predate --pot and
+        # because a row is an index rather than a value P.to_pot() can
+        # convert.
+        #
+        over["Cabinet"] = ROWS.index(args.row)
+        over["Drive"] = P.to_pot(name, "Drive", args.drive)
+        over["Resonance"] = P.to_pot(name, "Resonance", args.resonance)
+        over["Axis"] = P.to_pot(name, "Axis", args.axis)
+
+    known = P.labels(name)
+    for spec in args.pot:
+        label, _, value = spec.partition("=")
+        if not _ or label not in known:
+            sys.exit(f"feed: --pot wants LABEL=VALUE with a label {name} has "
+                     f"({', '.join(known)}), not {spec!r}")
+        over[label] = P.to_pot(name, label, float(value))
+
+    return short, name, over
 
 
 def stereo_s32(x):
@@ -181,12 +235,11 @@ def verify(args, card, p, dry):
     because a null against settings that were merely assumed is a null
     against nothing.
     """
-    cab = pedal.effect_id("CAB")
+    short, name, over = under_test(args)
+    eff = pedal.effect_id(short)
     settings = pedal.settings_effect()
-    if cab is None or settings is None:
-        sys.exit("feed: no Cabinet in the built map - is build/ current?")
-
-    row = ROWS.index(args.row)
+    if eff is None or settings is None:
+        sys.exit(f"feed: no {name} in the built map - is build/ current?")
 
     #
     # Put both effects where the bench starts from, pot by pot, and only
@@ -207,23 +260,24 @@ def verify(args, card, p, dry):
                 for lab, raw in want.items()]
 
     #
+    # Replace rather than Pre-FX, and that is the difference between a
+    # measurement and a guess: Pre-FX adds the host's audio to whatever
+    # is in the jack, so an open input's noise - or a signal generator
+    # somebody left plugged in - is part of the answer and the null test
+    # cannot get below it.
+    #
     # One invocation rather than nineteen.  send() falls back to
     # aplaymidi when the raw device is taken - which it is whenever the
     # web app is open - and that costs about two seconds a message.
     #
     pedal.send_many(
         p,
-        (0x03, settings, pedal.SETTINGS_USB_IN, pedal.USB_IN_PRE_FX),
+        (0x03, settings, pedal.SETTINGS_USB_IN, pedal.USB_IN_REPLACE),
         (0x03, settings, pedal.SETTINGS_USB_OUT, pedal.USB_OUT_WET),
         *pots_of(pedal.CHAIN, "Signal Chain", {"Gate": 0}),
-        (0x08, cab),                                    # routing: the cab alone
-        (0x03, cab, 0, 120),                            # mix, fully wet
-        *pots_of(cab, "Cabinet", {
-            "Cabinet": row,
-            "Drive": P.to_pot("Cabinet", "Drive", args.drive),
-            "Resonance": P.to_pot("Cabinet", "Resonance", args.resonance),
-            "Axis": P.to_pot("Cabinet", "Axis", args.axis),
-        }),
+        (0x08, eff),                            # routing: the one effect
+        (0x03, eff, 0, 120),                    # mix, fully wet
+        *pots_of(eff, name, over),
     )
 
     #
@@ -245,7 +299,7 @@ def verify(args, card, p, dry):
     got = audio.capture(seconds + 2.0, card,
                         during=lambda: player(card, blob, 1))[:, 0]
 
-    want, _, info = B.run(bench_args(args, row), dry.astype(np.float32),
+    want, _, info = B.run(bench_args(args), dry.astype(np.float32),
                           warmup=B.settle())
     want = np.asarray(want, dtype=np.float64)[-len(dry):]
 
@@ -383,13 +437,20 @@ def verify(args, card, p, dry):
         print("the board disagree about at the edges of the passage.")
 
 
-def bench_args(args, row):
+def bench_args(args):
+    """The same configuration as verify() sends, said to the bench.
+
+    Built from the same under_test() overrides so the two cannot drift
+    apart - a null against settings that differ by one pot is a null
+    against nothing, which is the mistake the pots_of() comment above is
+    about.  Every pot is named, not just the changed ones, for the same
+    reason.
+    """
+    _short, name, over = under_test(args)
     a = ["--pot", "Signal Chain:Gate=0",
-         "--route", "Cabinet", "--mix", "Cabinet=120",
-         "--pot", f"Cabinet:Cabinet={row}"]
-    a += P.arg("Cabinet", "Drive", args.drive)
-    a += P.arg("Cabinet", "Resonance", args.resonance)
-    a += P.arg("Cabinet", "Axis", args.axis)
+         "--route", name, "--mix", f"{name}=120"]
+    for label, raw in P.defaults(name).items():
+        a += ["--pot", f"{name}:{label}={over.get(label, raw)}"]
     return a
 
 
@@ -417,6 +478,13 @@ def main():
     ap.add_argument("--verify", action="store_true",
                     help="play it in, capture it back, and null it "
                          "against the host bench")
+    ap.add_argument("--effect", default="CAB",
+                    help="which effect --verify measures, by short name "
+                         "(CAB, RAT, KLON...)")
+    ap.add_argument("--pot", action="append", default=[], metavar="LABEL=VALUE",
+                    help="a pot of that effect, in the units its header "
+                         "declares; repeatable.  Everything not named here "
+                         "is set to its default rather than left alone")
     ap.add_argument("--row", default="Modern-4x12", choices=ROWS)
     ap.add_argument("--drive", type=float, default=15.0)
     ap.add_argument("--resonance", type=float, default=4.0)
@@ -474,8 +542,10 @@ def main():
             sys.exit("feed: no settings effect in the built map")
         pedal.set_pot(port, settings, pedal.SETTINGS_USB_IN,
                       pedal.USB_IN_PRE_FX)
-        print("USB L/R In set to Pre-FX (it adds to the jack, it does not "
-              "replace it)")
+        print("USB L/R In set to Pre-FX - it adds to the jack rather than "
+              "replacing it, so unplug\n"
+              "  anything you are not playing along with.  --verify uses "
+              "Replace instead.")
 
     repeats = None if args.repeat == "forever" else int(args.repeat)
     print(f"playing {'forever' if repeats is None else repeats} - ctrl-C to stop")
