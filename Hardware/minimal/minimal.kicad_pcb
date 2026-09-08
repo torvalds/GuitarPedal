@@ -211,13 +211,6 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/81e348e1-3934-4f0a-8519-29002821c05e")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "S" "R" "RN" "T" "TN")
-			)
-		)
-		(zone_connect 1)
 		(attr through_hole)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_rect
@@ -346,9 +339,9 @@
 			)
 		)
 		(pad "R" thru_hole oval
-			(at -11.1 -7.23 90)
+			(at -11.1 -7.115 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "/TAC5242/OUT^{RIGHT}")
@@ -356,9 +349,9 @@
 			(uuid "4d188ba0-0a84-4df5-a785-aefadf001ba5")
 		)
 		(pad "RN" thru_hole oval
-			(at -11.1 4.2 90)
+			(at -11.1 4.085 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "unconnected-(J302-PadRN)")
@@ -366,9 +359,9 @@
 			(uuid "a21dab08-85d4-4f18-9d06-6ff446325128")
 		)
 		(pad "S" thru_hole oval
-			(at -4.75 -7.23 90)
+			(at -4.7 -7.115 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "GND")
@@ -376,9 +369,9 @@
 			(uuid "7c665a72-974f-4f6a-b3b2-d44504e92e3a")
 		)
 		(pad "S" thru_hole oval
-			(at -4.75 4.2 90)
+			(at -4.7 4.085 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "GND")
@@ -386,9 +379,9 @@
 			(uuid "a2c53227-8567-4acd-a8c8-509ed1139ced")
 		)
 		(pad "T" thru_hole oval
-			(at -17.45 -7.23 90)
+			(at -17.5 -7.115 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "/TAC5242/OUT^{LEFT}")
@@ -396,9 +389,9 @@
 			(uuid "98f4252d-3ec4-478e-b79e-cc3e09fccbff")
 		)
 		(pad "TN" thru_hole oval
-			(at -17.45 4.2 90)
+			(at -17.5 4.085 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "unconnected-(J302-PadTN)")
@@ -406,15 +399,15 @@
 			(uuid "ac04f438-fa47-4b0b-aeb1-a0f097df153c")
 		)
 		(embedded_fonts no)
-		(model "NRJ6HM-1-PRE.step"
+		(model "${KIPRJMOD}/symbols/external/AUDIO-TH_PJ-611E_1.step"
 			(offset
-				(xyz 0 0 0)
+				(xyz -0.5 0 6.5)
 			)
 			(scale
 				(xyz 1 1 1)
 			)
 			(rotate
-				(xyz 0 0 0)
+				(xyz 0 0 -90)
 			)
 		)
 	)
@@ -479,13 +472,6 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/806e0d90-5d89-493c-bcbd-de875804a944")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "S" "R" "RN" "T" "TN")
-			)
-		)
-		(zone_connect 1)
 		(attr through_hole)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_rect
@@ -614,9 +600,9 @@
 			)
 		)
 		(pad "R" thru_hole oval
-			(at -11.1 -7.23 90)
+			(at -11.1 -7.115 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "/TAC5242/IN^{RIGHT}")
@@ -624,9 +610,9 @@
 			(uuid "024fa4dd-2ec7-405d-b858-f11fcd4e00bb")
 		)
 		(pad "RN" thru_hole oval
-			(at -11.1 4.2 90)
+			(at -11.1 4.085 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "GND")
@@ -634,9 +620,9 @@
 			(uuid "f975e43f-6732-4377-b05c-399a6f9ee058")
 		)
 		(pad "S" thru_hole oval
-			(at -4.75 -7.23 90)
+			(at -4.7 -7.115 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "GND")
@@ -644,9 +630,9 @@
 			(uuid "6e8b458b-55f8-47b7-9b4f-4b8958c25895")
 		)
 		(pad "S" thru_hole oval
-			(at -4.75 4.2 90)
+			(at -4.7 4.085 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "GND")
@@ -654,9 +640,9 @@
 			(uuid "4f353680-7937-4b40-a39d-178de3ffaa8c")
 		)
 		(pad "T" thru_hole oval
-			(at -17.45 -7.23 90)
+			(at -17.5 -7.115 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "/TAC5242/IN^{LEFT}")
@@ -664,9 +650,9 @@
 			(uuid "a71dbc1b-f1bc-4038-9904-824feb529495")
 		)
 		(pad "TN" thru_hole oval
-			(at -17.45 4.2 90)
+			(at -17.5 4.085 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "GND")
@@ -674,15 +660,15 @@
 			(uuid "e51ca2a8-c7e1-49ee-a64a-1481aaf27f07")
 		)
 		(embedded_fonts no)
-		(model "NRJ6HM-1-PRE.step"
+		(model "${KIPRJMOD}/symbols/external/AUDIO-TH_PJ-611E_1.step"
 			(offset
-				(xyz 0 0 0)
+				(xyz -0.5 0 6.5)
 			)
 			(scale
 				(xyz 1 1 1)
 			)
 			(rotate
-				(xyz 0 0 0)
+				(xyz 0 0 -90)
 			)
 		)
 	)
@@ -743,31 +729,28 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 90)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "3502ee77-e13a-422e-a17f-52eccd827cc2")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/cbade749-9dbf-4d76-961b-34168e39d4f2")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
-			(start -0.140581 0.51)
-			(end 0.140581 0.51)
-			(stroke
-				(width 0.12)
-				(type solid)
-			)
-			(layer "B.SilkS")
-			(uuid "46775817-ba62-4bd2-befd-4623a6db2f0b")
-		)
-		(fp_line
-			(start -0.140581 -0.51)
-			(end 0.140581 -0.51)
+			(start -0.14058 0.51)
+			(end 0.14058 0.51)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -775,29 +758,37 @@
 			(layer "B.SilkS")
 			(uuid "d93bec81-a579-4768-8e96-197a375f21c6")
 		)
-		(fp_poly
-			(pts
-				(xy 1.48 -0.73) (xy -1.48 -0.73) (xy -1.48 0.73) (xy 1.48 0.73)
+		(fp_line
+			(start -0.14058 -0.51)
+			(end 0.14058 -0.51)
+			(stroke
+				(width 0.12)
+				(type solid)
 			)
+			(layer "B.SilkS")
+			(uuid "46775817-ba62-4bd2-befd-4623a6db2f0b")
+		)
+		(fp_rect
+			(start -1.48 0.73)
+			(end 1.48 -0.73)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "070bbae9-c34a-43db-9c67-6b1bcf785f9d")
+			(uuid "e766e7ed-ce02-4867-ba92-38e49da940b5")
 		)
-		(fp_poly
-			(pts
-				(xy 0.8 -0.4) (xy -0.8 -0.4) (xy -0.8 0.4) (xy 0.8 0.4)
-			)
+		(fp_rect
+			(start -0.8 0.4)
+			(end 0.8 -0.4)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "f4d167ac-abb8-4325-a2b0-f77a2b416e94")
+			(uuid "fc16c367-3455-40b5-90c8-d7039397549f")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 90)
@@ -897,16 +888,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "fcb09877-5981-49b3-b3fe-aea1949a6550")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/bd33a401-d774-4e6e-b39c-8ac70f805b2f")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -1049,16 +1047,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "096d9d93-01e3-4bf0-ad36-d8722cfe3b0e")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/868f899f-3759-4624-97b0-9b7d93841909")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -1081,29 +1086,27 @@
 			(layer "B.SilkS")
 			(uuid "d9888c4d-702d-424c-b039-ab191e78e2ba")
 		)
-		(fp_poly
-			(pts
-				(xy 0.91 0.46) (xy 0.91 -0.46) (xy -0.91 -0.46) (xy -0.91 0.46)
-			)
+		(fp_rect
+			(start -0.91 0.46)
+			(end 0.91 -0.46)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "f2d2a5c5-7e86-4b33-881d-7c458909f4ac")
+			(uuid "51802a1c-1c95-4ecf-8619-be7afec69b37")
 		)
-		(fp_poly
-			(pts
-				(xy 0.5 0.25) (xy 0.5 -0.25) (xy -0.5 -0.25) (xy -0.5 0.25)
-			)
+		(fp_rect
+			(start -0.5 0.25)
+			(end 0.5 -0.25)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "bbb00352-1eb0-4e9c-82e0-2205376c325a")
+			(uuid "13bedd46-85e3-4a5e-9dd8-b600a99df480")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 0)
@@ -1203,16 +1206,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "1153e3c4-46de-4cc1-8dcd-19cfa8b86045")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/70940f20-a274-41a4-badb-85e11066a56e")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -1357,16 +1367,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "ac90298c-21a0-4a8e-8172-cf5309731cda")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/b02f7183-968b-4389-a471-324e058951f3")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -1511,31 +1528,28 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 90)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "a7131d81-ed7c-4999-8e1f-22b82e24c0f8")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/6ced7127-deab-401c-9ac0-30ab2a51215a")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
-			(start -0.140581 0.51)
-			(end 0.140581 0.51)
-			(stroke
-				(width 0.12)
-				(type solid)
-			)
-			(layer "B.SilkS")
-			(uuid "c676b5ef-4aa4-485f-b14f-736fc3a4b945")
-		)
-		(fp_line
-			(start -0.140581 -0.51)
-			(end 0.140581 -0.51)
+			(start -0.14058 0.51)
+			(end 0.14058 0.51)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -1543,29 +1557,37 @@
 			(layer "B.SilkS")
 			(uuid "02888a63-4238-4ccc-8296-e8f3b6ecc20d")
 		)
-		(fp_poly
-			(pts
-				(xy 1.48 -0.73) (xy -1.48 -0.73) (xy -1.48 0.73) (xy 1.48 0.73)
+		(fp_line
+			(start -0.14058 -0.51)
+			(end 0.14058 -0.51)
+			(stroke
+				(width 0.12)
+				(type solid)
 			)
+			(layer "B.SilkS")
+			(uuid "c676b5ef-4aa4-485f-b14f-736fc3a4b945")
+		)
+		(fp_rect
+			(start -1.48 0.73)
+			(end 1.48 -0.73)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "21f36f76-2c02-443a-84fc-84ba377c958c")
+			(uuid "242ef442-6566-4322-8adf-3f863000189a")
 		)
-		(fp_poly
-			(pts
-				(xy 0.8 -0.4) (xy -0.8 -0.4) (xy -0.8 0.4) (xy 0.8 0.4)
-			)
+		(fp_rect
+			(start -0.8 0.4)
+			(end 0.8 -0.4)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "e2da9083-5fda-4d41-a417-7f6dfb6f6519")
+			(uuid "e15722ac-a657-4df9-a559-755bd29fb9c2")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 90)
@@ -1667,16 +1689,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "5b09e215-4a84-4bcc-8dce-b00211e592b9")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/0d9478ed-0105-43cd-8b53-0932f32ff215")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -1819,16 +1848,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "5134437a-2780-409b-bc31-9b1f75a49ade")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/328fd5d8-1b85-4c4d-8040-4049596b9ad3")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -1851,29 +1887,27 @@
 			(layer "B.SilkS")
 			(uuid "d1bf1d8d-bb09-4c77-999d-005dd2d505c6")
 		)
-		(fp_poly
-			(pts
-				(xy 0.93 -0.47) (xy -0.93 -0.47) (xy -0.93 0.47) (xy 0.93 0.47)
-			)
+		(fp_rect
+			(start -0.93 0.47)
+			(end 0.93 -0.47)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "a169821f-70ec-4bc8-a5a3-01def2e3928e")
+			(uuid "a726aa9a-9cb4-4498-a986-a0a20ffd2255")
 		)
-		(fp_poly
-			(pts
-				(xy 0.525 -0.27) (xy -0.525 -0.27) (xy -0.525 0.27) (xy 0.525 0.27)
-			)
+		(fp_rect
+			(start -0.525 0.27)
+			(end 0.525 -0.27)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "ba124608-7db2-4935-9252-e2ebe2d57f8a")
+			(uuid "2bcd0ee3-9afa-49b6-8106-b2e9802369c3")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 0)
@@ -1888,7 +1922,7 @@
 			)
 		)
 		(pad "1" smd roundrect
-			(at -0.509999 0)
+			(at -0.51 0)
 			(size 0.54 0.64)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.25)
@@ -1897,7 +1931,7 @@
 			(uuid "49514e7d-1242-4b02-b89c-ac3e5dca985b")
 		)
 		(pad "2" smd roundrect
-			(at 0.509999 0)
+			(at 0.51 0)
 			(size 0.54 0.64)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.25)
@@ -1973,16 +2007,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "package/no_lead"
+			(at 0 0 90)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "937bf2f6-9272-4b42-b0de-309ac880b920")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "WSON*1EP*2x2mm*P0.65*")
 		(path "/8f9b08aa-fdca-4364-a38e-e3427e515279")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "6" "4" "7" "3" "5" "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -2316,16 +2357,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "cdd71bd2-67ce-44be-bc3c-70e2edfd925b")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/913e4e63-cd24-42db-afbd-09a49214f713")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -2468,16 +2516,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "59326819-79d1-4355-9e63-0ed8f0dcf11c")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/4b798a4b-4293-4093-bc77-48f1c7e22f57")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -2620,16 +2675,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 45)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "ce510d33-381d-46ae-b915-a75ce724df50")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/5fb29ec2-b54b-4ab0-9fdb-422f36113ce4")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -2654,7 +2716,7 @@
 		)
 		(fp_poly
 			(pts
-				(xy -0.91 0.46) (xy 0.91 0.46) (xy 0.91 -0.46) (xy -0.91 -0.46)
+				(xy 0.91 0.46) (xy -0.91 0.46) (xy -0.91 -0.46) (xy 0.91 -0.46)
 			)
 			(stroke
 				(width 0.05)
@@ -2666,7 +2728,7 @@
 		)
 		(fp_poly
 			(pts
-				(xy -0.5 0.25) (xy 0.5 0.25) (xy 0.5 -0.25) (xy -0.5 -0.25)
+				(xy 0.5 0.25) (xy -0.5 0.25) (xy -0.5 -0.25) (xy 0.5 -0.25)
 			)
 			(stroke
 				(width 0.1)
@@ -2776,16 +2838,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "3f159c72-ccba-4f0f-a4de-f4b4eeb92400")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/6e3b6580-ed36-49b9-9fe4-04ec7b6a257b")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -2928,16 +2997,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "dda83da7-7904-4b72-9fac-dfa4f85c3e13")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/62f1c18f-00cb-4fb5-9e37-9ec0fde46cb1")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -3080,16 +3156,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "82a7e48f-9f8d-4b4a-b8e1-561df831a162")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/ffff8fbc-4a66-44e2-a4be-bae321281f20")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -3232,16 +3315,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "a4b542f4-6c3e-4745-aca1-8adb5f9e9bfc")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/00000000-0000-0000-0000-00005eef00bb")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -3391,12 +3481,6 @@
 		(path "/bdaf8d47-4ed1-4522-ae58-5aba84c13023")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -3650,16 +3734,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 90)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "67fd1fb9-4b17-4b40-af4e-cf7dfcdea2cb")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/b6faff38-c0e7-4614-9e5b-da705f33bcae")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -3812,12 +3903,6 @@
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/d9d9f62b-fc6a-4b3f-aae9-29165a4a93cc")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_circle
@@ -3874,6 +3959,17 @@
 			(uuid "57425cb1-11d8-4b99-b33a-11b402ce57a5")
 		)
 		(embedded_fonts no)
+		(model "${KIPRJMOD}/symbols/external/IND-SMD_L2.0-W1.6_AOTA-B201610S3R3-101-T.step"
+			(offset
+				(xyz 0 -0.005 0.05)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 180)
+			)
+		)
 	)
 	(footprint "Mylib:WS2812B-4020"
 		(layer "B.Cu")
@@ -4157,6 +4253,17 @@
 			(uuid "2684c543-aaf6-4cbd-ab27-31cc7febca51")
 		)
 		(embedded_fonts no)
+		(model "${KIPRJMOD}/symbols/external/LED-SMD_WS2812B-4020.step"
+			(offset
+				(xyz 2.14 1.55 1.55)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
+		)
 	)
 	(footprint "Capacitor_SMD:C_0402_1005Metric"
 		(layer "B.Cu")
@@ -4213,16 +4320,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "ac2b8cb4-0621-4360-b6db-1c0f1a4ed41d")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/b18e4ea4-c1bd-4bb2-b977-10b99eb73540")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -4245,29 +4359,27 @@
 			(layer "B.SilkS")
 			(uuid "5c723536-c2f5-4811-aa28-19da8b5518cc")
 		)
-		(fp_poly
-			(pts
-				(xy 0.91 0.46) (xy 0.91 -0.46) (xy -0.91 -0.46) (xy -0.91 0.46)
-			)
+		(fp_rect
+			(start -0.91 0.46)
+			(end 0.91 -0.46)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "47af1b7a-8f91-4134-bc17-6e0a3bf52fe7")
+			(uuid "5bde6785-5e45-4d4c-a717-c763b30c3caa")
 		)
-		(fp_poly
-			(pts
-				(xy 0.5 0.25) (xy 0.5 -0.25) (xy -0.5 -0.25) (xy -0.5 0.25)
-			)
+		(fp_rect
+			(start -0.5 0.25)
+			(end 0.5 -0.25)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "2a0b1d1c-ff93-46e7-9d6e-22f57e079272")
+			(uuid "618b72b6-16dc-48a8-abe3-a6527f63ce15")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 0)
@@ -4367,16 +4479,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "45bc8a28-79fd-4019-8eda-0ca724dc82cc")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/4f73c597-9814-49df-a402-27734e866953")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -4519,20 +4638,22 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "package/no_lead"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "754c02bd-d078-4e81-807c-419cee5c79e3")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/7596cb9b-74cb-4805-a258-855c85e34e97")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "46" "49" "50" "48" "47" "60" "57" "59" "58" "55" "56" "21" "22"
-					"26" "24" "25" "39" "23" "6" "54" "45" "38" "61" "30" "20" "11" "1"
-					"53" "44" "52" "51" "2" "3" "4" "5" "7" "8" "9" "10" "12" "13" "14"
-					"15" "16" "17" "18" "19" "27" "28" "29" "31" "32" "33" "34" "35" "36"
-					"37" "40" "41" "42" "43"
-				)
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -5677,16 +5798,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "b85bb366-1fc9-46d3-b763-3f7884b560b7")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/1e0bd118-b5e5-4002-9de8-3419ffcc8dd8")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -5829,16 +5957,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "26d3d21d-7988-4176-9dc4-7a832bdff4bd")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/e49def4e-54f1-4fb5-8a8a-b391a9e48951")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -5981,24 +6116,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "package/gullwing"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "00de8089-d09b-4f1a-befe-4594679152ea")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "SOIC*3.9x4.9mm*P1.27mm* DIP*W7.62mm* MSOP*3x3mm*P0.65mm* SSOP*2.95x2.8mm*P0.65mm* TSSOP*3x3mm*P0.65mm* VSSOP*P0.5mm* TO?99*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/9949e64b-6b10-4cf8-850f-2db1e703c3ed")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "3" "2" "1")
-			)
-			(unit
-				(name "B")
-				(pins "5" "6" "7")
-			)
-			(unit
-				(name "C")
-				(pins "8" "4")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -6365,21 +6499,28 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 270)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "ef347d0b-5d9e-4894-bb81-8f8a6dea70e3")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/0ca2cc81-acdd-4b85-97f6-8e31cfd1e641")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
-			(start -0.140581 -0.51)
-			(end 0.140581 -0.51)
+			(start -0.14058 -0.51)
+			(end 0.14058 -0.51)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -6388,8 +6529,8 @@
 			(uuid "9fba97b2-d0b8-446c-8cb0-d46651ce8b0a")
 		)
 		(fp_line
-			(start -0.140581 0.51)
-			(end 0.140581 0.51)
+			(start -0.14058 0.51)
+			(end 0.14058 0.51)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -6397,29 +6538,27 @@
 			(layer "B.SilkS")
 			(uuid "8cf17a06-3229-44cc-b745-2eef19c71da9")
 		)
-		(fp_poly
-			(pts
-				(xy 1.48 -0.73) (xy -1.48 -0.73) (xy -1.48 0.73) (xy 1.48 0.73)
-			)
+		(fp_rect
+			(start -1.48 0.73)
+			(end 1.48 -0.73)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "d3f36dc6-688c-40a8-b169-52642000f986")
+			(uuid "a11757a8-cdc8-40c5-9b3a-42aa02f64127")
 		)
-		(fp_poly
-			(pts
-				(xy 0.8 -0.4) (xy -0.8 -0.4) (xy -0.8 0.4) (xy 0.8 0.4)
-			)
+		(fp_rect
+			(start -0.8 0.4)
+			(end 0.8 -0.4)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "b5eea3fb-8779-433a-9aea-85966f12b179")
+			(uuid "deb8603d-c9a0-4e56-9b70-c07837f350a4")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 90)
@@ -6519,16 +6658,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "1eba357f-998d-4350-ab6a-106f191d129c")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/6e746af5-d799-41c4-b6c6-4419157f3afb")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -6671,16 +6817,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "04506e75-fd6c-423c-9903-1cb7fa29a588")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/864db307-876a-4a43-a082-187d484c2304")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -6825,16 +6978,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "a132c421-c6a2-4b4d-8227-93e1240542af")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/5fde728b-60bf-40e6-8e30-860b5b87a14a")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -6977,16 +7137,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "package/no_lead"
+			(at 0 0 90)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "40c16a55-d8fc-490f-8d11-1800c91a6851")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "WSON*1EP*2x2mm*P0.65*")
 		(path "/8ed3b2b5-2088-4495-848b-d83777a1413c")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "6" "4" "7" "3" "5" "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -7318,16 +7485,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "13bb3fad-abd6-418d-ac92-0b51e6408b66")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/9c77ddd7-0f01-4a10-8d25-561e0b821e2b")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -7470,16 +7644,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "c462d373-7b33-4526-bcae-37754f7df688")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/7b6be133-c192-4ca1-b9d4-2412d19d6a90")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -7622,16 +7803,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 270)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "5830deb9-1f1c-473f-ad86-1d854a456005")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/01d5191b-3182-4c5c-b474-ad7f8ebcc5db")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -7774,16 +7962,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "8bde10ce-6ee8-4b1f-b148-d4cdc753fea1")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/032462f4-3b21-4114-a5c3-3dcfb9b98376")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -7926,16 +8121,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 270)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "17c8f36c-e707-486d-bc6e-2da35c2e697b")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/100d8571-a9e8-4bae-8312-52aa7ac38044")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -8078,16 +8280,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 270)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "20d88763-42fb-45ef-9f74-fcfae4f203cb")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/78107175-416c-4ff8-91a5-cfcf8ecb367d")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -8230,16 +8439,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "ee009493-143e-4fdb-b14d-2af169849f98")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/077035ff-96a2-4c83-8079-6b7e02a10184")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -8262,29 +8478,27 @@
 			(layer "B.SilkS")
 			(uuid "22020ec0-f303-4d3e-a2a2-12798d9b3935")
 		)
-		(fp_poly
-			(pts
-				(xy 0.93 0.47) (xy 0.93 -0.47) (xy -0.93 -0.47) (xy -0.93 0.47)
-			)
+		(fp_rect
+			(start -0.93 0.47)
+			(end 0.93 -0.47)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "123fdad5-d9d5-4d5a-8c40-63a53b5a4cc5")
+			(uuid "a99cff57-f62e-4299-8e6d-dc70ed6b0b43")
 		)
-		(fp_poly
-			(pts
-				(xy 0.525 0.27) (xy 0.525 -0.27) (xy -0.525 -0.27) (xy -0.525 0.27)
-			)
+		(fp_rect
+			(start -0.525 0.27)
+			(end 0.525 -0.27)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "3738c516-3b4a-4bcf-951e-69a7568ac66f")
+			(uuid "697a48d8-78fd-4cbd-a594-6611838adc24")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 0)
@@ -8299,7 +8513,7 @@
 			)
 		)
 		(pad "1" smd roundrect
-			(at -0.509999 0)
+			(at -0.51 0)
 			(size 0.54 0.64)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.25)
@@ -8308,7 +8522,7 @@
 			(uuid "5f26d594-b5ce-4503-9b0a-54bb14ecb5cb")
 		)
 		(pad "2" smd roundrect
-			(at 0.509999 0)
+			(at 0.51 0)
 			(size 0.54 0.64)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.25)
@@ -8384,16 +8598,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "e46e07b6-79a5-43b3-8b0c-c2f5cd4f5bc5")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/00000000-0000-0000-0000-00005f09255d")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -8536,21 +8757,28 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 270)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "006377da-8f73-4fa6-97c2-92d9e164d9d7")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/00fc0edc-bf21-4872-919b-63fbee7caad6")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
-			(start -0.140581 -0.51)
-			(end 0.140581 -0.51)
+			(start -0.14058 -0.51)
+			(end 0.14058 -0.51)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -8559,8 +8787,8 @@
 			(uuid "04235f3f-cb84-4089-b96f-314486bb794e")
 		)
 		(fp_line
-			(start -0.140581 0.51)
-			(end 0.140581 0.51)
+			(start -0.14058 0.51)
+			(end 0.14058 0.51)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -8568,29 +8796,27 @@
 			(layer "B.SilkS")
 			(uuid "68728213-4d63-45c7-9edd-f2e4462f7895")
 		)
-		(fp_poly
-			(pts
-				(xy -1.48 -0.73) (xy -1.48 0.73) (xy 1.48 0.73) (xy 1.48 -0.73)
-			)
+		(fp_rect
+			(start -1.48 0.73)
+			(end 1.48 -0.73)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "21c1ca27-5919-45bd-bea3-f6c4b0757291")
+			(uuid "359872d1-fbeb-44d3-ad63-1950517612c2")
 		)
-		(fp_poly
-			(pts
-				(xy -0.8 -0.4) (xy -0.8 0.4) (xy 0.8 0.4) (xy 0.8 -0.4)
-			)
+		(fp_rect
+			(start -0.8 0.4)
+			(end 0.8 -0.4)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "7a02ce91-0bb4-4ad8-af6a-afce4f948442")
+			(uuid "d5a7f3d2-1435-4035-96bf-95b2f4376a64")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 90)
@@ -8690,16 +8916,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "80e0847f-2587-4481-9a13-a0bfc360f15c")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/434ffbb1-db57-45b1-93a7-fc8cb7dd4a13")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -8842,16 +9075,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "15529a87-204e-497c-977e-d833a07602dd")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/c437f019-6348-474a-850d-a5fe54b370f1")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -8996,16 +9236,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 90)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "3be8c100-e807-41e1-93e8-eb58b27f543e")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/ab0569da-95a3-4e45-96e5-9b0b665003d9")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -9148,21 +9395,28 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 270)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "8776df72-9446-49e3-abd6-2d1398565e44")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/e08e2585-7664-4f9d-90c7-623183e9e0f4")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
-			(start -0.140581 -0.51)
-			(end 0.140581 -0.51)
+			(start -0.14058 -0.51)
+			(end 0.14058 -0.51)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -9171,8 +9425,8 @@
 			(uuid "3aec81d1-5c22-4126-b4e5-86f62e096c11")
 		)
 		(fp_line
-			(start -0.140581 0.51)
-			(end 0.140581 0.51)
+			(start -0.14058 0.51)
+			(end 0.14058 0.51)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -9180,29 +9434,27 @@
 			(layer "B.SilkS")
 			(uuid "06a23e3b-07e8-467c-bf8a-e854f4bd31b4")
 		)
-		(fp_poly
-			(pts
-				(xy -1.48 -0.73) (xy -1.48 0.73) (xy 1.48 0.73) (xy 1.48 -0.73)
-			)
+		(fp_rect
+			(start -1.48 0.73)
+			(end 1.48 -0.73)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "bc601124-f6b4-4e9a-abc1-594a8dbe88dc")
+			(uuid "7791f12f-9ebe-4ae2-b3b0-d8b3ce547521")
 		)
-		(fp_poly
-			(pts
-				(xy -0.8 -0.4) (xy -0.8 0.4) (xy 0.8 0.4) (xy 0.8 -0.4)
-			)
+		(fp_rect
+			(start -0.8 0.4)
+			(end 0.8 -0.4)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "63482ae6-35f8-4ee4-a153-5dbe02f866fa")
+			(uuid "a2111332-af08-4db4-bf35-5fd3952c2cc7")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 90)
@@ -9302,16 +9554,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "7dddadce-2e90-4702-bf16-e3f3814601fa")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "LED* LED_SMD:* LED_THT:*")
 		(path "/71a15644-f6f7-4507-b543-b1cd32d5b9c6")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_circle
@@ -9467,31 +9726,28 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 90)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "69075060-2741-4772-a5e6-7ccccad1f9ce")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/0fc8fa62-9f19-44cc-aaef-28aa8eb46c64")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
-			(start -0.261253 0.735)
-			(end 0.261253 0.735)
-			(stroke
-				(width 0.12)
-				(type solid)
-			)
-			(layer "B.SilkS")
-			(uuid "6fe877dc-2e2b-4981-87f2-d2aa963339ad")
-		)
-		(fp_line
-			(start -0.261253 -0.735)
-			(end 0.261253 -0.735)
+			(start -0.261252 0.735)
+			(end 0.261252 0.735)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -9499,29 +9755,37 @@
 			(layer "B.SilkS")
 			(uuid "2de10e6d-c549-4af4-bb65-36a4ee05a84d")
 		)
-		(fp_poly
-			(pts
-				(xy -1.7 -0.98) (xy -1.7 0.98) (xy 1.7 0.98) (xy 1.7 -0.98)
+		(fp_line
+			(start -0.261252 -0.735)
+			(end 0.261252 -0.735)
+			(stroke
+				(width 0.12)
+				(type solid)
 			)
+			(layer "B.SilkS")
+			(uuid "6fe877dc-2e2b-4981-87f2-d2aa963339ad")
+		)
+		(fp_rect
+			(start -1.7 0.98)
+			(end 1.7 -0.98)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "2c7ed8ba-093e-4c3a-99a0-cfc22e7ccd8b")
+			(uuid "6451f0e3-7c91-4fba-8427-165674e678dc")
 		)
-		(fp_poly
-			(pts
-				(xy -1 -0.625) (xy -1 0.625) (xy 1 0.625) (xy 1 -0.625)
-			)
+		(fp_rect
+			(start -1 0.625)
+			(end 1 -0.625)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "488c0aca-e21a-4802-bfa3-ae18dae5c2a9")
+			(uuid "4ea838d6-fe59-4f45-b87e-f7193276bb2b")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 90)
@@ -9536,7 +9800,7 @@
 			)
 		)
 		(pad "1" smd roundrect
-			(at -0.949999 0 270)
+			(at -0.95 0 270)
 			(size 1 1.45)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.25)
@@ -9545,7 +9809,7 @@
 			(uuid "80223093-a771-464e-87b3-59fd4fc3893e")
 		)
 		(pad "2" smd roundrect
-			(at 0.949999 0 270)
+			(at 0.95 0 270)
 			(size 1 1.45)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.25)
@@ -9621,16 +9885,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "3e1d70e5-54a8-4daf-9d16-152386411f70")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/6eba0417-ffce-46e2-8b43-6d203247c26f")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -9653,29 +9924,27 @@
 			(layer "B.SilkS")
 			(uuid "3af82b79-f806-4fca-a888-238b1d44c13b")
 		)
-		(fp_poly
-			(pts
-				(xy 0.91 -0.46) (xy -0.91 -0.46) (xy -0.91 0.46) (xy 0.91 0.46)
-			)
+		(fp_rect
+			(start -0.91 0.46)
+			(end 0.91 -0.46)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "ad868d74-8f22-43d6-beb3-b7bbf8b9a970")
+			(uuid "1775ac3c-5be8-4ef9-ad63-325c2486db7b")
 		)
-		(fp_poly
-			(pts
-				(xy 0.5 -0.25) (xy -0.5 -0.25) (xy -0.5 0.25) (xy 0.5 0.25)
-			)
+		(fp_rect
+			(start -0.5 0.25)
+			(end 0.5 -0.25)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "22181b35-55f8-4803-809a-449209082ece")
+			(uuid "b9540b51-05ac-42fa-a413-4fcba680b241")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 0)
@@ -9775,21 +10044,28 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 270)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "2c350455-7674-4bbc-b547-defd902b669a")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/efcc5142-4cdf-4bcb-9e1a-d1d6e83cb24d")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
-			(start -0.261253 -0.735)
-			(end 0.261253 -0.735)
+			(start -0.261252 -0.735)
+			(end 0.261252 -0.735)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -9798,8 +10074,8 @@
 			(uuid "fea05e3a-aa1d-4538-8c66-c9eaff3a1f5c")
 		)
 		(fp_line
-			(start -0.261253 0.735)
-			(end 0.261253 0.735)
+			(start -0.261252 0.735)
+			(end 0.261252 0.735)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -9807,29 +10083,27 @@
 			(layer "B.SilkS")
 			(uuid "c0a83590-1e01-4976-8681-3513d7e5d131")
 		)
-		(fp_poly
-			(pts
-				(xy -1.7 0.98) (xy 1.7 0.98) (xy 1.7 -0.98) (xy -1.7 -0.98)
-			)
+		(fp_rect
+			(start -1.7 0.98)
+			(end 1.7 -0.98)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "88f730f2-65f9-43c1-827a-826899af2307")
+			(uuid "2cf05d47-7745-48c8-b8ce-9e3a22cb3341")
 		)
-		(fp_poly
-			(pts
-				(xy -1 0.625) (xy 1 0.625) (xy 1 -0.625) (xy -1 -0.625)
-			)
+		(fp_rect
+			(start -1 0.625)
+			(end 1 -0.625)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "e7bd2272-1a99-4e0d-b96b-d666f3fba571")
+			(uuid "f74df98c-6b64-4644-b082-be62bb7902ea")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 90)
@@ -9844,7 +10118,7 @@
 			)
 		)
 		(pad "1" smd roundrect
-			(at -0.949999 0 90)
+			(at -0.95 0 90)
 			(size 1 1.45)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.25)
@@ -9853,7 +10127,7 @@
 			(uuid "d3949dae-71c4-4778-92e0-b9b0bdc3c5f1")
 		)
 		(pad "2" smd roundrect
-			(at 0.949999 0 90)
+			(at 0.95 0 90)
 			(size 1 1.45)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.25)
@@ -9929,16 +10203,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "d878739c-d2ce-4bab-b5cd-9f21f6112096")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/ea50cfb9-a5a0-4b99-835e-afeddaa627c0")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -10083,31 +10364,28 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 90)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "a8c69784-dfe5-401e-b867-4021154fe576")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/6530a521-3d90-4374-9b76-cef4b1715eaa")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
-			(start -0.140581 0.51)
-			(end 0.140581 0.51)
-			(stroke
-				(width 0.12)
-				(type solid)
-			)
-			(layer "B.SilkS")
-			(uuid "272d17ca-bfb3-4bf0-adbc-1626a4163de4")
-		)
-		(fp_line
-			(start -0.140581 -0.51)
-			(end 0.140581 -0.51)
+			(start -0.14058 0.51)
+			(end 0.14058 0.51)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -10115,29 +10393,37 @@
 			(layer "B.SilkS")
 			(uuid "866a3543-fcea-4310-a96e-1cf22983e151")
 		)
-		(fp_poly
-			(pts
-				(xy 1.48 -0.73) (xy -1.48 -0.73) (xy -1.48 0.73) (xy 1.48 0.73)
+		(fp_line
+			(start -0.14058 -0.51)
+			(end 0.14058 -0.51)
+			(stroke
+				(width 0.12)
+				(type solid)
 			)
+			(layer "B.SilkS")
+			(uuid "272d17ca-bfb3-4bf0-adbc-1626a4163de4")
+		)
+		(fp_rect
+			(start -1.48 0.73)
+			(end 1.48 -0.73)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "7332c98b-a0a5-4040-811b-2d1be07851ef")
+			(uuid "ff07fad5-2b4a-41de-bcfe-d0ad406481af")
 		)
-		(fp_poly
-			(pts
-				(xy 0.8 -0.4) (xy -0.8 -0.4) (xy -0.8 0.4) (xy 0.8 0.4)
-			)
+		(fp_rect
+			(start -0.8 0.4)
+			(end 0.8 -0.4)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "2edd590b-1dc6-4104-9c05-e553708e5952")
+			(uuid "565ca243-c7ee-4b4b-917b-737d700ebe69")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 90)
@@ -10239,16 +10525,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "1358804e-7511-4da9-a332-c8dd2440ced2")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/9e076fe7-4950-44dc-b9f7-510f410a1079")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -10271,29 +10564,27 @@
 			(layer "B.SilkS")
 			(uuid "0ce8ddb6-719f-40b4-b926-275e072467b1")
 		)
-		(fp_poly
-			(pts
-				(xy 0.93 0.47) (xy 0.93 -0.47) (xy -0.93 -0.47) (xy -0.93 0.47)
-			)
+		(fp_rect
+			(start -0.93 0.47)
+			(end 0.93 -0.47)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "86291076-7121-467d-8846-63baba03daa2")
+			(uuid "1ada2d16-20bb-49cb-bd0f-deaf30461388")
 		)
-		(fp_poly
-			(pts
-				(xy 0.525 0.27) (xy 0.525 -0.27) (xy -0.525 -0.27) (xy -0.525 0.27)
-			)
+		(fp_rect
+			(start -0.525 0.27)
+			(end 0.525 -0.27)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "a0c88306-f98e-4f9f-918c-ffbf88a541fd")
+			(uuid "ccc94910-2b54-473e-9fe0-37b8a6125a1c")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 0)
@@ -10308,7 +10599,7 @@
 			)
 		)
 		(pad "1" smd roundrect
-			(at -0.509999 0)
+			(at -0.51 0)
 			(size 0.54 0.64)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.25)
@@ -10317,7 +10608,7 @@
 			(uuid "3abd3eaa-9de4-4722-b701-298c772958d4")
 		)
 		(pad "2" smd roundrect
-			(at 0.509999 0)
+			(at 0.51 0)
 			(size 0.54 0.64)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.25)
@@ -10393,16 +10684,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 90)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "39b00ae1-1353-4cd8-8afd-74586f75ff43")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bc29502c-a0c2-415f-a798-7278efea6f36")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -10545,16 +10843,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 270)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "8de5baa8-1c4c-4043-ae31-4cab3b195a54")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/00000000-0000-0000-0000-00005eef0994")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -10697,16 +11002,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "ecdbc432-7748-4ddd-adda-3a3b641e5bf7")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/78192798-0e78-4d89-820f-b57ad09e09ef")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -10851,16 +11163,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "787112e1-a5f4-45bc-9fed-177c4ab4bb9c")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/6d893b4f-bbc3-41e0-bfc0-4d7513c14e60")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -11003,16 +11322,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "65a86d72-5d83-4dca-a00a-6f50dfe91a25")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/3ef5ac6c-f23d-49e6-8d38-d5a38429c435")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -11035,29 +11361,27 @@
 			(layer "B.SilkS")
 			(uuid "2108cec5-622d-4e88-ac4c-3a0cf6eb76da")
 		)
-		(fp_poly
-			(pts
-				(xy -0.91 0.46) (xy 0.91 0.46) (xy 0.91 -0.46) (xy -0.91 -0.46)
-			)
+		(fp_rect
+			(start -0.91 0.46)
+			(end 0.91 -0.46)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "b1260fc5-9ed5-45b8-ba79-1f7b78cc8b7e")
+			(uuid "7abedb6c-1762-41a2-bcfa-4ce324890570")
 		)
-		(fp_poly
-			(pts
-				(xy -0.5 0.25) (xy 0.5 0.25) (xy 0.5 -0.25) (xy -0.5 -0.25)
-			)
+		(fp_rect
+			(start -0.5 0.25)
+			(end 0.5 -0.25)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "f8381388-2957-4502-a8f8-8eaf2fda6c43")
+			(uuid "54b33493-4d68-433b-a531-a71270b3b053")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 0)
@@ -11167,12 +11491,6 @@
 		(path "/d59bc6c8-fc3f-4932-b5b5-137d6c99619a")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -11251,6 +11569,17 @@
 			(uuid "3c882830-040f-4e18-b4f4-b2dac89f1172")
 		)
 		(embedded_fonts no)
+		(model "${KIPRJMOD}/symbols/external/L0806.step"
+			(offset
+				(xyz 0 0 0.475)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
+		)
 	)
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "B.Cu")
@@ -11307,16 +11636,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 90)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "d1c27bde-a72f-485d-8fbe-f8e3404d805c")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/9a80b644-c760-4d92-afe1-c8453d235658")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -11460,16 +11796,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "crystal_resonator_oscillator"
+			(at 0 0 225)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "7bef9d18-ac5d-4801-9f65-ffc36cda93f8")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "Crystal*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/dd0fdcaf-56ed-460c-beac-ca6cbfc74af7")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2" "4" "3")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -11494,7 +11837,7 @@
 		)
 		(fp_poly
 			(pts
-				(xy -2.1 1.75) (xy 2.1 1.75) (xy 2.1 -1.75) (xy -2.1 -1.75)
+				(xy 2.1 1.75) (xy -2.1 1.75) (xy -2.1 -1.75) (xy 2.1 -1.75)
 			)
 			(stroke
 				(width 0.05)
@@ -11638,16 +11981,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 90)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "594a30ef-789b-48fd-9d3f-73925cf50f95")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/b94d9932-299c-49bf-8500-744318bbcc19")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -11796,18 +12146,24 @@
 				(justify mirror)
 			)
 		)
+		(property "JLCPCB" "C2906290"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "B.Fab")
+			(hide yes)
+			(uuid "4c20728b-5068-44d8-89b8-6cd0b61d49fa")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "USB*C*Receptacle*")
 		(path "/f6d1cb0c-01bf-4908-86e2-d4da4f4ae895")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "SH" "B1" "B12" "A1" "A12" "A9" "B4" "B9" "A4" "A5" "B5" "A7" "B7"
-					"A6" "B6" "A8" "B8"
-				)
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -12125,6 +12481,17 @@
 			(uuid "94d9b679-096e-4a05-b01b-ef49b76f7a9f")
 		)
 		(embedded_fonts no)
+		(model "${KIPRJMOD}/symbols/external/USB-C-SMD_SHOU_TYPE-C-16P-CB1.6.step"
+			(offset
+				(xyz 0 -1.775 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
+		)
 	)
 	(footprint "Capacitor_SMD:C_0402_1005Metric"
 		(layer "B.Cu")
@@ -12181,16 +12548,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "69a2de03-4a8d-45c1-8f20-e866b8c5ef47")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/00000000-0000-0000-0000-00005eef0473")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -12333,16 +12707,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 270)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "b7345f18-07d9-4de3-b55f-e93eda4ddb0f")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/8ca2a8d7-b8ce-4ff0-8cdb-5cd6740618b5")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -12485,31 +12866,28 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 90)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "b9ecc4b3-1e73-4baf-9e6b-cc3328981795")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/972c6631-9fa8-4f7f-9432-5cb8b4007e8e")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
-			(start -0.261253 0.735)
-			(end 0.261253 0.735)
-			(stroke
-				(width 0.12)
-				(type solid)
-			)
-			(layer "B.SilkS")
-			(uuid "77274922-9da9-4786-b7a1-8e14206f2ee3")
-		)
-		(fp_line
-			(start -0.261253 -0.735)
-			(end 0.261253 -0.735)
+			(start -0.261252 0.735)
+			(end 0.261252 0.735)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -12517,29 +12895,37 @@
 			(layer "B.SilkS")
 			(uuid "9850ded2-2a7e-418d-9653-9ebae00fbfc2")
 		)
-		(fp_poly
-			(pts
-				(xy -1.7 -0.98) (xy -1.7 0.98) (xy 1.7 0.98) (xy 1.7 -0.98)
+		(fp_line
+			(start -0.261252 -0.735)
+			(end 0.261252 -0.735)
+			(stroke
+				(width 0.12)
+				(type solid)
 			)
+			(layer "B.SilkS")
+			(uuid "77274922-9da9-4786-b7a1-8e14206f2ee3")
+		)
+		(fp_rect
+			(start -1.7 0.98)
+			(end 1.7 -0.98)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "645cef8d-9f6f-4522-8a03-84dd564ff7a3")
+			(uuid "7f4957fc-40ca-4d6a-a0c3-a8d590d69112")
 		)
-		(fp_poly
-			(pts
-				(xy -1 -0.625) (xy -1 0.625) (xy 1 0.625) (xy 1 -0.625)
-			)
+		(fp_rect
+			(start -1 0.625)
+			(end 1 -0.625)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "57d10bfa-9d99-47b3-8fe9-883a4d5af1b5")
+			(uuid "e1805c78-ef41-4b2f-935e-57bd2566a3d2")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 90)
@@ -12554,7 +12940,7 @@
 			)
 		)
 		(pad "1" smd roundrect
-			(at -0.949999 0 270)
+			(at -0.95 0 270)
 			(size 1 1.45)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.25)
@@ -12563,7 +12949,7 @@
 			(uuid "de5dca4f-c561-4087-ac04-6ee62187f565")
 		)
 		(pad "2" smd roundrect
-			(at 0.949999 0 270)
+			(at 0.95 0 270)
 			(size 1 1.45)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.25)
@@ -12639,16 +13025,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 135)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "8c3462bd-c13f-4e6b-b53d-117f3d9f3edd")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/f8e6e3c5-d783-4f7e-9568-47a2863d5b1c")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -12673,7 +13066,7 @@
 		)
 		(fp_poly
 			(pts
-				(xy -0.91 0.46) (xy 0.91 0.46) (xy 0.91 -0.46) (xy -0.91 -0.46)
+				(xy 0.91 0.46) (xy -0.91 0.46) (xy -0.91 -0.46) (xy 0.91 -0.46)
 			)
 			(stroke
 				(width 0.05)
@@ -12685,7 +13078,7 @@
 		)
 		(fp_poly
 			(pts
-				(xy -0.5 0.25) (xy 0.5 0.25) (xy 0.5 -0.25) (xy -0.5 -0.25)
+				(xy 0.5 0.25) (xy -0.5 0.25) (xy -0.5 -0.25) (xy 0.5 -0.25)
 			)
 			(stroke
 				(width 0.1)
@@ -12793,16 +13186,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "package/gullwing"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "2ee391c4-f64c-4779-a82e-4ad9e791e657")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "SOT?23*")
 		(path "/d615eb94-c159-4abf-aaf5-b85b3123e05e")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "3" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -13169,16 +13569,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "57994c27-7f12-4b95-92ff-c192b2634ace")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/afc5815d-d894-4cd1-ba9b-a5ec9f40998e")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -13323,16 +13730,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "00699de8-8be7-46ac-a1a8-80a55d72abe1")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/b7adf8ee-2bca-4d94-9e08-bbbbc245c6b0")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -13475,16 +13889,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "944d128d-98b3-46ad-8ee3-9874c96eb5e5")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/b85e8b20-3462-45af-9e8b-d79af303753a")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -13507,29 +13928,27 @@
 			(layer "B.SilkS")
 			(uuid "b0832f22-05cb-4872-88ad-a2cd9992798b")
 		)
-		(fp_poly
-			(pts
-				(xy -0.93 -0.47) (xy -0.93 0.47) (xy 0.93 0.47) (xy 0.93 -0.47)
-			)
+		(fp_rect
+			(start -0.93 0.47)
+			(end 0.93 -0.47)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "6bc3d2c0-6afa-47b7-9752-c7ea3e958436")
+			(uuid "dc6f008e-f537-44f6-9949-0cf2dbd657cb")
 		)
-		(fp_poly
-			(pts
-				(xy -0.525 -0.27) (xy -0.525 0.27) (xy 0.525 0.27) (xy 0.525 -0.27)
-			)
+		(fp_rect
+			(start -0.525 0.27)
+			(end 0.525 -0.27)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "4368b5dd-3e7d-430a-ad02-a8d28e1077d3")
+			(uuid "a77a4f00-a9ce-4867-b02c-5a24c740484e")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 0)
@@ -13544,7 +13963,7 @@
 			)
 		)
 		(pad "1" smd roundrect
-			(at -0.509999 0)
+			(at -0.51 0)
 			(size 0.54 0.64)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.25)
@@ -13553,7 +13972,7 @@
 			(uuid "b7479cf8-ac18-44af-8ede-cd37fd90fa18")
 		)
 		(pad "2" smd roundrect
-			(at 0.509999 0)
+			(at 0.51 0)
 			(size 0.54 0.64)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.25)
@@ -13629,16 +14048,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "a8e74349-8991-4675-991a-3ef377a80882")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/75b91789-8bd9-4be6-9ba5-e215c5ec731a")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -13781,16 +14207,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 90)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "c1611485-38db-4217-9e04-eb54c8fb7f52")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/b0b0a539-c986-4f90-a74f-68933d84eaae")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -13933,16 +14366,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "8d55251f-65ff-41bd-8c79-460d64682006")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/00000000-0000-0000-0000-00005eeee897")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -14085,16 +14525,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "6f491edf-7474-4851-9455-0c3b9f336e3d")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/c341666b-4407-4038-8223-6bd369da28f4")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -14237,16 +14684,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 270)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "59cfe087-af47-4074-845a-18dee2912eee")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/a88a5991-7854-4357-9ab6-2b7b14571529")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -14389,16 +14843,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "5e14aac6-be13-4a6a-a2bb-ff89727e8db7")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/790856c7-adbd-4263-bf18-b20e896f995f")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -14421,29 +14882,27 @@
 			(layer "B.SilkS")
 			(uuid "627f910c-9f67-4e27-b016-2d8865a0ca90")
 		)
-		(fp_poly
-			(pts
-				(xy 0.91 -0.46) (xy -0.91 -0.46) (xy -0.91 0.46) (xy 0.91 0.46)
-			)
+		(fp_rect
+			(start -0.91 0.46)
+			(end 0.91 -0.46)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "e70b0059-81e8-4b3f-8985-072e7d877373")
+			(uuid "95cee3f6-22db-4d74-8439-ba2be6b5fa53")
 		)
-		(fp_poly
-			(pts
-				(xy 0.5 -0.25) (xy -0.5 -0.25) (xy -0.5 0.25) (xy 0.5 0.25)
-			)
+		(fp_rect
+			(start -0.5 0.25)
+			(end 0.5 -0.25)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "f5bbd689-cd49-4bd2-9a3b-5ad34ec7bdc0")
+			(uuid "91842cff-2b14-4522-be53-b06832f65a23")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 0)
@@ -14545,31 +15004,28 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "ca65c012-fdf3-41f2-b4df-6e259ef1128c")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/541b6e1e-f75e-4b13-bd7d-6095099f7fe7")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
-			(start -0.140581 -0.51)
-			(end 0.140581 -0.51)
-			(stroke
-				(width 0.12)
-				(type solid)
-			)
-			(layer "B.SilkS")
-			(uuid "5d685450-c702-4c53-885a-598cf0d71122")
-		)
-		(fp_line
-			(start -0.140581 0.51)
-			(end 0.140581 0.51)
+			(start -0.14058 -0.51)
+			(end 0.14058 -0.51)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -14577,29 +15033,37 @@
 			(layer "B.SilkS")
 			(uuid "c5bde714-5f02-4124-b00b-cff1a84cd708")
 		)
-		(fp_poly
-			(pts
-				(xy -1.48 0.73) (xy 1.48 0.73) (xy 1.48 -0.73) (xy -1.48 -0.73)
+		(fp_line
+			(start -0.14058 0.51)
+			(end 0.14058 0.51)
+			(stroke
+				(width 0.12)
+				(type solid)
 			)
+			(layer "B.SilkS")
+			(uuid "5d685450-c702-4c53-885a-598cf0d71122")
+		)
+		(fp_rect
+			(start -1.48 0.73)
+			(end 1.48 -0.73)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "44ffb4ac-0f31-4ee7-81dc-aceb9be289bf")
+			(uuid "20b38974-cc93-4094-a142-e45e4c1f8783")
 		)
-		(fp_poly
-			(pts
-				(xy -0.8 0.4) (xy 0.8 0.4) (xy 0.8 -0.4) (xy -0.8 -0.4)
-			)
+		(fp_rect
+			(start -0.8 0.4)
+			(end 0.8 -0.4)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "009f4b04-9330-4cc1-acb2-5cb5f3477f0b")
+			(uuid "bebef74a-d808-426e-a895-1532abb1bae2")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 0)
@@ -14699,16 +15163,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "package/no_lead"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "4f3772c4-2103-41c9-89c1-d21700b63708")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "*SON*3x2mm*P0.5mm*EP0.2x1.6mm*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/e0b619cd-cab1-4749-8144-0f584484198c")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "6" "5" "2" "3" "7" "8" "4" "9")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -15053,31 +15524,28 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "f91c256c-9460-4fff-8285-e6709ec6bd9d")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/5b07b6e9-b25f-4cf3-92a9-857e618b08a1")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
-			(start -0.261253 0.735)
-			(end 0.261253 0.735)
-			(stroke
-				(width 0.12)
-				(type solid)
-			)
-			(layer "B.SilkS")
-			(uuid "08387b73-c540-4413-beb1-4d48f60c0f2a")
-		)
-		(fp_line
-			(start -0.261253 -0.735)
-			(end 0.261253 -0.735)
+			(start -0.261252 0.735)
+			(end 0.261252 0.735)
 			(stroke
 				(width 0.12)
 				(type solid)
@@ -15085,29 +15553,37 @@
 			(layer "B.SilkS")
 			(uuid "1f19afdf-5544-44ea-abf9-338cceffbdc6")
 		)
-		(fp_poly
-			(pts
-				(xy 1.7 -0.98) (xy -1.7 -0.98) (xy -1.7 0.98) (xy 1.7 0.98)
+		(fp_line
+			(start -0.261252 -0.735)
+			(end 0.261252 -0.735)
+			(stroke
+				(width 0.12)
+				(type solid)
 			)
+			(layer "B.SilkS")
+			(uuid "08387b73-c540-4413-beb1-4d48f60c0f2a")
+		)
+		(fp_rect
+			(start -1.7 0.98)
+			(end 1.7 -0.98)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "ab095679-7155-4ef3-ba59-1ba84ed1863d")
+			(uuid "05b99d0d-0173-4d63-8580-b4129c3b012c")
 		)
-		(fp_poly
-			(pts
-				(xy 1 -0.625) (xy -1 -0.625) (xy -1 0.625) (xy 1 0.625)
-			)
+		(fp_rect
+			(start -1 0.625)
+			(end 1 -0.625)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "c129c5a2-3771-4848-8d15-82775691ffd7")
+			(uuid "50679eb2-385f-4a93-825e-6da7bf26bed8")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 0)
@@ -15122,7 +15598,7 @@
 			)
 		)
 		(pad "1" smd roundrect
-			(at -0.949999 0 180)
+			(at -0.95 0 180)
 			(size 1 1.45)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.25)
@@ -15131,7 +15607,7 @@
 			(uuid "9c522e25-fd34-41d5-8ec6-87522cbe8868")
 		)
 		(pad "2" smd roundrect
-			(at 0.949999 0 180)
+			(at 0.95 0 180)
 			(size 1 1.45)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.25)
@@ -15207,16 +15683,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "20471a31-4b44-46ac-9ec8-cdd793d63c36")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/00000000-0000-0000-0000-00005eef89b3")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -15359,16 +15842,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "13447389-c839-4a02-a2c1-7e7127f069b3")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/d3e65cfc-7a4c-4df3-ad20-67a5959ab338")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -15511,16 +16001,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 90)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "17de36a3-3f97-418d-bd40-f68b2bbad21c")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/40b3ada1-0c3b-450b-a374-4196673514d2")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -15672,14 +16169,6 @@
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/e1bc4d9a-4871-49e2-a05e-ba0791ecbfed")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "14" "15" "16" "17" "18" "2" "3" "4" "5" "11" "23" "6" "A1" "A2"
-					"A3" "A4" "24" "PAD" "1" "20" "19" "21" "22" "13" "7" "8" "9" "10" "12"
-				)
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -15713,17 +16202,16 @@
 			(layer "B.SilkS")
 			(uuid "a5926509-2877-4698-b5ca-31fb45a65ac3")
 		)
-		(fp_poly
-			(pts
-				(xy 2.25 -2.25) (xy -2.25 -2.25) (xy -2.25 2.25) (xy 2.25 2.25)
-			)
+		(fp_rect
+			(start -2.25 2.25)
+			(end 2.25 -2.25)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "2f0d05d2-cc59-449f-9091-256a330cc8bf")
+			(uuid "6ef54629-6b77-4a46-8692-4e3663cc5841")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 -4 180)
@@ -15767,7 +16255,7 @@
 			(uuid "feb817c1-1907-475f-9b97-076286188ba0")
 		)
 		(pad "1" smd roundrect
-			(at -1.899999 1.25)
+			(at -1.9 1.25)
 			(size 0.6 0.24)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.15)
@@ -15817,7 +16305,7 @@
 			(uuid "02dae8cc-5ab4-4288-b600-79630e2c60e9")
 		)
 		(pad "6" smd roundrect
-			(at -1.899999 -1.25)
+			(at -1.9 -1.25)
 			(size 0.6 0.24)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.15)
@@ -15827,7 +16315,7 @@
 			(uuid "4a37b71c-848e-4ccc-894f-079b114f7626")
 		)
 		(pad "7" smd roundrect
-			(at -1.25 -1.899999 270)
+			(at -1.25 -1.9 270)
 			(size 0.6 0.24)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.15)
@@ -15877,7 +16365,7 @@
 			(uuid "e110e511-4ca2-45ab-99d4-ffec5c2d2032")
 		)
 		(pad "12" smd roundrect
-			(at 1.25 -1.899999 270)
+			(at 1.25 -1.9 270)
 			(size 0.6 0.24)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.15)
@@ -15887,7 +16375,7 @@
 			(uuid "8d4b8ba4-2c51-4991-937a-40da5994706a")
 		)
 		(pad "13" smd roundrect
-			(at 1.899999 -1.25 180)
+			(at 1.9 -1.25 180)
 			(size 0.6 0.24)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.15)
@@ -15937,7 +16425,7 @@
 			(uuid "a4421bd3-61b5-4ab7-b207-14cb380e05fe")
 		)
 		(pad "18" smd roundrect
-			(at 1.899999 1.25 180)
+			(at 1.9 1.25 180)
 			(size 0.6 0.24)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.15)
@@ -15947,7 +16435,7 @@
 			(uuid "85e4a50e-5645-4d00-afd7-a21d26946039")
 		)
 		(pad "19" smd roundrect
-			(at 1.25 1.899999 90)
+			(at 1.25 1.9 90)
 			(size 0.6 0.24)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.15)
@@ -15997,7 +16485,7 @@
 			(uuid "1f132233-b7b2-4caa-9820-dbfa51407563")
 		)
 		(pad "24" smd roundrect
-			(at -1.25 1.899999 90)
+			(at -1.25 1.9 90)
 			(size 0.6 0.24)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.15)
@@ -16047,7 +16535,7 @@
 			(uuid "25651831-60c6-48b1-aceb-ace5949791d8")
 		)
 		(pad "PAD" thru_hole circle
-			(at -0.799999 0)
+			(at -0.8 0)
 			(size 0.45 0.45)
 			(drill 0.2)
 			(property pad_prop_heatsink)
@@ -16059,7 +16547,7 @@
 			(uuid "ced652fb-0102-40e3-a740-75bad14917d9")
 		)
 		(pad "PAD" thru_hole circle
-			(at 0 -0.799999)
+			(at 0 -0.8)
 			(size 0.45 0.45)
 			(drill 0.2)
 			(property pad_prop_heatsink)
@@ -16068,7 +16556,7 @@
 			(net "GND")
 			(pinfunction "GND_PAD")
 			(pintype "power_in")
-			(uuid "2d423bfe-dd52-4a40-830d-07da1ba95acb")
+			(uuid "603360c9-c5ee-4e8b-a9ea-b8dd4238e4d6")
 		)
 		(pad "PAD" thru_hole circle
 			(at 0 0)
@@ -16093,7 +16581,7 @@
 			(uuid "fc935e5a-81d8-44c2-a25f-4db9eab57688")
 		)
 		(pad "PAD" thru_hole circle
-			(at 0 0.799999)
+			(at 0 0.8)
 			(size 0.45 0.45)
 			(drill 0.2)
 			(property pad_prop_heatsink)
@@ -16102,10 +16590,10 @@
 			(net "GND")
 			(pinfunction "GND_PAD")
 			(pintype "power_in")
-			(uuid "603360c9-c5ee-4e8b-a9ea-b8dd4238e4d6")
+			(uuid "2d423bfe-dd52-4a40-830d-07da1ba95acb")
 		)
 		(pad "PAD" thru_hole circle
-			(at 0.799999 0)
+			(at 0.8 0)
 			(size 0.45 0.45)
 			(drill 0.2)
 			(property pad_prop_heatsink)
@@ -16117,6 +16605,17 @@
 			(uuid "bae54f40-bf03-472a-9b81-20bbadf43ae5")
 		)
 		(embedded_fonts no)
+		(model "${KIPRJMOD}/symbols/external/VQFN-24_L4.0-W4.0-P0.50-BL-EP2.1_1.step"
+			(offset
+				(xyz 0 0 0.01)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
+		)
 	)
 	(footprint "Capacitor_SMD:C_0402_1005Metric"
 		(layer "B.Cu")
@@ -16173,16 +16672,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "91477266-01db-425e-bc7b-698ff8f582d4")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/64d5dc7e-cdf7-4c35-8e60-9ab312d5f274")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -16325,16 +16831,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 180)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "07a08676-9518-4db8-9062-fe554363f2b7")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/31a2f483-7c43-4c50-aaad-d9026b210a3e")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -16357,29 +16870,27 @@
 			(layer "B.SilkS")
 			(uuid "e5d5bd52-5f25-41da-a7a9-e96243dceb84")
 		)
-		(fp_poly
-			(pts
-				(xy -0.93 -0.47) (xy -0.93 0.47) (xy 0.93 0.47) (xy 0.93 -0.47)
-			)
+		(fp_rect
+			(start -0.93 0.47)
+			(end 0.93 -0.47)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "b806cdd6-bcb6-4db0-ac67-51804f36730b")
+			(uuid "5738448a-eca6-4d3b-8881-21abf8ce0a93")
 		)
-		(fp_poly
-			(pts
-				(xy -0.525 -0.27) (xy -0.525 0.27) (xy 0.525 0.27) (xy 0.525 -0.27)
-			)
+		(fp_rect
+			(start -0.525 0.27)
+			(end 0.525 -0.27)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "72087db8-a192-4c05-a40b-0ce6a73d0a00")
+			(uuid "1fc53470-10cf-4b27-999a-eb6065bd1d19")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 0)
@@ -16394,7 +16905,7 @@
 			)
 		)
 		(pad "1" smd roundrect
-			(at -0.509999 0)
+			(at -0.51 0)
 			(size 0.54 0.64)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.25)
@@ -16403,7 +16914,7 @@
 			(uuid "6add84fa-1fe9-467f-9187-d5b19de6f3a8")
 		)
 		(pad "2" smd roundrect
-			(at 0.509999 0)
+			(at 0.51 0)
 			(size 0.54 0.64)
 			(layers "B.Cu" "B.Mask" "B.Paste")
 			(roundrect_rratio 0.25)
@@ -16479,16 +16990,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "3839b549-69da-4ec6-a08b-61c90ec44a84")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/d9bf5b71-e949-4b0f-ad5c-178224345862")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -16633,16 +17151,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "b83b77fb-1362-477e-9a2c-bf9fad88fb86")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/631a6b7d-fdf9-4202-b283-1e6ccc6ad482")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -16785,16 +17310,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "21c4ca18-343b-4758-ac05-53d953ec0ce6")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/f946c038-123e-4111-a63d-06048e809fd3")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -16937,16 +17469,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "f9064dc5-af3f-4093-ab20-7be7e765dc3a")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/98eef63b-5e4a-4d4c-9a88-b0434a206403")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -17089,16 +17628,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 270)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "c361dfe8-579e-4c52-9fff-db3613857a55")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/bb378633-604e-4622-ba6e-edab6adacf96/7a1ab94d-3670-407a-a75e-0e0b31cac790")
 		(sheetname "/RP2354/")
 		(sheetfile "rp2354.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -17468,6 +18014,17 @@
 			(uuid "50db3c14-147a-49e2-b382-f7a79ace3992")
 		)
 		(embedded_fonts no)
+		(model "${KIPRJMOD}/symbols/external/LED-SMD_WS2812B-4020.step"
+			(offset
+				(xyz 2.14 1.55 1.55)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
+		)
 	)
 	(footprint "Package_TO_SOT_SMD:SOT-666"
 		(layer "B.Cu")
@@ -17532,12 +18089,6 @@
 		(path "/89671662-b76e-4744-a967-94e9ced315aa")
 		(sheetname "/")
 		(sheetfile "minimal.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "3" "5" "2" "6" "4")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -17812,16 +18363,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "16c508d2-82bd-4eb9-9324-8c14add9b55e")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/8560a723-1343-4e00-8e06-27cfd5a20a6a")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
@@ -17844,29 +18402,27 @@
 			(layer "B.SilkS")
 			(uuid "6f60c02a-508e-4f26-8f37-9484bc890a20")
 		)
-		(fp_poly
-			(pts
-				(xy -0.91 -0.46) (xy -0.91 0.46) (xy 0.91 0.46) (xy 0.91 -0.46)
-			)
+		(fp_rect
+			(start -0.91 0.46)
+			(end 0.91 -0.46)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.CrtYd")
-			(uuid "237e7908-1679-4d66-9991-107c7ef7aa44")
+			(uuid "2c473408-ffad-4e90-a37f-33d1db214db3")
 		)
-		(fp_poly
-			(pts
-				(xy -0.5 -0.25) (xy -0.5 0.25) (xy 0.5 0.25) (xy 0.5 -0.25)
-			)
+		(fp_rect
+			(start -0.5 0.25)
+			(end 0.5 -0.25)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(fill no)
 			(layer "B.Fab")
-			(uuid "43803bf9-9657-46c1-86b5-e33226cb087f")
+			(uuid "1c4d0396-babb-4b8c-889d-3d6974aa4798")
 		)
 		(fp_text user "${REFERENCE}"
 			(at 0 0 0)
@@ -17968,16 +18524,23 @@
 				(justify mirror)
 			)
 		)
+		(property "KiLib_Generator" "SMD_2terminal_chip_molded"
+			(at 0 0 0)
+			(layer "B.SilkS")
+			(hide yes)
+			(uuid "4729bff6-51a7-480e-b790-25782013cbb0")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+				(justify mirror)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/d7201b0a-5ec1-4d79-9769-0bc3f87cfe01/65a4d691-ccf2-4b21-bd63-b9481636b3d7")
 		(sheetname "/TAC5242/")
 		(sheetfile "tac5242.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line

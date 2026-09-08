@@ -89,7 +89,6 @@
 		)
 		(capping no)
 		(filling no)
-		(zone_defaults)
 		(pcbplotparams
 			(layerselection 0x00000000_00000000_55555555_5755f5ff)
 			(plot_on_all_layers_selection 0x00000000_00000000_00000000_00000000)
@@ -186,12 +185,6 @@
 		(path "/8450bd81-9ec0-45e1-a4c0-a5af17950cab")
 		(sheetname "/")
 		(sheetfile "dual-stomp.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr through_hole)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_rect
@@ -253,6 +246,17 @@
 			(uuid "14db9572-f43a-46a5-b955-c06f46ecf648")
 		)
 		(embedded_fonts no)
+		(model "${KIPRJMOD}/symbols/PBS-24B-2.step"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
+		)
 	)
 	(footprint "Mylib:Daier PBS-24B-2"
 		(layer "F.Cu")
@@ -313,12 +317,6 @@
 		(path "/5ec9a511-5505-4703-ba46-8af04cc26148")
 		(sheetname "/")
 		(sheetfile "dual-stomp.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
 		(attr through_hole)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_rect
@@ -380,6 +378,17 @@
 			(uuid "bec8498f-6b7f-4797-aed3-f718b564c0c1")
 		)
 		(embedded_fonts no)
+		(model "${KIPRJMOD}/symbols/PBS-24B-2.step"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
+		)
 	)
 	(footprint "Mylib:NRJ6HM-1-PRE"
 		(layer "F.Cu")
@@ -442,12 +451,6 @@
 		(path "/763f5827-454e-4009-ab03-808096fd6297")
 		(sheetname "/")
 		(sheetfile "dual-stomp.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "S" "R" "RN" "T" "TN")
-			)
-		)
 		(attr through_hole)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_rect
@@ -576,9 +579,9 @@
 			)
 		)
 		(pad "R" thru_hole oval
-			(at -11.1 -7.23 90)
+			(at -11.1 -7.115 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "/EXP_R")
@@ -586,9 +589,9 @@
 			(uuid "fc3e2488-097d-45d8-ba98-c08ddd59caa3")
 		)
 		(pad "RN" thru_hole oval
-			(at -11.1 4.2 90)
+			(at -11.1 4.085 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "GND")
@@ -596,9 +599,9 @@
 			(uuid "721ca748-f831-4309-a4d9-9e3748bc732c")
 		)
 		(pad "S" thru_hole oval
-			(at -4.75 -7.23 90)
+			(at -4.7 -7.115 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "GND")
@@ -606,9 +609,9 @@
 			(uuid "60b5639c-8c1e-47e5-ab88-0dee500260ef")
 		)
 		(pad "S" thru_hole oval
-			(at -4.75 4.2 90)
+			(at -4.7 4.085 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "GND")
@@ -616,9 +619,9 @@
 			(uuid "dfedd165-a817-48ac-93c1-c1b1580115f8")
 		)
 		(pad "T" thru_hole oval
-			(at -17.45 -7.23 90)
+			(at -17.5 -7.115 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "/EXP_T")
@@ -626,9 +629,9 @@
 			(uuid "a510c249-3f8e-4929-a22c-d2fbb474cb4a")
 		)
 		(pad "TN" thru_hole oval
-			(at -17.45 4.2 90)
+			(at -17.5 4.085 90)
 			(size 3 1.5)
-			(drill oval 2 0.8)
+			(drill oval 2 0.9)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "GND")
@@ -636,15 +639,15 @@
 			(uuid "a322eb26-221a-4240-95f7-52d50e0cc8c6")
 		)
 		(embedded_fonts no)
-		(model "NRJ6HM-1-PRE.step"
+		(model "${KIPRJMOD}/symbols/external/AUDIO-TH_PJ-611E_1.step"
 			(offset
-				(xyz 0 0 0)
+				(xyz -0.5 0 6.5)
 			)
 			(scale
 				(xyz 1 1 1)
 			)
 			(rotate
-				(xyz 0 0 0)
+				(xyz 0 0 -90)
 			)
 		)
 	)
@@ -749,6 +752,22 @@
 		(uuid "a0d3afb9-4439-4a3c-b5bc-a61e21d2381e")
 	)
 	(segment
+		(start 112.77 117.45)
+		(end 70.55 117.45)
+		(width 0.6)
+		(layer "F.Cu")
+		(net "/EXP_T")
+		(uuid "742bab80-8084-4987-b96a-61404db07517")
+	)
+	(segment
+		(start 70.55 117.45)
+		(end 68 114.9)
+		(width 0.6)
+		(layer "F.Cu")
+		(net "/EXP_T")
+		(uuid "e8bde848-950e-4916-a9b8-b8a48b485b8f")
+	)
+	(segment
 		(start 132 114.9)
 		(end 116.9 114.9)
 		(width 0.6)
@@ -771,22 +790,6 @@
 		(layer "F.Cu")
 		(net "/EXP_R")
 		(uuid "8d396d0d-a2b7-4a3f-8bbd-dba623599d94")
-	)
-	(segment
-		(start 112.77 117.45)
-		(end 70.55 117.45)
-		(width 0.6)
-		(layer "F.Cu")
-		(net "/EXP_T")
-		(uuid "742bab80-8084-4987-b96a-61404db07517")
-	)
-	(segment
-		(start 70.55 117.45)
-		(end 68 114.9)
-		(width 0.6)
-		(layer "F.Cu")
-		(net "/EXP_T")
-		(uuid "e8bde848-950e-4916-a9b8-b8a48b485b8f")
 	)
 	(zone
 		(net "GND")

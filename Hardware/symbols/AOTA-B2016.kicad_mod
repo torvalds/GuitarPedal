@@ -103,4 +103,15 @@
 		(uuid "a978c9ac-73be-41b2-ba00-d8406cf30a55")
 	)
 	(embedded_fonts no)
+	(model "${KIPRJMOD}/symbols/external/IND-SMD_L2.0-W1.6_AOTA-B201610S3R3-101-T.step"
+		(offset
+			(xyz 0 -0.005 0.05)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 180)
+		)
+	)
 )

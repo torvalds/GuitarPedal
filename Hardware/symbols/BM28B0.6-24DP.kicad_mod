@@ -351,7 +351,7 @@
 		)
 	)
 	(embedded_fonts no)
-	(model "${KIPRJMOD}/symbols/BM28-24DP.stp"
+	(model "${KIPRJMOD}/symbols/external/CONN-SMD_BM28B0.6-24DP-2-0.35V-51.step"
 		(offset
 			(xyz 0 0 0)
 		)
