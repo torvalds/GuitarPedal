@@ -57,8 +57,12 @@ button{background:#222831;color:#e6e6e6;border:1px solid #39414d;border-radius:6
   padding:.7rem 1rem;font:inherit;cursor:pointer;margin:0 .4rem .4rem 0;min-width:9rem}
 button.on{background:#0072b2;border-color:#0072b2;color:#fff}
 button:disabled{opacity:.4;cursor:default}
-#bar{height:5px;background:#222831;border-radius:3px;margin:1.2rem 0 .4rem;overflow:hidden}
-#pos{height:100%;width:0;background:#0072b2}
+#bar{height:5px;background:#222831;border-radius:3px;margin:1.2rem 0 .4rem;
+  position:relative;cursor:pointer}
+#pos{height:100%;width:0;background:#0072b2;border-radius:3px}
+#mark{position:absolute;top:-4px;bottom:-4px;width:2px;background:#e69f00;
+  left:0;display:none}
+#mode,#setmark{min-width:0;padding:.35rem .7rem;font-size:.85rem;margin-left:.6rem}
 small{color:#6f7986}kbd{background:#222831;border:1px solid #39414d;border-radius:4px;padding:0 .35rem}
 </style></head><body>
 <h1>__TITLE__</h1>
@@ -66,8 +70,21 @@ small{color:#6f7986}kbd{background:#222831;border:1px solid #39414d;border-radiu
 them in 8 ms. There is no seek and no gap, so what you hear when you switch is
 the difference and nothing else. Click a take or press its number to play and to
 switch; <kbd>space</kbd> pauses.</p>
+<p><b>Two ways to listen</b>, and they answer different questions.
+<kbd>m</kbd> switches.
+<b>Continue</b> keeps the playback position across a switch, so the two takes
+meet on whatever is playing right now - that is the one for hearing a small
+difference, because nothing but the take changes.
+<b>Restart</b> jumps back to a mark every time you pick a take, so you hear the
+same passage each time. Material whose character moves - a chord ringing out, a
+note decaying - sounds different depending on <em>where</em> you switch, and
+that difference is easy to mistake for a difference between the takes.
+Press <kbd>s</kbd> at the moment you want to come back to and the mark is set
+there, without interrupting what is playing - which is more exact than aiming at
+a bar. <kbd>s</kbd> again clears it. Clicking the bar puts the mark somewhere
+and jumps there.</p>
 <div id="btns"></div>
-<div id="bar"><div id="pos"></div></div>
+<div id="bar"><div id="pos"></div><div id="mark"></div></div>
 <small id="now">loading...</small>
 <script>
 //
@@ -87,6 +104,7 @@ const ctx = new (window.AudioContext || window.webkitAudioContext)();
 const btns = document.getElementById('btns');
 const now = document.getElementById('now');
 let bufs = [], gains = [], srcs = [], cur = 0, playing = false, t0 = 0, dur = 0;
+let restart = false, mark = 0;
 
 //
 // An AudioContext built before the page has been clicked is born
@@ -125,11 +143,19 @@ Promise.all(TAKES.map(t =>
   paint();
 }).catch(e => { now.textContent = 'could not load: ' + e; });
 
+//
+// In restart mode the loop is from the mark rather than from zero, so
+// the passage repeats instead of running on into different material.
+// loopStart does that in the graph, which keeps every take
+// sample-locked through the wrap - doing it by hand with a timer would
+// not.
+//
 function start(offset){
   srcs = bufs.map((b,i) => {
     const s = ctx.createBufferSource();
     const g = ctx.createGain();
     s.buffer = b; s.loop = true;
+    if (restart){ s.loopStart = mark; s.loopEnd = b.duration; }
     g.gain.value = (i === cur) ? 1 : 0;
     s.connect(g).connect(ctx.destination);
     gains[i] = g;
@@ -140,6 +166,17 @@ function start(offset){
 }
 function stop(){ srcs.forEach(s => { try { s.stop(); } catch(e){} }); srcs = []; }
 function at(){ return playing ? (ctx.currentTime - t0) : 0; }
+//
+// Where the needle is, which is not at() once the loop wraps: in
+// restart mode it comes back to the mark and not to zero.
+//
+function pos(){
+  const t = at();
+  if (!dur) return 0;
+  if (!restart || mark <= 0) return t % dur;
+  const span = dur - mark;
+  return span <= 0 ? mark : mark + ((t - mark) % span + span) % span;
+}
 
 //
 // Picking a take also starts the page, rather than only moving gain.
@@ -152,7 +189,15 @@ function pick(i){
   if (!bufs.length) return;
   resume();
   const old = cur; cur = i;
-  if (!playing){ playing = true; start(0); }
+  if (!playing){ playing = true; start(restart ? mark : 0); }
+  else if (restart){
+    //
+    // Picking the take that is already playing restarts it too, which
+    // is the point: hearing the same phrase again is most of what this
+    // mode is for.
+    //
+    stop(); start(mark);
+  }
   else if (gains.length && old !== i){
     const t = ctx.currentTime, R = 0.008;
     gains[old].gain.setTargetAtTime(0, t, R/3);
@@ -160,29 +205,89 @@ function pick(i){
   }
   paint();
 }
+function setMode(on){
+  //
+  // Where we are has to be read before the mode changes, because pos()
+  // interprets the clock differently either side of it.
+  //
+  const here = playing ? pos() : 0;
+  restart = on;
+  if (playing){ stop(); start(restart ? mark : here); }
+  paint();
+}
+function showMark(){
+  const el = document.getElementById('mark');
+  el.style.left = (100*mark/dur) + '%';
+  el.style.display = mark > 0 ? 'block' : 'none';
+}
+//
+// Changing where the loop comes back to does not need the sources
+// restarted: loopStart is live on a running AudioBufferSourceNode and
+// takes effect at the next wrap.  That is what lets the mark be set at
+// the moment you hear the thing you want to hear again, rather than
+// after stopping to aim at a bar.
+//
+function applyLoop(){
+  srcs.forEach(s => { s.loopStart = restart ? mark : 0; });
+}
+function setMark(frac){
+  mark = Math.max(0, Math.min(0.999, frac)) * dur;
+  showMark();
+  if (playing){ stop(); start(mark); }
+  paint();
+}
+function markHere(){
+  if (!dur) return;
+  mark = mark > 0 ? 0 : (playing ? pos() : 0);
+  showMark();
+  applyLoop();
+  paint();
+}
 function toggle(){
   if (!bufs.length) return;
   resume();
   if (playing){ stop(); playing = false; }
-  else { playing = true; start(0); }
+  else { playing = true; start(restart ? mark : 0); }
   paint();
 }
 function paint(){
   [...btns.children].forEach((b,i) => b.className = i===cur ? 'on' : '');
+  const m = document.getElementById('mode');
+  if (m) m.textContent = restart
+    ? ('restart from ' + mark.toFixed(1) + 's') : 'continue';
+  const sm = document.getElementById('setmark');
+  if (sm) sm.textContent = mark > 0 ? 'clear start point' : 'set start point';
   now.textContent = !bufs.length ? 'loading...'
     : (TAKES[cur].note || '')
       + (playing && ctx.state === 'running' ? ''
          : '  (click a take, or space, to play)');
 }
+const modeBtn = document.createElement('button');
+modeBtn.id = 'mode'; modeBtn.textContent = 'continue';
+modeBtn.onclick = () => setMode(!restart);
+btns.appendChild(modeBtn);
+
+const markBtn = document.createElement('button');
+markBtn.id = 'setmark'; markBtn.textContent = 'set start point';
+markBtn.onclick = markHere;
+btns.appendChild(markBtn);
+
+document.getElementById('bar').addEventListener('click', e => {
+  if (!dur) return;
+  const r = e.currentTarget.getBoundingClientRect();
+  setMark((e.clientX - r.left) / r.width);
+});
+
 document.addEventListener('keydown', e => {
   if (e.code === 'Space'){ e.preventDefault(); toggle(); return; }
+  if (e.key === 'm'){ setMode(!restart); return; }
+  if (e.key === 's'){ markHere(); return; }
   const n = parseInt(e.key, 10);
   if (n >= 1 && n <= TAKES.length) pick(n-1);
 });
 setInterval(() => {
   if (playing && dur)
-    document.getElementById('pos').style.width =
-      (100*((at() % dur)/dur)) + '%';
+    document.getElementById('pos').style.width = (100*(pos()/dur)) + '%';
 }, 80);
 </script></body></html>
 """
