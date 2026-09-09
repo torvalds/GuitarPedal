@@ -251,16 +251,30 @@ for (const name of WANT)
 //
 const identity = (over) => Object.assign({
     build: 'Jan 1 2026 00:00:00', scenes: 32, midi_hw: true,
-    found: { legacy_codec: false, legacy_screen: false },
+    found: { i2c_codec: true, codec: 'stereo', legacy_screen: false },
 }, over);
 
 app.handleIdentity(identity());
 check('a current board raises no warning', app.boardFault.on === false);
 
-app.handleIdentity(identity({ scenes: 1, found: { legacy_codec: true } }));
+//
+// The codec line is a statement, not a warning: the same bit means mono
+// on one board family and DC-coupled on another, so the pedal sends the
+// word and this only has to show it.
+//
+check('the codec is described', /stereo/.test(
+      document.getElementById('identity-info').textContent),
+      document.getElementById('identity-info').textContent);
+
+app.handleIdentity(identity({ found: { i2c_codec: false, codec: 'AC-coupled' } }));
+check('a strapped codec says so', /strapped: AC-coupled/.test(
+      document.getElementById('identity-info').textContent),
+      document.getElementById('identity-info').textContent);
+
+app.handleIdentity(identity({ scenes: 1, found: { legacy_screen: true } }));
 check('an early board is noted, not faulted', app.earlyNote.on === true
       && app.boardFault.on === false);
-check('and says why', /TAC5112/.test(document.getElementById('status-early').title),
+check('and says why', /SH1106/.test(document.getElementById('status-early').title),
       document.getElementById('status-early').title);
 
 app.handleIdentity(identity());

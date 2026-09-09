@@ -8,7 +8,7 @@
 # flashes it without changing what the tree is about, because
 # spot-checking an old board should not cost you your setting.
 #
-BOARDS := split unified
+BOARDS := split unified minimal
 BOARD := $(shell cat board.local 2>/dev/null)
 
 build:

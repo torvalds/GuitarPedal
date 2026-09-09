@@ -168,8 +168,17 @@ static void sysex_send_identity(void)
 	sysex_write_num(populated_scenes());
 	sysex_write_str(",\"midi_hw\":");
 	sysex_write_str(MIDI_HW ? "true" : "false");
-	sysex_write_str(",\"found\":{\"legacy_codec\":");
-	sysex_write_str(hardware.legacy_codec ? "true" : "false");
+	sysex_write_str(",\"found\":{\"i2c_codec\":");
+	sysex_write_str(hardware.i2c_codec ? "true" : "false");
+	//
+	// ...and what that means on this board, because the same bit means
+	// mono-against-stereo on one family and DC-against-AC-coupled on
+	// another.  A named key, so appending one is safe here in a way
+	// 315 says it is not in the telemetry block.
+	//
+	sysex_write_str(",\"codec\":\"");
+	sysex_write_str(hardware.i2c_codec ? CODEC_I2C_DESC : CODEC_STRAPPED_DESC);
+	sysex_write_str("\"");
 	sysex_write_str(",\"legacy_screen\":");
 	sysex_write_str(hardware.legacy_screen ? "true" : "false");
 	sysex_write_str("}");

@@ -27,8 +27,25 @@ static void init_i2s(void)
 	tx_offset = pio_add_program(pio0, &i2s_tx_program);
 	rx_offset = pio_add_program(pio0, &i2s_rx_program);
 
-	i2s_tx_program_init(pio0, PIO0_I2S_TX_SM, tx_offset, I2S_BCLK);
-	i2s_rx_program_init(pio0, PIO0_I2S_RX_SM, rx_offset, I2S_BCLK);
+	//
+	// BCLK and FSYNC are the side-set, so they and only they have to be
+	// adjacent.  Which of the two is lower is a board fact that reaches
+	// the instructions rather than this call; see i2s.pio.
+	//
+	_Static_assert(I2S_BCLK == I2S_FSYNC + 1 || I2S_FSYNC == I2S_BCLK + 1,
+		       "i2s BCLK and FSYNC must be adjacent for the side-set");
+#ifdef I2S_FSYNC_BELOW_BCLK
+	_Static_assert(I2S_FSYNC < I2S_BCLK,
+		       "I2S_FSYNC_BELOW_BCLK disagrees with the pins");
+#else
+	_Static_assert(I2S_BCLK < I2S_FSYNC,
+		       "the side-set wants I2S_FSYNC_BELOW_BCLK for these pins");
+#endif
+
+	i2s_tx_program_init(pio0, PIO0_I2S_TX_SM, tx_offset,
+			    I2S_BCLK, I2S_FSYNC, I2S_DIN, I2S_DOUT);
+	i2s_rx_program_init(pio0, PIO0_I2S_RX_SM, rx_offset,
+			    I2S_FSYNC, I2S_DOUT);
 
 	dma_rx = dma_claim_unused_channel(true);
 	dma_channel_config c_rx = dma_channel_get_default_config(dma_rx);
@@ -106,6 +123,8 @@ static void switch_irq(void)
 
 	user_interaction = 1;
 }
+
+
 //
 // What this firmware found itself running on.
 //
@@ -144,7 +163,7 @@ static void switch_irq(void)
 // app change and not a protocol one.
 //
 static struct {
-	bool legacy_codec;	// TAC5112, 0x51 - the mono audio board
+	bool i2c_codec;		// a codec answered, so it is not strapped
 	bool legacy_screen;	// SH1106, 0x3c - a design that is gone
 } hardware;
 
@@ -159,31 +178,41 @@ static bool i2c_probe(i2c_inst_t *i2c, uint8_t addr)
 
 static void probe_hardware(void)
 {
-	hardware.legacy_codec = i2c_probe(TAC5112_I2C);
+	hardware.i2c_codec = i2c_probe(TAC5112_I2C);
+#ifdef SH1106_I2C
 	hardware.legacy_screen = i2c_probe(SH1106_I2C);
+#endif
 
 	//
 	// Say what we are before USB exists, because the name is part of
 	// how a person tells two pedals apart and the host may already be
 	// attached and waiting.
 	//
-	// The board name is compile-time and the channel count is not, so
-	// this is where the two meet.  Two static strings rather than a
+	// The board name is compile-time and what the probe means is not,
+	// so this is where the two meet.  Two static strings rather than a
 	// buffer: there is exactly one bit to fold in.
 	//
-	usb_set_product(hardware.legacy_codec
-			? PEDAL_BOARD_NAME " mono Pedal"
-			: PEDAL_BOARD_NAME " stereo Pedal");
+	// **What that bit means is a board fact, so the board says it.**
+	// The probe establishes one thing - a codec answered on i2c rather
+	// than being strapped - and the consequence differs: on the split
+	// family the i2c part is the TAC5112, which is mono; on minimal it
+	// is the TAC5212, which is DC-coupled where the strapped one has a
+	// corner at 10Hz.  Both are worth knowing and neither is the other.
+	//
+	usb_set_product(hardware.i2c_codec
+			? PEDAL_BOARD_NAME " " CODEC_I2C_DESC " Pedal"
+			: PEDAL_BOARD_NAME " " CODEC_STRAPPED_DESC " Pedal");
 
 	//
-	// An early board is merely old: the TAC5112 wants a little setup,
-	// which it gets, and that board never routed the second channel,
-	// so it is mono.  Worth saying rather than fixing - and now that
-	// the product string carries it too, this is the louder half of
-	// the same fact rather than the only place it appears.
+	// Stated rather than judged, for the same reason the wire format
+	// carries the observation: "early" is an inference and it is the
+	// reader's to draw.
 	//
-	if (hardware.legacy_codec || hardware.legacy_screen)
-		report_status("Early board: mono only");
+	report_status(hardware.i2c_codec
+		      ? "Codec on i2c: " CODEC_I2C_DESC
+		      : "Codec strapped: " CODEC_STRAPPED_DESC);
+	if (hardware.legacy_screen)
+		report_status("A screen answered on i2c");
 }
 static uint debounce_offset;
 
@@ -192,6 +221,7 @@ static void init_sw_pins(void)
 	PIO pio = pio1;
 
 	debounce_offset = pio_add_program(pio, &debounce_program);
+
 
 	//
 	// Same PIO program for every switch, one state machine each,
@@ -208,12 +238,15 @@ static void init_sw_pins(void)
 		debounce_program_init(pio, sw, debounce_offset, switch_gpio[sw]);
 	}
 
+
 	irq_set_exclusive_handler(PIO1_IRQ_0, switch_irq);
 	irq_set_enabled(PIO1_IRQ_0, true);
 }
 
 // Any pin, not just an LED_GPIO: a board with smart LEDs still has an
-// expression jack that may have something to light on it.
+// expression jack that may have something to light on it.  A board with
+// neither has nothing to dim at all.
+#if !defined(WS2812_GPIO) || defined(EXP_TIP_GPIO)
 static void init_one_pwm_pin(int pin)
 {
 	unsigned int slice = pwm_gpio_to_slice_num(pin);
@@ -223,6 +256,7 @@ static void init_one_pwm_pin(int pin)
 	pwm_set_gpio_level(pin, 0);
 	pwm_set_enabled(slice, true);
 }
+#endif
 
 static void init_pwm_pins(void)
 {
@@ -275,6 +309,7 @@ static void init_i2c_bus(i2c_inst_t *i2c, int kbps, int sda, int scl)
 //
 static volatile int rotary_value;
 
+#ifdef ROTARY_A_GPIO
 static void rotary_irq(void)
 {
 	// Initial impossible previous value
@@ -320,6 +355,7 @@ static void init_rotary_encoder(void)
 	irq_set_exclusive_handler(PIO2_IRQ_0, rotary_irq);
 	irq_set_enabled(PIO2_IRQ_0, true);
 }
+#endif
 
 
 #endif

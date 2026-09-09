@@ -531,8 +531,10 @@ static void handle_switch_bindings(void)
 		unsigned char sw;
 		unsigned char ctrl;
 	} gestures[] = {
+#ifdef ROTARY_SW_GPIO
 		{ ROTARY_SWITCH,		CTRL_ROTARY_TAP },
 		{ LONGPRESS(ROTARY_SWITCH),	CTRL_ROTARY_HOLD },
+#endif
 		{ STOMP_SWITCH,			CTRL_STOMP_TAP },
 		{ LONGPRESS(STOMP_SWITCH),	CTRL_STOMP_HOLD },
 #ifdef EXP_TIP_GPIO

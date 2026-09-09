@@ -18,7 +18,7 @@
 // picked once in board.local and the artifacts say which is which; see
 // the comment at the top of CMakeLists.txt.
 //
-// **Only the pin map is a build option**, and only two of them exist.
+// **Only the pin map is a build option**, and there are three of them.
 // Everything else that varies between boards - which codec, whether a
 // rotary or the MIDI jacks are fitted - either does not reach the pins
 // or is discovered at runtime, and a thing the firmware can find out for
@@ -41,14 +41,11 @@
 #include PEDAL_BOARD_HEADER
 
 //
-// Everything below is common to every board and has been through every
-// generation unchanged.
+// Everything below is common to every board.  The i2s pins, the i2c pins
+// and the codec's address used to be here too, on the strength of having
+// been through every generation unchanged; the minimal board moved all
+// three, so they live with the rest of the pins now.
 //
-
-#define I2S_BCLK		8
-#define I2S_FSYNC		9
-#define I2S_DIN			10
-#define I2S_DOUT		11
 
 //
 // Hardware MIDI is on uart1 on every board - which is not obvious, and
@@ -66,15 +63,21 @@
 // the SDK has no name for, and hardcoding it in uart.h is what stopped
 // the simpler pins from being simpler.
 //
+// Read as a value as well as tested, so every board has to have one.
+#ifndef MIDI_HW
+#define MIDI_HW			0
+#endif
+
 #if MIDI_HW
 #define MIDI_UART		uart1
 #endif
 
-#define I2C0_SDA		4
-#define I2C0_SCL		5
-#define I2C1_SDA		2
-#define I2C1_SCL		3
-
-#define MC24Cxx_I2C		i2c0, 0x50
-#define TAC5112_I2C		i2c0, 0x51
+//
+// The i2c devices that are not the codec.  Both are on i2c1, which only
+// the boards with a screen header ever wired, so both are conditional on
+// its pins existing.  The codec's own address is a board fact and lives
+// in the board file.
+//
+#ifdef I2C1_SDA
 #define SH1106_I2C		i2c1, 0x3c
+#endif
