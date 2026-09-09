@@ -1,110 +1,24 @@
 #
-# The parts worth using again.
+# The parts worth using again.  Hardware/parts.README has the format.
 #
-# Each entry is an index line ending in ':', then indented body lines.
-# The index is what a person would call the part: the value or family
-# first, the package last, and whatever distinguishes it in between.  For
-# resistors and capacitors that always includes the voltage rating and
-# usually the tolerance - not because it always matters, but because it
-# makes the choice explicit.  Index lines are unique, and that is the
-# rule that catches a part being added twice under two numbers.
+# One line of comment or none, and only where it is critical to the
+# part.  Anything that has to be looked at before an order is a CHECK:
+# line instead.
 #
-# Body lines are recognised by shape, not by tags:
-#
-#	Cnnnnnn [basic|promo]	the JLCPCB part, and its pricing tier
-#	http... or www...	a datasheet
-#	CHECK: <sentence>	look at this before placing an order
-#	JLC: rotate <deg>	JLCPCB's footprint against ours
-#	JLC: offset <dx> <dy>	   - see below
-#	one word with a ':'	the KiCad footprint
-#	anything else		manufacturer and part number
-#
-# CHECK: is a tagged shape because prose has no shape that tells it
-# apart from the manufacturer line.  The script below repeats every one
-# of them, for every part in a board's BOM, at the moment the
-# manufacturing files are made - so it is for the things that get
-# checked by eye and cannot be checked by anything else.
-#
-# JLC: is how JLCPCB's own footprint for a part differs from ours,
-# measured from EasyEDA's footprint data rather than remembered.  Both
-# numbers are in *our footprint's* frame:
-#
-#   rotate D    their drawing has to be turned by D to land on ours
-#   offset dx dy   their origin sits here in our footprint's frame
-#
-# and the position file is corrected by them automatically.  A part with
-# no JLC: line needs no correction *that a footprint can show* - the
-# rotation also depends on how the part sits in its tape, which is in no
-# file either side has, so these lines never retire the CHECK: ones.
-#
-# The footprint is only written when it cannot be derived.  A resistor
-# or capacitor with an imperial size in its index gets the obvious KiCad
-# name from the section heading it sits under, so the ## headings are
-# load-bearing rather than decorative.  Inductors are not derivable -
-# two 0806 parts here have different footprints - and neither is
-# anything with a bespoke or connector footprint.
-#
-# 'basic' is JLCPCB's Basic part, which costs no setup fee, and 'promo'
-# is Promotional Extended.  Both change over time and neither is checked
-# automatically; Basic is a weak preference, for LED limiters and
-# pull-ups rather than for anything that matters.
-#
-# Package names are JLCPCB's where JLCPCB's are already clean, and
-# trimmed where they are not: SOT-666 rather than SOT-666-6, QFN-16
-# rather than QFN-16-EP(3x3).  Matching those up by eye is easy; wading
-# through Package_DFN_QFN:VQFN-16-1EP_3x3mm_P0.5mm_EP1.68x1.68mm_ThermalVias
-# is not, which is the whole reason this column exists.
-#
-# Everything below marked 'TODO' carries only what the schematics knew.
-# The parts on the current boards - usb-stomp and single-input - were
-# looked up on 2026-08-12; the older generations were not.
-#
-# One thing to read this list with, before drawing conclusions from a
-# specification: these choices are often somewhat random.  Picking a
-# part means searching JLCPCB - "surface mount chip resistors, 100R,
-# thin film, 0402" - sorting by stock, and taking something near the
-# top.  Stock availability is a real criterion alongside the technical
-# one, and sometimes the deciding one.  So a tight tolerance or an
-# unusual dielectric in an entry below is not automatically a
-# requirement; it may just be what was cheap and plentiful that day.
-# Where a spec *is* load-bearing, the comment says so.
-#
-# This file is read by a script as well as by people, which is why the
-# shapes above are worth keeping to: it checks the KiCad projects
-# against this list - every part used is listed, and every footprint
-# agrees - and builds the JLCPCB BOM's package column out of it.
-#
-
 ## Capacitors
 
-# Bypass and decoupling everywhere - 54 of them across four boards.
-# The Z7 in the Murata code is X7R, not the X7T it looks like.  Worth
-# knowing: the same code on the 4.7uF 0805 was read as X7T once and it
-# is X7R there too.
-0.1uF/16V/X7R/0201:
-	Murata GRM033Z71C104ME14D
-	C3901090
-
-# Crystal load capacitors.  C0G because the load capacitance is part of
-# the oscillator and wants to stay where it was put.
 15pF/25V/5%/C0G/0201:
 	Murata GRM0335C1E150JA01D
 	C161373
 
-# The 0402 crystal load capacitor, for when the 0201 above will not fit.
 15pF/50V/5%/C0G/0402:
 	Murata GRM1555C1H150JA01D
 	C76950
 
-# RF filter on the guitar input, 1k in series ahead of it - C307/C308.
-# One of the few places C0G is possible at all, being small enough.
 150pF/25V/5%/C0G/0402:
 	Murata GRM1555C1E151JA01D
 	C710836
 
-# Second input filter, after the unity-gain buffer - 1k with 2.2nF to
-# ground, C304/C309/C311/C312 on the codec sheet.  C0G because this is
-# a filter corner rather than a bypass.
 2.2nF/50V/2%/C0G/0402:
 	Murata GRM1555C1H222GA01D
 	C2987940
@@ -113,63 +27,52 @@
 	Fenghua 0402B223K500NT
 	C1532
 
-# Power-rail bulk on the 0402 rails.  X5R and 20% is fine here and it is
-# deliberately not the part the audio path gets.
-4.7uF/25V/20%/X5R/0402:
-	Murata GRM155R61E475ME15D
-	C2858031
+# The Z7 in the Murata code is X7R, not the X7T it looks like.
+0.1uF/16V/X7R/0201:
+	Murata GRM033Z71C104ME14D
+	C3901090
 
-# The audio coupling capacitor: C313-C316 into the codec's input, which
-# is what sets the low-frequency corner at 18.6Hz.  The next spin wants
-# 4.7uF here, which means 0805 and a re-layout.
-2.2uF/25V/10%/X7R/0603:
-	Murata GRM188Z71E225KE43D
-	C415535
+0.1uF/16V/10%/X7R/0402:
+	Samsung CL05B104KO5NNNC
+	C1525
 
-10uF/25V/20%/X5R/0603:
-	Murata GRM188R61E106MA73D
-	C91606
-
-22uF/25V/10%/X7R/1210:
-	Samsung CL32B226KAJNNNE
-	C309062
-
-# Two 1uF 0603s exist and they are not duplicates: this one is the
-# Murata GCM automotive-grade part at 25V.
-1uF/25V/10%/X7R/0603:
-	Murata GCM188R71E105KA64D
-	C85862
-
-# ...and this is the other, at 16V and a tighter 5%.
 1uF/16V/5%/X7R/0603:
 	Yageo CC0603JRX7R7BB105
 	C519560
 
-# The 0402 bypass part, on the older boards where the 0201 above was
-# not being used yet.
-0.1uF/16V/10%/X7R/0402:
-	Samsung CL05B104KO5NNNC
-	C1525
+1uF/25V/10%/X7R/0603:
+	Murata GCM188R71E105KA64D
+	C85862
+
+2.2uF/25V/10%/X7R/0603:
+	Murata GRM188Z71E225KE43D
+	C415535
 
 2.2uF/25V/10%/X7R/0805:
 	Murata GRM21BR71E225KE11L
 	C77081
 
-# The intended audio coupling capacitor for the next spin, taking the
-# low-frequency corner from 18.6Hz to about 8.9Hz - the first standard
-# value that puts it under 10Hz.  Held to the audio-path standard: X7R
-# and the physically larger part, name-brand Murata.  4.7uF already
-# exists on these boards as C2858031, but that is an 0402 power-rail
-# part in X5R, which is a different thing entirely.
+4.7uF/25V/20%/X5R/0402:
+	Murata GRM155R61E475ME15D
+	C2858031
+
 4.7uF/50V/10%/X7R/0805:
 	Murata GRM21BZ71H475KE15L
 	C437557
+
+10uF/25V/20%/X5R/0603:
+	Murata GRM188R61E106MA73D
+	C91606
 
 22uF/25V/20%/X5R/0805:
 	Murata GRM21BR61E226ME44L
 	C86816
 
-# Random 47uF hybrid electrolytic
+22uF/25V/10%/X7R/1210:
+	Samsung CL32B226KAJNNNE
+	C309062
+
+# Hybrid electrolytic.
 47uF/35V/D6.3xL5.8:
 	Panasonic EEHZA1V470P
 	C178639
@@ -177,176 +80,118 @@
 
 ## Resistors
 
-# Thin film, for the input bias network and anywhere else the value sets
-# an impedance the guitar sees.  1M is the pedal's input impedance.
-1MΩ/50V/1%/thin-film/0402:
-	Vishay MCS04020C1004FE000
-	C1884615
+1Ω/50V/1%/0402:
+	FOJAN FRC0402F1R00TS
+	C2909329
 
-# The audio-path series resistor into the codec; these went from 1k to
-# 100R on the current generation.
-#
-# The 0.1% and 25ppm are incidental, not a requirement.  This is what
-# came up first searching JLCPCB for a thin-film 100R 0402 sorted by
-# stock, at 533k in stock.  The next entry down was marginally cheaper,
-# 1%, and 38k in stock, and would have done the job just as well.  Do
-# not read this tolerance as a spec to preserve on a respin.
-100Ω/50V/0.1%/thin-film/0402:
-	Yageo RT0402BRD07100RL
-	C705627
+10Ω/50V/1%/0402:
+	UniRoyal 0402WGF100JTCE
+	C25077 basic
 
-# Thin film 1k, for where the value matters.
-1kΩ/50V/1%/thin-film/0402:
-	Yageo RT0402FRE071KL
-	C136974
-
-# The don't-care 1k: LED limiters, pull-ups, the BOOTSEL resistor.
-# Basic, so it costs nothing to place.
-1kΩ/50V/1%/0402:
-	UniRoyal 0402WGF1001TCE
-	C11702 basic
-
-# Small 1kΩ resistor
-1kΩ/25V/1%/0201:
-	UniRoyal 0201WMF1001TEE
-	C270365
-
-# The don't-care 2k2: pull-ups, the BOOTSEL resistor.
-# Basic, so it costs nothing to place.
-2.2kΩ/50V/1%/0402:
-	UniRoyal 0402WGF2201TCE
-	C25879 basic
-
-# The 0402 series damper, and a Basic part unlike its 0201 sibling.
-33Ω/50V/1%/0402:
-	UniRoyal 0402WGF330JTCE
-	C25105 basic
-
-# USB and QSPI series termination.  5% is fine for a series damper.
 33Ω/25V/5%/0201:
 	UniRoyal 0201WMJ0330TEE
 	C423356
 
-100kΩ/50V/1%/0402:
-	UniRoyal 0402WGF1003TCE
-	C25741 basic
+33Ω/50V/1%/0402:
+	UniRoyal 0402WGF330JTCE
+	C25105 basic
+
+100Ω/50V/0.1%/thin-film/0402:
+	Yageo RT0402BRD07100RL
+	C705627
 
 220Ω/50V/1%/0402:
 	UniRoyal 0402WGF2200TCE
 	C25091 basic
 
-5.1kΩ/50V/1%/0402:
-	UniRoyal 0402WGF5101TCE
-	C25905 basic
+1kΩ/25V/1%/0201:
+	UniRoyal 0201WMF1001TEE
+	C270365
 
-# The damping resistor in the analog LDO's LC filter, the 2u2/1R/22u
-# network that sits ahead of U302.
-1Ω/50V/1%/0402:
-	FOJAN FRC0402F1R00TS
-	C2909329
+1kΩ/50V/1%/0402:
+	UniRoyal 0402WGF1001TCE
+	C11702 basic
 
-# The same position on the minimal board, where the analog 5V rail is
-# VBUS through L101 rather than a buck's output.  Basic, so unlike the
-# 1Ω above it costs nothing to place.
-10Ω/50V/1%/0402:
-	UniRoyal 0402WGF100JTCE
-	C25077 basic
+1kΩ/50V/1%/thin-film/0402:
+	Yageo RT0402FRE071KL
+	C136974
 
-# R104 on the rotary board, and the one resistor here whose exact value
-# is a program rather than a preference: it is the VSET resistor that
-# tells the TPS628438 to make 3.3V.  Checked in the netlist rather than
-# assumed - R104.1 goes to U103.3 (VSET) and R104.2 to ground.
-249kΩ/25V/1%/0201:
-	Yageo RC0201FR-07249KL
-	C273273
-
-5.1kΩ/25V/1%/0201:
-	UniRoyal 0201WMF5101TEE
-	C270344
+2.2kΩ/50V/1%/0402:
+	UniRoyal 0402WGF2201TCE
+	C25879 basic
 
 4.7kΩ/50V/1%/0402:
 	UniRoyal 0402WGF4701TCE
 	C25900 basic
 
+5.1kΩ/25V/1%/0201:
+	UniRoyal 0201WMF5101TEE
+	C270344
+
+5.1kΩ/50V/1%/0402:
+	UniRoyal 0402WGF5101TCE
+	C25905 basic
+
+100kΩ/50V/1%/0402:
+	UniRoyal 0402WGF1003TCE
+	C25741 basic
+
+249kΩ/25V/1%/0201:
+	Yageo RC0201FR-07249KL
+	C273273
+
+1MΩ/50V/1%/thin-film/0402:
+	Vishay MCS04020C1004FE000
+	C1884615
+
 ## Inductors
 
-# Two jobs on usb-stomp: L101 is the TPS62153's inductor on the 9V->5V
-# rail, and L301 is the filter into the analog LDO - 2u2 with R313 1R
-# into C317 22u - a parallel-damped LC at 22.9kHz, so it guards the
-# buck's 2.5MHz well and does nothing in the audio band.
+1uH/2A/0806:
+	Murata LQM2MPN1R0MGHL
+	C528977
+	Mylib:L_0806
+
 2.2uH/1.8A/0806:
 	Murata DFE201612E-2R2M=P2
 	C337893
 	Mylib:L_0806
 	https://pim.murata.com/asset/pim4/inductor/J(E)TE243A-0006_PDF_INDUCTOR
 
-# The part the RP2350 datasheet specifies for the chip's built-in 1.1V
-# buck regulator.  This one is a requirement rather than a search hit.
-#
-# It is polarised - the KiCad footprint is named for it - and JLCPCB's
-# rotation for a part and KiCad's are not always the same, so it can
-# arrive turned round.  It is easy to overlook and was nearly missed on
-# the 2026-08-14 order.  Getting it wrong is an RF emissions problem
-# rather than a working/not-working one, which is exactly why nothing
-# else will ever catch it.
+# Polarised, and the inductor the RP2350 datasheet specifies.
 3.3uH/0806:
 	Abracon AOTA-B201610S3R3-101-T
 	C42411119
 	Mylib:AOTA-B2016
 	https://abracon.com/datasheets/AOTA-B201610S3R3-101-T.pdf
-	CHECK: polarised, and rotated by hand at the 2026-08-14 order -
-	CHECK: 180 degrees.  The pads are identical to 0um and the pad
-	CHECK: numbering is arbitrary on a two-terminal part, so the only
-	CHECK: thing that says so is the silkscreen: JLCPCB marks the pad
-	CHECK: ours does not.  The hard kind to spot: the body is
-	CHECK: symmetrical, so nothing looks wrong - match the silkscreen
-	CHECK: dot against the one JLCPCB draws.  The dot is the outer
-	CHECK: winding and belongs on the quiet rail, +1V1, our pad 1
+	CHECK: polarised, and the body is symmetrical - match the silkscreen
+	CHECK: dot to JLCPCB's.  The dot is the outer winding, our pad 1
 	JLC: rotate 180
-
-# The inductor for the TPS628438 buck on the rotary board - L101 there,
-# feeding +3V3.
-1uH/2A/0806:
-	Murata LQM2MPN1R0MGHL
-	C528977
-	Mylib:L_0806
 
 ## Diodes
 
-# The power-path and BOOTSEL isolation diodes - D101, D103, D104, D106
-# on the top sheet and D201 on the MIDI sheet.  One of these is why +5V
-# is nearer 4.7V.  D101's Schottky drop is also what keeps QSPI
-# traffic from faking the encoder's BOOTSEL pull-down.
+# KiCad's Part field says LRC LMBR130T1G; that is not what C191023 ships.
 1N5819WS/40V/1A/SOD-323:
 	Guangdong Hottech 1N5819WS
 	C191023
 	Diode_SMD:D_SOD-323
 
-# Note: KiCad's Part field on this says 'LRC LMBR130T1G', which is a
-# different manufacturer's equivalent and not what C191023 actually
-# ships.  Worth reconciling rather than trusting either blindly.
-
-# Series-connected pair, D105 and D107 on the top sheet.
-BAT54SW/30V/SOT-323:
-	hongjiacheng BAT54SW
-	C22466373
-	Package_TO_SOT_SMD:SOT-323_SC-70
-	https://assets.nexperia.com/documents/data-sheet/BAT54W_SER.pdf
-	CHECK: JLCPCB's footprint for this is 180 degrees from ours -
-	CHECK: measured, and applied to the position file automatically
-	CHECK: now.  Was corrected by hand at the 2026-08-14 order.  The
-	CHECK: easy kind to spot: 180 out and the body plainly does not
-	CHECK: match the footprint outline
-	JLC: rotate 180
-
-# Common cathode, where the BAT54SW above is series-connected.
+# Common cathode.
 BAT54CW/30V/SOT-323:
 	hongjiacheng BAT54CW
 	C22392482
 	Package_TO_SOT_SMD:SOT-323_SC-70
 	https://assets.nexperia.com/documents/data-sheet/BAT54W_SER.pdf
-	CHECK: JLCPCB's footprint is 180 degrees from ours, the same as
-	CHECK: its BAT54SW sibling.  Not yet seen on a board
+	CHECK: rotation applied automatically, and never yet seen on a board
+	JLC: rotate 180
+
+# Series connected.
+BAT54SW/30V/SOT-323:
+	hongjiacheng BAT54SW
+	C22466373
+	Package_TO_SOT_SMD:SOT-323_SC-70
+	https://assets.nexperia.com/documents/data-sheet/BAT54W_SER.pdf
+	CHECK: rotation applied automatically - confirm the body matches the
+	CHECK: footprint outline in the assembly preview
 	JLC: rotate 180
 
 SM4007PL/1kV/1A/SOD-123FL:
@@ -356,52 +201,27 @@ SM4007PL/1kV/1A/SOD-123FL:
 
 ## LEDs
 
-# The plain power LED, across +5V through a resistor.  Not addressable
-# by the firmware at all.
 LED/yellow-green/2V/0402:
 	Lite-On LTST-C281KGKT
 	C160479
-	CHECK: same land pattern as JLCPCB's to 60um, and the silk marks
-	CHECK: are at opposite ends - theirs by pad 2, ours by pad 1 -
-	CHECK: but that is numbering, not orientation: D102 came out
-	CHECK: right on rev 1 with no rotation applied.  Left here as a
-	CHECK: known-benign difference rather than deleted, so the next
-	CHECK: person to notice it does not have to work it out again
 
-# The three addressable status LEDs.  Top-emitting, which is the
-# problem with them: they fire straight up into the 14mm gap between
-# the board and the enclosure panel, and very little comes out.
+# Top-emitting.
 WS2812B/2020:
 	Worldsemi WS2812B-2020-V6
 	C52917434
 	LED_SMD:LED_WS2812B-2020_PLCC4_2.0x2.0mm
 	https://cdn-shop.adafruit.com/product-files/4684/4684_WS2812B-2020_V1.3_EN.pdf
-	CHECK: the two footprints agree - same pads, same numbering, same
-	CHECK: orientation - but they mark completely different things.
-	CHECK: LCSC puts a '+' next to VCC, which is pin 4; ours indents
-	CHECK: the body rectangle at pin 1.  Neither is wrong and they do
-	CHECK: not conflict, but a JLCPCB engineer has queried this part
-	CHECK: before, so expect to be asked and have the answer ready
+	CHECK: JLCPCB have queried this footprint's pin-1 marking before
 
-# The side-emitting variant - D103-D110 on the rotary board, eight of
-# them round the knob.  This is the shape the pedal's status LEDs would
-# want: side-lit parts at the board edge stop the panel gap mattering.
+# Side-emitting.
 WS2812B/4020:
 	Worldsemi WS2812B-4020
 	C965557
 	Mylib:WS2812B-4020
-	CHECK: our footprint has no pin 1 marker and does not need one:
-	CHECK: it outlines the body, with the gap on the pad side, so the
-	CHECK: silk says which face the light comes out of.  The pads are
-	CHECK: all on the back, so the part is unambiguous by shape.
-	CHECK: Placement confirmed right on the boards already built
 
 ## Crystals
 
-# The crystal the RP2350 datasheet recommends.  3225 is the metric size,
-# 3.2 x 2.5mm - crystals are quoted metric where a passive of the same
-# dimensions would be called 1210.  JLCPCB writes it SMD3225-4P.
-# 10pF load capacitance, which is what the 15pF pair above is for.
+# 10pF load capacitance.  3225 is the metric size, 3.2 x 2.5mm.
 ABM8/12MHz/30ppm/3225:
 	Abracon ABM8-272-T3
 	C20625731
@@ -409,114 +229,18 @@ ABM8/12MHz/30ppm/3225:
 
 ## Connectors
 
-# The USB-C receptacle.  JLCPCB ships this as a G-Switch GT-USB-7010C,
-# while the footprint is named for a GCT USB4105 - compatible 16P parts,
-# but the names disagree and that is worth knowing before a respin.
-# JLCPCB's package field for both of these just says 'SMD', which tells
-# you nothing, so the package here is the body designation instead - for
-# a connector that is what identifies the physical part anyway.
-USB-C/2.0/16P/GT-USB-7010C:
-	G-Switch GT-USB-7010C
-	C2843967
-	Connector_USB:USB_C_Receptacle_GCT_USB4105-xx-A_16P_TopMnt_Horizontal
-	CHECK: same footprint as ours to 8um, but JLCPCB's origin sits
-	CHECK: (0.000, -1.305) mm from it.  Applied to the position file
-	CHECK: automatically now - confirm in the preview that it landed
-	CHECK: on the pads rather than 1.3mm the wrong way
-	JLC: offset +0.000 -1.305
-
-# The mid-mount version of the same receptacle, for when the connector
-# is on the underside and how far it hangs below the board matters.
-# JLCPCB files this mounting style under "Laminated board", which is not
-# a phrase that turns up in a search for "mid mount".  The body drops
-# into a 9.24 x 6.50mm notch cut into the board edge, so the footprint
-# carries Edge.Cuts and the board outline has to be broken by hand to
-# meet it - that is the part of fitting this that is not just placing a
-# footprint.
-#
-# The number on the end is the board thickness and it is not a
-# preference.  The body is 3.16mm tall on every one of these sheets and
-# its underside sits flush with the board's far face, so it stands
-# 3.16mm minus the thickness proud of the face it is soldered to: a
-# 1.6mm board recovers 1.6mm, which is the whole reason this is the
-# CB1.6.  SHOU HAN also sell C2906289 (0.8mm, 25293 in stock) and
-# C49287214 (1.0mm, 4419) - the 1.0mm one has neither EasyEDA data nor a
-# dimensional drawing, so nothing here could check it.
-#
-# Their own EasyEDA data draws the notch 9.000mm wide and 0.049mm off
-# centre, which is narrower than the 8.94mm body on one side.  Every
-# other number in it matches the datasheet to the micron - 4.00 between
-# the shell posts, 11.24 across them, 2.10 to the board edge, 4.60 and
-# 5.70 to the two ends of the contact row - and this one does not, so
-# ours uses the datasheet's 9.24 centred.
-#
-# The datasheet is wrong about the other pair of shell holes.  Its
-# recommended layout gives 1.80 for the pair near the board edge and
-# 0.80 for the pair behind them, but 0.80 is the pin and not its hole:
-# the side view draws each pin sitting in its hole, a 1.20 pin in a 1.80
-# one and a 0.80 pin in a 1.20 one, and measuring those tab outlines
-# against the 4.00 between the post centres gives 1.83 and 1.18.  A 0.80
-# hole for a 0.80 pin is a press fit, which is the tell.  So the far
-# holes here are 0.60 x 1.20.
-#
-# The contact row sits 0.20mm from the closed end of the notch, and that
-# is the part rather than our drawing of it: EasyEDA's pads against
-# EasyEDA's own outline give 0.2009, ours against the datasheet's notch
-# give 0.2000, and the datasheet's own arithmetic - 4.60 to the near
-# edge of the row, less 6.50 of notch depth minus the 2.10 to the board
-# edge - gives 0.20 with no EasyEDA involved.  It is exactly JLCPCB's
-# copper-to-edge floor with nothing spare, so a board taking this part
-# wants a local DRC exception rather than a shorter pad.  The notch
-# width does not enter into it; the tight edge is the end, not the
-# sides.  Stock 55004 on 2026-08-26.
-USB-C/2.0/16P/mid-mount/TYPE-C-16P-CB1.6:
-	SHOU HAN TYPE-C 16P CB1.6 073
-	C2906290
-	Mylib:TYPE-C-16P-CB1.6
-	https://atta.szlcsc.com/upload/public/pdf/source/20211021/35D048B933FA988260DD32545575C1A5.pdf
-	CHECK: our footprint is EasyEDA's to 0um, no rotation and no origin
-	CHECK: offset, so there is no JLC: line.  What that does not cover
-	CHECK: is the notch, which is not a pad - confirm in the fab
-	CHECK: preview that Edge.Cuts carries it and that the board outline
-	CHECK: is broken between its two sides
-
-# The audio jacks, TRRS with switched contacts.  TN and RN grounded, so
-# an empty jack shorts tip to ground.
-AudioJack/TRRS/PJ-320D:
-	SHOU HAN PJ-320D
-	C431535
-	Mylib:PJ-320D
-	CHECK: same footprint as ours to 0um, but JLCPCB's origin sits
-	CHECK: (+7.400, 0.000) mm from it.  Applied to the position file
-	CHECK: automatically now, and 7.4mm is impossible to miss in the
-	CHECK: preview - so this is the part that proves the sign
-	JLC: offset +7.400 +0.000
-
-# The vertical Type-C, J2 on pedal-board.  The GT-USB-7010C above is
-# the horizontal one and is what the current boards take.
-USB-C/2.0/16P/GT-USB-7051A:
-	G-Switch GT-USB-7051A
-	C2843970
-	Connector_USB:USB_C_Receptacle_G-Switch_GT-USB-7051x
-
-# J4 on pedal-board, carrying i2c off the board.
-JST-SH/4P/1.00mm:
-	JST SM04B-SRSS-TB(LF)(SN)
-	C160404
-	Connector_JST:JST_SH_SM04B-SRSS-TB_1x04-1MP_P1.00mm_Horizontal
-	JLC: offset +0.000 -0.062
-
-# The FFC connector at both ends of the 12-way ribbon between the split
-# boards - power, i2c for control and i2s for audio down one cable.
-# J4 on audio-jacks and J1 on pedal-board.
 AFH-5/12P/0.5mm-FFC:
 	JUSHUO AFH05-S12FIA-1H
 	C5371161
 	Mylib:AFH-5-S12FIA-1H
 
-# The tiny Hirose board-to-board pair the split generation stacked on:
-# plug on codec (J1), socket on pedal-board (J3).  0.35mm pitch, which
-# is what "tiny" means here.
+AudioJack/TRRS/PJ-320D:
+	SHOU HAN PJ-320D
+	C431535
+	Mylib:PJ-320D
+	CHECK: 7.4mm origin offset applied automatically - confirm the pads land
+	JLC: offset +7.400 +0.000
+
 BM28/24P/0.35mm/plug:
 	Hirose BM28B0.6-24DP/2-0.35V(51)
 	C424568
@@ -529,173 +253,50 @@ BM28/24P/0.35mm/socket:
 	Mylib:BM28B0.6-24DS
 	https://www.hirose.com/product/series/BM28
 
+JST-SH/4P/1.00mm:
+	JST SM04B-SRSS-TB(LF)(SN)
+	C160404
+	Connector_JST:JST_SH_SM04B-SRSS-TB_1x04-1MP_P1.00mm_Horizontal
+	JLC: offset +0.000 -0.062
+
+# Horizontal.  JLCPCB ships a G-Switch part; the footprint is named for a GCT USB4105.
+USB-C/2.0/16P/GT-USB-7010C:
+	G-Switch GT-USB-7010C
+	C2843967
+	Connector_USB:USB_C_Receptacle_GCT_USB4105-xx-A_16P_TopMnt_Horizontal
+	CHECK: origin offset applied automatically - confirm the pads land
+	JLC: offset +0.000 -1.305
+
+# Vertical.
+USB-C/2.0/16P/GT-USB-7051A:
+	G-Switch GT-USB-7051A
+	C2843970
+	Connector_USB:USB_C_Receptacle_G-Switch_GT-USB-7051x
+
+# Mid-mount, CB1.6 being the board thickness: the body needs a 9.24 x 6.50mm notch, which the footprint carries on Edge.Cuts.
+USB-C/2.0/16P/mid-mount/TYPE-C-16P-CB1.6:
+	SHOU HAN TYPE-C 16P CB1.6 073
+	C2906290
+	Mylib:TYPE-C-16P-CB1.6
+	https://atta.szlcsc.com/upload/public/pdf/source/20211021/35D048B933FA988260DD32545575C1A5.pdf
+	CHECK: confirm Edge.Cuts carries the notch and the outline is broken for it
+
 ## Switches
 
-# TODO
-ZX-QC1212/tactile/SMD:
-	ZX-QC1212-4.3TP
-	C7470196
-	Mylib:ZX-QC1212
-
-# The BOOTSEL button on the minimal board, and the reason that board
-# needs no magnetic sensor: it sits on the underside with the rest of
-# the assembly, behind a hole in the bottom of the case, where a
-# footswitch-sized part could not go.  Two pads, 3.9 x 3.0mm body,
-# 1.6N, 100k cycles, and about 2mm tall - that last number is the one
-# the case has to be designed around, because the whole family shares
-# this footprint and differs in height.
-#
-# JLCPCB's package string is 'SMD,4x3mm'; written here without the
-# comma, since a comma is the one character the BOM column cannot
-# carry.  Basic, and stock is over 900k, so neither price nor supply is
-# a consideration.
-#
-# EasyEDA's pads land on ours - pad 1 at -2.185 against our -2.225,
-# same side, same numbering - so there is no JLC: line.
+# About 2mm tall; the family shares this footprint and differs in height.
 TS-1088/tactile/1.6N/SMD-4x3mm:
 	XUNPU TS-1088-AR02016
 	C720477 basic
 	Button_Switch_SMD:SW_SPST_TS-1088-xR020
 
+ZX-QC1212/tactile/SMD:
+	ZX-QC1212-4.3TP
+	C7470196
+	Mylib:ZX-QC1212
+
 ## Integrated circuits
 
-# The MCU.  QFN-60(7x7) in JLCPCB's words.
-RP2354A/QFN-60:
-	Raspberry Pi RP2354A
-	C41378174
-	Package_DFN_QFN:QFN-60-1EP_7x7mm_P0.4mm_EP3.4x3.4mm_ThermalVias
-	https://datasheets.raspberrypi.com/rp2350/hardware-design-with-rp2350.pdf
-
-# The codec.  Essentially a VQFN-24 but with four extra corner pads
-# (A1-A4) beside the thermal pad, which is why the footprint is bespoke
-# and named for the chip.  JLCPCB writes the package VQFN-24(4x4).
-TAC5242/VQFN-24:
-	TI TAC5242IRGER
-	C47122155
-	Mylib:TAC5242
-	https://www.ti.com/lit/ds/symlink/tac5242.pdf
-
-# The input buffer: gigaohm input impedance, which is why the 1k series
-# resistor ahead of it does not matter.
-OPA2365/SOIC-8:
-	TI OPA2365AIDR
-	C130011
-	Package_SO:SOIC-8_3.9x4.9mm_P1.27mm
-	JLC: rotate 90
-
-# The same buffer in a fifth of the area - 2.9 x 1.6mm against the
-# 2365's 3.9 x 4.9mm - and what the minimal board uses.  20MHz of
-# gain-bandwidth against the 2365's 50MHz, which decides nothing for a
-# unity-gain buffer at audio, and 1.6mA per channel against 4.6mA,
-# which is 6mA off the analog rail.  9nV/rtHz at 1kHz, under the
-# 128nV/rtHz the 1M input resistor makes on its own; the 2365's
-# datasheet quotes noise only at 100kHz, so the two do not compare at a
-# frequency this circuit cares about.
-#
-# Supply 1.7V to 5.5V and absolute maximum 7V, where the 2365's
-# absolute maximum is 5.5V.  That matters here and not on the pedal
-# board: this one hangs off the 5V rail rather than 3.3V.
-#
-# EasyEDA's pad 1 lands on ours, so there is no JLC: line.  Stock was
-# 437 on 2026-08-25, which is the warning band rather than the
-# comfortable one - look before ordering.
-OPA2323/TSOT-23-8:
-	TI OPA2323IDDFR
-	C36686067
-	Package_TO_SOT_SMD:TSOT-23-8
-	https://www.ti.com/lit/ds/symlink/opa2323.pdf
-
-# 9V -> 5V.  Straps verified against SLVSAL5E in 111: DEF low selects
-# 5.0V, FSW low selects 2.5MHz, FB to AGND is what the fixed part wants.
-# No MODE pin, so power-save cannot be disabled.
-TPS62153/5V/QFN-16:
-	TI TPS62153RGTR
-	C477927
-	Package_DFN_QFN:VQFN-16-1EP_3x3mm_P0.5mm_EP1.68x1.68mm_ThermalVias
-	http://www.ti.com/lit/ds/symlink/TPS62150.pdf
-	JLC: rotate 90
-
-# The TLV767 family: low-noise fixed-output LDOs, 1A, 60uVrms and 70dB
-# PSRR at 1kHz.  Both of the ones used here are fixed versions rather
-# than adjustable, so no divider and nothing to get wrong.
-#
-# Two of these on usb-stomp: U103 is the digital 3.3V straight off the
-# 5V rail, and U302 is the analog 3.3V behind the L301/R313/C317 filter
-# - which is the whole reason for having two.
-TLV76733/3.3V/WSON-6:
-	TI TLV76733DRVR
-	C2848334
-	Package_SON:WSON-6-1EP_2x2mm_P0.65mm_EP1x1.6mm
-	http://www.ti.com/lit/gpn/TLV767
-
-# The MIDI input buffer.
-SN74AHCT1G125/SC-70-5:
-	TI SN74AHCT1G125DCKR
-	C350557
-	Package_TO_SOT_SMD:SOT-353_SC-70-5
-	http://www.ti.com/lit/sg/scyt129e/scyt129e.pdf
-	CHECK: JLCPCB's footprint is 90 degrees from ours, applied
-	CHECK: automatically now.  255um residual - the same land pattern,
-	CHECK: far enough apart to be worth an eye.  Likely one of the
-	CHECK: fixups made at the 2026-08-14 order without being recorded
-	JLC: rotate 90
-
-# USB ESD protection.  JLCPCB writes the package SOT-666-6.
-USBLC6/SOT-666:
-	STM USBLC6-2P6
-	C15999
-	Package_TO_SOT_SMD:SOT-666
-	https://www.st.com/resource/en/datasheet/usblc6-2.pdf
-	JLC: rotate 180
-
-# The MIDI input optocoupler.  JLCPCB's package string here is just
-# 'SOP', which says nothing useful; the footprint is a 5-pin SO-6
-# outline, so the package field wants confirming against the datasheet.
-TLP2310/SOP:
-	Toshiba TLP2310
-	C7473281
-	Package_SO:SO-5-6_4.55x3.7mm_P1.27mm
-	https://toshiba.semicon-storage.com/info/TLP2310_datasheet_en_20220913.pdf
-	CHECK: JLCPCB's footprint is 90 degrees from ours, applied
-	CHECK: automatically now.  Likely the other of the fixups made at
-	CHECK: the 2026-08-14 order without being recorded
-	JLC: rotate 90
-
-# U102, still fitted on usb-stomp.  Scene storage no longer lives here -
-# flash_store.h keeps slots at the top of internal flash instead - so
-# what this part does on the current board is worth checking rather than
-# assuming from its presence.
-M24C64/64Kbit/UFDFPN-5:
-	STM M24C64-FMH6TG
-	C222104
-	Mylib:UFDFPN5
-	https://www.st.com/en/memories/m24c64-f.html#documentation
-
-# The 2kbit part this started on, and the reason scenes moved into
-# internal flash: it held exactly one scene, and the control bindings
-# alone outgrew it.
-M24C02/2Kbit/UFDFPN-5:
-	STM M24C02-FMH6TG
-	C222197
-	Mylib:UFDFPN5
-	https://www.st.com/resource/en/datasheet/m24c02-r.pdf
-
-# The 5V member of the same low-noise LDO family as the TLV76733 above,
-# also fixed-output.  U1 on audio-jacks.
-TLV76750/5V/WSON-6:
-	TI TLV76750DRVR
-	C2872569
-	Package_SON:WSON-6-1EP_2x2mm_P0.65mm_EP1x1.6mm
-	http://www.ti.com/lit/gpn/TLV767
-
-# A 8MB PSRAM chip in a USON-8L footprint.
-#
-# EasyEDA draws the eight pads as two horizontal rows where ours are two
-# vertical columns, so their drawing wants a quarter turn.  Without the
-# line below, lcsc verify puts the part 1398um out against an 82um
-# land-pattern difference; with it, 0.  The part reached parts.txt in
-# 2525e4d, after the 2026-08-14 run that measured the correction on
-# every other part, so nothing has been ordered with it missing.
+# 8MB PSRAM, QSPI.
 APS6404L/3.3V/USON-8L:
 	AP-Memory APS6404L-3SQR-ZR
 	C3040877
@@ -703,8 +304,96 @@ APS6404L/3.3V/USON-8L:
 	https://www.mouser.com/datasheet/2/1127/APM_PSRAM_QSPI_APS6404L_3SQR_v2_3_PKG-1954826.pdf
 	JLC: rotate 90
 
-# The 3-axis magnetic sensor on the rotary test board, U102 there, for
-# reading knob position off a magnet.  SPI, 12-bit.
+# Latching TMR magnetic switch: the magnet moves past it, not just closer.
+KTM1331TD/latch/9Gs/continuous/SOT-23:
+	CONNTEK KTM1331TD-ST3
+	C7544656
+	Package_TO_SOT_SMD:SOT-23
+	https://wmsc.lcsc.com/wmsc/upload/file/pdf/v2/lcsc/2404011708_CONNTEK-KTM1331TD-ST3_C7544656.pdf
+	JLC: rotate 180
+
+# i2c EEPROM.
+M24C02/2Kbit/UFDFPN-5:
+	STM M24C02-FMH6TG
+	C222197
+	Mylib:UFDFPN5
+	https://www.st.com/resource/en/datasheet/m24c02-r.pdf
+
+# i2c EEPROM.
+M24C64/64Kbit/UFDFPN-5:
+	STM M24C64-FMH6TG
+	C222104
+	Mylib:UFDFPN5
+	https://www.st.com/en/memories/m24c64-f.html#documentation
+
+# Dual op-amp, rail-to-rail in but out only to within 15-45mV.  Maximum 7V.
+OPA2323/TSOT-23-8:
+	TI OPA2323IDDFR
+	C36686067
+	Package_TO_SOT_SMD:TSOT-23-8
+	https://www.ti.com/lit/ds/symlink/opa2323.pdf
+
+# Dual op-amp.  Absolute maximum 5.5V.
+OPA2365/SOIC-8:
+	TI OPA2365AIDR
+	C130011
+	Package_SO:SOIC-8_3.9x4.9mm_P1.27mm
+	JLC: rotate 90
+
+# The MCU.
+RP2354A/QFN-60:
+	Raspberry Pi RP2354A
+	C41378174
+	Package_DFN_QFN:QFN-60-1EP_7x7mm_P0.4mm_EP3.4x3.4mm_ThermalVias
+	https://datasheets.raspberrypi.com/rp2350/hardware-design-with-rp2350.pdf
+
+# Single tri-state buffer, TTL input thresholds.
+SN74AHCT1G125/SC-70-5:
+	TI SN74AHCT1G125DCKR
+	C350557
+	Package_TO_SOT_SMD:SOT-353_SC-70-5
+	http://www.ti.com/lit/sg/scyt129e/scyt129e.pdf
+	CHECK: rotation applied automatically; 255um residual is worth an eye
+	JLC: rotate 90
+
+# Stereo codec, i2c.  105dB ADC / 114dB DAC.  One land pattern for all TAC5xxx.
+TAC5112/VQFN-24:
+	TI TAC5112IRGER
+	C44853692
+	Mylib:TAC5112
+	https://www.ti.com/lit/ds/symlink/tac5112.pdf
+
+# Stereo codec, no i2c: hardware-strapped on MD0-MD5.
+TAC5242/VQFN-24:
+	TI TAC5242IRGER
+	C47122155
+	Mylib:TAC5242
+	https://www.ti.com/lit/ds/symlink/tac5242.pdf
+
+# Optocoupler.
+TLP2310/SOP:
+	Toshiba TLP2310
+	C7473281
+	Package_SO:SO-5-6_4.55x3.7mm_P1.27mm
+	https://toshiba.semicon-storage.com/info/TLP2310_datasheet_en_20220913.pdf
+	CHECK: rotation applied automatically - confirm in the preview
+	JLC: rotate 90
+
+# 3.3V fixed LDO, low noise.  EN has an internal pullup, so it may float.
+TLV76733/3.3V/WSON-6:
+	TI TLV76733DRVR
+	C2848334
+	Package_SON:WSON-6-1EP_2x2mm_P0.65mm_EP1x1.6mm
+	http://www.ti.com/lit/gpn/TLV767
+
+# 5V fixed LDO, low noise.
+TLV76750/5V/WSON-6:
+	TI TLV76750DRVR
+	C2872569
+	Package_SON:WSON-6-1EP_2x2mm_P0.65mm_EP1x1.6mm
+	http://www.ti.com/lit/gpn/TLV767
+
+# 3-axis magnetic sensor, SPI.
 TMAG5170-Q1/VSSOP-8:
 	TI TMAG5170A1QDGKR
 	C5220642
@@ -712,10 +401,15 @@ TMAG5170-Q1/VSSOP-8:
 	https://www.ti.com/lit/ds/symlink/tmag5170-q1.pdf
 	JLC: rotate 90
 
-# A small synchronous buck: 1.8-5.5V in, 600mA, 1.5MHz, 275nA quiescent.
-# U103 on the rotary board, making +3V3 straight from VBUS.  The output
-# is set by a single resistor to VSET - which is what the 249k above is,
-# confirmed from the netlist: R104.1 to U103.3 (VSET), R104.2 to ground.
+# Fixed 5V buck.  No MODE pin, so power-save cannot be disabled.
+TPS62153/5V/QFN-16:
+	TI TPS62153RGTR
+	C477927
+	Package_DFN_QFN:VQFN-16-1EP_3x3mm_P0.5mm_EP1.68x1.68mm_ThermalVias
+	http://www.ti.com/lit/ds/symlink/TPS62150.pdf
+	JLC: rotate 90
+
+# Buck converter, output set by a single VSET resistor.
 TPS628438/SOT-563:
 	TI TPS628438DRLR
 	C38060243
@@ -723,24 +417,10 @@ TPS628438/SOT-563:
 	https://www.ti.com/lit/ds/symlink/tps62843.pdf
 	JLC: rotate 180
 
-# The earlier codec, on the split boards.  Same VQFN-24-with-corner-pads
-# package as the TAC5242; the difference that mattered was the input,
-# where this one left the negative input floating rather than tying it
-# to ground through a matching capacitor.
-TAC5112/VQFN-24:
-	TI TAC5112IRGER
-	C44853692
-	Mylib:TAC5112
-	https://www.ti.com/lit/ds/symlink/tac5112.pdf
-
-# A latching TMR switch
-# 'T' is the "continuous" version at 1.9uA, really 5kHz typical sample rate
-# 'D' is the 98 Gauss B_OP version (least sensitive)
-# Latching: move the magnet not closer, but *past* the sensor through
-# the board for on/off sensing
-KTM1331TD/latch/9Gs/continuous/SOT-23:
-	CONNTEK KTM1331TD-ST3
-	C7544656
-	Package_TO_SOT_SMD:SOT-23
-	https://wmsc.lcsc.com/wmsc/upload/file/pdf/v2/lcsc/2404011708_CONNTEK-KTM1331TD-ST3_C7544656.pdf
+# USB ESD protection; pins 1 and 6 are one node and 3 and 4 another.
+USBLC6/SOT-666:
+	STM USBLC6-2P6
+	C15999
+	Package_TO_SOT_SMD:SOT-666
+	https://www.st.com/resource/en/datasheet/usblc6-2.pdf
 	JLC: rotate 180

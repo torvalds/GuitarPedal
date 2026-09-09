@@ -1,0 +1,87 @@
+The format of Hardware/parts.txt
+================================
+
+The list of parts worth using again: JLCPCB part numbers, packages, and
+how JLCPCB's footprint for a part differs from ours.  Read by people
+scanning for a part, and by `jlc`, which checks the KiCad projects
+against it and builds the BOM's package column out of it.
+
+Each entry is an index line ending in ':', then indented body lines.
+The index is what a person would call the part: the value or family
+first, the package last, whatever distinguishes it in between.  For
+resistors and capacitors that includes the voltage rating and usually
+the tolerance, so the choice is explicit.  Index lines are unique, which
+is what catches a part being listed twice under two numbers.
+
+Body lines are recognised by shape, not by tags:
+
+	Cnnnnnn [basic|promo]	the JLCPCB part, and its pricing tier
+	MPN: <part number>	the manufacturer's own, spelled out
+	http... or www...	a datasheet
+	CHECK: <sentence>	look at this before placing an order
+	JLC: rotate <deg>	JLCPCB's footprint against ours
+	JLC: offset <dx> <dy>	   - see below
+	one word with a ':'	the KiCad footprint
+	anything else		manufacturer and part number
+
+CHECK: is tagged because prose has no shape that tells it apart from the
+manufacturer line.  Every one is reprinted, for every part in a board's
+BOM, when the manufacturing files are made - so it is for what gets
+checked by eye and cannot be checked by anything else.  Keep it to the
+instruction.
+
+MPN: is only needed when the part number is not the last word of the
+manufacturer line, because that is what `jlc sync` writes otherwise. One
+entry needs it: SHOU HAN's `TYPE-C 16P CB1.6 073`, whose number is four
+words and whose maker's name is two. Without the line, sync silently
+rewrites a correct part number in the schematic to `073`.
+
+JLC: is how JLCPCB's own footprint differs from ours, measured from
+EasyEDA's data rather than remembered.  Both numbers are in *our*
+footprint's frame:
+
+	rotate D	their drawing turns by D to land on ours
+	offset dx dy	their origin sits here in our frame
+
+and the position file is corrected by them automatically.  No JLC: line
+means no correction *that a footprint can show* - rotation also depends
+on how the part sits in its tape, which is in no file either side has,
+so these never retire the CHECK: ones.
+
+The footprint is written only when it cannot be derived.  A resistor or
+capacitor with an imperial size in its index gets the obvious KiCad name
+from the section heading it sits under, so the ## headings are load
+bearing.  Inductors are not derivable - two 0806 parts here have
+different footprints - and neither is anything bespoke.
+
+Package names are JLCPCB's where those are clean and trimmed where they
+are not: SOT-666 rather than SOT-666-6, QFN-16 rather than QFN-16-EP(3x3).
+
+Entries are sorted within a section: by value for the passives, by name
+for everything else.
+
+Comments
+--------
+
+One line, or none.  A comment earns its line only when it is critical to
+the part and is not already in the index line above it - a polarised
+inductor, an absolute maximum, which of two suffixes means what.
+
+Not: how the part was used on some board, that it has been verified,
+that it differs from a part it obviously differs from, or what happened
+on a past order.  That is the schematic's job, or the commit's, and here
+it hides the entries and the few comments that matter.
+
+Reading the data
+----------------
+
+Picking a part often means searching JLCPCB, sorting by stock, and
+taking something near the top; stock is a real criterion and sometimes
+the deciding one.  So a tight tolerance or an unusual dielectric in an
+entry is not automatically a requirement.  Where a spec is load bearing,
+the comment says so.
+
+'basic' is JLCPCB's Basic part, which costs no setup fee, and 'promo' is
+Promotional Extended.  Both change over time and neither is checked.
+
+'TODO' marks an entry carrying only what the schematics knew.
