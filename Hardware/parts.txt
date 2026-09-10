@@ -84,6 +84,10 @@
 	FOJAN FRC0402F1R00TS
 	C2909329
 
+1Ω/75V/1%/0603:
+	UniRoyal 0603WAF100KT5E
+	C22936 basic
+
 10Ω/50V/1%/0402:
 	UniRoyal 0402WGF100JTCE
 	C25077 basic
@@ -213,11 +217,12 @@ WS2812B/2020:
 	https://cdn-shop.adafruit.com/product-files/4684/4684_WS2812B-2020_V1.3_EN.pdf
 	CHECK: JLCPCB have queried this footprint's pin-1 marking before
 
-# Side-emitting.
+# Side-emitting.  The -V6 is not a drop-in for the earlier version
 WS2812B/4020:
-	Worldsemi WS2812B-4020
-	C965557
-	Mylib:WS2812B-4020
+	Worldsemi WS2812B-4020-V6
+	C52941387
+	Mylib:WS2812B-4020-V6
+	CHECK: Check footprint offsets
 
 ## Crystals
 
@@ -276,6 +281,7 @@ USB-C/2.0/16P/GT-USB-7051A:
 # Mid-mount, CB1.6 being the board thickness: the body needs a 9.24 x 6.50mm notch, which the footprint carries on Edge.Cuts.
 USB-C/2.0/16P/mid-mount/TYPE-C-16P-CB1.6:
 	SHOU HAN TYPE-C 16P CB1.6 073
+	MPN: TYPE-C 16P CB1.6 073
 	C2906290
 	Mylib:TYPE-C-16P-CB1.6
 	https://atta.szlcsc.com/upload/public/pdf/source/20211021/35D048B933FA988260DD32545575C1A5.pdf
@@ -360,8 +366,16 @@ SN74AHCT1G125/SC-70-5:
 TAC5112/VQFN-24:
 	TI TAC5112IRGER
 	C44853692
-	Mylib:TAC5112
+	Mylib:TAC5242
 	https://www.ti.com/lit/ds/symlink/tac5112.pdf
+
+# Stereo codec, i2c.  119dB ADC / 120dB DAC.
+TAC5212/VQFN-24:
+	TI TAC5212IRGER
+	C44853694
+	Mylib:TAC5242
+	https://www.ti.com/lit/ds/symlink/tac5212.pdf
+	CHECK: stock was single-digit on 2026-09-09 - confirm before ordering
 
 # Stereo codec, no i2c: hardware-strapped on MD0-MD5.
 TAC5242/VQFN-24:
