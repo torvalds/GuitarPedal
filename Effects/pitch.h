@@ -42,12 +42,18 @@ static void pitch_init(unsigned char pot[10])
 	pitch.step = step - 1;				// -0.75 .. 3
 	pitch.feedback = pitch_feedback_pot(pot);
 
-	// Long enough to average the carrier out of the moment products
-	// (their ripple sits at twice the note, ~26dB down at 165Hz),
-	// short enough to follow a note change well inside the crossfade
-	// window.  This only has to be right about what is playing, never
-	// about when: the weights enter the prediction directly below.
-	pitch.follow = time_constant(20.0f);
+	// Fast enough to follow the tap correlation around the loop: with
+	// the feedback pot up the taps read recirculated content whose
+	// correlation at the tap spacing turns over on loop timescales
+	// (tens of ms), and estimates that lag it leave the crossfade
+	// ripple partly uncorrected (4.4dB swing on a sustained 84Hz at
+	// 20ms, 2.8dB at 2ms).  Slower would average the carrier ripple
+	// out of the products more fully - it sits at twice the note -
+	// but the mistracking costs more than the ripple does down to
+	// here; below ~1ms the ripple starts winning again on low notes.
+	// One constant for all three moments: they enter the prediction
+	// below as a ratio, and staggered lags pump the gain instead.
+	pitch.follow = time_constant(2.0f);
 }
 
 // i is discontinuous when sin**2 is 0
