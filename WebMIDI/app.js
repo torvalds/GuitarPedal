@@ -2237,10 +2237,16 @@ function handleIdentity(id) {
     // Mono, because they never routed the second channel. Worth knowing
     // which board is on the bench, not worth alarming anybody.
     //
-    if (found.legacy_codec)
-        early.push('A TAC5112 codec answered on i2c, so this is an early ' +
-                   'board: mono only, and the codec is set up over i2c ' +
-                   'rather than strapped.');
+    //
+    // What answered on i2c, and what the pedal says that means. The same
+    // bit is mono-against-stereo on the split boards and DC-coupled
+    // against AC-coupled on minimal, so the firmware sends the word for
+    // it rather than leaving that to be inferred here - and 'mono' is
+    // its own warning without needing a box round it.
+    //
+    if (found.codec)
+        notes.push(`Codec ${found.i2c_codec ? 'set up over i2c' : 'strapped'}` +
+                   `: ${found.codec}.`);
     if (found.legacy_screen)
         early.push('An SH1106 screen answered on i2c, from a generation ' +
                    'that had one. Nothing drives it.');

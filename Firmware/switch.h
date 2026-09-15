@@ -16,7 +16,9 @@
 // they are - see init_exp_switches().  They take the last two of pio1's
 // four state machines, which is the ceiling on this scheme.
 enum switch_id {
+#ifdef ROTARY_SW_GPIO
 	ROTARY_SWITCH,		// the rotary encoder's shaft, pressed down
+#endif
 	STOMP_SWITCH,		// the footswitch
 	NR_ONBOARD_SWITCHES,	// the ones that are soldered down
 #ifdef EXP_TIP_GPIO
@@ -27,7 +29,9 @@ enum switch_id {
 };
 
 static const unsigned char switch_gpio[NR_SWITCHES] = {
+#ifdef ROTARY_SW_GPIO
 	[ROTARY_SWITCH]	= ROTARY_SW_GPIO,
+#endif
 	[STOMP_SWITCH]	= STOMP_GPIO,
 #ifdef EXP_TIP_GPIO
 	[EXP_TIP_SWITCH]	= EXP_TIP_GPIO,

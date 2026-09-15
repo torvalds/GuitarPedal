@@ -310,7 +310,9 @@ APS6404L/3.3V/USON-8L:
 	https://www.mouser.com/datasheet/2/1127/APM_PSRAM_QSPI_APS6404L_3SQR_v2_3_PKG-1954826.pdf
 	JLC: rotate 90
 
-# Latching TMR magnetic switch: the magnet moves past it, not just closer.
+# Latching TMR switch: the magnet must move *past* it, not merely closer.
+# BOP +/-9 Gs, from the D series electrical table - the ordering-code page
+# says 98 Gauss and contradicts its own feature list and the A/B/C/E run.
 KTM1331TD/latch/9Gs/continuous/SOT-23:
 	CONNTEK KTM1331TD-ST3
 	C7544656

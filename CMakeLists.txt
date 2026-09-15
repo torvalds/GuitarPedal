@@ -54,7 +54,7 @@ pico_sdk_init()
 # What is left is the pin map, which the unified board shares four GPIOs
 # of and no more.  That is the whole of the build-time question.
 #
-set(PEDAL_BOARDS split unified)
+set(PEDAL_BOARDS split unified minimal)
 
 # ...and the same list as prose, for the messages below.
 list(JOIN PEDAL_BOARDS " " PEDAL_BOARDS_PRETTY)
@@ -263,6 +263,10 @@ add_custom_target(pedal_generated DEPENDS ${PEDAL_GENERATED})
 # state machine does, and which pin it does it on arrives at runtime in
 # *_program_init().
 #
+# i2s is the exception and is generated per board below.  Its BCLK/FSYNC
+# side-set encodes *which* pin is which in the instruction itself, so
+# that one fact cannot arrive at runtime; see Firmware/pio/i2s.pio.
+#
 # They go through an INTERFACE library because pico_generate_pio_header()
 # writes to one fixed path per .pio file: calling it once per board would
 # declare three rules for the same output and cmake refuses that outright.
@@ -279,7 +283,6 @@ add_library(pedal_pio INTERFACE)
 pico_generate_pio_header(pedal_pio ${PIO_DIR}/bitstream.pio)
 pico_generate_pio_header(pedal_pio ${PIO_DIR}/debounce.pio)
 pico_generate_pio_header(pedal_pio ${PIO_DIR}/rotary.pio)
-pico_generate_pio_header(pedal_pio ${PIO_DIR}/i2s.pio)
 
 #
 # ...and the header-generating targets it made, named after it, which
@@ -290,8 +293,7 @@ pico_generate_pio_header(pedal_pio ${PIO_DIR}/i2s.pio)
 set(PEDAL_PIO_TARGETS
 	pedal_pio_bitstream_pio_h
 	pedal_pio_debounce_pio_h
-	pedal_pio_rotary_pio_h
-	pedal_pio_i2s_pio_h)
+	pedal_pio_rotary_pio_h)
 
 #
 # One board, one target, one name.  Everything below here is per-board;
@@ -305,6 +307,38 @@ add_executable(${tgt})
 
 add_dependencies(${tgt} pedal_generated ${PEDAL_PIO_TARGETS})
 target_link_libraries(${tgt} pedal_pio)
+
+#
+# i2s.pio through the C preprocessor first, with this board's header
+# included, because the BCLK/FSYNC side-set order is baked into the
+# instructions and boards wire that pair both ways round.
+#
+# -P suppresses the line markers pioasm would choke on; -x c is what
+# stops the compiler wanting a .c suffix.
+#
+# OUTPUT_DIR is what makes this legal at all.  Without it
+# pico_generate_pio_header() names its output from the *basename* of the
+# input, so every board's copy of i2s.pio would claim build/i2s.pio.h and
+# cmake refuses the second rule for it - which is the collision the note
+# above the shared programs describes.  A directory each gives distinct
+# rules, and the SDK puts that directory on the target's include path, so
+# the source still says #include "i2s.pio.h".
+#
+set(pio_out "${CMAKE_CURRENT_BINARY_DIR}/pio-${board}")
+set(i2s_pio "${pio_out}/i2s.pio")
+set(board_hdr "${CMAKE_CURRENT_SOURCE_DIR}/Firmware/include/boards/${board}.h")
+add_custom_command(OUTPUT ${i2s_pio}
+	COMMAND ${CMAKE_COMMAND} -E make_directory ${pio_out}
+	COMMAND ${CMAKE_C_COMPILER} -E -P -x c -include ${board_hdr}
+		${PIO_DIR}/i2s.pio -o ${i2s_pio}
+	DEPENDS ${PIO_DIR}/i2s.pio ${board_hdr}
+	COMMENT "Preprocessing i2s.pio for ${board}"
+	VERBATIM)
+
+add_library(${tgt}_pio INTERFACE)
+pico_generate_pio_header(${tgt}_pio ${i2s_pio} OUTPUT_DIR ${pio_out})
+add_dependencies(${tgt} ${tgt}_pio_i2s_pio_h)
+target_link_libraries(${tgt} ${tgt}_pio)
 
 #
 # Which board this is, in the three places it has to be true at once:

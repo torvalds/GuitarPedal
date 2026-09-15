@@ -16,6 +16,35 @@
 ; The actual data is transmitted one cycle after FSYNC
 ; goes low
 ;
+; ---------------------------------------------------------------------
+;
+; BCLK and FSYNC are one two-bit side-set, and side-set bit 0 is
+; whichever of them sits at the base - so which pin is which is baked
+; into the instructions and cannot arrive at runtime the way the data
+; pins do.  Boards wire the pair in both orders, so this file is run
+; through the C preprocessor before pioasm sees it, with the board
+; header included; see CMakeLists.txt.
+;
+; Only the two mixed values differ.  Both-low and both-high are the same
+; number whichever pin is bit 0, which is why there are two symbols here
+; and not four.
+;
+; These are cpp defines rather than the .define pioasm has of its own,
+; so pioasm only ever sees the literal it would have seen before.
+;
+; Mind the apostrophes: cpp tokenises these comments even though pioasm
+; treats them as text, so an unpaired quote warns on every build.
+;
+#define S_NONE  0b00
+#define S_BOTH  0b11
+#ifdef I2S_FSYNC_BELOW_BCLK
+#define S_BCLK  0b10
+#define S_FSYNC 0b01
+#else
+#define S_BCLK  0b01
+#define S_FSYNC 0b10
+#endif
+
 .pio_version 1
 
 .program i2s_tx
@@ -24,43 +53,48 @@
 .side_set 2
 
 .wrap_target
-	out pins, 1		side 0b00	; Cycle 0: FSYNC low. Output R0 (from previous frame)
+	out pins, 1		side S_NONE	; Cycle 0: FSYNC low. Output R0 (from previous frame)
 public start_tx:
-	set x, 30		side 0b01
+	set x, 30		side S_BCLK
 loop_low:
-	out pins, 1		side 0b00	; Cycle 2: Output L31..L1
-	jmp x-- loop_low	side 0b01
+	out pins, 1		side S_NONE	; Cycle 2: Output L31..L1
+	jmp x-- loop_low	side S_BCLK
 
-	out pins, 1		side 0b10	; Cycle 64: FSYNC high. Output L0
-	set x, 30		side 0b11
+	out pins, 1		side S_FSYNC	; Cycle 64: FSYNC high. Output L0
+	set x, 30		side S_BOTH
 loop_high:
-	out pins, 1		side 0b10	; Cycle 66: Output R31..R1
-	jmp x-- loop_high	side 0b11
+	out pins, 1		side S_FSYNC	; Cycle 66: Output R31..R1
+	jmp x-- loop_high	side S_BOTH
 .wrap
 
 % c-sdk {
 //
-// 'pin'   is BCLK	(MCU output)
-// 'pin+1' is FSYNC	(MCU output)
-// 'pin+2' is DIN	(MCU output! It's DIN from the CODEC standpoint!)
-// 'pin+3' is DOUT	(MCU input! It's DOUT from the CODEC standpoint!)
+// The four pins by name rather than a base and three offsets.  Only BCLK
+// and FSYNC have to be adjacent - they are the side-set - and the caller
+// asserts that, where the numbers are constants and the assert can be
+// static.  'din' and 'dout' are named from the CODEC's standpoint, so
+// din is an MCU *output* and dout an MCU *input*.
 //
-static inline void i2s_tx_program_init(PIO pio, uint sm, uint offset, uint pin)
+static inline void i2s_tx_program_init(PIO pio, uint sm, uint offset,
+				       uint bclk, uint fsync,
+				       uint din, uint dout)
 {
 	pio_sm_config c = i2s_tx_program_get_default_config(offset);
+	uint32_t outs = (1u << bclk) | (1u << fsync) | (1u << din);
+	uint32_t all = outs | (1u << dout);
 
-	pio_gpio_init(pio, pin);
-	pio_gpio_init(pio, pin+1);
-	pio_gpio_init(pio, pin+2);
-	pio_gpio_init(pio, pin+3);
+	pio_gpio_init(pio, bclk);
+	pio_gpio_init(pio, fsync);
+	pio_gpio_init(pio, din);
+	pio_gpio_init(pio, dout);
 
 	// three output pins, one input
-	pio_sm_set_pindirs_with_mask(pio, sm, 0b0111 << pin, 0b1111 << pin);
+	pio_sm_set_pindirs_with_mask(pio, sm, outs, all);
 
-	// BCLK and FSYNC using sideset
-	sm_config_set_sideset_pin_base(&c, pin);
-	// DOUT using 'OUT' instruction
-	sm_config_set_out_pins(&c, pin+2, 1);
+	// BCLK and FSYNC using sideset, from whichever of them is lower
+	sm_config_set_sideset_pin_base(&c, bclk < fsync ? bclk : fsync);
+	// the codec's DIN using 'OUT' instructions
+	sm_config_set_out_pins(&c, din, 1);
 	// Auto-pull, shift left (MSB first), 32 bits
 	sm_config_set_out_shift(&c, false, true, 32);
 
@@ -93,12 +127,18 @@ loop_right:
 .wrap
 
 % c-sdk {
-static inline void i2s_rx_program_init(PIO pio, uint sm, uint offset, uint pin)
+//
+// No side-set here, so nothing in this program depends on the pin order:
+// it needs FSYNC to wait on and the codec's DOUT to sample, and both are
+// named pins rather than offsets from a base.
+//
+static inline void i2s_rx_program_init(PIO pio, uint sm, uint offset,
+				       uint fsync, uint dout)
 {
 	pio_sm_config c = i2s_rx_program_get_default_config(offset);
 
-	sm_config_set_jmp_pin(&c, pin+1);	// FSYNC
-	sm_config_set_in_pins(&c, pin+3);	// DOUT
+	sm_config_set_jmp_pin(&c, fsync);
+	sm_config_set_in_pins(&c, dout);
 	// Auto-push, shift left (MSB first), 32 bits
 	sm_config_set_in_shift(&c, false, true, 32);
 

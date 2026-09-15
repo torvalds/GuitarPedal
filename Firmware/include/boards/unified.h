@@ -78,3 +78,27 @@
 //
 #define WS2812_GPIO		25
 #define NR_LEDS			5
+
+//
+// i2s and i2c.  BCLK below FSYNC, which is the order the PIO side-set
+// was written for - see i2s.pio and the minimal board, which is the
+// other way round.
+//
+#define I2S_BCLK		8
+#define I2S_FSYNC		9
+#define I2S_DIN			10
+#define I2S_DOUT		11
+
+#define I2C0_SDA		4
+#define I2C0_SCL		5
+#define I2C1_SDA		2
+#define I2C1_SCL		3
+
+//
+// Two audio boards answer here, and which one it is decides the channel
+// count: the TAC5112 needs i2c setup and never had its second channel
+// routed, and the TAC5242 is strapped and stereo.  See probe_hardware().
+//
+#define TAC5112_I2C		i2c0, 0x51
+#define CODEC_I2C_DESC		"mono"
+#define CODEC_STRAPPED_DESC	"stereo"

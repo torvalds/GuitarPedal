@@ -221,12 +221,16 @@ int main()
 	init_ws2812();
 	init_sw_pins();
 	init_pwm_pins();
+#ifdef ROTARY_A_GPIO
 	init_rotary_encoder();
+#endif
 #ifdef EXP_TIP_GPIO
 	exp_init();
 #endif
 	init_i2c_bus(i2c0, 400, I2C0_SDA, I2C0_SCL);
+#ifdef I2C1_SDA
 	init_i2c_bus(i2c1, 400, I2C1_SDA, I2C1_SCL);
+#endif
 
 	//
 	// Before init_usb(), because it decides what the pedal enumerates

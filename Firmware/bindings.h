@@ -90,9 +90,13 @@ struct control_desc {
 #define CTRL_PEDAL	"pedal"
 
 static const struct control_desc controls[NR_CONTROLS] = {
+#ifdef ROTARY_A_GPIO
 	[CTRL_ROTARY_TURN]	= { "Knob \\u2014 turn",		CTRL_TURNS  },
+#endif
+#ifdef ROTARY_SW_GPIO
 	[CTRL_ROTARY_TAP]	= { "Knob \\u2014 press",		CTRL_CLICKS },
 	[CTRL_ROTARY_HOLD]	= { "Knob \\u2014 hold",		CTRL_CLICKS },
+#endif
 	[CTRL_STOMP_TAP]	= { "Footswitch \\u2014 press",	CTRL_CLICKS },
 	[CTRL_STOMP_HOLD]	= { "Footswitch \\u2014 hold",	CTRL_CLICKS },
 #ifdef EXP_TIP_GPIO
@@ -198,9 +202,13 @@ struct rule {
 // The footswitch keeps what it always did.
 //
 static const struct rule default_rules[] = {
+#ifdef ROTARY_A_GPIO
 	{ CTRL_ROTARY_TURN, ACT_POT,       0, CHAIN_VOLUME + 1 },
+#endif
+#ifdef ROTARY_SW_GPIO
 	{ CTRL_ROTARY_TAP,  ACT_RESET_POT, BIND_FOLLOW },
 	{ CTRL_ROTARY_HOLD, ACT_RESET_POT, BIND_FOLLOW },
+#endif
 	{ CTRL_STOMP_TAP,   ACT_BYPASS },
 	{ CTRL_STOMP_HOLD,  ACT_TUNER },
 };
