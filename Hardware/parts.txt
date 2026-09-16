@@ -7,6 +7,18 @@
 #
 ## Capacitors
 
+0.3pF/50V/±0.1pF/C0G/0201:
+	Murata GRM0335C1HR30BA01D
+	C76927
+
+1.5pF/25V/±0.05pF/C0G/0201:
+	Murata GJM0335C1E1R5WB01D
+	C435397
+
+2.0pF/25V/±0.05pF/C0G/0201:
+	Murata GJM0335C1E2R0WB01D
+	C668326
+
 15pF/25V/5%/C0G/0201:
 	Murata GRM0335C1E150JA01D
 	C161373
@@ -19,9 +31,17 @@
 	Murata GRM1555C1E151JA01D
 	C710836
 
+2.2nF/25V/10%/X7R/0201:
+	Murata GRM033R71E222KA12D
+	C161488
+
 2.2nF/50V/2%/C0G/0402:
 	Murata GRM1555C1H222GA01D
 	C2987940
+
+10nF/25V/10%/X7R/0201:
+	Murata GRM033R71E103KE14D
+	C85930
 
 22nF/50V/10%/X7R/0402:
 	Fenghua 0402B223K500NT
@@ -150,6 +170,16 @@
 
 ## Inductors
 
+2.7nH/600mA/0201:
+	Murata LQP03HQ2N7B02D
+	C7216765
+	Inductor_SMD:L_0201_0603Metric
+
+3.5nH/500mA/0201:
+	Murata LQP03HQ3N5B02D
+	C3911055
+	Inductor_SMD:L_0201_0603Metric
+
 1uH/2A/0806:
 	Murata LQM2MPN1R0MGHL
 	C528977
@@ -170,6 +200,18 @@
 	CHECK: polarised, and the body is symmetrical - match the silkscreen
 	CHECK: dot to JLCPCB's.  The dot is the outer winding, our pad 1
 	JLC: rotate 180
+
+4.7uH/350mA/0603:
+	TDK MLZ1608M4R7WT000
+	C76799
+	Inductor_SMD:L_0603_1608Metric
+
+## Ferrite beads
+
+120Ω@100MHz/200mA/0201:
+	Murata BLM03AG121SN1D
+	C97850
+	Inductor_SMD:L_0201_0603Metric
 
 ## Diodes
 
@@ -226,11 +268,25 @@ WS2812B/4020:
 
 ## Crystals
 
+32MHz/8pF/20ppm/2016:
+	YXC X201632MKB4SI
+	C718072
+	Crystal:Crystal_SMD_2016-4Pin_2.0x1.6mm
+
 # 10pF load capacitance.  3225 is the metric size, 3.2 x 2.5mm.
 ABM8/12MHz/30ppm/3225:
 	Abracon ABM8-272-T3
 	C20625731
 	Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm
+
+## Antennas
+
+# Needs 6.5 x 6.5mm of ground clearance at a board edge.
+2.4GHz/chip/1206:
+	Johanson 2450AT18A100E
+	C89334
+	RF_Antenna:Johanson_2450AT18x100
+	https://www.johansontechnology.com/docs/3827/Antenna-2450AT18A0100001E-Rev4.0.pdf
 
 ## Connectors
 
@@ -331,6 +387,13 @@ M24C64/64Kbit/UFDFPN-5:
 	C222104
 	Mylib:UFDFPN5
 	https://www.st.com/en/memories/m24c64-f.html#documentation
+
+# The radio.  1MB of RRAM, not flash.
+NRF54L10/VFQFN-48:
+	Nordic NRF54L10-QFAA-R7
+	C44800139
+	Package_DFN_QFN:QFN-48-1EP_6x6mm_P0.4mm_EP4.6x4.6mm_ThermalVias
+	https://docs.nordicsemi.com/bundle/ps_nrf54l15
 
 # Dual op-amp, rail-to-rail in but out only to within 15-45mV.  Maximum 7V.
 OPA2323/TSOT-23-8:
