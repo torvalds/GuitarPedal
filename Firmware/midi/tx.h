@@ -13,13 +13,13 @@
 // usb_audio_task() is the last thing in that loop, and the audio
 // endpoint's software fifo holds three packets - three milliseconds.  A
 // reply that takes longer than that to send starves the audio endpoint
-// for as long as it runs, and the schema takes 15700 bytes' worth.
+// for as long as it runs, and the schema takes hundreds of milliseconds.
 //
 // Two things were wrong and they are easy to confuse:
 //
 //  - The *size* of a reply.  Even with the host reading as fast as it
-//    can, one pass of the main loop spent sending 15700 bytes is a pass
-//    not spent feeding audio.
+//    can, one pass of the main loop spent sending a whole schema is a
+//    pass not spent feeding audio.
 //  - Whether anything is *reading*.  usb_midi_write() spins for 20ms per
 //    packet on a full transmit fifo.  A host that drains the endpoint
 //    keeps that fifo empty and the spin almost never happens; a host that
@@ -40,7 +40,7 @@
 // construction rather than by convention.
 //
 // SysEx goes to USB only.  The hardware jacks run at 31250 baud, where
-// the schema is 5.2 seconds of wire time, and uart_midi_write() is a
+// the schema is several seconds of wire time, and uart_midi_write() is a
 // 512-byte ring that drops silently when full - so the TRS side would
 // need to solve the slow-consumer problem before it could carry any of
 // this, and that is a decision rather than an omission.
@@ -51,7 +51,7 @@
 //
 // The payload ring only holds *generated* bytes.  Anything already in
 // flash is queued by pointer and costs a descriptor and nothing else,
-// which is what keeps the 15700-byte schema out of RAM entirely.
+// which is what keeps the schema out of RAM entirely.
 //
 // What has to fit is a state dump.  That is 140 bytes as things stand,
 // and about 1.4kB in the worst case where every effect is routed and
@@ -68,8 +68,8 @@
 //
 // 'more' means the next entry finishes what this one starts, which is how
 // a message can be part flash and part generated without being copied:
-// the schema is a generated 'F0 7D 02', 15700 static bytes, and a
-// generated 'F7'.  Three descriptors, four bytes of RAM.
+// the schema is a generated 'F0 7D 02', twenty-odd thousand static
+// bytes, and a generated 'F7'.  Three descriptors, four bytes of RAM.
 //
 struct midi_msg {
 	const uint8_t *flash;	// non-NULL: the bytes are in flash

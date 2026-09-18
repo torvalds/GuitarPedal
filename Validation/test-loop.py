@@ -224,7 +224,7 @@ def main():
     #
     ap.add_argument("--load", choices=sorted(LOADS), default="dump",
                     help="which reply to ask for.  'schema' is the big-message "
-                         "case: 15700 bytes in one sysex message, with no "
+                         "case: the whole schema in one sysex message, with no "
                          "message boundary in it to resume from.  'dump' is "
                          "140 bytes in 8 and is the control")
     ap.add_argument("--dumps", type=int, default=12,
@@ -781,9 +781,9 @@ DUMP_END = bytes([0xF0, 0x7D, 0x08])
 #
 # The two loads, and why the big one is not a synthetic message.
 #
-# The schema *is* the stress case and always was: 15700 bytes in one
-# single SysEx message, so there is not a message boundary anywhere in it
-# to resume from.  Nothing had to be built to test a big reply, because
+# The schema *is* the stress case and always was: tens of thousands of
+# bytes in one single SysEx message, so there is not a message boundary
+# anywhere in it to resume from.  Nothing had to be built to test a big reply, because
 # the pedal already sends the biggest one it will ever send.
 #
 # The state dump is the light load and has become much lighter - 140

@@ -460,11 +460,11 @@ static void sysex_send_schema(void)
 	// The body is queued where it lies rather than copied.
 	//
 	// It is a static const string in flash and by far the largest
-	// thing the pedal ever says - 15700 bytes, against a state dump's
-	// 140 - so copying it into the payload ring would mean sizing that
-	// ring for the one reply that least needs it.  Three descriptors
-	// and four bytes of RAM instead: a generated header, the flash
-	// body, a generated trailer.
+	// thing the pedal ever says - tens of thousands of bytes, against
+	// a state dump's 140 - so copying it into the payload ring would
+	// mean sizing that ring for the one reply that least needs it.
+	// Three descriptors and four bytes of RAM instead: a generated
+	// header, the flash body, a generated trailer.
 	//
 	sysex_tx_start();
 	sysex_stream_write(sysex_schema_header, sizeof(sysex_schema_header));
