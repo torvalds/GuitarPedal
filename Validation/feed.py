@@ -26,9 +26,7 @@
 # and the script measures it rather than assuming it.
 #
 import argparse
-import glob
 import os
-import re
 import subprocess
 import sys
 import time
@@ -55,25 +53,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 #
 EDGE = RATE // 3
 
-ROWS = ["Small-Combo", "American-1x12", "British-4x12",
-        "Modern-4x12", "Bass-15"]
-
-
-def display_name(short):
-    """"CAB" -> "Cabinet", out of the same headers pots.py reads.
-
-    The board wants the short name, because that is what the generated
-    map declares an id for; pots.py wants the display name, because that
-    is what a POT: line is under.  One lookup rather than a table, for
-    the same reason labels() asks the header rather than holding
-    constants: the headers move and a table does not.
-    """
-    for path in sorted(glob.glob(os.path.join(HERE, "..", "Effects", "*.h"))):
-        with open(path) as f:
-            m = re.search(r"^// NAME:\s*(.+?)\s*\[(\w+)\]\s*$", f.read(), re.M)
-        if m and m.group(2) == short:
-            return m.group(1)
-    return None
+def rows():
+    """The cabinets this build has, for --row; empty without a build."""
+    try:
+        return effectmap.pot_info("Cabinet", "Cabinet")["enum"] or []
+    except effectmap.MapError:
+        return []
 
 
 def under_test(args):
@@ -84,18 +69,15 @@ def under_test(args):
     back the other way for the bench's command line.
     """
     short = args.effect.upper()
-    name = display_name(short)
-    if name is None:
-        sys.exit(f"feed: no effect header declares [{short}]")
+    name = effectmap.display(short)
 
     over = {}
     if short == "CAB":
         #
         # The cabinet's own options, kept because they predate --pot and
-        # because a row is an index rather than a value P.to_pot() can
-        # convert.
+        # because the row is the thing --pot cannot spell.
         #
-        over["Cabinet"] = ROWS.index(args.row)
+        over["Cabinet"] = P.to_pot(name, "Cabinet", args.row)
         over["Drive"] = P.to_pot(name, "Drive", args.drive)
         over["Resonance"] = P.to_pot(name, "Resonance", args.resonance)
         over["Axis"] = P.to_pot(name, "Axis", args.axis)
@@ -489,7 +471,7 @@ def main():
                     help="a pot of that effect, in the units its header "
                          "declares; repeatable.  Everything not named here "
                          "is set to its default rather than left alone")
-    ap.add_argument("--row", default="Modern-4x12", choices=ROWS)
+    ap.add_argument("--row", default="Modern-4x12", choices=rows() or None)
     ap.add_argument("--drive", type=float, default=15.0)
     ap.add_argument("--resonance", type=float, default=4.0)
     ap.add_argument("--axis", type=float, default=0.5)
