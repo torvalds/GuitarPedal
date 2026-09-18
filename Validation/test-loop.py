@@ -293,7 +293,7 @@ def main():
         "%s (card %s, midi %s)" % (d["label"], d["card"], d["port"])
         for d in found))
 
-    ring = topology(found, args)
+    ring, loops = topology(found, args)
     if not ring:
         return 1
 
@@ -303,13 +303,14 @@ def main():
         one_edge(src, dst, found, args)
 
     print()
-    latency(ring, found, args)
+    latency(loops, found, args)
 
     if args.json:
         import json
         RESULTS["pedals"] = [{k: d[k] for k in ("label", "serial", "product")}
                              for d in found]
         RESULTS["ring"] = [[a["label"], b["label"]] for a, b in ring]
+        RESULTS["loops"] = [[d["label"] for d in cyc] for cyc in loops]
         RESULTS["recorded"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
         RESULTS["operator_notes"] = args.note
 
@@ -384,8 +385,13 @@ def topology(found, args):
         time.sleep(0.8)
         heard = []
         for dst in found:
-            if dst is src:
-                continue
+            #
+            # Including src itself.  A board wired output to input is a
+            # loop of one, and it is what test-analog.py and everything
+            # built on loop.py run on - the tone replaces the input in
+            # the chain, but raw_in() reads the jack, so a self-loop
+            # hears itself exactly as any other pair does.
+            #
             for ch, x in zip(("L", "R"), raw_in(dst, 1.0)):
                 lvl = audio.dbfs(audio.rms(x))
                 if lvl < -60.0:
@@ -401,7 +407,8 @@ def topology(found, args):
                 "".join(sorted(c for _, _, c in heard))
             nxt[src["serial"]] = dst
             note("%s feeds" % src["label"],
-                 "%s %s at %.1f dBFS" % (dst["label"], chans, lvl))
+                 "%s %s at %.1f dBFS"
+                 % ("itself" if dst is src else dst["label"], chans, lvl))
         elif not heard:
             note("%s feeds" % src["label"], "nothing - output not connected?")
         else:
@@ -410,11 +417,47 @@ def topology(found, args):
                            for l, d, c in heard))
 
     edges = [(s, nxt[s["serial"]]) for s in found if s["serial"] in nxt]
-    check("every pedal feeds exactly one other", len(edges) == len(found),
+    check("every pedal feeds exactly one", len(edges) == len(found),
           "%d of %d links found" % (len(edges), len(found)))
+
+    loops = cycles(edges, found)
+    if loops is None:
+        print("  (the links do not close into loops - measuring what exists)")
+    else:
+        for cyc in loops:
+            note("loop of %d" % len(cyc),
+                 "%s back to itself" % cyc[0]["label"] if len(cyc) == 1
+                 else " -> ".join(d["label"] for d in cyc + [cyc[0]]))
+    return edges, loops or []
+
+
+def cycles(edges, found):
+    """The links grouped into the loops they form, or None if they do not.
+
+    A bench of patch cables is a set of disjoint loops - one ring, two
+    rings, or a board wired back into itself - and that is exactly what
+    every board feeding one and being fed by one means.  Anything else is
+    a patching mistake worth naming rather than averaging over.
+    """
     if len(edges) != len(found):
-        print("  (an incomplete ring - measuring the links that exist)")
-    return edges
+        return None
+    nxt = {s["serial"]: d for s, d in edges}
+    if len({d["serial"] for _, d in edges}) != len(edges):
+        return None                      # two boards feeding one
+
+    out, seen = [], set()
+    for s, _ in edges:
+        if s["serial"] in seen:
+            continue
+        cyc, cur = [], s
+        while cur["serial"] not in seen:
+            seen.add(cur["serial"])
+            cyc.append(cur)
+            cur = nxt[cur["serial"]]
+        if cur is not cyc[0]:
+            return None                  # walked into an earlier loop
+        out.append(cyc)
+    return out
 
 
 def highpass_db(f, fc):
@@ -658,8 +701,8 @@ def stereo(src, dst, found, args):
         note("channel separation", "%.1f dB, the worse of the two" % sep)
 
 
-def latency(ring, found, args):
-    """How long the whole ring takes.
+def latency(loops, found, args):
+    """How long each loop takes.
 
     The generating pedal is at full mix, so its output ignores its input
     and the ring is open at that end - which means its own capture holds
@@ -672,27 +715,41 @@ def latency(ring, found, args):
     Noise rather than a tone, because a sine correlates with itself every
     cycle and the answer would be a cycle count.
     """
-    if len(ring) != len(found):
-        note("ring latency", "skipped - the ring is not closed")
+    if not loops:
+        note("loop latency", "skipped - the links do not close into loops")
         return
 
-    src = ring[0][0]
-    for d in found:
-        if d is not src:
-            passthrough(d)
-    generate(src, args.level, shape=SHAPE_NOISE)
-    usb_mode(src, LR_WETDRY)
-    time.sleep(0.8)
+    #
+    # One loop at a time, because two of them are two separate journeys
+    # and an average over both would be a number about neither.  The
+    # boards in the other loops are muted rather than passed through:
+    # they are not in this path, and a muted board cannot leak into it.
+    #
+    RESULTS["latency"] = []
+    for cyc in loops:
+        src = cyc[0]
+        for d in found:
+            if d is src:
+                continue
+            passthrough(d) if d in cyc else mute(d)
+        generate(src, args.level, shape=SHAPE_NOISE)
+        usb_mode(src, LR_WETDRY)
+        time.sleep(0.8)
 
-    d = audio.capture(args.seconds, src["card"])
-    sent, back = d[:, 0], d[:, 1] * audio.SAMPLE_TO_FLOAT
-    lag = audio.delay_samples(sent, back, MAX_LAG)
-    ms = lag * 1000.0 / audio.RATE
-    note("ring latency", "%.2f ms round the whole ring of %d, %.0f samples"
-         % (ms, len(found), lag))
-    RESULTS["latency"] = {"ms": ms, "samples": float(lag), "pedals": len(found)}
-    note("per pedal", "%.2f ms average" % (ms / len(found)))
-    check("ring latency is a real delay", 0.05 < ms < 90.0, "%.2f ms" % ms)
+        d = audio.capture(args.seconds, src["card"])
+        sent, back = d[:, 0], d[:, 1] * audio.SAMPLE_TO_FLOAT
+        lag = audio.delay_samples(sent, back, MAX_LAG)
+        ms = lag * 1000.0 / audio.RATE
+        where = ("%s back to itself" % src["label"] if len(cyc) == 1
+                 else "round %s" % " -> ".join(d["label"] for d in cyc))
+        note("loop latency", "%.2f ms %s, %.0f samples" % (ms, where, lag))
+        RESULTS["latency"].append(
+            {"ms": ms, "samples": float(lag),
+             "pedals": [d["label"] for d in cyc]})
+        if len(cyc) > 1:
+            note("per pedal", "%.2f ms average" % (ms / len(cyc)))
+        check("loop latency is a real delay (%s)" % src["label"],
+              0.05 < ms < 90.0, "%.2f ms" % ms)
 
     #
     # The one the rig was built for.  A reply is turned into four-byte
