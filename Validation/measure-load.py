@@ -98,6 +98,7 @@ import time
 sys.path.insert(0, ".")
 import effectmap
 import pedal
+import pots as P
 
 SETTLE = 1.0            # effect fades are 100 ms, the load meter 21 ms
 DEFAULT = ["Reverb"]
@@ -113,9 +114,7 @@ DEFAULT = ["Reverb"]
 # silently pins some other effect's pot instead is a baseline that has
 # quietly stopped being the baseline.  See effectmap.settings(), and
 # check-effect-ids.py, which is what finds the ones written down anyway.
-SETTINGS = None
-USB_OUT_POT = 1
-USB_OUT_NONE = 0
+SETTINGS = USB_OUT_POT = USB_OUT_NONE = None
 STEP_PCT = 100.0 / 16383   # what one telemetry step is worth, 14-bit
 COARSE = 128               # ...and how many of them the old 7-bit step was
 
@@ -256,8 +255,10 @@ def main():
             pots.append((effectmap.effect(short), int(num), int(val)))
         args = args[2:]
 
-    global SETTINGS
+    global SETTINGS, USB_OUT_POT, USB_OUT_NONE
     SETTINGS = effectmap.settings()
+    USB_OUT_POT = effectmap.pot("Settings", "USB L/R Out")
+    USB_OUT_NONE = P.to_pot("Settings", "USB L/R Out", "None")
     names = dict((i, n) for i, n, _short in effectmap.names())
     #
     # An effect on the command line is a name, and stays a number only

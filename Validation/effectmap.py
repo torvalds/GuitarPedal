@@ -190,6 +190,11 @@ def pot(name, label, path=None):
     return _find_pot(name, label, path)[0]
 
 
+def pots(name, *labels, path=None):
+    """Several of one effect's pot numbers, in the order asked for."""
+    return tuple(pot(name, label, path) for label in labels)
+
+
 def pot_info(name, label, path=None):
     """Curve, range, enum names, and both spellings of the default."""
     return _find_pot(name, label, path)[1]

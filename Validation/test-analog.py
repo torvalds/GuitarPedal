@@ -56,23 +56,33 @@ except ImportError:
 import audio
 import effectmap
 import pedal
+import pots as P
+
+TONE_HZ = 440.0
 
 # Asked for in main(), so --help works without a build.
 CHAIN = pedal.CHAIN
-TESTTONE = SETTINGS = None
+TESTTONE = SETTINGS = USB_OUT = None
+CHAIN_GATE = CHAIN_TRIM = CHAIN_VOLUME = None
+TT_LEVEL = TT_FREQ = TT_SHAPE = None
+WET_DRY = DRY = SHAPE_SINE = SHAPE_NOISE = None
 
 
 def resolve():
-    global TESTTONE, SETTINGS
+    global TESTTONE, SETTINGS, USB_OUT, WET_DRY, DRY
+    global CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME, TT_LEVEL, TT_FREQ, TT_SHAPE
+    global SHAPE_SINE, SHAPE_NOISE
     TESTTONE = effectmap.effect("TESTTONE")
     SETTINGS = effectmap.settings()
-
-CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME = 1, 4, 5
-TT_LEVEL, TT_FREQ, TT_SHAPE = 1, 2, 3
-SETTINGS_USB_OUT, USB_OUT_WET_DRY = 1, 3
-
-TONE_HZ = 440.0
-SHAPE_SINE, SHAPE_NOISE = 0, 3
+    CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME = effectmap.pots(
+        "Signal Chain", "Gate", "Trim", "Volume")
+    TT_LEVEL, TT_FREQ, TT_SHAPE = effectmap.pots(
+        "Test Tone", "Level", "Freq", "Shape")
+    USB_OUT = effectmap.pot("Settings", "USB L/R Out")
+    WET_DRY = P.to_pot("Settings", "USB L/R Out", "Wet/Dry")
+    DRY = P.to_pot("Settings", "USB L/R Out", "Dry")
+    SHAPE_SINE = P.to_pot("Test Tone", "Shape", "Sine")
+    SHAPE_NOISE = P.to_pot("Test Tone", "Shape", "Noise")
 
 
 def configure(p, level, shape):
@@ -85,7 +95,7 @@ def configure(p, level, shape):
                           (TESTTONE, TT_FREQ, 60),      # 440 Hz exactly
                           (TESTTONE, TT_SHAPE, shape),
                           (TESTTONE, TT_LEVEL, level),
-                          (SETTINGS, SETTINGS_USB_OUT, USB_OUT_WET_DRY)):
+                          (SETTINGS, USB_OUT, WET_DRY)):
         pedal.set_pot(p, eff, pot, val)
         time.sleep(0.02)
     time.sleep(1.0)
@@ -242,10 +252,10 @@ def main():
              audio.delay_samples(sent, back, 2000) / 48.0))
 
     #
-    # Leave it quiet, and the USB output back where it was found.
+    # Leave it quiet, and the USB output on Dry.
     #
     pedal.set_routing(p)
-    pedal.set_pot(p, SETTINGS, SETTINGS_USB_OUT, 2)
+    pedal.set_pot(p, SETTINGS, USB_OUT, DRY)
     print()
     print("test-analog: reported, not judged - see the header of test-loop.py")
     print("             on why a bench measurement is a hypothesis until the")

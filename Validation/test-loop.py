@@ -32,6 +32,7 @@ import numpy as np
 import audio
 import effectmap
 import pedal
+import pots as P
 
 FAILED = []
 
@@ -46,9 +47,9 @@ def note(name, detail):
     print(f"  --    {name}: {detail}")
 
 
-# The test tone's pots, in SysEx numbering where 0 is the mix.
-TONE_MIX, TONE_LEVEL, TONE_FREQ, TONE_SHAPE = 0, 1, 2, 3
-SHAPE_SINE, SHAPE_NOISE = 0, 3
+# The test tone's pots and the two shapes, resolved in main().
+TONE_LEVEL = TONE_FREQ = TONE_SHAPE = None
+SHAPE_SINE = SHAPE_NOISE = None
 LEVEL_OFF = 0
 
 # Freq is EXPONENTIAL(13.75 14080) over 120 steps: ten octaves, twelve
@@ -61,7 +62,7 @@ LEVEL_OFF = 0
 # to stay a multiple of twelve so that 440 Hz - the point everything is
 # reported against - is one of the points.
 SWEEP_LOW_POT, SWEEP_HIGH_POT = 0, 108
-FREQ_440_POT = 60
+FREQ_440_POT = None
 
 #
 # The tone topology detection uses, deliberately not 440 Hz.
@@ -72,10 +73,10 @@ FREQ_440_POT = 60
 # Hz - one octave down, pot 48 - can be told apart from it, and every
 # channel is then checked for the frequency rather than for a level.
 #
-TOPOLOGY_FREQ_POT, TOPOLOGY_FREQ_HZ = 48, 220.0
+TOPOLOGY_FREQ_HZ = 220.0
+TOPOLOGY_FREQ_POT = None
 
-# usb_output enum
-LR_WET, LR_DRY, LR_WETDRY = 1, 2, 3
+LR_WET = LR_DRY = LR_WETDRY = None
 
 #
 # Channel steering, and the defaults every helper below re-asserts.
@@ -86,10 +87,8 @@ LR_WET, LR_DRY, LR_WETDRY = 1, 2, 3
 # silence.  So a stale steering setting quietly turns mute() into a
 # pass-through, and then the topology says one pedal feeds two others.
 #
-POT_CH_IN, POT_CH_OUT, POT_MERGE = 11, 12, 13
-STRAIGHT = ((0x03, None, POT_CH_IN, 0),
-            (0x03, None, POT_CH_OUT, 0),
-            (0x03, None, POT_MERGE, 120))
+POT_CH_IN = POT_CH_OUT = POT_MERGE = None
+STRAIGHT = ()
 
 
 def straight(eff):
@@ -121,11 +120,11 @@ RESULTS = {"links": []}
 
 
 def level_pot(dbfs):
-    return max(0, min(120, int(round((dbfs + 90.0) / 0.75))))
+    return P.to_pot("Test Tone", "Level", dbfs)
 
 
 def level_dbfs(pot):
-    return -90.0 + pot * 0.75
+    return P.value("Test Tone", "Level", pot)
 
 
 
@@ -154,7 +153,7 @@ def usb_mode(d, mode):
 # parameter, which is worth about two seconds a message - see pedal.py
 # for why sending them back to back is safe.
 #
-def generate(d, dbfs, shape=SHAPE_SINE, freq=FREQ_440_POT):
+def generate(d, dbfs, shape=None, freq=None):
     """Make this pedal's output the tone, and nothing else.
 
     At full mix the tone replaces the input rather than adding to it, so
@@ -163,9 +162,11 @@ def generate(d, dbfs, shape=SHAPE_SINE, freq=FREQ_440_POT):
     """
     pedal.send_many(d["port"],
                     (0x08, TONE),
-                    (0x03, TONE, TONE_MIX, 120),
-                    (0x03, TONE, TONE_SHAPE, shape),
-                    (0x03, TONE, TONE_FREQ, freq),
+                    (0x03, TONE, effectmap.MIX, 120),
+                    (0x03, TONE, TONE_SHAPE,
+                     SHAPE_SINE if shape is None else shape),
+                    (0x03, TONE, TONE_FREQ,
+                     FREQ_440_POT if freq is None else freq),
                     (0x03, TONE, TONE_LEVEL, level_pot(dbfs)),
                     *straight(TONE))
 
@@ -174,7 +175,7 @@ def mute(d):
     """Full mix, no level: digital silence out, and the input ignored."""
     pedal.send_many(d["port"],
                     (0x08, TONE),
-                    (0x03, TONE, TONE_MIX, 120),
+                    (0x03, TONE, effectmap.MIX, 120),
                     (0x03, TONE, TONE_LEVEL, LEVEL_OFF),
                     *straight(TONE))
 
@@ -202,6 +203,9 @@ def raw_in(d, seconds):
 
 def main():
     global SETTINGS, TONE, CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME
+    global TONE_LEVEL, TONE_FREQ, TONE_SHAPE, SHAPE_SINE, SHAPE_NOISE
+    global FREQ_440_POT, TOPOLOGY_FREQ_POT, LR_WET, LR_DRY, LR_WETDRY
+    global POT_CH_IN, POT_CH_OUT, POT_MERGE, STRAIGHT
 
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--seconds", type=float, default=2.0)
@@ -246,6 +250,20 @@ def main():
         CHAIN_GATE = effectmap.pot("Signal Chain", "Gate")
         CHAIN_TRIM = effectmap.pot("Signal Chain", "Trim")
         CHAIN_VOLUME = effectmap.pot("Signal Chain", "Volume")
+        TONE_LEVEL, TONE_FREQ, TONE_SHAPE = effectmap.pots(
+            "Test Tone", "Level", "Freq", "Shape")
+        SHAPE_SINE = P.to_pot("Test Tone", "Shape", "Sine")
+        SHAPE_NOISE = P.to_pot("Test Tone", "Shape", "Noise")
+        FREQ_440_POT = P.to_pot("Test Tone", "Freq", 440.0)
+        TOPOLOGY_FREQ_POT = P.to_pot("Test Tone", "Freq", TOPOLOGY_FREQ_HZ)
+        LR_WET, LR_DRY, LR_WETDRY = (
+            P.to_pot("Settings", "USB L/R Out", v)
+            for v in ("Wet", "Dry", "Wet/Dry"))
+        POT_CH_IN, POT_CH_OUT, POT_MERGE = effectmap.pots(
+            "Test Tone", "In", "Out", "Merge")
+        STRAIGHT = ((0x03, None, POT_CH_IN, 0),
+                    (0x03, None, POT_CH_OUT, 0),
+                    (0x03, None, POT_MERGE, 120))
     except effectmap.MapError as e:
         print("test-loop: SKIPPED - %s" % e)
         return 0
@@ -488,7 +506,8 @@ def one_edge(src, dst, found, args):
     for pot in range(SWEEP_LOW_POT, SWEEP_HIGH_POT + 1, 12):
         pedal.set_pot(src["port"], TONE, TONE_FREQ, pot)
         L, _ = raw_in(dst, args.seconds)
-        resp.append((13.75 * 2 ** (pot / 12.0), audio.dbfs(audio.rms(L))))
+        resp.append((P.value("Test Tone", "Freq", pot),
+                     audio.dbfs(audio.rms(L))))
 
     ref = dict((round(f), db) for f, db in resp).get(440)
     note("frequency response",
@@ -566,13 +585,14 @@ def stereo(src, dst, found, args):
     # to be a decibel louder than the tone.  Which it duly did.
     #
     seen = {}
-    for side, out in (("L", 1), ("R", 2)):     # CH_OUT_LEFT, CH_OUT_RIGHT
+    for side in ("Left", "Right"):
+        out = P.to_pot("Test Tone", "Out", side)
         generate(src, args.level, freq=TOPOLOGY_FREQ_POT)
         pedal.send_many(src["port"], (0x03, TONE, POT_CH_OUT, out))
         time.sleep(0.3)
         L, R = raw_in(dst, args.seconds)
-        seen[side] = (audio.tone_level(L, TOPOLOGY_FREQ_HZ),
-                      audio.tone_level(R, TOPOLOGY_FREQ_HZ))
+        seen[side[0]] = (audio.tone_level(L, TOPOLOGY_FREQ_HZ),
+                         audio.tone_level(R, TOPOLOGY_FREQ_HZ))
     mute(src)
 
     #
