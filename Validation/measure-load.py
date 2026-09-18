@@ -252,21 +252,8 @@ def main():
             #
             spec, _, val = args[1].partition("=")
             short, _, num = spec.partition(":")
-            pots.append((effectmap.effect(short), int(num), int(val)))
+            pots.append((short, int(num), int(val)))
         args = args[2:]
-
-    global SETTINGS, USB_OUT_POT, USB_OUT_NONE
-    SETTINGS = effectmap.settings()
-    USB_OUT_POT = effectmap.pot("Settings", "USB L/R Out")
-    USB_OUT_NONE = P.to_pot("Settings", "USB L/R Out", "None")
-    names = dict((i, n) for i, n, _short in effectmap.names())
-    #
-    # An effect on the command line is a name, and stays a number only
-    # for whoever already knows one.
-    #
-    ids = [int(a) if a.isdigit() else effectmap.effect(a)
-           for a in args] or [effectmap.effect(n) for n in DEFAULT]
-    label = " + ".join(names.get(i, "effect %d" % i) for i in ids)
 
     #
     # Refusing to guess, for the same reason pedal.find() does: two
@@ -289,7 +276,34 @@ def main():
     else:
         d = found[0]
     p = d["port"]
-    print("%s on %s, %s, %d boot(s)" % (d["label"], p, label, boots))
+
+    #
+    # Ask the board for its own map.  A pot number means whatever the
+    # firmware on the board says it means, and that is frequently not
+    # what this tree just built - so the build is the fallback and not
+    # the answer.
+    #
+    running = pedal.schema(p)
+    effectmap.use(running)
+    print("%s on %s, effects from %s"
+          % (d["label"], p,
+             "the pedal" if running else "../build - it did not answer"))
+
+    global SETTINGS, USB_OUT_POT, USB_OUT_NONE
+    SETTINGS = effectmap.settings()
+    USB_OUT_POT = effectmap.pot("Settings", "USB L/R Out")
+    USB_OUT_NONE = P.to_pot("Settings", "USB L/R Out", "None")
+    names = dict((i, n) for i, n, _short in effectmap.names())
+    #
+    # An effect on the command line is a name, and stays a number only
+    # for whoever already knows one.
+    #
+    ids = [int(a) if a.isdigit() else effectmap.effect(a)
+           for a in args] or [effectmap.effect(n) for n in DEFAULT]
+    pots = [(effectmap.effect(s), n, v) for s, n, v in pots]
+    label = " + ".join(names.get(i, "effect %d" % i) for i in ids)
+
+    print("%s, %d boot(s)" % (label, boots))
     print("USB L/R Out pinned to None; the scene goes back at the end\n")
     print("  boot   empty (noisy)     routed          routed load")
 

@@ -53,19 +53,47 @@ class NoSuchName(MapError):
     """The map has no such effect or pot, or more than one."""
 
 
+def parse(text):
+    """A schema, from the generated header or from the pedal's own reply.
+
+    The file wraps it in a C string and the pedal sends it bare, which is
+    the only difference between the two.  Firmware old enough to send a
+    list rather than an object is read as one, the way the app reads it.
+    """
+    m = re.search(r'= "(.*)";\s*$', text, re.S)
+    if m:
+        text = m.group(1).encode().decode("unicode_escape")
+    obj = json.loads(text)
+    return obj if isinstance(obj, dict) else {"steering": {"pots": []},
+                                              "effects": obj}
+
+
 def _read(path):
-    """The JSON out of a midi_schema.h, or None if it is not there."""
+    """The schema in a midi_schema.h, or None if it is not there."""
     try:
         text = open(path).read()
     except OSError:
         return None
-    m = re.search(r'= "(.*)";\s*$', text, re.S)
-    if not m:
+    try:
+        return parse(text)
+    except ValueError:
         raise MapError("%s is not a generated schema" % path)
-    return json.loads(m.group(1).encode().decode("unicode_escape"))
 
 
 _cache = {}
+_using = []
+
+
+def use(obj):
+    """Resolve against this map rather than against the build's.
+
+    Process-wide and deliberately blunt: a script drives one pedal and
+    wants every lookup in it to mean that pedal.  Returns what was in
+    force, so a caller that needs the build's map back can put it back.
+    """
+    was = _using[0] if _using else None
+    _using[:] = [obj] if obj is not None else []
+    return was
 
 
 def schema(path=None):
@@ -76,6 +104,8 @@ def schema(path=None):
     which is worth saying out loud - it is invisible otherwise, and it
     decides which of two maps a measurement was taken against.
     """
+    if _using and path is None:
+        return _using[0]
     if path in _cache:
         return _cache[path]
 

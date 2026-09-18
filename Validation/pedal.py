@@ -528,6 +528,23 @@ def identity(p, in_port=None, wait=2.0):
         return None
 
 
+def schema(p, wait=6.0):
+    """The effect map the board is actually running, or None.
+
+    SysEx 0x01 asking, 0x02 answering, and the answer is the same JSON
+    the build writes into midi_schema.h - so effectmap reads it either
+    way and only the transport differs.  Which matters because the build
+    describes a commit and this describes the board in front of you.
+    """
+    body = sysex_payload(listen_sysex(p, 0x01, wait), 0x02)
+    if body is None:
+        return None
+    try:
+        return effectmap.parse(body.decode())
+    except (ValueError, UnicodeDecodeError):
+        return None
+
+
 def telemetry(p, in_port=None, wait=1.5):
     """What the pedal thinks its own levels are.
 
