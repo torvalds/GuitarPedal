@@ -160,6 +160,11 @@ def names(path=None):
     return [(e["id"], e["name"], e["shortName"]) for e in _effects(path)]
 
 
+def pot_labels(name, path=None):
+    """An effect's own pot labels, in the order it declares them."""
+    return [p["name"].strip() for p in _by_name(name, path)["pots"]]
+
+
 def _find_pot(name, label, path=None):
     """(SysEx index, the pot's schema entry)."""
     e = _by_name(name, path)

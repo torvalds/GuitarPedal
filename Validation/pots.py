@@ -8,13 +8,13 @@
 # afternoon: a range moved, the script did not, and nothing said so -
 # the numbers came out plausible and wrong, which is the worst kind.
 #
-# So this reads the POT: line rather than being told, and then checks
-# itself.  gen_effects.py has already converted each declared default
-# into the raw 0..120 that goes in effect_map.h, so converting the
-# header's default here and comparing against that is a test of this
-# file's arithmetic against the generator's, on every pot, every run.
-# If a curve is handled wrongly the mismatch shows up immediately
-# instead of as a strange measurement a week later.
+# So the curve and the range are asked for rather than written down, and
+# then this checks itself.  The generated map carries each declared
+# default twice - once as the engineering value and once as the raw
+# 0..120 gen_effects.py turned it into - so converting one here and
+# comparing against the other tests this file's arithmetic against the
+# generator's, on every pot, every run.  A curve handled wrongly shows up
+# immediately instead of as a strange measurement a week later.
 #
 # It deliberately does not implement every curve.  FREQUENCY is a cubic
 # and SQUARED is its own thing; neither is needed yet, and guessing at
@@ -22,51 +22,30 @@
 # have.  Ask for one and it says so.
 #
 import math
-import re
 import sys
-from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
-EFFECTS = HERE.parent / "Effects"
-MAP = HERE / "bench" / "gen" / "effect_map.h"
+import effectmap
 
-POT_RE = re.compile(
-    r'//[ \t]*POT:[ \t]*"([^"]+)"[ \t]+(LINEAR|EXPONENTIAL|FREQUENCY|SQUARED|RAW|ENUM)'
-    r'(?:\(([^)]+)\))?(?:[ \t]*=[ \t]*(\S+))?')
-
-
-def _declared():
-    """Every POT: line in the tree, by effect display name and label."""
-    out = {}
-    for path in sorted(EFFECTS.glob("*.h")):
-        text = path.read_text()
-        m = re.search(r"^// NAME:\s*(.+?)\s*\[(\w+)\]\s*$", text, re.M)
-        if not m:
-            continue
-        for label, curve, rng, default in POT_RE.findall(text):
-            lo, hi = (None, None)
-            if rng:
-                parts = rng.split()
-                if len(parts) == 2:
-                    try:
-                        lo, hi = float(parts[0]), float(parts[1])
-                    except ValueError:
-                        pass
-            out[(m.group(1), label)] = (curve, lo, hi, default)
-    return out
+#
+# A BOOL is an ENUM the generator spells differently: it declares the two
+# names, so reading it as one is not a guess.
+#
+DONE = ("LINEAR", "EXPONENTIAL", "ENUM", "BOOL")
+NAMED = ("ENUM", "BOOL")
 
 
-def _raw_defaults():
-    """What the generator turned each declared default into."""
-    out = {}
-    text = MAP.read_text() if MAP.exists() else ""
-    for name, body in re.findall(r'\.name = "([^"]*)",.*?\.pots = \{(.*?)\n\t\}',
-                                 text, re.S):
-        base = re.sub(r" \d+$", "", name)          # "Tone 1" -> "Tone"
-        for label, _unit, dv in re.findall(
-                r'EFFECT_POT\("([^"]*)",\s*([^,]*),\s*(\d+)', body):
-            out.setdefault((base, label), int(dv))
-    return out
+def _range(info):
+    """(curve, low, high).
+
+    The steering pots are declared by the firmware rather than by a POT:
+    line, so they carry their choices and no range.  For an enum the two
+    are the same statement.
+    """
+    curve = info["curve"]
+    lo, hi = info.get("min"), info.get("max")
+    if hi is None and curve in NAMED:
+        lo, hi = 0.0, float(len(info["enum"] or []) - 1)
+    return curve, lo, hi
 
 
 def labels(effect):
@@ -74,10 +53,10 @@ def labels(effect):
 
     Which is also SysEx pot order shifted by one, because pot 0 there is
     the mix.  Asking beats a table of constants per effect for the same
-    reason settings_effect() beats counting: the header moves and the
+    reason effectmap.settings() beats counting: the header moves and the
     constants do not.
     """
-    return [lab for (eff, lab) in _DECLARED if eff == effect]
+    return effectmap.pot_labels(effect)
 
 
 def defaults(effect):
@@ -87,84 +66,116 @@ def defaults(effect):
     that sets only the pots it cares about is measuring those pots plus
     whatever the last person left behind.
     """
-    raw = _raw_defaults()
-    return {lab: raw[(effect, lab)] for lab in labels(effect)
-            if (effect, lab) in raw}
+    return {lab: effectmap.pot_info(effect, lab)["defaultPot"]
+            for lab in labels(effect)}
 
 
 def to_pot(effect, label, value):
-    """The 0..120 the firmware stores for an engineering value."""
-    spec = _DECLARED.get((effect, label))
-    if spec is None:
-        raise KeyError(f"no POT: line for {effect}:{label}")
-    curve, lo, hi, _ = spec
+    """The 0..120 the firmware stores for an engineering value.
+
+    An ENUM or a BOOL takes the name of one of its choices.  It also
+    takes a
+    position, because a command line is allowed to say `Shape=2`, but
+    an out-of-range one is refused rather than clamped: a position
+    nobody can name is a position that has moved.
+    """
+    info = effectmap.pot_info(effect, label)
+    curve, lo, hi = _range(info)
+
+    if curve in NAMED:
+        if isinstance(value, str):
+            return effectmap.enum_value(effect, label, value)
+        if not 0 <= value <= hi:
+            raise ValueError("%s:%s has %d choices, so %r is not one"
+                             % (effect, label, len(info["enum"] or []), value))
+        return int(value)
+
     if curve == "LINEAR":
         p = (value - lo) / (hi - lo)
     elif curve == "EXPONENTIAL":
         p = math.log2(value / lo) / math.log2(hi / lo)
     else:
         raise NotImplementedError(
-            f"{effect}:{label} is {curve}; pots.py only does LINEAR and "
-            f"EXPONENTIAL, and guessing at the rest would be inventing one")
+            f"{effect}:{label} is {curve}; pots.py only does {', '.join(DONE)}"
+            f", and guessing at the rest would be inventing one")
     return max(0, min(120, round(p * 120)))
 
 
 def value(effect, label, pot):
-    """The other way: what a raw 0..120 setting reads as on the knob.
+    """The other way: what a raw setting reads as on the knob.
 
     A sweep is written in raw steps, because that is the thing with a
     hundred and twenty-one of them and no rounding in it, and then has
     to say in its table what each step meant.  Doing that by hand is the
     same mistake as doing to_pot() by hand, from the same direction.
+
+    An ENUM or a BOOL reads as the name of its choice, not as a number.
     """
-    spec = _DECLARED.get((effect, label))
-    if spec is None:
-        raise KeyError(f"no POT: line for {effect}:{label}")
-    curve, lo, hi, _ = spec
+    info = effectmap.pot_info(effect, label)
+    curve, lo, hi = _range(info)
+
+    if curve in NAMED:
+        choices = info["enum"] or []
+        if not 0 <= pot < len(choices):
+            raise ValueError("%s:%s has %d choices, so %r is not one"
+                             % (effect, label, len(choices), pot))
+        return choices[int(pot)]
+
     p = pot / 120.0
     if curve == "LINEAR":
         return lo + p * (hi - lo)
     if curve == "EXPONENTIAL":
         return lo * (hi / lo) ** p
     raise NotImplementedError(
-        f"{effect}:{label} is {curve}; pots.py only does LINEAR and "
-        f"EXPONENTIAL, and guessing at the rest would be inventing one")
+        f"{effect}:{label} is {curve}; pots.py only does {', '.join(DONE)}"
+        f", and guessing at the rest would be inventing one")
 
 
 def arg(effect, label, value):
-    """...as the --pot argument the bench wants."""
-    return ["--pot", f"{effect}:{label}={to_pot(effect, label, value)}"]
+    """...as the --pot argument the bench wants.
+
+    Under the display name, which is the only one the bench answers to.
+    """
+    name = effectmap.display(effect)
+    return ["--pot", f"{name}:{label}={to_pot(effect, label, value)}"]
 
 
 def selfcheck():
     """Does this file's arithmetic agree with the generator's?
 
-    Returns the list of disagreements, empty when all is well.
+    Returns (disagreements, how many pots were checked).
     """
-    bad, raws = [], _raw_defaults()
-    for (effect, label), (curve, lo, hi, default) in sorted(_DECLARED.items()):
-        if curve not in ("LINEAR", "EXPONENTIAL") or default is None:
-            continue
-        want = raws.get((effect, label))
-        if want is None:
-            continue
-        try:
-            got = to_pot(effect, label, float(default))
-        except (ValueError, TypeError):
-            continue
-        if got != want:
-            bad.append(f"{effect}:{label} default {default} -> {got}, "
-                       f"generator says {want}")
-    return bad
+    bad, n = [], 0
+    for _id, name, _short in effectmap.names():
+        for label in labels(name):
+            info = effectmap.pot_info(name, label)
+            if info["curve"] not in DONE or info["default"] is None:
+                continue
+            want = info["defaultPot"]
+            declared = info["default"]
+            if info["curve"] in NAMED:
+                declared = (info["enum"] or [])[int(declared)]
+            n += 1
+            got = to_pot(name, label, declared)
+            if got != want:
+                bad.append(f"{name}:{label} default {declared} -> {got}, "
+                           f"generator says {want}")
+    return bad, n
 
 
-_DECLARED = _declared()
-
-if __name__ == "__main__":
-    problems = selfcheck()
+def main():
+    try:
+        problems, n = selfcheck()
+    except effectmap.MapError as e:
+        print("pots: %s" % e)
+        return 1
     for p in problems:
         print("pots: MISMATCH " + p)
-    n = sum(1 for v in _DECLARED.values() if v[0] in ("LINEAR", "EXPONENTIAL"))
-    print(f"pots: {n} linear/exponential pots, "
-          f"{'all agree with the generator' if not problems else 'DISAGREEMENTS ABOVE'}")
-    sys.exit(1 if problems else 0)
+    print("pots: %d pots, %s" % (
+        n, "all agree with the generator" if not problems
+        else "DISAGREEMENTS ABOVE"))
+    return 1 if problems else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
