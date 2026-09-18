@@ -15,6 +15,7 @@
 #
 import os
 import re
+import select
 import subprocess
 import sys
 import tempfile
@@ -435,6 +436,94 @@ def enter_bootsel(p, channel=1):
     _cc(p, 20, 126, channel)
 
 
+def listen_sysex(p, opcode, wait, in_port=None):
+    """Send one request and hand back every byte that came back.
+
+    The reply is read *while* it arrives.  A dumper writes three
+    characters per byte, so a long reply is more than a pipe will hold,
+    and a pipe nobody is reading stops the dumper dead: it blocks on the
+    write and takes nothing more off the MIDI device.  Collecting only
+    after the dumper has been killed therefore caps every capture at one
+    pipeful, and what did arrive looks exactly like the pedal giving up
+    partway through.
+
+    The raw device first, because the sequencer's pool drops a long
+    reply, and the sequencer second.  A sequencer client - the web app
+    in a tab - holds the raw device open underneath itself, so the fast
+    route is refused and the slow one still works, which is the case the
+    fallback is for.
+    """
+    dev = rawmidi(p) if in_port is None else None
+    if dev:
+        #
+        # -r rather than -d: the hex dump is three characters a byte and
+        # is meant to be read by a person, and this reads it straight
+        # back.  -a -c so that active sensing and clock arrive instead of
+        # being filtered out here, because a byte nobody ever sees is a
+        # byte nobody can notice the pedal sending.
+        #
+        got = _listen(["amidi", "-p", dev, "-a", "-c", "-r", "/dev/stdout"],
+                      p, opcode, wait)
+        if got:
+            return got
+
+    text = _listen(["aseqdump", "-p", in_port or p], p, opcode, wait)
+    return bytes.fromhex("".join(re.findall(
+        r"System exclusive\s+((?:[0-9A-Fa-f]{2} ?)+)",
+        text.decode("ascii", "replace"))).replace(" ", ""))
+
+
+def sysex_payload(blob, opcode):
+    """The body of an 'F0 7D <opcode> ... F7' in a captured stream.
+
+    The last one, because a request from before this one still arriving
+    leaves a partial reply in front of the real one, and half a message
+    parses rather than failing.
+
+    Real-time bytes are dropped here rather than upstream.  MIDI lets
+    them appear between any two bytes of a longer message, including
+    inside a SysEx, so a payload taken as a byte range has to allow for
+    it - and this pedal has never been seen to send one, which is worth
+    being able to find out rather than arranging not to see.
+    """
+    at = blob.rfind(bytes([0xF0, 0x7D, opcode]))
+    if at < 0:
+        return None
+    end = blob.find(0xF7, at)
+    if end < 0:
+        return None
+    return bytes(b for b in blob[at + 3:end] if not 0xF8 <= b <= 0xFE)
+
+
+def _listen(cmd, p, opcode, wait):
+    """Run a dumper, ask, and read its output as it comes."""
+    dump = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                            stderr=subprocess.DEVNULL)
+    chunks = []
+
+    def collect(seconds):
+        fd = dump.stdout.fileno()
+        until = time.monotonic() + seconds
+        while True:
+            left = until - time.monotonic()
+            if left <= 0 or not select.select([fd], [], [], left)[0]:
+                return
+            b = os.read(fd, 1 << 16)
+            if not b:
+                return              # the dumper is gone
+            chunks.append(b)
+
+    try:
+        collect(0.4)                # let the port settle
+        send(p, opcode)
+        collect(wait)
+    finally:
+        dump.terminate()
+        collect(0.2)                # and whatever is still in the pipe
+        dump.wait()
+    return b"".join(chunks)
+
+
 def identity(p, in_port=None, wait=2.0):
     """The pedal's self-description, as a dict, or None.
 
@@ -442,26 +531,11 @@ def identity(p, in_port=None, wait=2.0):
     bus, and what the save area holds.
     """
     import json
-    dump = subprocess.Popen(["aseqdump", "-p", in_port or p],
-                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                            text=True)
-    try:
-        time.sleep(0.4)
-        send(p, 0x0A)
-        time.sleep(wait)
-    finally:
-        dump.terminate()
-        text = dump.stdout.read()
-        dump.wait()
-
-    blob = bytes.fromhex("".join(
-        re.findall(r"System exclusive\s+((?:[0-9A-Fa-f]{2} ?)+)", text)
-    ).replace(" ", ""))
-    i = blob.find(bytes([0xF0, 0x7D, 0x0A]))
-    if i < 0:
+    body = sysex_payload(listen_sysex(p, 0x0A, wait, in_port=in_port), 0x0A)
+    if body is None:
         return None
     try:
-        return json.loads(blob[i + 3:blob.find(0xF7, i)].decode())
+        return json.loads(body.decode())
     except (ValueError, UnicodeDecodeError):
         return None
 
@@ -473,26 +547,8 @@ def telemetry(p, in_port=None, wait=1.5):
     floor, output peak, gate, load.  The levels are -dBFS, one byte per
     dB, counting down from full scale.
     """
-    dump = subprocess.Popen(["aseqdump", "-p", in_port or p],
-                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                            text=True)
-    try:
-        time.sleep(0.4)
-        send(p, 0x0B)
-        time.sleep(wait)
-    finally:
-        dump.terminate()
-        text = dump.stdout.read()
-        dump.wait()
-
-    blob = bytes.fromhex("".join(
-        re.findall(r"System exclusive\s+((?:[0-9A-Fa-f]{2} ?)+)", text)
-    ).replace(" ", ""))
-    i = blob.find(bytes([0xF0, 0x7D, 0x0B]))
-    if i < 0:
-        return None
-    body = blob[i + 3:blob.find(0xF7, i)]
-    if len(body) < 6:
+    body = sysex_payload(listen_sysex(p, 0x0B, wait, in_port=in_port), 0x0B)
+    if body is None or len(body) < 6:
         return None
     out = {"version": body[0], "in_dbfs": -body[1], "floor_dbfs": -body[2],
            "out_dbfs": -body[3], "gate": body[4], "load": body[5]}
