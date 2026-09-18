@@ -257,27 +257,27 @@ def _unheld(d):
     return d, None
 
 
-def dongle(match=""):
-    """A sequencer port that is not a pedal - the USB-MIDI adapter.
+def dongles(match=""):
+    """Every sequencer port that is not a pedal, in order.
 
-    The hardware MIDI jacks go to the UART rather than to USB, so they
-    are reachable only through something else plugged into them, and
-    that something is not discoverable the way a pedal is: it has no
-    serial we care about and no audio side to join to.  It is simply
-    the MIDI port that is not one of ours.
+    An adapter can have more than one DIN pair - the MIDIMATE has two,
+    48:0 and 48:1 - and which of them a pedal is wired to is a fact
+    about the bench rather than about the adapter.  So a caller that
+    wants to find the pedal tries them.
     """
     try:
         out = subprocess.run(["aplaymidi", "-l"], capture_output=True,
                              text=True, check=True).stdout
     except (FileNotFoundError, subprocess.CalledProcessError):
-        return None
+        return []
+    found = []
     for line in out.splitlines()[1:]:
         m = re.match(r"\s*(\d+:\d+)\s+(.*\S)", line)
         if not m or "pedal" in m.group(2).lower():
             continue
         if match.lower() in m.group(2).lower():
-            return m.group(1)
-    return None
+            found.append(m.group(1))
+    return found
 
 
 def midi_listen(port, seconds=1.5, during=None):

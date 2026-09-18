@@ -39,8 +39,8 @@ def main():
     ap.add_argument("--seconds", type=float, default=1.2)
     args = ap.parse_args()
 
-    dong = pedal.dongle()
-    if not dong:
+    ports = pedal.dongles()
+    if not ports:
         print("test-midi: SKIPPED - no MIDI adapter on the sequencer")
         return 0
 
@@ -61,25 +61,31 @@ def main():
         return 0
     pedals = wired
 
-    print("test-midi: adapter on %s (%s)" % (dong, pedal.rawmidi(dong)))
+    print("test-midi: adapter on %s"
+          % ", ".join("%s (%s)" % (p, pedal.rawmidi(p)) for p in ports))
 
     #
-    # Which pedal the jacks belong to, by trying it rather than being
-    # told.  A note-on the pedal does not consume comes back out of both
-    # its MIDI thru paths, so whichever pedal echoes it to USB is the one
-    # the adapter is wired to.
+    # Which port reaches which pedal, by trying it rather than being
+    # told.  An adapter can have more than one DIN pair and only one of
+    # them is in the pedal, and a note-on the pedal does not consume
+    # comes back out of both its MIDI thru paths - so whichever pedal
+    # echoes it to USB is the one that pair is wired to.
     #
-    target = None
-    for d in pedals:
-        if _saw_note(pedal.midi_listen(d["port"], args.seconds,
-                                       during=lambda: _note(dong))):
-            target = d
+    dong = target = None
+    for port in ports:
+        for d in pedals:
+            if _saw_note(pedal.midi_listen(d["port"], args.seconds,
+                                           during=lambda: _note(port))):
+                dong, target = port, d
+                break
+        if target:
             break
     if not target:
-        print("test-midi: SKIPPED - the adapter does not reach any pedal")
+        print("test-midi: SKIPPED - none of the adapter's ports reaches a "
+              "pedal (%s)" % ", ".join(d["label"] for d in pedals))
         return 0
 
-    print("test-midi: wired to %s" % target["label"])
+    print("test-midi: %s is wired to %s" % (dong, target["label"]))
 
     alive = rx = tx = act = 0
     for _ in range(args.trials):
