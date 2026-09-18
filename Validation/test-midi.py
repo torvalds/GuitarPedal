@@ -49,6 +49,18 @@ def main():
         print("test-midi: SKIPPED - no pedals")
         return 0
 
+    #
+    # Only the boards with the jacks.  minimal has none, so an adapter
+    # that cannot reach it is the board being what it is rather than
+    # anything being wrong.
+    #
+    wired = [d for d in pedals if pedal.capabilities(d)["midi_hw"]]
+    if not wired:
+        print("test-midi: SKIPPED - no board here has hardware MIDI (%s)"
+              % ", ".join(d["label"] for d in pedals))
+        return 0
+    pedals = wired
+
     print("test-midi: adapter on %s (%s)" % (dong, pedal.rawmidi(dong)))
 
     #

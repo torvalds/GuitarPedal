@@ -132,8 +132,10 @@ def main():
     if not args.watch:
         got = probe(d["port"])
         if got is None:
-            print("  no reply - is this firmware built with the probe in it?")
-            return 1
+            print("exp-probe: SKIPPED - %s did not answer the probe; only "
+                  "unified has\n           the jack, and only firmware built "
+                  "with it answers" % d["board"])
+            return 0
         print()
         show(*got)
         return 0

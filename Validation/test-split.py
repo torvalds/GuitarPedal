@@ -31,6 +31,7 @@
 # steering across a save and a Program Change, which is the other half
 # of the feature and is not separately testable.
 #
+import argparse
 import sys
 
 import numpy as np
@@ -76,9 +77,24 @@ def measure(p, card, which):
 
 
 def main():
-    card, p = audio.find_card(), pedal.port()
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--target", default=None,
+                    help="serial, label or board name naming one pedal")
+    args = ap.parse_args()
+
+    d, why = pedal.sole(args.target)
+    if not d:
+        print("test-split: SKIPPED - %s" % why)
+        return 0
+    card, p = d["card"], d["port"]
     if card is None or p is None:
-        print("test-split: SKIPPED - no pedal on the USB")
+        print("test-split: SKIPPED - %s has no card or no MIDI port"
+              % d["label"])
+        return 0
+
+    if pedal.capabilities(d)["stereo"] is False:
+        print("test-split: SKIPPED - %s is mono; there is no second channel "
+              "to keep" % d["label"])
         return 0
 
     pedal.wet_dry(p, effectmap.settings())

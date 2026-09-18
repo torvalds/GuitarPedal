@@ -167,6 +167,44 @@ def find(match, among=None):
     return hits[0] if len(hits) == 1 else None
 
 
+def capabilities(d, ident=None):
+    """What a board can do, out of its own identity reply.
+
+    Read by presence: a board old enough not to carry a key does not
+    have the thing it names, and a version number to compare against is
+    what the telemetry block got wrong.
+
+    The codec description comes from the product string rather than from
+    the reply, because every board sets it and firmware old enough to
+    omit "codec" from the reply still says it there.  What it means is
+    per family - "mono"/"stereo" on the boards with an audio card,
+    "DC-coupled"/"AC-coupled" on minimal - so 'stereo' is None on a board
+    that did not say either way rather than a guess.
+    """
+    ident = pedal_identity(d) if ident is None else ident
+    found = (ident or {}).get("found", {})
+
+    # "<board> <desc> Pedal"
+    words = (d.get("product") or "").split()
+    desc = " ".join(words[1:-1]) if len(words) > 2 else None
+    desc = found.get("codec", desc)
+
+    return {
+        "board": d.get("board"),
+        "build": (ident or {}).get("build"),
+        "codec": desc,
+        "stereo": {"stereo": True, "mono": False}.get(desc),
+        "dc_coupled": None if desc is None else desc == "DC-coupled",
+        "midi_hw": (ident or {}).get("midi_hw"),
+        "controls": (ident or {}).get("controls", []),
+        "scenes": (ident or {}).get("scenes"),
+    }
+
+
+def pedal_identity(d):
+    return identity(d["port"]) if d.get("port") else None
+
+
 def matches(target, among=None):
     """Every pedal 'target' names.
 
