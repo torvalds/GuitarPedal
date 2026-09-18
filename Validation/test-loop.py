@@ -30,6 +30,7 @@ import time
 import numpy as np
 
 import audio
+import effectmap
 import pedal
 
 FAILED = []
@@ -127,12 +128,6 @@ def level_dbfs(pot):
     return -90.0 + pot * 0.75
 
 
-def tone_id():
-    import scene
-    for i, e in enumerate(scene.effects_from_map()):
-        if e["name"] == "Test Tone":
-            return i
-    return None
 
 
 #
@@ -244,10 +239,11 @@ def main():
         print(f"test-loop: SKIPPED - found {len(found)} pedal(s), need 2")
         return 0
 
-    TONE = tone_id()
-    SETTINGS = pedal.settings_effect()
-    if TONE is None or SETTINGS is None:
-        print("test-loop: SKIPPED - no Test Tone effect in the built map")
+    try:
+        TONE = effectmap.effect("TESTTONE")
+        SETTINGS = effectmap.settings()
+    except effectmap.MapError as e:
+        print("test-loop: SKIPPED - %s" % e)
         return 0
 
     print("test-loop: " + ", ".join(

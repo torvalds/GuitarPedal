@@ -49,14 +49,21 @@ except ImportError:
 
 import audio
 import bench as B
+import effectmap
 import pedal
 
 # Effect ids, which are indexes into the firmware's effects[] - the same
-# order 'bench --list' prints, since it is printing that array.
+# order 'bench --list' prints, since it is printing that array.  Asked
+# for in main(), so --help works without a build.
 CHAIN = pedal.CHAIN
-BOOST = pedal.effect_id("BOOST")
-TESTTONE = pedal.effect_id("TESTTONE")
-SETTINGS = pedal.settings_effect()
+BOOST = TESTTONE = SETTINGS = None
+
+
+def resolve():
+    global BOOST, TESTTONE, SETTINGS
+    BOOST = effectmap.effect("BOOST")
+    TESTTONE = effectmap.effect("TESTTONE")
+    SETTINGS = effectmap.settings()
 
 # Pot numbers as the SysEx sees them: 0 is the mix, 1-10 are the effect's.
 CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME = 1, 4, 5
@@ -180,9 +187,10 @@ def main():
                     help="serial, label or product substring naming one pedal")
     args = ap.parse_args()
 
-    if None in (BOOST, SETTINGS, TESTTONE):
-        print("%s: SKIPPED - no effect map in ../build; run 'make' first"
-              % "test-bench")
+    try:
+        resolve()
+    except effectmap.MapError as e:
+        print("test-bench: SKIPPED - %s" % e)
         return 0
 
     found = pedal.discover()

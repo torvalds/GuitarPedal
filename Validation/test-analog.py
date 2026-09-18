@@ -54,11 +54,18 @@ except ImportError:
     sys.exit(0)
 
 import audio
+import effectmap
 import pedal
 
+# Asked for in main(), so --help works without a build.
 CHAIN = pedal.CHAIN
-TESTTONE = pedal.effect_id("TESTTONE")
-SETTINGS = pedal.settings_effect()
+TESTTONE = SETTINGS = None
+
+
+def resolve():
+    global TESTTONE, SETTINGS
+    TESTTONE = effectmap.effect("TESTTONE")
+    SETTINGS = effectmap.settings()
 
 CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME = 1, 4, 5
 TT_LEVEL, TT_FREQ, TT_SHAPE = 1, 2, 3
@@ -116,9 +123,10 @@ def main():
                     help="serial, label or product substring naming one pedal")
     args = ap.parse_args()
 
-    if None in (SETTINGS, TESTTONE):
-        print("%s: SKIPPED - no effect map in ../build; run 'make' first"
-              % "test-analog")
+    try:
+        resolve()
+    except effectmap.MapError as e:
+        print("test-analog: SKIPPED - %s" % e)
         return 0
 
     found = pedal.discover()

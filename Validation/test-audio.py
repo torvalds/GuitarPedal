@@ -25,6 +25,7 @@ import time
 import numpy as np
 
 import audio
+import effectmap
 import pedal
 
 FAILED = []
@@ -91,9 +92,7 @@ def main():
     # same instant, so anything below can subtract one from the other
     # without aligning them first.
     #
-    settings = pedal.settings_effect()
-    if settings is not None:
-        pedal.wet_dry(p, settings)
+    pedal.wet_dry(p, effectmap.settings())
 
     d = audio.trim(audio.capture(args.seconds, card))
     wet, dry = d[:, 0], d[:, 1]

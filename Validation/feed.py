@@ -38,6 +38,7 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import audio
 import bench as B
+import effectmap
 import pedal
 import pots as P
 
@@ -236,10 +237,8 @@ def verify(args, card, p, dry):
     against nothing.
     """
     short, name, over = under_test(args)
-    eff = pedal.effect_id(short)
-    settings = pedal.settings_effect()
-    if eff is None or settings is None:
-        sys.exit(f"feed: no {name} in the built map - is build/ current?")
+    eff = effectmap.effect(short)
+    settings = effectmap.settings()
 
     #
     # Put both effects where the bench starts from, pot by pot, and only
@@ -537,9 +536,7 @@ def main():
         return 0
 
     if not args.no_set:
-        settings = pedal.settings_effect()
-        if settings is None:
-            sys.exit("feed: no settings effect in the built map")
+        settings = effectmap.settings()
         pedal.set_pot(port, settings, pedal.SETTINGS_USB_IN,
                       pedal.USB_IN_PRE_FX)
         print("USB L/R In set to Pre-FX - it adds to the jack rather than "

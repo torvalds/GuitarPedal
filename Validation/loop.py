@@ -47,6 +47,7 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import audio
 import feed
+import effectmap
 import pedal
 import targets as T
 
@@ -112,7 +113,7 @@ def configure(p, leg, t=None, knobs=None, settle=0.3):
     if leg not in ("hardware", "model"):
         raise LoopError("no such leg: %r" % (leg,))
 
-    settings = pedal.settings_effect()
+    settings = effectmap.settings()
     pedal.set_pot(p, settings, pedal.SETTINGS_USB_IN, pedal.USB_IN_REPLACE)
     pedal.set_pot(p, settings, pedal.SETTINGS_USB_OUT, pedal.USB_OUT_WET_DRY)
 
@@ -128,14 +129,11 @@ def configure(p, leg, t=None, knobs=None, settle=0.3):
     else:
         if t is None:
             raise LoopError("the model leg needs a target")
-        eff = pedal.effect_id(t["short"])
+        eff = effectmap.effect(t["short"])
         pedal.set_routing(p, eff)
         for name, v in (knobs or t["knobs"]).items():
             raw = int(v) if isinstance(t["knobs"][name], int) else round(v * 120)
-            idx = pedal.pot_index(t["short"], name)
-            if idx is None:
-                raise LoopError("%s has no pot %r in the generated map"
-                                % (t["short"], name))
+            idx = effectmap.pot(t["short"], name)
             pedal.set_pot(p, eff, idx, raw)
 
     time.sleep(settle)
