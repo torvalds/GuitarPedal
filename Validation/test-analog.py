@@ -56,7 +56,10 @@ except ImportError:
 import audio
 import pedal
 
-CHAIN, TESTTONE, SETTINGS = 0, 16, 18
+CHAIN = pedal.CHAIN
+TESTTONE = pedal.effect_id("TESTTONE")
+SETTINGS = pedal.settings_effect()
+
 CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME = 1, 4, 5
 TT_LEVEL, TT_FREQ, TT_SHAPE = 1, 2, 3
 SETTINGS_USB_OUT, USB_OUT_WET_DRY = 1, 3
@@ -112,6 +115,11 @@ def main():
     ap.add_argument("--target", default=None,
                     help="serial, label or product substring naming one pedal")
     args = ap.parse_args()
+
+    if None in (SETTINGS, TESTTONE):
+        print("%s: SKIPPED - no effect map in ../build; run 'make' first"
+              % "test-analog")
+        return 0
 
     found = pedal.discover()
     if not found:

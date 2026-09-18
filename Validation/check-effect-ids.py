@@ -81,6 +81,19 @@ def literal_int(node):
         and not isinstance(node.value, bool)
 
 
+def bindings(node):
+    """Every (target, value) an assignment binds, tuples unpacked."""
+    out = []
+    for t in node.targets:
+        if isinstance(t, (ast.Tuple, ast.List)) \
+           and isinstance(node.value, (ast.Tuple, ast.List)) \
+           and len(t.elts) == len(node.value.elts):
+            out += list(zip(t.elts, node.value.elts))
+        else:
+            out.append((t, node.value))
+    return out
+
+
 def scan(path, ids):
     """Every place this file writes an effect id down.
 
@@ -117,15 +130,15 @@ def scan(path, ids):
         # the shape the three stale ones actually had - the call site
         # looked fine, and the constant above it was the lie.
         #
-        if isinstance(node, ast.Assign) and literal_int(node.value) \
-           and not assigns_ok:
-            for t in node.targets:
-                if isinstance(t, ast.Name) and t.id.upper() in ids:
+        if isinstance(node, ast.Assign) and not assigns_ok:
+            for t, v in bindings(node):
+                if isinstance(t, ast.Name) and literal_int(v) \
+                   and t.id.upper() in ids:
                     bad.append("%s:%d: %s is an effect the map declares, "
                                "assigned the literal %d - ask "
                                "pedal.effect_id(\"%s\") instead"
                                % (os.path.basename(path), node.lineno,
-                                  t.id, node.value.value, t.id.upper()))
+                                  t.id, v.value, t.id.upper()))
     return bad
 
 

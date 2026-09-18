@@ -53,7 +53,10 @@ import pedal
 
 # Effect ids, which are indexes into the firmware's effects[] - the same
 # order 'bench --list' prints, since it is printing that array.
-CHAIN, BOOST, TESTTONE, SETTINGS = 0, 5, 16, 18
+CHAIN = pedal.CHAIN
+BOOST = pedal.effect_id("BOOST")
+TESTTONE = pedal.effect_id("TESTTONE")
+SETTINGS = pedal.settings_effect()
 
 # Pot numbers as the SysEx sees them: 0 is the mix, 1-10 are the effect's.
 CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME = 1, 4, 5
@@ -176,6 +179,11 @@ def main():
     ap.add_argument("--target", default=None,
                     help="serial, label or product substring naming one pedal")
     args = ap.parse_args()
+
+    if None in (BOOST, SETTINGS, TESTTONE):
+        print("%s: SKIPPED - no effect map in ../build; run 'make' first"
+              % "test-bench")
+        return 0
 
     found = pedal.discover()
     if not found:
