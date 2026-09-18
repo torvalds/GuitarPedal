@@ -263,10 +263,12 @@ check-reboot:
 	./test-reboot.py $(if $(TARGET),--target $(TARGET)) \
 			 $(if $(JSON),--json $(JSON)) $(BOOTARGS)
 
-check: test-midi-cin bench/coeff bench/gen/midi_schema.h
+check: test-midi-cin bench/bench bench/coeff bench/gen/midi_schema.h
 	./test-midi-cin
 	./test-biquad.py
+	./test-effects.py
 	./effectmap.py
+	./pots.py
 	./check-effect-ids.py
 ifeq ($(NODE),)
 	@echo "test-webmidi: SKIPPED - no node in PATH"
