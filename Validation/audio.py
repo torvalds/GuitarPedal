@@ -70,14 +70,13 @@ def find_cards(match=""):
 
     A card line carries a short name and a longer one in brackets, and
     which of them the USB product string ends up in depends on whether the
-    product starts with the manufacturer - "Linus Pedal" reduced to
-    "Pedal", "TAC5242 Pedal" does not.  So the match is against the whole
-    line rather than either field, and the name handed back is the
-    bracketed one, which is the full product string and therefore names
-    the codec.
+    product starts with the manufacturer.  So the match is against the
+    whole line rather than either field, and the name handed back is the
+    bracketed one, which is the full product string - "unified stereo
+    Pedal", "minimal AC-coupled Pedal".
 
     'match' narrows that further, and is how a caller says which pedal it
-    means when there is more than one: "TAC5242", or "5112".
+    means when there is more than one: "unified", or "minimal".
     """
     try:
         out = subprocess.run(["arecord", "-l"], capture_output=True,

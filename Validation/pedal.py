@@ -131,17 +131,23 @@ def discover():
         if port and product not in name:
             port = None
 
-        codec = (re.search(r"TAC\d+", product) or [None])
-        codec = codec.group(0) if hasattr(codec, "group") else None
+        #
+        # The product string is "<board> <codec> Pedal": the board name is
+        # compile-time because it is the pin map, and the codec is what
+        # probe_hardware() found.  Only the first word is a fact about
+        # which build this is - what the probe said is in the identity
+        # reply, and capabilities() is where to ask.
+        #
+        board = product.split()[0]
 
         found.append({
             "serial": serial,
             "product": product,
-            "codec": codec,
+            "board": board,
             "card": card,
             "port": port,
             # Unique and short, for saying which board a number came from
-            "label": "%s/%s" % (codec or product.split()[0], serial[-4:]),
+            "label": "%s/%s" % (board, serial[-4:]),
         })
     return sorted(found, key=lambda d: d["serial"])
 
@@ -150,8 +156,8 @@ def find(match, among=None):
     """The one pedal matching 'match', or None if it is not exactly one.
 
     Matches a serial, a label or a product string, and refuses to guess:
-    two boards of the same codec both match "TAC5242", and answering
-    either of them is how a test ends up measuring the wrong board.
+    two boards of one revision both match their board name, and
+    answering either is how a test measures the board nobody asked about.
     """
     pedals = among if among is not None else discover()
     m = match.lower()
