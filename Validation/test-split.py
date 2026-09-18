@@ -41,6 +41,16 @@ import effectmap
 import pedal
 import pots as P
 
+#
+# Something has to be on the analog input, and the line between "nothing"
+# and "something" has to sit above what the converter does on its own: an
+# unplugged jack reads about -91 dBFS here, so a guard below that can
+# never fire and the run reports FAILs about silence.  -60 leaves thirty
+# decibels of room either side, and the measurement wants a signal it can
+# see six decibels of difference in.
+#
+INPUT_FLOOR_DBFS = -60.0
+
 
 def configure(p, out):
     """Both tones routed and flat, with TONE 2's output where asked.
@@ -117,8 +127,10 @@ def main():
     merge_db, wet, dry = measure(p, card, 0)
     keep_db, _, _ = measure(p, card, 1)
 
-    if audio.peak(dry) < 1e-6:
-        print("test-split: SKIPPED - nothing on the analog input")
+    level = audio.dbfs(audio.rms(dry))
+    if level < INPUT_FLOOR_DBFS:
+        print("test-split: SKIPPED - the analog input is at %.1f dBFS, which "
+              "is nothing plugged in" % level)
         return 0
 
     print(f"  scene 0, TONE 2 out=Merge : {merge_db:+.2f} dB   (want +6.02)")
