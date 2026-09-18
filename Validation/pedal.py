@@ -194,13 +194,26 @@ def sole(target=None, among=None):
     if target:
         hits = matches(target, found)
         if len(hits) == 1:
-            return hits[0], None
+            return _unheld(hits[0])
         return None, ("%r names %s of the %d pedals here: %s"
                       % (target, len(hits) or "none", len(found), here))
     if len(found) > 1:
         return None, ("%d pedals and no target; this wants exactly one: %s"
                       % (len(found), here))
-    return found[0], None
+    return _unheld(found[0])
+
+
+def _unheld(d):
+    """(board, None), or (None, who has its port) - see port_holder().
+
+    Checked here because this is where every script picks a board, and
+    because the alternative is each of them discovering it as "the pedal
+    did not answer" several seconds later.
+    """
+    held = port_holder(d["port"]) if d.get("port") else None
+    if held and held["kind"] == "raw":
+        return None, "%s: %s" % (d["label"], held["why"])
+    return d, None
 
 
 def dongle(match=""):
@@ -466,6 +479,61 @@ def enter_bootsel(p, channel=1):
     _cc(p, 20, 126, channel)
 
 
+def port_holder(p):
+    """What else has this pedal's MIDI input open, or None.
+
+    "The pedal did not answer" is more often this than anything wrong
+    with the pedal, and it is one cheap question rather than a guess:
+    ALSA gives a rawmidi input one owner, and /proc names the process.
+
+    How that owner got there decides whether anything here can still
+    hear a reply, so the two are told apart by what it has open.  A
+    sequencer client - the web app in a tab - holds the raw device
+    underneath itself and the sequencer still fans replies out to
+    everyone subscribed.  Another raw reader takes the bytes before the
+    sequencer sees them, and then nothing here will hear anything at
+    all, however long it waits.
+    """
+    dev = rawmidi(p)
+    if not dev:
+        return None
+    card = int(dev.split(":")[1].split(",")[0])
+    try:
+        text = open("/proc/asound/card%d/midi0" % card).read()
+    except OSError:
+        return None
+
+    m = re.search(r"Owner PID\s*:\s*(\d+)", text)
+    if not m or int(m.group(1)) == os.getpid():
+        return None
+    pid = int(m.group(1))
+
+    try:
+        name = open("/proc/%d/comm" % pid).read().strip()
+    except OSError:
+        name = "pid %d" % pid
+
+    kind = "seq"
+    try:
+        for fd in os.listdir("/proc/%d/fd" % pid):
+            try:
+                if os.readlink("/proc/%d/fd/%s" % (pid, fd)).startswith(
+                        "/dev/snd/midi"):
+                    kind = "raw"
+                    break
+            except OSError:
+                pass
+    except OSError:
+        pass
+
+    return {"pid": pid, "name": name, "kind": kind,
+            "why": "%s (pid %d) has the raw MIDI device open, so it is "
+                   "taking the pedal's replies before anything else can "
+                   "see them" % (name, pid) if kind == "raw" else
+                   "%s (pid %d) has the port open through the sequencer"
+                   % (name, pid)}
+
+
 def listen_sysex(p, opcode, wait, in_port=None):
     """Send one request and hand back every byte that came back.
 
@@ -482,8 +550,21 @@ def listen_sysex(p, opcode, wait, in_port=None):
     in a tab - holds the raw device open underneath itself, so the fast
     route is refused and the slow one still works, which is the case the
     fallback is for.
+
+    Another *raw* reader is a different thing and nothing here helps: it
+    takes the bytes before the sequencer sees them, so both routes come
+    back empty and the pedal looks silent while it is answering
+    perfectly well.  That is what port_holder() is asked about above.
     """
-    dev = rawmidi(p) if in_port is None else None
+    held = port_holder(p) if in_port is None else None
+    if held and held["kind"] == "raw":
+        #
+        # Waiting here is waiting for a reply somebody else is already
+        # taking, for however long the caller asked for.
+        #
+        return b""
+
+    dev = rawmidi(p) if in_port is None and not held else None
     if dev:
         #
         # -r rather than -d: the hex dump is three characters a byte and
