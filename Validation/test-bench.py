@@ -199,15 +199,16 @@ def main():
                     help="serial, label or product substring naming one pedal")
     args = ap.parse_args()
 
-    try:
-        resolve()
-    except effectmap.MapError as e:
-        print("test-bench: SKIPPED - %s" % e)
-        return 0
-
     d, why = pedal.sole(args.target)
     if not d:
         print("test-bench: SKIPPED - %s" % why)
+        return 0
+
+    try:
+        print("test-bench:", pedal.use_map(d, strict=True))
+        resolve()
+    except (pedal.Stale, effectmap.MapError) as e:
+        print("test-bench: SKIPPED - %s" % e)
         return 0
     print("test-bench: %s, card %d, port %s"
           % (d["label"], d["card"], d["port"]))

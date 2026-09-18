@@ -92,6 +92,12 @@ def main():
               % d["label"])
         return 0
 
+    try:
+        print("test-split:", pedal.use_map(d, strict=True))
+    except pedal.Stale as e:
+        print("test-split: SKIPPED - %s" % e)
+        return 0
+
     if pedal.capabilities(d)["stereo"] is False:
         print("test-split: SKIPPED - %s is mono; there is no second channel "
               "to keep" % d["label"])

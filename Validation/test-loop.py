@@ -244,6 +244,27 @@ def main():
         print(f"test-loop: SKIPPED - found {len(found)} pedal(s), need 2")
         return 0
 
+    #
+    # One map has to describe every board here, because the ids below are
+    # written to all of them.  Asking each board for its own would give
+    # several maps and no way to use them at once, so this is the one
+    # place that wants them all running this tree.
+    #
+    stale = []
+    for d in found:
+        want = pedal.elf_build(d["board"])
+        got = (pedal.identity(d["port"]) or {}).get("build")
+        if want is None or got != want:
+            stale.append("%s is running %r and this tree builds %r"
+                         % (d["label"], got, want))
+    if stale:
+        print("test-loop: SKIPPED - every board has to be running this tree, "
+              "since one map\n           has to mean the same thing on all "
+              "of them")
+        for s in stale:
+            print("           " + s)
+        return 0
+
     try:
         TONE = effectmap.effect("TESTTONE")
         SETTINGS = effectmap.settings()
