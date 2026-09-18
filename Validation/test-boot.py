@@ -216,8 +216,7 @@ def main():
     # the two are told apart without restating its matching rule here.
     board = pedal.find(args.target) if args.target else None
     if board is None and args.target:
-        found = pedal.discover()
-        hits = [d for d in found if pedal.find(args.target, among=[d])]
+        hits = pedal.matches(args.target)
         if len(hits) > 1:
             print("test-boot: SKIPPED - %r matches %s" % (
                 args.target, ", ".join(d["label"] for d in hits)))
@@ -235,16 +234,10 @@ def main():
         print("test-boot: found it")
 
     if board is None:
-        found = pedal.discover()
-        if not found:
-            print("test-boot: SKIPPED - no pedal on the USB")
+        board, why = pedal.sole()
+        if not board:
+            print("test-boot: SKIPPED - %s" % why)
             return 0
-        if len(found) > 1:
-            print("test-boot: SKIPPED - %d pedals; say which with --target" % (
-                len(found),))
-            print("           %s" % ", ".join(d["label"] for d in found))
-            return 0
-        board = found[0]
 
     #
     # The build stamp, read once and recorded beside the tally.  The

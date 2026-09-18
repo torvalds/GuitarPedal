@@ -205,24 +205,10 @@ def main():
         print("test-bench: SKIPPED - %s" % e)
         return 0
 
-    found = pedal.discover()
-    if not found:
-        print("%s: SKIPPED - no pedal on the USB" % "test-bench")
+    d, why = pedal.sole(args.target)
+    if not d:
+        print("test-bench: SKIPPED - %s" % why)
         return 0
-    if args.target:
-        d = pedal.find(args.target, among=found)
-        if not d:
-            print("%s: SKIPPED - '%s' does not name exactly one of the %d "
-                  "pedals here: %s"
-                  % ("test-bench", args.target, len(found),
-                     ", ".join(x["label"] for x in found)))
-            return 0
-    elif len(found) > 1:
-        print("%s: SKIPPED - %d pedals and no --target; this wants exactly one"
-              % ("test-bench", len(found)))
-        return 0
-    else:
-        d = found[0]
     print("test-bench: %s, card %d, port %s"
           % (d["label"], d["card"], d["port"]))
     print("            [TESTTONE] 440 Hz -18 dBFS into [BOOST], captured over USB")

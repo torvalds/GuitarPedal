@@ -260,21 +260,9 @@ def main():
     # boards of one revision differ only in their serial, and answering
     # either is how a run reports on the board nobody asked about.
     #
-    found = pedal.discover()
-    if not found:
-        sys.exit("measure-load: no pedal on the USB")
-    if target:
-        d = pedal.find(target, among=found)
-        if not d:
-            sys.exit("measure-load: '%s' names none or several of the %d "
-                     "pedals here: %s"
-                     % (target, len(found),
-                        ", ".join(x["label"] for x in found)))
-    elif len(found) > 1:
-        sys.exit("measure-load: %d pedals and no -t; this wants exactly one "
-                 "(%s)" % (len(found), ", ".join(x["label"] for x in found)))
-    else:
-        d = found[0]
+    d, why = pedal.sole(target)
+    if not d:
+        sys.exit("measure-load: " + why)
     p = d["port"]
 
     #

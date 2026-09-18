@@ -167,6 +167,42 @@ def find(match, among=None):
     return hits[0] if len(hits) == 1 else None
 
 
+def matches(target, among=None):
+    """Every pedal 'target' names.
+
+    find() collapses to "exactly one or nothing", and the difference
+    between nothing matched and several matched is worth having: one of
+    them is worth waiting for and the other never will be.
+    """
+    pedals = among if among is not None else discover()
+    return [d for d in pedals if find(target, among=[d])]
+
+
+def sole(target=None, among=None):
+    """The one pedal to drive, as (device, why not) - one is always None.
+
+    Refusing to guess is the default, for the reason find() gives.  What
+    to do about a refusal stays with the caller, because a check target
+    skips with 0 and a tool stops with a message, and the difference
+    between those is not this function's to decide.
+    """
+    found = among if among is not None else discover()
+    if not found:
+        return None, "no pedal on the USB"
+
+    here = ", ".join(d["label"] for d in found)
+    if target:
+        hits = matches(target, found)
+        if len(hits) == 1:
+            return hits[0], None
+        return None, ("%r names %s of the %d pedals here: %s"
+                      % (target, len(hits) or "none", len(found), here))
+    if len(found) > 1:
+        return None, ("%d pedals and no target; this wants exactly one: %s"
+                      % (len(found), here))
+    return found[0], None
+
+
 def dongle(match=""):
     """A sequencer port that is not a pedal - the USB-MIDI adapter.
 

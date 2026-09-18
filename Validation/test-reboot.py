@@ -115,14 +115,10 @@ def main():
     ap.add_argument("--note", default="", help="what is being tested")
     args = ap.parse_args()
 
-    board = pedal.find(args.target) if args.target else None
-    if board is None:
-        found = pedal.discover()
-        if args.target or len(found) != 1:
-            print("test-reboot: SKIPPED - %r is not exactly one of: %s" % (
-                args.target, ", ".join(d["label"] for d in found) or "nothing"))
-            return 0
-        board = found[0]
+    board, why = pedal.sole(args.target)
+    if not board:
+        print("test-reboot: SKIPPED - %s" % why)
+        return 0
 
     ident = pedal.identity(board["port"]) if board["port"] else None
     build = (ident or {}).get("build")

@@ -139,24 +139,10 @@ def main():
         print("test-analog: SKIPPED - %s" % e)
         return 0
 
-    found = pedal.discover()
-    if not found:
-        print("%s: SKIPPED - no pedal on the USB" % "test-analog")
+    d, why = pedal.sole(args.target)
+    if not d:
+        print("test-analog: SKIPPED - %s" % why)
         return 0
-    if args.target:
-        d = pedal.find(args.target, among=found)
-        if not d:
-            print("%s: SKIPPED - '%s' does not name exactly one of the %d "
-                  "pedals here: %s"
-                  % ("test-analog", args.target, len(found),
-                     ", ".join(x["label"] for x in found)))
-            return 0
-    elif len(found) > 1:
-        print("%s: SKIPPED - %d pedals and no --target; this wants exactly one"
-              % ("test-analog", len(found)))
-        return 0
-    else:
-        d = found[0]
     p, card = d["port"], d["card"]
     print("test-analog: %s, card %d, port %s" % (d["label"], card, p))
 

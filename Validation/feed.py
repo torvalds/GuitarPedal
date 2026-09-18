@@ -455,7 +455,8 @@ def main():
                          "does on the bench")
     ap.add_argument("--repeat", default="forever",
                     help="how many times round, or 'forever'")
-    ap.add_argument("--pedal", default="", help="which board, by serial")
+    ap.add_argument("--target", default=None,
+                    help="serial, label or board name naming one pedal")
     ap.add_argument("--force", action="store_true",
                     help="write pots even if the board is running a "
                          "different build than this tree")
@@ -477,12 +478,9 @@ def main():
     ap.add_argument("--axis", type=float, default=0.5)
     args = ap.parse_args()
 
-    found = pedal.discover()
-    if not found:
-        sys.exit("feed: no pedal found")
-    d = pedal.find(args.pedal, found) if args.pedal else found[0]
+    d, why = pedal.sole(args.target)
     if not d:
-        sys.exit(f"feed: '{args.pedal}' is not exactly one of these boards")
+        sys.exit("feed: " + why)
     card, port, key = d["card"], d["port"], d["label"]
     if port is None:
         sys.exit(f"feed: {key} has no MIDI port - nothing can be set on it")

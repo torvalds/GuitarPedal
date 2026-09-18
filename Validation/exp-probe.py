@@ -115,17 +115,18 @@ def show(vals, tail):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--target", default=None,
+                    help="serial, label or board name naming one pedal")
     ap.add_argument("--watch", action="store_true",
                     help="keep probing; move the treadle and watch it track")
     ap.add_argument("--interval", type=float, default=0.0,
                     help="extra seconds between sweeps in --watch")
     args = ap.parse_args()
 
-    found = pedal.discover()
-    if not found:
-        print("exp-probe: SKIPPED - no pedal found")
+    d, why = pedal.sole(args.target)
+    if not d:
+        print("exp-probe: SKIPPED - %s" % why)
         return 0
-    d = found[0]
     print(f"exp-probe: {d['label']} (midi {d['port']})")
 
     if not args.watch:
