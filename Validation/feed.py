@@ -251,6 +251,11 @@ def verify(args, card, p, dry):
     # error to be divided out afterwards - it is a different signal - and
     # it read as a 9.3 dB gain difference and a null of only -25 dB.
     #
+    def setting(label, value):
+        """(pot, raw) for one Settings pot, both by name."""
+        return (effectmap.pot("Settings", label),
+                P.to_pot("Settings", label, value))
+
     def pots_of(effect_id, effect_name, override=()):
         order = P.labels(effect_name)
         want = dict(P.defaults(effect_name))
@@ -271,8 +276,8 @@ def verify(args, card, p, dry):
     #
     pedal.send_many(
         p,
-        (0x03, settings, pedal.SETTINGS_USB_IN, pedal.USB_IN_REPLACE),
-        (0x03, settings, pedal.SETTINGS_USB_OUT, pedal.USB_OUT_WET),
+        (0x03, settings, *setting("USB L/R In", "Replace")),
+        (0x03, settings, *setting("USB L/R Out", "Wet")),
         *pots_of(pedal.CHAIN, "Signal Chain", {"Gate": 0}),
         (0x08, eff),                            # routing: the one effect
         (0x03, eff, 0, 120),                    # mix, fully wet
@@ -536,9 +541,7 @@ def main():
         return 0
 
     if not args.no_set:
-        settings = effectmap.settings()
-        pedal.set_pot(port, settings, pedal.SETTINGS_USB_IN,
-                      pedal.USB_IN_PRE_FX)
+        pedal.set_named(port, "Settings", "USB L/R In", "Pre-FX")
         print("USB L/R In set to Pre-FX - it adds to the jack rather than "
               "replacing it, so unplug\n"
               "  anything you are not playing along with.  --verify uses "

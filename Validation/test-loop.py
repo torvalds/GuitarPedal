@@ -98,8 +98,8 @@ def straight(eff):
 # Room for a trip around a ring of pedals.
 MAX_LAG = audio.RATE // 10
 
-SETTINGS = None
-TONE = None
+SETTINGS = TONE = None
+CHAIN_GATE = CHAIN_TRIM = CHAIN_VOLUME = None
 
 #
 # The two notes that decide whether this is a bass problem: the bottom
@@ -143,7 +143,8 @@ _usb_mode = {}
 def usb_mode(d, mode):
     if _usb_mode.get(d["serial"]) == mode:
         return
-    pedal.set_pot(d["port"], SETTINGS, pedal.SETTINGS_USB_OUT, mode)
+    pedal.set_pot(d["port"], SETTINGS,
+                  effectmap.pot("Settings", "USB L/R Out"), mode)
     _usb_mode[d["serial"]] = mode
     time.sleep(0.4)
 
@@ -181,9 +182,9 @@ def mute(d):
 def passthrough(d):
     pedal.send_many(d["port"],
                     (0x08,),                             # nothing routed
-                    (0x03, 0, pedal.CHAIN_GATE, 0),      # fully down is off
-                    (0x03, 0, pedal.CHAIN_TRIM, 60),     # 0 dB
-                    (0x03, 0, pedal.CHAIN_VOLUME, 80))   # 0 dB
+                    (0x03, pedal.CHAIN, CHAIN_GATE, 0),    # down is off
+                    (0x03, pedal.CHAIN, CHAIN_TRIM, 60),   # 0 dB
+                    (0x03, pedal.CHAIN, CHAIN_VOLUME, 80))  # 0 dB
 
 
 def raw_in(d, seconds):
@@ -200,7 +201,7 @@ def raw_in(d, seconds):
 
 
 def main():
-    global SETTINGS, TONE
+    global SETTINGS, TONE, CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME
 
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--seconds", type=float, default=2.0)
@@ -242,6 +243,9 @@ def main():
     try:
         TONE = effectmap.effect("TESTTONE")
         SETTINGS = effectmap.settings()
+        CHAIN_GATE = effectmap.pot("Signal Chain", "Gate")
+        CHAIN_TRIM = effectmap.pot("Signal Chain", "Trim")
+        CHAIN_VOLUME = effectmap.pot("Signal Chain", "Volume")
     except effectmap.MapError as e:
         print("test-loop: SKIPPED - %s" % e)
         return 0

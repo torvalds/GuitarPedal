@@ -29,6 +29,7 @@ import argparse
 import sys
 import time
 
+import effectmap
 import pedal
 
 
@@ -157,7 +158,7 @@ def _chain_volume(d):
     if end < 0:
         return None
     for at in range(i + 4, end - 1, 2):
-        if blob[at] == pedal.CHAIN_VOLUME:
+        if blob[at] == effectmap.pot("Signal Chain", "Volume"):
             return blob[at + 1]
     return None
 

@@ -113,16 +113,15 @@ def configure(p, leg, t=None, knobs=None, settle=0.3):
     if leg not in ("hardware", "model"):
         raise LoopError("no such leg: %r" % (leg,))
 
-    settings = effectmap.settings()
-    pedal.set_pot(p, settings, pedal.SETTINGS_USB_IN, pedal.USB_IN_REPLACE)
-    pedal.set_pot(p, settings, pedal.SETTINGS_USB_OUT, pedal.USB_OUT_WET_DRY)
+    pedal.set_named(p, "Settings", "USB L/R In", "Replace")
+    pedal.set_named(p, "Settings", "USB L/R Out", "Wet/Dry")
 
     #
     # The gate off, and the trim and volume where the bench has them.
     # A gate is the one thing here that would silence exactly the part
     # of a decaying note the measurement is about.
     #
-    pedal.set_pot(p, pedal.CHAIN, pedal.CHAIN_GATE, 0)
+    pedal.set_pot(p, pedal.CHAIN, effectmap.pot("Signal Chain", "Gate"), 0)
 
     if leg == "hardware":
         pedal.set_routing(p)

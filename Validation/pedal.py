@@ -21,27 +21,15 @@ import sys
 import tempfile
 import time
 
+import effectmap
+import pots
+
 HEADER = bytes([0xF0, 0x7D])
 
-# Effect 0 is the signal chain, and its pots in SysEx numbering, where 0
-# is the mix and 1-10 are the effect's own.
+# The signal chain is priority 0 and therefore effect 0.  It is the one
+# id written down on purpose, and check-effect-ids.py checks it against
+# the map rather than exempting it.
 CHAIN = 0
-CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME = 1, 4, 5
-
-# The settings pseudo-effect, in SysEx pot numbering.  Ask
-# settings_effect() which effect it *is* - it is not the last one and has
-# not been since something was given a priority above it.
-SETTINGS_USB_OUT = 1
-SETTINGS_USB_IN = 2
-
-# ENUM(None Wet Dry Wet/Dry).  Wet/Dry puts the processed signal on the
-# left and the untouched input on the right.
-USB_OUT_NONE, USB_OUT_WET, USB_OUT_DRY, USB_OUT_WET_DRY = 0, 1, 2, 3
-
-# ENUM(Off Pre-FX Mix).  Pre-FX *adds* the USB input to the analog input
-# ahead of the signal chain - it does not replace it - so whatever the
-# input jack is picking up sums in with it.
-USB_IN_OFF, USB_IN_PRE_FX, USB_IN_MIX, USB_IN_REPLACE = 0, 1, 2, 3
 
 
 def ports(match=""):
@@ -574,6 +562,17 @@ def set_pot(p, effect, pot, value):
     send(p, 0x03, effect, pot, value)
 
 
+def set_named(p, effect, label, value):
+    """One pot, named all the way down.
+
+    The effect, the pot and - for an enum - the setting, each spelled the
+    way the header spells it, so nothing between here and the board has a
+    position written down in it.
+    """
+    set_pot(p, effectmap.effect(effect), effectmap.pot(effect, label),
+            pots.to_pot(effect, label, value))
+
+
 def set_routing(p, *effect_ids):
     send(p, 0x08, *effect_ids)
 
@@ -583,8 +582,13 @@ def save_scene(p, scene):
 
 
 def wet_dry(p, settings_effect):
-    """Put the processed signal and the raw input side by side."""
-    set_pot(p, settings_effect, SETTINGS_USB_OUT, USB_OUT_WET_DRY)
+    """Put the processed signal and the raw input side by side.
+
+    Wet/Dry is the processed signal on the left and the untouched input
+    on the right, in the same frame.
+    """
+    set_pot(p, settings_effect, effectmap.pot("Settings", "USB L/R Out"),
+            pots.to_pot("Settings", "USB L/R Out", "Wet/Dry"))
 
 
 def elf_build(elf="../build/pedal-unified.elf"):
