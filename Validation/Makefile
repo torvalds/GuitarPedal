@@ -213,7 +213,7 @@ check-hw:
 # that over MIDI yet.  It leaves two scenes behind in the save area.
 #
 check-split:
-	./test-split.py
+	./test-split.py $(if $(TARGET),--target $(TARGET))
 
 #
 # Two pedals, patched output to input in both directions, one generating
