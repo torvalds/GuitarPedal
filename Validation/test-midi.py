@@ -66,10 +66,9 @@ def main():
 
     #
     # Which port reaches which pedal, by trying it rather than being
-    # told.  An adapter can have more than one DIN pair and only one of
-    # them is in the pedal, and a note-on the pedal does not consume
-    # comes back out of both its MIDI thru paths - so whichever pedal
-    # echoes it to USB is the one that pair is wired to.
+    # told.  A note-on the pedal does not consume comes back out of both
+    # its MIDI thru paths, so whichever pedal echoes it to USB is the
+    # one that pair's OUT is wired to.
     #
     dong = target = None
     for port in ports:
@@ -85,11 +84,22 @@ def main():
               "pedal (%s)" % ", ".join(d["label"] for d in pedals))
         return 0
 
-    print("test-midi: %s is wired to %s" % (dong, target["label"]))
+    #
+    # ...and separately, which port hears it coming back.  A pedal has
+    # one IN and one OUT and an adapter has a pair per port, so there is
+    # nothing saying the cable out of the pedal goes back to the pair
+    # the cable into it came from - on this bench it does not.  The
+    # status CCs are the probe because they need nothing sent.
+    #
+    back = next((p for p in ports if pedal.midi_alive(p, args.seconds)), None)
+
+    print("test-midi: %s -> %s, %s -> %s"
+          % (dong, target["label"], target["label"],
+             back or "nothing that answers"))
 
     alive = rx = tx = act = 0
     for _ in range(args.trials):
-        if pedal.midi_alive(dong, args.seconds):
+        if back and pedal.midi_alive(back, args.seconds):
             alive += 1
 
         # adapter -> pedal IN -> thru -> pedal USB
@@ -98,8 +108,8 @@ def main():
             rx += 1
 
         # pedal USB -> thru -> pedal OUT -> adapter
-        if _saw_note(pedal.midi_listen(dong, args.seconds,
-                                       during=lambda: _note(target["port"]))):
+        if back and _saw_note(pedal.midi_listen(
+                back, args.seconds, during=lambda: _note(target["port"]))):
             tx += 1
 
         # and whether it *acts* on what arrives, which needs no thru at
