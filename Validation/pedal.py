@@ -301,21 +301,11 @@ def midi_listen(port, seconds=1.5, during=None):
     # device and left it busy for everything after it.
     #
     try:
-        proc = subprocess.Popen(["amidi", "-p", dev, "-d"],
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.DEVNULL, text=True)
+        return list(_listen(["amidi", "-p", dev, "-a", "-c",
+                             "-r", "/dev/stdout"], during, seconds,
+                            settle=0.3))
     except FileNotFoundError:
         return []
-    try:
-        time.sleep(0.3)          # let it get the device open
-        if during:
-            during()
-        time.sleep(seconds)
-    finally:
-        proc.terminate()
-        out = proc.stdout.read()
-        proc.wait()
-    return [int(b, 16) for b in out.split()]
 
 
 def midi_alive(port, seconds=1.5):
@@ -615,11 +605,12 @@ def listen_sysex(p, opcode, wait, in_port=None):
         # byte nobody can notice the pedal sending.
         #
         got = _listen(["amidi", "-p", dev, "-a", "-c", "-r", "/dev/stdout"],
-                      p, opcode, wait)
+                      lambda: send(p, opcode), wait)
         if got:
             return got
 
-    text = _listen(["aseqdump", "-p", in_port or p], p, opcode, wait)
+    text = _listen(["aseqdump", "-p", in_port or p],
+                   lambda: send(p, opcode), wait)
     return bytes.fromhex("".join(re.findall(
         r"System exclusive\s+((?:[0-9A-Fa-f]{2} ?)+)",
         text.decode("ascii", "replace"))).replace(" ", ""))
@@ -647,8 +638,14 @@ def sysex_payload(blob, opcode):
     return bytes(b for b in blob[at + 3:end] if not 0xF8 <= b <= 0xFE)
 
 
-def _listen(cmd, p, opcode, wait):
-    """Run a dumper, ask, and read its output as it comes."""
+def _listen(cmd, provoke, wait, settle=0.4):
+    """Run a dumper, provoke the reply, and read its output as it comes.
+
+    'provoke' is called once the dumper is actually up.  Provoking first
+    and listening after loses whatever arrives while it is still opening
+    the device, which does not show on a stream that never stops - like
+    the status CCs - and shows badly on a single note.
+    """
     dump = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                             stderr=subprocess.DEVNULL)
     chunks = []
@@ -666,8 +663,9 @@ def _listen(cmd, p, opcode, wait):
             chunks.append(b)
 
     try:
-        collect(0.4)                # let the port settle
-        send(p, opcode)
+        collect(settle)             # let the dumper get the device open
+        if provoke:
+            provoke()
         collect(wait)
     finally:
         dump.terminate()
