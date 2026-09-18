@@ -68,6 +68,12 @@ def take(p, card, leg, t, knobs, x, tries=3):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("target", nargs="?", default="rat")
+    #
+    # --pedal rather than --target, because the positional above is
+    # already the effect being listened to.
+    #
+    ap.add_argument("--pedal", default=None,
+                    help="serial, label or board name naming one pedal")
     ap.add_argument("--input", default="Inputs/Dry-Guitar.wav")
     ap.add_argument("--seconds", type=float, default=6.0)
     ap.add_argument("--offset", type=float, default=12.0)
@@ -95,9 +101,11 @@ def main():
             sys.exit("%s has no pot %r; it has %s"
                      % (args.target, name, ", ".join(knobs)))
         knobs[name] = int(val) if isinstance(knobs[name], int) else float(val)
-    p = pedal.port()
-    card = audio.find_card("Pedal")
-    print("firmware:", loop.refuse_if_stale(p))
+    d, why = pedal.sole(args.pedal)
+    if not d:
+        sys.exit("shoot-loop: " + why)
+    p, card = d["port"], d["card"]
+    print("shoot-loop:", pedal.use_map(d, strict=True))
 
     x, _ = audio.decode(args.input, seconds=args.seconds, offset=args.offset)
     x = x / max(np.abs(x).max(), 1e-9) * args.peak

@@ -24,6 +24,9 @@ import time
 import effectmap
 import pots
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+BUILD = os.path.join(HERE, "..", "build")
+
 HEADER = bytes([0xF0, 0x7D])
 
 # The signal chain is priority 0 and therefore effect 0.  It is the one
@@ -769,20 +772,56 @@ def wet_dry(p, settings_effect):
             pots.to_pot("Settings", "USB L/R Out", "Wet/Dry"))
 
 
-def elf_build(elf="../build/pedal-unified.elf"):
-    """The build stamp compiled into an elf, as the identity reply says it.
+class Stale(Exception):
+    """The board is running firmware this tree cannot vouch for."""
+
+
+def elf_build(board):
+    """The build stamp in this tree's elf for that board, or None.
 
     The firmware builds "{\"build\":\"" __DATE__ " " __TIME__ "\"" into
     the reply to SysEx 0x0a, so the same literal is sitting in the binary
-    and the two can simply be compared.  That is the cheap way to answer
-    "is the board running what this tree just built" - which is the
-    question underneath every pot index in here, because an effect map
-    that has changed renumbers everything after the change and a pot
-    write to the wrong effect fails completely silently.
+    and the two can simply be compared.
+
+    Named for the board, because every artifact here is: there is no
+    pedal.elf, and comparing a minimal board against unified's stamp
+    refuses a board that is fine and accepts one that is not.
     """
     try:
-        blob = open(elf, "rb").read()
+        blob = open(os.path.join(BUILD, "pedal-%s.elf" % board), "rb").read()
     except OSError:
         return None
     m = re.search(rb'\{"build":"([^"]*)"', blob)
     return m.group(1).decode() if m else None
+
+
+def use_map(d, strict=False):
+    """Point the lookups at the map this board is running, and say which.
+
+    Two questions with one answer.  A board that can hand over its own
+    schema settles it: what it says is what it is.  A board that cannot -
+    no MIDI port, or firmware older than the schema request - leaves the
+    build's map as the only one there is, and that is the right map only
+    if the board is running this tree.
+
+    'strict' is the difference between a test and a tool.  A test refuses
+    firmware it cannot vouch for, because an effect id that has moved
+    lands on a real pot of a real effect and says nothing.  A tool says
+    what it is working from and carries on.
+    """
+    running = schema(d["port"]) if d.get("port") else None
+    if running:
+        effectmap.use(running)
+        return "effects from the pedal"
+
+    effectmap.use(None)
+    want = elf_build(d["board"])
+    got = (identity(d["port"]) or {}).get("build") if d.get("port") else None
+    if want and got and want == got:
+        return "effects from ../build, which is what %s is running" % d["label"]
+
+    why = ("%s is running %r and this tree builds %r"
+           % (d["label"], got or "nothing it would say", want or "nothing"))
+    if strict:
+        raise Stale(why + " - run 'make flash'")
+    return "effects from ../build, unverified: " + why

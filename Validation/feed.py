@@ -486,27 +486,16 @@ def main():
         sys.exit(f"feed: {key} has no MIDI port - nothing can be set on it")
 
     #
-    # Refuse to write a pot to a board that is not running this tree.
+    # Which map this board's pot numbers mean.  Adding or removing an
+    # effect renumbers everything after it, and a pot write to the wrong
+    # effect sets a real pot on a real effect and says nothing - see
+    # issue 285, which is that mistake found by accident after it had
+    # been shipping for a while.
     #
-    # Every effect index in here comes out of build/effect_map.h, and
-    # adding or removing an effect renumbers everything after it.  A pot
-    # write to the wrong effect sets a real pot on a real effect and says
-    # nothing - see issue 285, which is that mistake found by accident
-    # after it had been shipping for a while.
-    #
-    if not args.force:
-        want = pedal.elf_build()
-        got = (pedal.identity(port) or {}).get("build")
-        if want and got and want != got:
-            sys.exit(f"feed: the board is running {got!r} and this tree "
-                     f"built {want!r}.\n"
-                     f"      Effect numbering may have moved under it, and a "
-                     f"pot write would land\n"
-                     f"      somewhere silently wrong.  'make flash', or "
-                     f"--force if you know better.")
-        if want and not got:
-            print("feed: could not read the board's build stamp - is the "
-                  "web app holding the port?", file=sys.stderr)
+    try:
+        print("feed:", pedal.use_map(d, strict=not args.force))
+    except pedal.Stale as e:
+        sys.exit("feed: %s, or --force if you know better" % e)
 
     off = None if args.offset == "auto" else float(args.offset)
     dry, off = audio.decode(args.source, args.seconds, off)

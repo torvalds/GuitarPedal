@@ -70,37 +70,6 @@ class LoopError(Exception):
     pass
 
 
-def refuse_if_stale(p):
-    """The hardware twin of bench.refuse_if_stale().
-
-    An effect map that has changed renumbers everything after the
-    change, so a pot write to a board running yesterday's firmware lands
-    on a different effect and says nothing at all.
-    """
-    want = pedal.elf_build()
-    if want is None:
-        raise LoopError("no built elf to compare against - run 'make'")
-    #
-    # Asked more than once before giving up.  The first request after
-    # the bench has been idle for a while goes unanswered often enough
-    # to have happened twice in one session, and works every time on the
-    # next try - so a single miss says nothing about the firmware, and a
-    # guard that reports one as a fault is a guard that gets commented
-    # out.  A real mismatch answers, and answers wrong.
-    #
-    got = None
-    for _ in range(3):
-        got = (pedal.identity(p, wait=3.0) or {}).get("build")
-        if got is not None:
-            break
-    if got is None:
-        raise LoopError("the pedal did not answer three identity requests")
-    if got != want:
-        raise LoopError("the pedal is running %r and this tree builds %r"
-                        " - run 'make flash'" % (got, want))
-    return got
-
-
 def configure(p, leg, t=None, knobs=None, settle=0.3):
     """Put the pedal into one of the two legs, from scratch.
 

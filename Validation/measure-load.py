@@ -271,11 +271,7 @@ def main():
     # what this tree just built - so the build is the fallback and not
     # the answer.
     #
-    running = pedal.schema(p)
-    effectmap.use(running)
-    print("%s on %s, effects from %s"
-          % (d["label"], p,
-             "the pedal" if running else "../build - it did not answer"))
+    print("%s on %s, %s" % (d["label"], p, pedal.use_map(d)))
 
     global SETTINGS, USB_OUT_POT, USB_OUT_NONE
     SETTINGS = effectmap.settings()

@@ -36,6 +36,8 @@ def main():
     ap = argparse.ArgumentParser(
         description="Capture one Helios setting: sweep, ladder and waveforms.")
     ap.add_argument("out", help="where to write the JSON")
+    ap.add_argument("--target", default=None,
+                    help="serial, label or board name naming one pedal")
     ap.add_argument("--setting", default="Distortion noon, Filter noon, "
                                          "Sweep min, Level max, one silicon",
                     help="what the pedal is set to - recorded verbatim, "
@@ -81,11 +83,14 @@ def main():
                          "low to high, e.g. -24:0:1")
     ladder = [lo + i * step for i in range(int((hi - lo) / step) + 1)]
 
-    p = pedal.port()
-    card = audio.find_card("Pedal")
-    print("firmware:", loop.refuse_if_stale(p))
+    d, why = pedal.sole(args.target)
+    if not d:
+        raise SystemExit("capture-rat: " + why)
+    p, card = d["port"], d["card"]
+    print("capture-rat:", pedal.use_map(d, strict=True))
     loop.configure(p, "hardware")
-    store = {"setting": args.setting, "firmware": pedal.elf_build()}
+    store = {"setting": args.setting,
+             "firmware": (pedal.identity(p) or {}).get("build")}
 
     print("\n[1] small signal at %+.0f dBFS" % args.level)
     hz = [40, 60, 110, 220, 440, 880, 1250, 1760, 2500, 3520, 5000, 7000,
