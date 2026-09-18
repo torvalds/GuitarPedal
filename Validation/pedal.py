@@ -357,16 +357,25 @@ def _rawmidi_devices():
 
 
 def rawmidi(port):
-    """hw:C,D,S for a sequencer port, or None if it cannot be had."""
+    """hw:C,D,S for a sequencer port, or None if it cannot be had.
+
+    The client number gives the card by the 16 + 4*N rule, and the port
+    number after the colon is the subdevice on it - 'ESI MIDIMATE eX
+    MIDI 2' is 48:1 and hw:8,0,1.  A pedal has one port and it is always
+    zero, which is why this used to read the client and ignore the rest,
+    and why a two-port adapter came back as its own first port whichever
+    half was asked for.
+    """
     if port in _rawmidi_cache:
         return _rawmidi_cache[port]
 
     dev = None
     try:
-        card, rem = divmod(int(port.split(":")[0]) - SEQ_GLOBAL_CLIENTS,
+        client, _, sub = port.partition(":")
+        card, rem = divmod(int(client) - SEQ_GLOBAL_CLIENTS,
                            SEQ_CLIENTS_PER_CARD)
         if card >= 0 and not rem:
-            cand = "hw:%d,0,0" % card
+            cand = "hw:%d,0,%d" % (card, int(sub or 0))
             dev = cand if cand in _rawmidi_devices() else None
     except ValueError:
         dev = None
@@ -528,13 +537,23 @@ def port_holder(p):
     dev = rawmidi(p)
     if not dev:
         return None
-    card = int(dev.split(":")[1].split(",")[0])
+    _hw, card, _device, sub = re.split(r"[:,]", dev)
     try:
-        text = open("/proc/asound/card%d/midi0" % card).read()
+        text = open("/proc/asound/card%s/midi0" % card).read()
     except OSError:
         return None
 
-    m = re.search(r"Owner PID\s*:\s*(\d+)", text)
+    #
+    # A section per subdevice, and the owner belongs to one of them: an
+    # adapter with two DIN pairs has an "Input 0" and an "Input 1", and
+    # taking the first owner in the file would call both of them busy
+    # whichever one was open.
+    #
+    m = re.search(r"^Input %s\b(.*?)(?=^\S|\Z)" % re.escape(sub),
+                  text, re.M | re.S)
+    if not m:
+        return None
+    m = re.search(r"Owner PID\s*:\s*(\d+)", m.group(1))
     if not m or int(m.group(1)) == os.getpid():
         return None
     pid = int(m.group(1))
