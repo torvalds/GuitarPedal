@@ -46,6 +46,9 @@ import subprocess
 
 import numpy as np
 
+import effectmap
+import pots
+
 FS = 48000.0
 
 BENCH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bench", "bench")
@@ -64,6 +67,32 @@ HIGH_HZ = 1320.0
 
 class BenchError(Exception):
     pass
+
+
+#
+# The bench answers to display names, so a caller that spells one out
+# is holding a copy of the map.  These two build the argv instead.
+#
+def quiet():
+    """[CHAIN]'s gate fully down, which switches it off.
+
+    Almost every measurement wants it: the gate is there for a guitar
+    in a room, and a synthetic stimulus that starts at zero trips it.
+    """
+    return pots.arg("CHAIN", "Gate", -100.0)
+
+
+def route(effect, mix=None):
+    """Put one effect in the chain, optionally at a stated mix.
+
+    'mix' is the raw 0..120 the bench takes - 120 being fully wet,
+    which is what an effect under measurement usually wants.
+    """
+    name = effectmap.display(effect)
+    a = ["--route", name]
+    if mix is not None:
+        a += ["--mix", "%s=%d" % (name, mix)]
+    return a
 
 
 def run(args, x, warmup=WINDOW * 2):

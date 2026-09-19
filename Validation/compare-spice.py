@@ -56,7 +56,7 @@ import numpy as np
 import audio
 import bench as B
 import ngspice as NG
-from targets import TARGETS, pot_args
+import targets as T
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -83,8 +83,8 @@ def db(x):
 def one(t, knobs, rival=False):
     """Run one pot setting, model and oracle, and return the numbers."""
     params = t["spice"](knobs)
-    args = pot_args(t, knobs)
-    rargs = pot_args(t, knobs, t["rival"]) if rival and t.get("rival") else None
+    args = T.pot_args(t, knobs)
+    rargs = T.pot_args(t, knobs, t["rival"]) if rival and t.get("rival") else None
 
     lad = []
     for dbfs in LADDER:
@@ -124,7 +124,7 @@ def one(t, knobs, rival=False):
 def report(name, t, rival=False):
     print("=" * 62)
     print("%s   effect %s   oracle %s.cir"
-          % (name, t["effect"], t["netlist"]))
+          % (name, T.display(t), t["netlist"]))
     for over in t["settings"]:
         knobs = dict(t["knobs"])
         knobs.update(over)
@@ -205,7 +205,7 @@ def played(name, t, knobs, seconds=4.0):
                         seconds=seconds)
     x = np.asarray(x / max(np.abs(x).max(), 1e-9) * 0.35, dtype=np.float32)
 
-    y, _, _ = B.run(pot_args(t, knobs), x, warmup=B.settle())
+    y, _, _ = B.run(T.pot_args(t, knobs), x, warmup=B.settle())
     s = NG.tran(t["netlist"], t["node"], x * audio.VPEAK, fs=FS, settle=0.3,
                 params=t["spice"](knobs)) / audio.VPEAK
     y, s = y[:len(x)], s[:len(x)]
@@ -280,7 +280,7 @@ def waves(name, t, knobs, out_dir):
     import matplotlib.pyplot as plt
 
     params = t["spice"](knobs)
-    args = pot_args(t, knobs)
+    args = T.pot_args(t, knobs)
 
     #
     # A burst rather than a steady tone, because the attack is where a
@@ -307,7 +307,7 @@ def waves(name, t, knobs, out_dir):
 
     fig, ax = plt.subplots(4, 1, figsize=(11, 11))
     fig.suptitle("%s   %s   %s"
-                 % (t["effect"], t["netlist"],
+                 % (T.display(t), t["netlist"],
                     ", ".join("%s=%s" % kv for kv in sorted(knobs.items()))))
     for i, (lab, lo, hi) in enumerate(spans):
         tt = (np.arange(lo, hi) - a) * 1000.0 / FS
@@ -371,8 +371,8 @@ def waves(name, t, knobs, out_dir):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("target", nargs="*", default=sorted(TARGETS),
-                    help="which of %s" % ", ".join(sorted(TARGETS)))
+    ap.add_argument("target", nargs="*", default=sorted(T.TARGETS),
+                    help="which of %s" % ", ".join(sorted(T.TARGETS)))
     ap.add_argument("--rival", action="store_true",
                     help="also run the exact model where one exists")
     ap.add_argument("--waves", action="store_true",
@@ -389,15 +389,15 @@ def main():
         sys.exit("compare-spice: %s" % e)
 
     for name in args.target:
-        if name not in TARGETS:
+        if name not in T.TARGETS:
             sys.exit("no such target: %s" % name)
-        t = TARGETS[name]
+        t = T.TARGETS[name]
         if args.waves:
             waves(name, t, dict(t["knobs"]), args.out)
         elif args.played:
             print("=" * 62)
             print("%s   effect %s   oracle %s.cir"
-                  % (name, t["effect"], t["netlist"]))
+                  % (name, T.display(t), t["netlist"]))
             for over in t["settings"]:
                 knobs = dict(t["knobs"])
                 knobs.update(over)
@@ -406,7 +406,7 @@ def main():
                          or "default"))
                 played(name, t, knobs)
         else:
-            report(name, TARGETS[name], args.rival)
+            report(name, T.TARGETS[name], args.rival)
 
 
 if __name__ == "__main__":

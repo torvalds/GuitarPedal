@@ -123,14 +123,11 @@ def configure(p, boost, level):
 
 
 def on_bench(boost, level):
-    args = ["--pot", "Signal Chain:Gate=0",
-            "--route", "Test Tone", "--route", "Boost",
-            "--mix", "Test Tone=120",
+    args = (B.quiet() + B.route("TESTTONE", 120) + B.route("BOOST", 120) + [
             "--pot", "Test Tone:Freq=60", "--pot", "Test Tone:Shape=0",
             "--pot", "Test Tone:Level=96",
-            "--mix", "Boost=120",
             "--pot", "Boost:Boost=%d" % boost, "--pot", "Boost:Level=%d" % level,
-            "--pot", "Boost:Basscut=120", "--pot", "Boost:Highcut=120"]
+            "--pot", "Boost:Basscut=120", "--pot", "Boost:Highcut=120"])
     #
     # Silence in: the test tone ignores its input, which is the whole
     # point of it.

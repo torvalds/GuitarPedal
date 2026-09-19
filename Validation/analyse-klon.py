@@ -20,8 +20,9 @@ import math
 
 sys.path.insert(0, ".")
 import bench as B
+import pots as P
 
-KLON = "Klonlike"
+KLON = "KLON"
 
 #
 # Octave centres from 20Hz.  Mermaid has no logarithmic axis, so evenly
@@ -54,16 +55,11 @@ def hz_label(f):
     return f"{round(f / 1000)}k"
 
 
-def pots(gain, treble, output):
-    """[KLON]'s three pots are all LINEAR(0 1), so 0..120 maps directly."""
-    return ["--pot", f"{KLON}:Gain={round(gain * 120)}",
-            "--pot", f"{KLON}:Treble={round(treble * 120)}",
-            "--pot", f"{KLON}:Output={round(output * 120)}"]
-
-
 def routed(gain, treble=0.5, output=0.4):
-    return (["--pot", "Signal Chain:Gate=0", "--route", KLON]
-            + pots(gain, treble, output))
+    return (B.quiet() + B.route(KLON)
+            + P.arg(KLON, "Gain", gain)
+            + P.arg(KLON, "Treble", treble)
+            + P.arg(KLON, "Output", output))
 
 
 def response(gain, treble, freqs, dbfs=-40.0):

@@ -38,16 +38,16 @@ import numpy as np
 
 sys.path.insert(0, ".")
 import bench as B
+import effectmap
 import pots as P
 
-REVERB = "Reverb"
+REVERB = effectmap.display("REVERB")
 FS = int(B.FS)
 OCTAVES = [125, 250, 500, 1000, 2000, 4000]
 
 
 def routed(room_pot=77, damp_pot=45):
-    return ["--pot", "Signal Chain:Gate=0", "--route", REVERB,
-            "--mix", "Reverb=120",
+    return B.quiet() + B.route(REVERB, 120) + [
             "--pot", "%s:Room=%d" % (REVERB, room_pot),
             "--pot", "%s:Damp=%d" % (REVERB, damp_pot)]
 

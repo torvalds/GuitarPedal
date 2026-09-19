@@ -42,7 +42,7 @@ sys.path.insert(0, ".")
 import bench as B
 import pots as P
 
-COMP = "Compressor"
+COMP = "COMPRESSOR"
 INPUT = "Inputs/BassForLinus.mp3"
 PEAK_DBFS = -6.0
 WINDOW_S = 0.5
@@ -68,7 +68,7 @@ def decode(path):
 #
 def routed(level_db=-35.0, attack_ms=15.0, release_ms=150.0,
            ratio=4.8, boost_db=6.0):
-    return (["--pot", "Signal Chain:Gate=0", "--route", COMP]
+    return (B.quiet() + B.route(COMP)
             + P.arg(COMP, "Level", level_db)
             + P.arg(COMP, "Attack", attack_ms)
             + P.arg(COMP, "Release", release_ms)
@@ -85,7 +85,7 @@ def squeeze(x, window, **kw):
     is bought to answer is whether the quiet and the loud ended up
     closer together.
     """
-    dry, _, _ = B.run(["--pot", "Signal Chain:Gate=0"], x, warmup=B.settle())
+    dry, _, _ = B.run(B.quiet(), x, warmup=B.settle())
     di = levels(np.asarray(dry), window)
     wet, _, _ = B.run(routed(**kw), x, warmup=B.settle())
     wo = levels(np.asarray(wet), window)
@@ -131,7 +131,7 @@ def main():
     # Dynamic: the same question asked of somebody playing.
     #
     window = int(WINDOW_S * B.FS)
-    dry, _, info = B.run(["--pot", "Signal Chain:Gate=0"], x, warmup=B.settle())
+    dry, _, info = B.run(B.quiet(), x, warmup=B.settle())
     di = levels(np.asarray(dry), window)
     if info.get("clipped"):
         print(f"\nWARNING: the dry run clipped {info['clipped']:.0f} times")

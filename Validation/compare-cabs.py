@@ -26,7 +26,7 @@ import pots as P
 import shootout as S
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-GATE = ["--pot", "Signal Chain:Gate=0"]
+GATE = B.quiet()
 
 
 def rows():
@@ -36,8 +36,7 @@ def rows():
 
 def cab(row, **over):
     """One cabinet row at its defaults, except for what is named."""
-    a = (["--route", "Cabinet", "--mix", "Cabinet=120"]
-         + P.arg("Cabinet", "Cabinet", row))
+    a = B.route("CAB", 120) + P.arg("CAB", "Cabinet", row)
     for k, val in over.items():
         a += P.arg("Cabinet", k, val)
     return GATE + a

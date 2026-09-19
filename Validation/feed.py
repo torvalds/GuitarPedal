@@ -433,8 +433,7 @@ def bench_args(args):
     reason.
     """
     _short, name, over = under_test(args)
-    a = ["--pot", "Signal Chain:Gate=0",
-         "--route", name, "--mix", f"{name}=120"]
+    a = B.quiet() + B.route(name, 120)
     for label, raw in P.defaults(name).items():
         a += ["--pot", f"{name}:{label}={over.get(label, raw)}"]
     return a

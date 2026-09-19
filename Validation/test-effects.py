@@ -57,7 +57,7 @@ def check(name, got, lo=None, hi=None, unit=""):
 #
 print("negative control - [CHAIN] at unity, gate off")
 for dbfs in (-40.0, -18.0, -6.0):
-    m = B.measure(["--pot", "Signal Chain:Gate=0"], dbfs=dbfs)
+    m = B.measure(B.quiet(), dbfs=dbfs)
     tag = "%.0f dBFS" % dbfs
     check("transparent gain (%s)" % tag, m["gain_db"], -0.001, 0.001, "dB")
     check("transparent thd (%s)" % tag, m["thd_db"], None, -120.0, "dB")
@@ -79,8 +79,7 @@ for dbfs in (-40.0, -18.0, -6.0):
 #
 print()
 print("positive control - [BOOST] folding on purpose")
-folding = ["--pot", "Signal Chain:Gate=0", "--route", "Boost",
-           "--mix", "Boost=120",
+folding = B.quiet() + B.route("BOOST", 120) + [
            "--pot", "Boost:Boost=90", "--pot", "Boost:Level=40",
            "--pot", "Boost:Basscut=120", "--pot", "Boost:Highcut=120"]
 
