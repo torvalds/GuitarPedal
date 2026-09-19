@@ -82,6 +82,20 @@ def quiet():
     return pots.arg("CHAIN", "Gate", -100.0)
 
 
+def pot(effect, label, raw):
+    """One pot at a raw 0..120 position.
+
+    pots.arg() is the one to reach for, since it takes the value in
+    the unit the pot is marked in.  This is for the two tests that
+    drive the bench and the pedal from the same position and compare
+    the results, where a conversion in between is a difference the
+    comparison would have to account for.
+    """
+    name = effectmap.display(effect)
+    effectmap.pot_info(name, label)            # refuse a label that moved
+    return ["--pot", "%s:%s=%d" % (name, label, raw)]
+
+
 def route(effect, mix=None):
     """Put one effect in the chain, optionally at a stated mix.
 

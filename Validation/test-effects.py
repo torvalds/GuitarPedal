@@ -79,9 +79,9 @@ for dbfs in (-40.0, -18.0, -6.0):
 #
 print()
 print("positive control - [BOOST] folding on purpose")
-folding = B.quiet() + B.route("BOOST", 120) + [
-           "--pot", "Boost:Boost=90", "--pot", "Boost:Level=40",
-           "--pot", "Boost:Basscut=120", "--pot", "Boost:Highcut=120"]
+folding = (B.quiet() + B.route("BOOST", 120)
+           + B.pot("BOOST", "Boost", 90) + B.pot("BOOST", "Level", 40)
+           + B.pot("BOOST", "Basscut", 120) + B.pot("BOOST", "Highcut", 120))
 
 clean = B.measure(folding, dbfs=-60.0)
 check("below the fold, no corner", clean["corner_sharpness"], 1.35, 3.0)
