@@ -113,10 +113,21 @@ def main():
               "another pedal driving this one?")
         return 0
 
-    want = args.ptp / 2 / np.sqrt(2)
-    seen = audio.rms(dry * audio.SAMPLE_TO_FLOAT)
-    if abs(audio.dbfs(seen / want)) > 6.0:
-        print(f"test-audio: SKIPPED - the input is {audio.dbfs(seen / want):+.1f} "
+    #
+    # The declared input as one number, used twice below.
+    #
+    # It is the jack's Vrms, and it is also the internal peak that makes
+    # - audio/process.h puts a 1Vrms sine at 1.0, so the two are the
+    # same number in the two scales.  Both comparisons here are against
+    # the peak, and the measured peak comes from the RMS through a
+    # sine's crest factor rather than from one sample, which a single
+    # spike would otherwise decide.
+    #
+    vrms = args.ptp / 2 / np.sqrt(2)
+
+    seen = audio.rms(dry * audio.SAMPLE_TO_FLOAT) * np.sqrt(2)
+    if abs(audio.dbfs(seen / vrms)) > 6.0:
+        print(f"test-audio: SKIPPED - the input is {audio.dbfs(seen / vrms):+.1f} "
               f"dB from the {args.ptp * 1000:.0f}mV PtP declared.")
         return 0
 
@@ -128,7 +139,6 @@ def main():
     #
     # The left channel is the internal float already; the right is the
     # raw sample and needs converting before the two can be compared.
-    vrms = args.ptp / 2 / np.sqrt(2)
     internal = audio.peak(wet)
     off = audio.dbfs(internal / vrms)
     check("scale", abs(off) < 1.0,
