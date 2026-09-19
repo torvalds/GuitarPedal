@@ -206,13 +206,19 @@ def tran(name, node, x, fs=48000.0, params=None, settle=0.2,
     having an opinion about the load.  Whether that assumption is right
     is a different question, and driving the node is how it gets asked.
     """
+    return tran_src(netlist(name), node, x, fs, params, settle, drive, offset)
+
+
+def tran_src(src, node, x, fs=48000.0, params=None, settle=0.2,
+             drive=None, offset=0.0):
+    """tran() on a deck already in hand, for a netlist built rather than read."""
     x = np.asarray(x, dtype=float)
     n = len(x)
     if n > MAX_TRAN_SAMPLES:
         raise SpiceError("%d samples is %.1f s of deck; ngspice is the level "
                          "of the chain that runs on short windows (limit %d)"
                          % (n, n / fs, MAX_TRAN_SAMPLES))
-    src = _params(netlist(name), params)
+    src = _params(src, params)
 
     t = (np.arange(n) + settle * fs) / fs
     pts = ["0 %.9g" % offset]
