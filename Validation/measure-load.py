@@ -209,10 +209,18 @@ def fmt(vals):
     return "%.3f" % lo if lo == hi else "%.3f..%.3f" % (lo, hi)
 
 
-def reboot(p):
-    pedal.enter_bootsel(p)
+def reboot(d):
+    """Out to the bootrom and back, on this board and no other.
+
+    Both halves are bound to the serial.  A bare `picotool reboot`
+    answers for whichever RP-series device it finds, which with more
+    than one attached is the wrong board - and the failure lands as a
+    board that did not come back, which is the thing being measured.
+    """
+    pedal.enter_bootsel(d["port"])
     time.sleep(3)
-    subprocess.run(["picotool", "reboot"], capture_output=True)
+    subprocess.run(["picotool", "reboot", "--ser", d["serial"]],
+                   capture_output=True)
     time.sleep(7)
 
 
@@ -294,8 +302,11 @@ def main():
     routed_all = []
     for k in range(boots):
         if k:
-            reboot(p)
-            p = pedal.port()
+            reboot(d)
+            d, why = pedal.sole(target)
+            if not d:
+                sys.exit("measure-load: after reboot, " + why)
+            p = d["port"]
         empty, routed = one_pass(p, ids, pots=pots)
         if not routed:
             print("  %4d   no reply" % (k + 1))

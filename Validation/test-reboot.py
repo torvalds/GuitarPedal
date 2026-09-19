@@ -95,7 +95,7 @@ def one_reboot(serial):
         #
         return "no-bootsel"
 
-    subprocess.run([PICOTOOL, "reboot"], capture_output=True)
+    subprocess.run([PICOTOOL, "reboot", "--ser", serial], capture_output=True)
 
     #
     # A timeout is honest here in a way it was not in test-boot.py: the
