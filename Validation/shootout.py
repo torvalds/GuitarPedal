@@ -37,10 +37,7 @@ def rms(x):
 
 
 def write_wav(path, x):
-    """RIFF by hand, because `import wave` does not get the standard
-    library here - Validation/wave.py is the waveform viewer and it
-    shadows the stdlib module for anything with this directory on its
-    path, which is everything in here."""
+    """Write 16-bit mono PCM samples to a WAV file directly."""
     q = np.clip(np.asarray(x) * 32767.0, -32768, 32767).astype("<i2")
     d = q.tobytes()
     le = lambda v, n: int(v).to_bytes(n, "little")
