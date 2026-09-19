@@ -18,8 +18,13 @@ bench/bench[0-9]*
 #
 bench/ref/
 spice-cache/
-distortion-shootout.html
-distortion-shootout-*.wav
+#
+# Every page here is generated - shootout.py's comparisons, scope.py's
+# traces - and its name is whatever --out said that afternoon, so
+# listing them one at a time is a treadmill.  No page in this directory
+# is committed; what goes on one is a PNG, in Documentation/.
+#
+*.html
 #
 # compare-spice.py --waves, and whatever was drawn beside it while
 # chasing one afternoon's defect.
@@ -33,6 +38,4 @@ waves-*.png
 # correctly from a clone, and the scripts say how to remake the rest.
 #
 rat-*.json
-rat-*.html
-rat-*.wav
 figures/
