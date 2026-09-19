@@ -117,7 +117,7 @@ def main():
         print(f"    {name}: in the firmware, not in the README")
     for name in extra:
         print(f"    {name}: in the README, not in the firmware")
-    print("    Software/effects/*.h is the source of truth; the README "
+    print("    Effects/*.h is the source of truth; the README "
           "wants a line about each")
     return 0
 
