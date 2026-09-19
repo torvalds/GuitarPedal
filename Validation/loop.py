@@ -52,7 +52,6 @@ import pedal
 import targets as T
 
 FS = 48000.0
-VPEAK = 1.41421356
 
 #
 # A sine's crest factor, and how far out is far enough to complain.

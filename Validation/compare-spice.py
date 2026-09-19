@@ -53,6 +53,7 @@ import sys
 
 import numpy as np
 
+import audio
 import bench as B
 import ngspice as NG
 from targets import TARGETS, pot_args
@@ -63,7 +64,6 @@ FS = B.FS
 N = B.WINDOW
 REP = 6
 F0 = 220.0
-VPEAK = 1.41421356
 
 LADDER = (-66, -54, -42, -30, -24, -18, -12, -6, 0)
 LIN_HZ = (40, 80, 160, 320, 640, 1250, 2500, 5000)
@@ -90,8 +90,8 @@ def one(t, knobs, rival=False):
     for dbfs in LADDER:
         x = B.tone(F0, dbfs, N * REP)
         y, _, _ = B.run(args, x, warmup=B.settle())
-        s = NG.tran(t["netlist"], t["node"], x * VPEAK, fs=FS,
-                    settle=0.3, params=params) / VPEAK
+        s = NG.tran(t["netlist"], t["node"], x * audio.VPEAK, fs=FS,
+                    settle=0.3, params=params) / audio.VPEAK
         row = [dbfs, db(s[-N:]), db(y[-N:])]
         if rargs:
             r, _, _ = B.run(rargs, x, warmup=B.settle())
@@ -104,8 +104,8 @@ def one(t, knobs, rival=False):
     #
     x = B.tone(F0, -12.0, N * REP)
     y, _, _ = B.run(args, x, warmup=B.settle())
-    s = NG.tran(t["netlist"], t["node"], x * VPEAK, fs=FS,
-                settle=0.3, params=params) / VPEAK
+    s = NG.tran(t["netlist"], t["node"], x * audio.VPEAK, fs=FS,
+                settle=0.3, params=params) / audio.VPEAK
     hm, hs = harmonics(y[-N:]), harmonics(s[-N:])
     al = (B.alias_db(s[-N:], F0), B.alias_db(y[-N:], F0))
 
@@ -206,8 +206,8 @@ def played(name, t, knobs, seconds=4.0):
     x = np.asarray(x / max(np.abs(x).max(), 1e-9) * 0.35, dtype=np.float32)
 
     y, _, _ = B.run(pot_args(t, knobs), x, warmup=B.settle())
-    s = NG.tran(t["netlist"], t["node"], x * VPEAK, fs=FS, settle=0.3,
-                params=t["spice"](knobs)) / VPEAK
+    s = NG.tran(t["netlist"], t["node"], x * audio.VPEAK, fs=FS, settle=0.3,
+                params=t["spice"](knobs)) / audio.VPEAK
     y, s = y[:len(x)], s[:len(x)]
     #
     # Level-matched, because a gain error is what every other table here
@@ -295,8 +295,8 @@ def waves(name, t, knobs, out_dir):
     x = np.asarray(x, dtype=np.float32)
 
     y, _, _ = B.run(args, x, warmup=B.settle())
-    s = NG.tran(t["netlist"], t["node"], x * VPEAK, fs=FS, settle=0.3,
-                params=params) / VPEAK
+    s = NG.tran(t["netlist"], t["node"], x * audio.VPEAK, fs=FS, settle=0.3,
+                params=params) / audio.VPEAK
     y, s = y[:len(x)], s[:len(x)]
 
     a = int(0.05 * FS)

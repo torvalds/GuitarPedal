@@ -40,6 +40,12 @@ RATE = 48000
 FULL_SCALE_VRMS = 1.0
 
 #
+# The same claim in volts peak, which is what an ngspice deck and a
+# scope are in.
+#
+VPEAK = FULL_SCALE_VRMS * 2 ** 0.5
+
+#
 # What the two USB channels are actually in.
 #
 # 'Wet/Dry' puts the processed signal on the left and the raw ADC sample
