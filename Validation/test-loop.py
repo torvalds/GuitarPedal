@@ -303,7 +303,7 @@ def main():
         one_edge(src, dst, found, args)
 
     print()
-    latency(loops, found, args)
+    latency(loops, ring, found, args)
 
     if args.json:
         import json
@@ -701,7 +701,7 @@ def stereo(src, dst, found, args):
         note("channel separation", "%.1f dB, the worse of the two" % sep)
 
 
-def latency(loops, found, args):
+def latency(loops, ring, found, args):
     """How long each loop takes.
 
     The generating pedal is at full mix, so its output ignores its input
@@ -760,7 +760,8 @@ def latency(loops, found, args):
     # the host, which is what the far pedal is: not captured from, not
     # asked anything, and unaware the test is running.
     #
-    sysex_load(src, ring[0][1], args)
+    far, under_load = ring[0]
+    sysex_load(far, under_load, args)
 
 
 #
