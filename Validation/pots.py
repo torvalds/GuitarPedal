@@ -30,8 +30,15 @@ import effectmap
 # A BOOL is an ENUM the generator spells differently: it declares the two
 # names, so reading it as one is not a guess.
 #
-DONE = ("LINEAR", "EXPONENTIAL", "ENUM", "BOOL")
+DONE = ("LINEAR", "EXPONENTIAL", "FREQUENCY", "SQUARED", "ENUM", "BOOL")
 NAMED = ("ENUM", "BOOL")
+
+#
+# The two curves that interpolate on a power of the knob's travel rather
+# than on the travel itself, and which power each is.  Audio/util.h:
+# frequency_pot() is cubic() and a SQUARED pot squares.
+#
+POWER = {"FREQUENCY": 3.0, "SQUARED": 2.0}
 
 
 def _range(info):
@@ -74,10 +81,15 @@ def to_pot(effect, label, value):
     """The 0..120 the firmware stores for an engineering value.
 
     An ENUM or a BOOL takes the name of one of its choices.  It also
-    takes a
-    position, because a command line is allowed to say `Shape=2`, but
-    an out-of-range one is refused rather than clamped: a position
-    nobody can name is a position that has moved.
+    takes a position, because a command line is allowed to say
+    `Shape=2`.
+
+    A value the pot cannot reach is refused, whichever kind it is.
+    Clamping it returns a setting that is in range, plausible and not
+    what was asked for, which is the failure this whole file exists to
+    stop: a sign slip or a dB-against-linear mix-up then measures
+    something real at a setting nobody chose.  Rounding happens first,
+    so a value a hair outside its own endpoint still lands on 0 or 120.
     """
     info = effectmap.pot_info(effect, label)
     curve, lo, hi = _range(info)
@@ -94,11 +106,28 @@ def to_pot(effect, label, value):
         p = (value - lo) / (hi - lo)
     elif curve == "EXPONENTIAL":
         p = math.log2(value / lo) / math.log2(hi / lo)
+    elif curve in POWER:
+        #
+        # Audio/util.h puts the knob's own travel to a power and
+        # interpolates on that, so the inverse takes the root.  A value
+        # under the bottom of the range would be a fractional root of a
+        # negative number, which is a complex number rather than an
+        # error, so it is refused here instead.
+        #
+        ratio = (value - lo) / (hi - lo)
+        if ratio < 0:
+            raise ValueError("%s:%s is %s(%g %g), so %r is off the end of it"
+                             % (effect, label, curve, lo, hi, value))
+        p = ratio ** (1.0 / POWER[curve])
     else:
         raise NotImplementedError(
             f"{effect}:{label} is {curve}; pots.py only does {', '.join(DONE)}"
             f", and guessing at the rest would be inventing one")
-    return max(0, min(120, round(p * 120)))
+    pot = round(p * 120)
+    if not 0 <= pot <= 120:
+        raise ValueError("%s:%s is %s(%g %g), so %r is off the end of it"
+                         % (effect, label, curve, lo, hi, value))
+    return pot
 
 
 def value(effect, label, pot):
@@ -126,6 +155,8 @@ def value(effect, label, pot):
         return lo + p * (hi - lo)
     if curve == "EXPONENTIAL":
         return lo * (hi / lo) ** p
+    if curve in POWER:
+        return lo + p ** POWER[curve] * (hi - lo)
     raise NotImplementedError(
         f"{effect}:{label} is {curve}; pots.py only does {', '.join(DONE)}"
         f", and guessing at the rest would be inventing one")
