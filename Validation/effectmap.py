@@ -21,6 +21,7 @@
 # transport rather than a rewrite, which matters because the build
 # describes the commit and the question is usually about the board.
 #
+import contextlib
 import json
 import os
 import re
@@ -94,6 +95,21 @@ def use(obj):
     was = _using[0] if _using else None
     _using[:] = [obj] if obj is not None else []
     return was
+
+
+@contextlib.contextmanager
+def using(obj):
+    """use(), scoped.
+
+    For a script driving more than one pedal at once, where each lookup
+    has to mean the board it is about - test-loop.py has a ring of them
+    and they need not be running the same firmware.
+    """
+    was = use(obj)
+    try:
+        yield
+    finally:
+        use(was)
 
 
 def schema(path=None):

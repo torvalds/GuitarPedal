@@ -24,8 +24,11 @@ import math
 import cmath
 import os
 
-FS = 48000.0
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import audio
+
+FS = float(audio.RATE)
 COEFF = os.path.join(HERE, "bench", "coeff")
 
 #
@@ -270,8 +273,8 @@ def main():
 
     print(f"test-biquad: {len(cases)} filters, {FREQS[0]:.0f} Hz to "
           f"{FREQS[-1]:.0f} Hz, every semitone\n")
-    print(f"worst placement error, as a fraction of what float32 allows "
-          f"there\n(1.00 would be exactly at the bound; over 1.00 fails)\n")
+    print("worst placement error, as a fraction of what float32 allows "
+          "there\n(1.00 would be exactly at the bound; over 1.00 fails)\n")
 
     print(f"{'filter':>9} " + "".join(f"{'Q=' + str(q):>12}" for q in QS))
     print("-" * (10 + 12 * len(QS)))

@@ -40,16 +40,15 @@ sys.path.insert(0, ".")
 import bench as B
 import pots as P
 
-REVERB = "Reverb"
+REVERB = "REVERB"
 FS = int(B.FS)
 OCTAVES = [125, 250, 500, 1000, 2000, 4000]
 
 
 def routed(room_pot=77, damp_pot=45):
-    return ["--pot", "Signal Chain:Gate=0", "--route", REVERB,
-            "--mix", "Reverb=120",
-            "--pot", "%s:Room=%d" % (REVERB, room_pot),
-            "--pot", "%s:Damp=%d" % (REVERB, damp_pot)]
+    return (B.quiet() + B.route(REVERB, 120)
+            + B.pot(REVERB, "Room", room_pot)
+            + B.pot(REVERB, "Damp", damp_pot))
 
 
 def burst(lead_s=0.6, burst_ms=20.0, tail_s=8.0, dbfs=-6.0, seed=3):

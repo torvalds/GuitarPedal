@@ -36,7 +36,7 @@ A = importlib.util.module_from_spec(
         "analyse_rat", os.path.join(HERE, "analyse-rat.py")))
 A.__spec__.loader.exec_module(A)
 
-FS, VPEAK = 48000.0, 1.41421356
+FS = float(audio.RATE)
 
 
 def need(path, how):
@@ -96,8 +96,8 @@ def edge(out, capture):
 
     model, _i = B.through(B.BENCH, T.pot_args(t, knobs), x.astype(np.float32))
     model = np.asarray(model, float)
-    deck = NG.tran("rat-helios", "out", x * VPEAK, fs=FS, settle=0.2,
-                   params=t["spice"](knobs)) / VPEAK
+    deck = NG.tran("rat-helios", "out", x * audio.VPEAK, fs=FS, settle=0.2,
+                   params=t["spice"](knobs)) / audio.VPEAK
 
     a = int(0.12 * len(hw))
     sl = slice(a, a + int(2.2 * FS / 220.0))
@@ -397,7 +397,7 @@ def deck_travel():
     for pot in FINE:
         params = t["spice"](dict(t["knobs"], Distortion=pot))
         params["dist"] = max(params["dist"], 1e-6)   # ngspice wants a resistor
-        v = NG.tran("rat-helios", "out", x * VPEAK, fs=FS, settle=0.3,
+        v = NG.tran("rat-helios", "out", x * audio.VPEAK, fs=FS, settle=0.3,
                     params=params)
         b = v[int(0.5 * len(v)):]
         out.append(100.0 * np.mean((b - b.mean()) > 0))

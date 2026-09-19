@@ -50,9 +50,20 @@ MAP = os.path.join(HERE, "bench", "gen", "effect_map.h")
 #
 ID_ARGS = {
     "set_pot": (1,),
-    "set_mix": (1,),
+    "set_named": (1,),
     "wet_dry": (1,),
     "set_routing": slice(1, None),
+}
+
+#
+# The same, for a keyword.  A call is allowed to name its arguments, and
+# a rule that reads only node.args lets pedal.set_pot(p, effect=17, ...)
+# past without a word.
+#
+ID_KWARGS = {
+    "set_pot": ("effect",),
+    "set_named": ("effect",),
+    "wet_dry": ("settings_effect",),
 }
 
 
@@ -119,6 +130,9 @@ def scan(path, ids):
                 continue
             args = node.args[want] if isinstance(want, slice) \
                 else [node.args[i] for i in want if i < len(node.args)]
+            named = ID_KWARGS.get(called_name(node), ())
+            args = list(args) + [k.value for k in node.keywords
+                                 if k.arg in named]
             for a in args:
                 if literal_int(a):
                     bad.append("%s:%d: %s() given the literal %d as an "
@@ -177,8 +191,8 @@ def main():
         for b in bad:
             print("    %s" % b)
         print("\n  An id is a position in a list ordered by PRIORITY, so"
-              " adding an effect\n  moves it.  Ask pedal.effect_id(\"NAME\")"
-              " or pedal.settings_effect().")
+              " adding an effect\n  moves it.  Ask effectmap.effect(\"NAME\")"
+              " or effectmap.settings().")
         return 1
 
     print("check-effect-ids: %d effects, no ids written down" % len(ids))

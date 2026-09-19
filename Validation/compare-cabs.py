@@ -2,20 +2,10 @@
 #
 # Listening to [CAB], for ears rather than for the FFT.
 #
-# It writes one wav per setting and a page that switches between them
-# without losing the playback position, which is the only way a small
-# tonal difference is audible as a difference rather than as a restart.
-#
-# Level matching is the whole reason this is a script and not a handful
-# of commands.  The rows do not have the same output level, they do not
-# have the same level *as a function of input* either, and louder wins
-# every uncontrolled A/B ever run.  Everything below is matched to the
-# same RMS over the same passage before it is written out, and the gain
-# that took is printed so it is visible rather than hidden.
-#
-# It began as the head-to-head that chose between the biquad cab sim and
-# this one, and the level matching is what it learned there: the first
-# comparison it ran was decided entirely by one of them being 3 dB up.
+# One source through every cabinet row, or one row at five Drive
+# settings.  shootout.py does the level matching and the page; what is
+# here is the routing and the source - which rows exist, what goes in
+# front of them, and what the passage actually contains.
 #
 # The source defaults to Inputs/BassForLinus.mp3, which is a DI
 # recording - no cab on it already - so it is a fair thing to put a cab
@@ -23,10 +13,7 @@
 # voiced for; pass --source for something better.
 #
 import argparse
-import base64
 import os
-import random
-import subprocess
 import sys
 
 import numpy as np
@@ -36,10 +23,10 @@ import audio
 import bench as B
 import effectmap
 import pots as P
+import shootout as S
 
-FS = 48000
 HERE = os.path.dirname(os.path.abspath(__file__))
-GATE = ["--pot", "Signal Chain:Gate=0"]
+GATE = B.quiet()
 
 
 def rows():
@@ -49,92 +36,10 @@ def rows():
 
 def cab(row, **over):
     """One cabinet row at its defaults, except for what is named."""
-    a = (["--route", "Cabinet", "--mix", "Cabinet=120"]
-         + P.arg("Cabinet", "Cabinet", row))
+    a = B.route("CAB", 120) + P.arg("CAB", "Cabinet", row)
     for k, val in over.items():
         a += P.arg("Cabinet", k, val)
     return GATE + a
-
-
-def rms(x):
-    return float(np.sqrt(np.mean(np.asarray(x, dtype=np.float64) ** 2)))
-
-
-def write_wav(path, x):
-    """RIFF by hand, because `import wave` does not get the standard
-    library here - Validation/wave.py is the waveform viewer and it
-    shadows the stdlib module for anything with this directory on its
-    path, which is everything in here."""
-    q = np.clip(np.asarray(x) * 32767.0, -32768, 32767).astype("<i2")
-    d = q.tobytes()
-    le = lambda v, n: int(v).to_bytes(n, "little")
-    hdr = (b"RIFF" + le(36 + len(d), 4) + b"WAVEfmt " + le(16, 4)
-           + le(1, 2) + le(1, 2) + le(FS, 4) + le(FS * 2, 4)
-           + le(2, 2) + le(16, 2) + b"data" + le(len(d), 4))
-    with open(path, "wb") as f:
-        f.write(hdr + d)
-    return len(hdr) + len(d)
-
-
-PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
-<title>__TITLE__</title><style>
-body{background:#14161a;color:#e6e6e6;font:15px/1.5 system-ui,sans-serif;
-     margin:0;padding:2rem;max-width:46rem}
-h1{font-size:1.2rem;margin:0 0 .3rem}p{color:#9aa4b2;margin:.2rem 0 1.4rem}
-button{background:#222831;color:#e6e6e6;border:1px solid #39414d;border-radius:6px;
-  padding:.7rem 1rem;font:inherit;cursor:pointer;margin:0 .4rem .4rem 0;min-width:9rem}
-button.on{background:#0072b2;border-color:#0072b2;color:#fff}
-#bar{height:5px;background:#222831;border-radius:3px;margin:1.2rem 0 .4rem;overflow:hidden}
-#pos{height:100%;width:0;background:#0072b2}
-small{color:#6f7986}kbd{background:#222831;border:1px solid #39414d;border-radius:4px;padding:0 .35rem}
-</style></head><body>
-<h1>__TITLE__</h1>
-<p>Switching keeps the playback position, so the change is audible as a change
-rather than as a restart. Number keys pick a take; <kbd>space</kbd> plays and pauses.</p>
-<div id="btns"></div>
-<div id="bar"><div id="pos"></div></div>
-<small id="now"></small>
-<script>
-const TAKES = __TAKES__;
-const els = TAKES.map(t => { const a = new Audio(t.src); a.preload='auto'; a.loop=true; return a; });
-let cur = 0, playing = false;
-const btns = document.getElementById('btns');
-TAKES.forEach((t,i) => {
-  const b = document.createElement('button');
-  b.textContent = (i+1) + '. ' + t.name;
-  b.onclick = () => pick(i);
-  btns.appendChild(b);
-});
-function paint(){
-  [...btns.children].forEach((b,i) => b.className = i===cur ? 'on' : '');
-  document.getElementById('now').textContent = TAKES[cur].note || '';
-}
-function pick(i){
-  if (i === cur) return;
-  const t = els[cur].currentTime;
-  els[cur].pause();
-  cur = i;
-  els[cur].currentTime = t;
-  if (playing) els[cur].play();
-  paint();
-}
-function toggle(){
-  playing = !playing;
-  if (playing) els[cur].play(); else els[cur].pause();
-}
-document.addEventListener('keydown', e => {
-  if (e.code === 'Space'){ e.preventDefault(); toggle(); return; }
-  const n = parseInt(e.key, 10);
-  if (n >= 1 && n <= TAKES.length) pick(n-1);
-});
-setInterval(() => {
-  const a = els[cur];
-  if (a.duration) document.getElementById('pos').style.width =
-      (100*a.currentTime/a.duration) + '%';
-}, 80);
-paint();
-</script></body></html>
-"""
 
 
 def main():
@@ -185,7 +90,7 @@ def main():
     dry, off = audio.decode(args.source, args.seconds, off)
     dry = dry / max(np.abs(dry).max(), 1e-9) * args.peak
     print(f"source: {os.path.basename(args.source)} "
-          f"{off:.1f}..{off + len(dry) / FS:.1f}s"
+          f"{off:.1f}..{off + len(dry) / audio.RATE:.1f}s"
           f"{' (found)' if args.offset == 'auto' else ''}, "
           f"peak {args.peak}, {len(dry)} samples")
 
@@ -196,7 +101,7 @@ def main():
     # a measurement rather than an opinion.
     #
     spec = np.abs(np.fft.rfft(dry * np.hanning(len(dry)))) ** 2
-    freq = np.fft.rfftfreq(len(dry), 1.0 / FS)
+    freq = np.fft.rfftfreq(len(dry), 1.0 / audio.RATE)
     edges = [20, 40, 80, 160, 320, 640, 1280, 2560, 5120, 10240, 20480]
     band = []
     for lo, hi in zip(edges[:-1], edges[1:]):
@@ -209,10 +114,10 @@ def main():
 
     if args.ladder:
         row = args.row or "Modern-4x12"
-        takes = [("nocab", "no cab at all", GATE + pre)]
+        setups = [("nocab", "no cab at all", GATE + pre)]
         for db in (0.0, 10.0, 18.0, 24.0, 30.0):
-            takes.append((f"drive{int(db)}", f"{row}, Drive {db:+.0f} dB",
-                          GATE + pre + cab(row, Drive=db)[len(GATE):]))
+            setups.append((f"drive{int(db)}", f"{row}, Drive {db:+.0f} dB",
+                           GATE + pre + cab(row, Drive=db)[len(GATE):]))
     else:
         #
         # Every row at the same Drive.  They are all at the same
@@ -220,49 +125,21 @@ def main():
         # sensitivity out - so what is left is the voicing and how early
         # each one lets go, which is the whole of what a row is.
         #
-        takes = [("nocab", "no cab at all", GATE + pre)]
+        setups = [("nocab", "no cab at all", GATE + pre)]
         for row in rows():
-            takes.append((row.lower(), f"{row}, Drive {args.drive:+.0f} dB",
-                          GATE + pre + cab(row, Drive=args.drive)[len(GATE):]))
+            setups.append((row.lower(), f"{row}, Drive {args.drive:+.0f} dB",
+                           GATE + pre + cab(row, Drive=args.drive)[len(GATE):]))
 
-    ref = rms(dry)
-    rows = []
-    for key, name, argv in takes:
+    takes, clipped = [], {}
+    for key, name, argv in setups:
         y, _, info = B.run(argv, dry.astype(np.float32), warmup=B.settle())
-        y = np.asarray(y, dtype=np.float64)[-len(dry):]
-        raw = rms(y)
-        g = ref / max(raw, 1e-12)
-        y = y * g
-        pk = float(np.abs(y).max())
-        if pk > 0.99:                      # matched loudness can still clip a wav
-            y = y * (0.99 / pk)
-        rows.append((key, name, y, 20 * np.log10(g), pk, info))
+        takes.append((key, name, np.asarray(y, dtype=np.float64)[-len(dry):]))
+        n = info.get("clipped", 0)
+        clipped[key] = "" if not n else f"{n:.0f} clipped"
 
-    order = list(range(len(rows)))
-    if args.blind:
-        random.shuffle(order)
-
-    print()
-    print(f"{'take':14} {'match gain':>11} {'peak after':>11} {'clipped':>8}")
-    manifest = []
-    for slot, idx in enumerate(order):
-        key, name, y, gdb, pk, info = rows[idx]
-        path = f"{args.out}-{'take%d' % (slot + 1) if args.blind else key}.wav"
-        write_wav(path, y)
-        label = f"Take {slot + 1}" if args.blind else name
-        manifest.append({"name": label, "src": os.path.basename(path),
-                         "note": "" if args.blind else name})
-        print(f"{key:14} {gdb:+10.2f} dB {pk:11.3f} {info.get('clipped', 0):8.0f}")
-
-    page = PAGE.replace("__TITLE__", "Cabinet - one source, several speakers") \
-               .replace("__TAKES__", repr(manifest).replace("'", '"'))
-    html = f"{args.out}.html"
-    open(html, "w").write(page)
-    print(f"\npage: {os.path.abspath(html)}")
-    if args.blind:
-        print("\nkey (look after listening):")
-        for slot, idx in enumerate(order):
-            print(f"  Take {slot + 1}  =  {rows[idx][1]}")
+    S.publish(takes, args.out,
+              title="Cabinet - one source, several speakers",
+              ref=S.rms(dry), blind=args.blind, extra=clipped)
 
 
 if __name__ == "__main__":

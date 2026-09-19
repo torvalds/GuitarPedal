@@ -17,10 +17,10 @@
 #
 # The fields:
 #
-#   effect     the name the bench routes by
-#   short      the [SHORT] name, which is what the pedal's SysEx takes -
-#              the bench routes by display name and the firmware does
-#              not, and neither is derivable from the other
+#   short      the [SHORT] name, which is what the pedal's SysEx takes.
+#              The bench routes by display name instead; display() below
+#              is the map's translation, so only one of them is written
+#              down here.
 #   netlist    the deck in spice/, without its extension
 #   node       which node to probe
 #   knobs      every pot the comparison sets, with the default it sits
@@ -33,6 +33,13 @@
 #   rival      an effect to measure beside this one, where the comparison
 #              between two models is the point
 #
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import bench as B
+import effectmap
+import pots as P
 
 #
 # The clamp, numbered twice, because the two ends are counting different
@@ -54,7 +61,7 @@ RAT_MODE = {0: 1, 1: 2, 2: 0}
 
 TARGETS = {
     "rat": dict(
-        effect="Rat Sketch", short="RAT", netlist="rat-helios", node="out",
+        short="RAT", netlist="rat-helios", node="out",
         knobs={"Distortion": 0.45, "Filter": 0.5, "Sweep": 0.0,
                "Mode": 0, "Volume": 1.0},
         # the two rheostats are audio taper and the effect cubes them
@@ -83,17 +90,34 @@ def target(name):
                          % (name, " ".join(sorted(TARGETS))))
 
 
+def display(t):
+    """The name the bench routes by."""
+    return effectmap.display(t["short"])
+
+
+def raw_pots(t, knobs=None, effect=None):
+    """Each knob this target names, as (label, the raw 0..120 it means).
+
+    A knob here is a fraction of the pot's travel, because that is the
+    scale the spice translation beside it takes.  A named pot is a
+    position rather than a fraction, and the map says which is which -
+    asking it is the point, because the two are indistinguishable from
+    the value on its own.
+
+    Two things set a pedal up from a target - the bench, through argv,
+    and loop.py, over MIDI - and this is the half they share.
+    """
+    on = effect or display(t)
+    for name, v in (knobs or t["knobs"]).items():
+        curve = effectmap.pot_info(on, name)["curve"]
+        yield name, (int(v) if curve in P.NAMED else round(v * 120))
+
+
 def pot_args(t, knobs, effect=None):
-    args = ["--pot", "Signal Chain:Gate=0", "--route", effect or t["effect"]]
-    for name, v in knobs.items():
-        #
-        # An enum pot is a position and a continuous one is a fraction of
-        # 120 steps.  Telling them apart by whether the default was
-        # written as an int is not clever, but the alternative is parsing
-        # the generated map and the callers already have an oracle to run.
-        #
-        raw = int(v) if isinstance(t["knobs"][name], int) else round(v * 120)
-        args += ["--pot", "%s:%s=%d" % (effect or t["effect"], name, raw)]
+    on = effect or display(t)
+    args = B.quiet() + B.route(on)
+    for label, raw in raw_pots(t, knobs, on):
+        args += B.pot(on, label, raw)
     return args
 
 

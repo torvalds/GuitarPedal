@@ -46,7 +46,11 @@ import subprocess
 
 import numpy as np
 
-FS = 48000.0
+import audio
+import effectmap
+import pots
+
+FS = float(audio.RATE)
 
 BENCH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bench", "bench")
 
@@ -64,6 +68,46 @@ HIGH_HZ = 1320.0
 
 class BenchError(Exception):
     pass
+
+
+#
+# The bench answers to display names, so a caller that spells one out
+# is holding a copy of the map.  These two build the argv instead.
+#
+def quiet():
+    """[CHAIN]'s gate fully down, which switches it off.
+
+    Almost every measurement wants it: the gate is there for a guitar
+    in a room, and a synthetic stimulus that starts at zero trips it.
+    """
+    return pots.arg("CHAIN", "Gate", -100.0)
+
+
+def pot(effect, label, raw):
+    """One pot at a raw 0..120 position.
+
+    pots.arg() is the one to reach for, since it takes the value in
+    the unit the pot is marked in.  This is for the two tests that
+    drive the bench and the pedal from the same position and compare
+    the results, where a conversion in between is a difference the
+    comparison would have to account for.
+    """
+    name = effectmap.display(effect)
+    effectmap.pot_info(name, label)            # refuse a label that moved
+    return ["--pot", "%s:%s=%d" % (name, label, raw)]
+
+
+def route(effect, mix=None):
+    """Put one effect in the chain, optionally at a stated mix.
+
+    'mix' is the raw 0..120 the bench takes - 120 being fully wet,
+    which is what an effect under measurement usually wants.
+    """
+    name = effectmap.display(effect)
+    a = ["--route", name]
+    if mix is not None:
+        a += ["--mix", "%s=%d" % (name, mix)]
+    return a
 
 
 def run(args, x, warmup=WINDOW * 2):
@@ -175,15 +219,25 @@ def harmonics(y, f0, n=WINDOW):
 def alias_db(y, f0, n=WINDOW):
     """Energy off the harmonic grid, in dB below the fundamental.
 
-    Everything a periodic input can honestly produce lands on a multiple
-    of f0.  What is left over came back from over Nyquist, which is what
-    a corner sounds like rather than what it looks like.
+    Everything a *time-invariant* effect can honestly do to a sine lands
+    on a multiple of f0.  What is left over came back from over Nyquist,
+    which is what a corner sounds like rather than what it looks like.
+
+    That precondition is the whole of it, and it is not checked.  Any
+    modulation puts sidebands at f0 +/- fm, which are off the grid and
+    are not aliasing: a clean 440 Hz sine with a 5 Hz, 5% wobble on it
+    reads -29 dB here with nothing folded at all.  So this says nothing
+    about a tremolo, a chorus, a vibrato, a flanger, or a compressor
+    working hard enough for its envelope to show - see 129.
+
+    The low bins cannot be excluded to fix that: a real alias lands
+    wherever |k*f0 - m*Fs| puts it, and at 440 Hz the 109th harmonic
+    folds back to 40 Hz, under the fundamental.
     """
     mag = spectrum(y, n)
     b0 = bin_of(f0, n)
     grid = np.zeros(len(mag), dtype=bool)
-    grid[::b0] = True
-    grid[0] = True                      # DC is not aliasing
+    grid[::b0] = True                   # index 0 is DC, and is on it
     off = mag[~grid]
     fund = mag[b0]
     if fund <= 0:

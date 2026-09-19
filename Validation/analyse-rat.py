@@ -39,11 +39,12 @@ import sys
 import numpy as np
 
 sys.path.insert(0, ".")
+import audio
 import bench as B
 import loop
 import targets as T
 
-FS = 48000.0
+FS = float(audio.RATE)
 RAT = "Rat Sketch"
 MODES = ("Silicon", "Stacked", "LED")
 
@@ -111,12 +112,20 @@ def run(k, x):
 
 
 def gain_at(k, hz, dbfs=SMALL_SIGNAL):
-    """Small-signal gain, on a whole number of cycles at each frequency."""
+    """Small-signal gain: the output's level against the input's own.
+
+    Measured both ends with the same function rather than against the
+    nominal.  loop.tone() is given a *peak* in dBFS and loop.tone_db()
+    reports an RMS-referenced level, so subtracting the nominal left
+    every figure 3.01 dB - one crest factor - low.
+    """
     out = []
     for f in hz:
         n = max(int(round(FS / f)) * 60, 9600)
-        out.append(round(loop.tone_db(run(k, loop.tone(float(f), dbfs, n)),
-                                      float(f)) - dbfs, 2))
+        x = loop.tone(float(f), dbfs, n)
+        y = run(k, x)
+        out.append(round(loop.tone_db(y, float(f))
+                         - loop.tone_db(x, float(f)), 2))
     return out
 
 

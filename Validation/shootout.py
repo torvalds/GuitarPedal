@@ -26,10 +26,13 @@
 #
 import os
 import random
+import wave
 
 import numpy as np
 
-FS = 48000
+import audio
+
+FS = audio.RATE
 
 
 def rms(x):
@@ -37,19 +40,12 @@ def rms(x):
 
 
 def write_wav(path, x):
-    """RIFF by hand, because `import wave` does not get the standard
-    library here - Validation/wave.py is the waveform viewer and it
-    shadows the stdlib module for anything with this directory on its
-    path, which is everything in here."""
     q = np.clip(np.asarray(x) * 32767.0, -32768, 32767).astype("<i2")
-    d = q.tobytes()
-    le = lambda v, n: int(v).to_bytes(n, "little")
-    hdr = (b"RIFF" + le(36 + len(d), 4) + b"WAVEfmt " + le(16, 4)
-           + le(1, 2) + le(1, 2) + le(FS, 4) + le(FS * 2, 4)
-           + le(2, 2) + le(16, 2) + b"data" + le(len(d), 4))
-    with open(path, "wb") as f:
-        f.write(hdr + d)
-    return len(hdr) + len(d)
+    with wave.open(path, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(FS)
+        w.writeframes(q.tobytes())
 
 
 PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">

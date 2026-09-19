@@ -18,6 +18,7 @@
 # input - so injected signals have to be compared against the host's own
 # copy instead.
 #
+import contextlib
 import re
 import subprocess
 import sys
@@ -27,6 +28,11 @@ import wave
 
 import numpy as np
 
+#
+# The one sample rate.  Everything here derives it rather than writing
+# it down again: the pedal has exactly one, and two copies that could
+# disagree are two copies that will.
+#
 RATE = 48000
 
 #
@@ -38,6 +44,12 @@ RATE = 48000
 # so it is a claim to be checked rather than a constant to trust.
 #
 FULL_SCALE_VRMS = 1.0
+
+#
+# The same claim in volts peak, which is what an ngspice deck and a
+# scope are in.
+#
+VPEAK = FULL_SCALE_VRMS * 2 ** 0.5
 
 #
 # What the two USB channels are actually in.
@@ -177,10 +189,30 @@ def capture(seconds, card, during=None, warm=True):
 
 
 def wav(path):
-    """A capture from disk, for looking at one again later."""
-    w = wave.open(path)
-    d = np.frombuffer(w.readframes(w.getnframes()), dtype="<i4")
-    return d.reshape(-1, 2).astype(np.float64) / 2**31
+    """A capture from disk, for looking at one again later.
+
+    Mono comes back one-dimensional and stereo as (n, 2), which is the
+    shape capture() gives.
+
+    It reads the header rather than assuming capture()'s own format, and
+    refuses a width or a rate it does not handle.  Assuming was worth a
+    bug: a 16-bit mono file read as 32-bit stereo glues four samples into
+    one frame, and comes back a quarter as long with the same RMS and a
+    spectrum that is nonsense - a shape wrong enough to be obvious in a
+    picture and a level right enough that nothing questions it.
+    """
+    with contextlib.closing(wave.open(path)) as w:
+        ch, width, rate = w.getnchannels(), w.getsampwidth(), w.getframerate()
+        raw = w.readframes(w.getnframes())
+    if rate != RATE:
+        raise ValueError("%s is at %d Hz, not %d - decode() resamples, this "
+                         "does not" % (path, rate, RATE))
+    if width not in (2, 4):
+        raise ValueError("%s is %d-bit; this reads 16 and 32"
+                         % (path, 8 * width))
+    d = np.frombuffer(raw, dtype="<i%d" % width).astype(np.float64)
+    d = d / float(2 ** (8 * width - 1))
+    return d if ch == 1 else d.reshape(-1, ch)
 
 
 def decode(path, seconds=None, offset=None):

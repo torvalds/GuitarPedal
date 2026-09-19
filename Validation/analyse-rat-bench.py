@@ -38,7 +38,8 @@ import sys
 
 import numpy as np
 
-VPEAK = 1.41421356          # volts at digital full scale
+import audio
+
 R5 = 1000.0                 # the only thing between the drive and the diodes
 VT = 0.02585
 
@@ -88,8 +89,8 @@ def clamp_curve(c):
     """
     rows = []
     for r in c["ladder"]:
-        drive = 10 ** (r["dbfs"] / 20.0) * VPEAK
-        vcl = r["peak"] / c["pk"] * VPEAK
+        drive = 10 ** (r["dbfs"] / 20.0) * audio.VPEAK
+        vcl = r["peak"] / c["pk"] * audio.VPEAK
         rows.append((r["dbfs"], drive, vcl, (drive - vcl) / R5,
                      r["out_db"] - (r["dbfs"] + c["gain"])))
     return rows

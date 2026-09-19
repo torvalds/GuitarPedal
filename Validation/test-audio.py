@@ -70,6 +70,22 @@ def main():
         print("test-audio: SKIPPED - no pedal on the USB")
         return 0
 
+    #
+    # Resolve against the map this board is running, not the build's.
+    # Every setting below is written by effect id, and an id is a
+    # position in effects[] - so against the wrong map they land on a
+    # real pot of a real effect and nothing reports anything. On a board
+    # one effect short, "USB L/R Out" went to the Expression Jack, the
+    # capture mode never changed, and the three checks that compare the
+    # wet channel against the dry one failed against a pedal that was
+    # working.
+    #
+    try:
+        print("test-audio:", pedal.use_map(d, strict=True))
+    except (pedal.Stale, effectmap.MapError) as e:
+        print("test-audio: SKIPPED - %s" % e)
+        return 0
+
     print(f"test-audio: card {card}, midi {p}, "
           f"generator {args.ptp * 1000:.0f}mV PtP at {args.freq:.0f}Hz")
 
@@ -113,10 +129,21 @@ def main():
               "another pedal driving this one?")
         return 0
 
-    want = args.ptp / 2 / np.sqrt(2)
-    seen = audio.rms(dry * audio.SAMPLE_TO_FLOAT)
-    if abs(audio.dbfs(seen / want)) > 6.0:
-        print(f"test-audio: SKIPPED - the input is {audio.dbfs(seen / want):+.1f} "
+    #
+    # The declared input as one number, used twice below.
+    #
+    # It is the jack's Vrms, and it is also the internal peak that makes
+    # - audio/process.h puts a 1Vrms sine at 1.0, so the two are the
+    # same number in the two scales.  Both comparisons here are against
+    # the peak, and the measured peak comes from the RMS through a
+    # sine's crest factor rather than from one sample, which a single
+    # spike would otherwise decide.
+    #
+    vrms = args.ptp / 2 / np.sqrt(2)
+
+    seen = audio.rms(dry * audio.SAMPLE_TO_FLOAT) * np.sqrt(2)
+    if abs(audio.dbfs(seen / vrms)) > 6.0:
+        print(f"test-audio: SKIPPED - the input is {audio.dbfs(seen / vrms):+.1f} "
               f"dB from the {args.ptp * 1000:.0f}mV PtP declared.")
         return 0
 
@@ -128,7 +155,6 @@ def main():
     #
     # The left channel is the internal float already; the right is the
     # raw sample and needs converting before the two can be compared.
-    vrms = args.ptp / 2 / np.sqrt(2)
     internal = audio.peak(wet)
     off = audio.dbfs(internal / vrms)
     check("scale", abs(off) < 1.0,
@@ -211,7 +237,6 @@ def main():
     # floor is not zero that is itself worth knowing: it means the USB
     # audio path drops samples continuously, not just when busy.
     #
-    b = audio.bursts(breaks)
     per_s = len(breaks) / (len(dry) / audio.RATE)
     check("usb stream idle", not breaks,
           f"{len(breaks)} breaks in {len(dry) / audio.RATE:.1f}s "
