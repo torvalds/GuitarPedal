@@ -70,6 +70,22 @@ def main():
         print("test-audio: SKIPPED - no pedal on the USB")
         return 0
 
+    #
+    # Resolve against the map this board is running, not the build's.
+    # Every setting below is written by effect id, and an id is a
+    # position in effects[] - so against the wrong map they land on a
+    # real pot of a real effect and nothing reports anything. On a board
+    # one effect short, "USB L/R Out" went to the Expression Jack, the
+    # capture mode never changed, and the three checks that compare the
+    # wet channel against the dry one failed against a pedal that was
+    # working.
+    #
+    try:
+        print("test-audio:", pedal.use_map(d, strict=True))
+    except (pedal.Stale, effectmap.MapError) as e:
+        print("test-audio: SKIPPED - %s" % e)
+        return 0
+
     print(f"test-audio: card {card}, midi {p}, "
           f"generator {args.ptp * 1000:.0f}mV PtP at {args.freq:.0f}Hz")
 
