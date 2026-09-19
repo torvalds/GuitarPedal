@@ -59,7 +59,7 @@ LEVELS = (-36.0, -24.0, -12.0)
 SECONDS = 0.4
 
 
-def spice_leg(t, knobs):
+def spice_leg(t, knobs, seconds=SECONDS):
     """simulate(src, freqs, level) -> dB, through ngspice on a given deck.
 
     A transient rather than an ac sweep, because the circuit this exists
@@ -72,7 +72,7 @@ def spice_leg(t, knobs):
         dbfs = -36.0 if level is None else level
         out = []
         for hz in freqs:
-            x = loop.tone(hz, dbfs, int(SECONDS * loop.FS))
+            x = loop.tone(hz, dbfs, int(seconds * loop.FS))
             y = ngspice.tran_src(src, t["node"], x, fs=loop.FS, params=params)
             out.append(loop.tone_db(y, hz) - loop.tone_db(x, hz))
         return np.asarray(out)
@@ -80,26 +80,43 @@ def spice_leg(t, knobs):
     return simulate
 
 
-def loop_response(card, report=print):
+def loop_response(card, freqs=FREQS, report=print):
     """What the loop does to each frequency, pedal under test bypassed."""
     _delay, f, h = loop.calibrate(card)
     report("  loop measured, %.2f to %.2f dB across the band"
            % (20.0 * np.log10(np.abs(h)).min(), 20.0 * np.log10(np.abs(h)).max()))
-    return np.interp(FREQS, f, 20.0 * np.log10(np.abs(h)))
+    return np.interp(freqs, f, 20.0 * np.log10(np.abs(h)))
 
 
-def measured_ladder(card, loop_db, report=print):
+def measured_ladder(card, loop_db, freqs=FREQS, levels=LEVELS,
+                    seconds=SECONDS, report=print):
     """The board on the bench, one gain per rung, the loop taken out."""
     rows = []
-    for level in LEVELS:
+    for level in levels:
         row = []
-        for hz, cal in zip(FREQS, loop_db):
-            sent, back = loop.measure_tone(card, hz, level, seconds=SECONDS,
+        for hz, cal in zip(freqs, loop_db):
+            sent, back = loop.measure_tone(card, hz, level, seconds=seconds,
                                            report=report)
             row.append(loop.tone_db(back, hz) - loop.tone_db(sent, hz) - cal)
         report("  %+.0f dBFS rung taken" % level)
         rows.append(row)
     return np.asarray(rows)
+
+
+def numbers(text, what):
+    """A comma separated sweep from the command line."""
+    out = []
+    for field in text.split(","):
+        field = field.strip()
+        if not field:
+            continue
+        try:
+            out.append(float(field))
+        except ValueError:
+            sys.exit("diagnose: --%s has %r in it, which is not a number" % (what, field))
+    if not out:
+        sys.exit("diagnose: --%s is empty" % what)
+    return out
 
 
 def blameable(parts, exclude):
@@ -129,8 +146,16 @@ def main():
     ap.add_argument("--exclude", default="",
                     help="parts that are not on the board and so cannot be "
                          "mis-fitted, comma separated")
+    ap.add_argument("--freqs", default=",".join("%g" % f for f in FREQS),
+                    help="where to measure, comma separated Hz")
+    ap.add_argument("--levels", default=",".join("%g" % v for v in LEVELS),
+                    help="the rungs, comma separated dBFS")
+    ap.add_argument("--seconds", type=float, default=SECONDS,
+                    help="per tone; these three set what the run costs")
     ap.add_argument("--top", type=int, default=5)
     args = ap.parse_args()
+    freqs = numbers(args.freqs, "freqs")
+    levels = numbers(args.levels, "levels")
 
     t = targets.target(args.target)
     src = ngspice.netlist(t["netlist"])
@@ -146,7 +171,7 @@ def main():
         return 0
     print("diagnose: %s, %s" % (d["label"], pedal.use_map(d)))
     print("          %s against %s, %d parts, %d rungs, %d points"
-          % (args.target, t["netlist"], len(refs), len(LEVELS), len(FREQS)))
+          % (args.target, t["netlist"], len(refs), len(levels), len(freqs)))
     if skip:
         print("          not on the board: %s" % ", ".join(sorted(skip)))
 
@@ -155,18 +180,18 @@ def main():
 
     print("\n  put the pedal under test in bypass, then Enter: ", end="")
     input()
-    loop_db = loop_response(d["card"])
+    loop_db = loop_response(d["card"], freqs)
     print("  engage it again, then Enter: ", end="")
     input()
 
     print("\n  measuring the board")
-    measured = measured_ladder(d["card"], loop_db)
+    measured = measured_ladder(d["card"], loop_db, freqs, levels, args.seconds)
 
     print("  building the dictionary (%d simulations)"
-          % ((len(refs) * len(netfault.FACTORS) + 1) * len(LEVELS) * len(FREQS)))
-    sim = spice_leg(t, t["knobs"])
-    cands = netfault.candidates(src, FREQS, sim, refs, netfault.FACTORS,
-                                levels=LEVELS)
+          % ((len(refs) * len(netfault.FACTORS) + 1) * len(levels) * len(freqs)))
+    sim = spice_leg(t, t["knobs"], args.seconds)
+    cands = netfault.candidates(src, freqs, sim, refs, netfault.FACTORS,
+                                levels=levels)
 
     # Both sides are gains, so aligning would throw away the level a
     # fault most often moves.

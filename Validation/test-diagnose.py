@@ -141,6 +141,20 @@ def loop_response_lands_on_our_frequencies():
            "worst %.6f dB" % float(abs(db + 0.5).max()))
 
 
+def numbers_are_checked():
+    """A sweep given on the command line is still a sweep."""
+    print("numbers()")
+    record("a list parses", diagnose.numbers("80,160,320", "freqs") == [80.0, 160.0, 320.0])
+    record("spaces are not part of a number",
+           diagnose.numbers(" -36 , -12 ", "levels") == [-36.0, -12.0])
+    for bad, why in (("80,abc", "not a number"), ("", "empty"), (" , ", "only separators")):
+        try:
+            diagnose.numbers(bad, "freqs")
+            record("refuses %r" % bad, ok=False, detail=why + ", it returned")
+        except SystemExit:
+            record("refuses %r" % bad, ok=True, detail=why)
+
+
 def main():
     print("blameable()")
     record("no --exclude leaves every part",
@@ -179,6 +193,9 @@ def main():
 
     print()
     loop_response_lands_on_our_frequencies()
+
+    print()
+    numbers_are_checked()
 
     print()
     if FAILED:
