@@ -127,6 +127,15 @@ pedal's output back to its own input, ``make check-bench`` to ask whether
 a real board agrees with the host build, and ``make check-loop`` if you
 have two pedals to patch into each other.
 
+`Validation/diagnose.py` is the odd one out: what it measures isn't the
+pedal.  With an analog pedal in the loop it names which *component* of
+that pedal disagrees with the netlist in `Validation/spice`, by
+simulating every single-component fault the netlist could have and
+keeping the closest.  Ranking is
+[netfault](https://github.com/quotentiroler/netfault), installed
+separately.  Building the dictionary is the slow part, and is done once
+for a board rather than once per measurement.
+
 ## Hardware
 
 The kicad design files (and some supporting infrastructure, like the 3D
