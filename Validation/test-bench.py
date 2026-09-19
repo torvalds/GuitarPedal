@@ -49,20 +49,39 @@ except ImportError:
 
 import audio
 import bench as B
+import effectmap
 import pedal
+import pots as P
 
 # Effect ids, which are indexes into the firmware's effects[] - the same
-# order 'bench --list' prints, since it is printing that array.
+# order 'bench --list' prints, since it is printing that array.  Asked
+# for in main(), so --help works without a build.
 CHAIN = pedal.CHAIN
-BOOST = pedal.effect_id("BOOST")
-TESTTONE = pedal.effect_id("TESTTONE")
-SETTINGS = pedal.settings_effect()
+BOOST = TESTTONE = SETTINGS = USB_OUT = None
+CHAIN_GATE = CHAIN_TRIM = CHAIN_VOLUME = None
+TT_LEVEL = TT_FREQ = TT_SHAPE = SHAPE_SINE = None
+BOOST_BOOST = BOOST_LEVEL = BOOST_BASSCUT = BOOST_HIGHCUT = None
+WET = DRY = None
+
 
 # Pot numbers as the SysEx sees them: 0 is the mix, 1-10 are the effect's.
-CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME = 1, 4, 5
-TT_LEVEL, TT_FREQ, TT_SHAPE = 1, 2, 3
-BOOST_BOOST, BOOST_LEVEL, BOOST_BASSCUT, BOOST_HIGHCUT = 1, 2, 3, 4
-SETTINGS_USB_OUT, USB_OUT_WET = 1, 1
+def resolve():
+    global BOOST, TESTTONE, SETTINGS, USB_OUT, WET, DRY, SHAPE_SINE
+    global CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME, TT_LEVEL, TT_FREQ, TT_SHAPE
+    global BOOST_BOOST, BOOST_LEVEL, BOOST_BASSCUT, BOOST_HIGHCUT
+    BOOST = effectmap.effect("BOOST")
+    TESTTONE = effectmap.effect("TESTTONE")
+    SETTINGS = effectmap.settings()
+    CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME = effectmap.pots(
+        "Signal Chain", "Gate", "Trim", "Volume")
+    TT_LEVEL, TT_FREQ, TT_SHAPE = effectmap.pots(
+        "Test Tone", "Level", "Freq", "Shape")
+    BOOST_BOOST, BOOST_LEVEL, BOOST_BASSCUT, BOOST_HIGHCUT = effectmap.pots(
+        "Boost", "Boost", "Level", "Basscut", "Highcut")
+    USB_OUT = effectmap.pot("Settings", "USB L/R Out")
+    WET = P.to_pot("Settings", "USB L/R Out", "Wet")
+    DRY = P.to_pot("Settings", "USB L/R Out", "Dry")
+    SHAPE_SINE = P.to_pot("Test Tone", "Shape", "Sine")
 
 N = B.WINDOW                    # 12000 samples: 110 whole cycles of 440 Hz
 BIN = B.bin_of(B.MID_HZ, N)     # ...so the fundamental is bin 110
@@ -85,14 +104,14 @@ def configure(p, boost, level):
             (CHAIN, CHAIN_VOLUME, 80),      # 0 dB - it scales the tone, see testtone.h
             (TESTTONE, 0, 120),             # full mix: replace the input rather than add
             (TESTTONE, TT_FREQ, 60),        # pot 60 is 440 Hz exactly
-            (TESTTONE, TT_SHAPE, 0),        # sine
+            (TESTTONE, TT_SHAPE, SHAPE_SINE),
             (TESTTONE, TT_LEVEL, 96),       # -18 dBFS
             (BOOST, 0, 120),
             (BOOST, BOOST_BOOST, boost),
             (BOOST, BOOST_LEVEL, level),
             (BOOST, BOOST_BASSCUT, 120),
             (BOOST, BOOST_HIGHCUT, 120),
-            (SETTINGS, SETTINGS_USB_OUT, USB_OUT_WET)):
+            (SETTINGS, USB_OUT, WET)):
         pedal.set_pot(p, eff, pot, val)
         time.sleep(0.02)
     #
@@ -180,29 +199,17 @@ def main():
                     help="serial, label or product substring naming one pedal")
     args = ap.parse_args()
 
-    if None in (BOOST, SETTINGS, TESTTONE):
-        print("%s: SKIPPED - no effect map in ../build; run 'make' first"
-              % "test-bench")
+    d, why = pedal.sole(args.target)
+    if not d:
+        print("test-bench: SKIPPED - %s" % why)
         return 0
 
-    found = pedal.discover()
-    if not found:
-        print("%s: SKIPPED - no pedal on the USB" % "test-bench")
+    try:
+        print("test-bench:", pedal.use_map(d, strict=True))
+        resolve()
+    except (pedal.Stale, effectmap.MapError) as e:
+        print("test-bench: SKIPPED - %s" % e)
         return 0
-    if args.target:
-        d = pedal.find(args.target, among=found)
-        if not d:
-            print("%s: SKIPPED - '%s' does not name exactly one of the %d "
-                  "pedals here: %s"
-                  % ("test-bench", args.target, len(found),
-                     ", ".join(x["label"] for x in found)))
-            return 0
-    elif len(found) > 1:
-        print("%s: SKIPPED - %d pedals and no --target; this wants exactly one"
-              % ("test-bench", len(found)))
-        return 0
-    else:
-        d = found[0]
     print("test-bench: %s, card %d, port %s"
           % (d["label"], d["card"], d["port"]))
     print("            [TESTTONE] 440 Hz -18 dBFS into [BOOST], captured over USB")
@@ -225,7 +232,7 @@ def main():
     # be playing when the next person picks the pedal up.
     #
     pedal.set_routing(d["port"])
-    pedal.set_pot(d["port"], SETTINGS, SETTINGS_USB_OUT, 2)     # back to Dry
+    pedal.set_pot(d["port"], SETTINGS, USB_OUT, DRY)
 
     if FAILED:
         print("test-bench: FAILED - %s" % ", ".join(FAILED))

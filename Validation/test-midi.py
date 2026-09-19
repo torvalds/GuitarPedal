@@ -29,6 +29,7 @@ import argparse
 import sys
 import time
 
+import effectmap
 import pedal
 
 
@@ -38,8 +39,8 @@ def main():
     ap.add_argument("--seconds", type=float, default=1.2)
     args = ap.parse_args()
 
-    dong = pedal.dongle()
-    if not dong:
+    ports = pedal.dongles()
+    if not ports:
         print("test-midi: SKIPPED - no MIDI adapter on the sequencer")
         return 0
 
@@ -48,40 +49,82 @@ def main():
         print("test-midi: SKIPPED - no pedals")
         return 0
 
-    print("test-midi: adapter on %s (%s)" % (dong, pedal.rawmidi(dong)))
+    #
+    # Only the boards with the jacks.  minimal has none, so an adapter
+    # that cannot reach it is the board being what it is rather than
+    # anything being wrong.
+    #
+    wired = [d for d in pedals if pedal.capabilities(d)["midi_hw"]]
+    if not wired:
+        print("test-midi: SKIPPED - no board here has hardware MIDI (%s)"
+              % ", ".join(d["label"] for d in pedals))
+        return 0
+    pedals = wired
+
+    print("test-midi: adapter on %s"
+          % ", ".join("%s (%s)" % (p, pedal.rawmidi(p)) for p in ports))
 
     #
-    # Which pedal the jacks belong to, by trying it rather than being
+    # Which port reaches which pedal, by trying it rather than being
     # told.  A note-on the pedal does not consume comes back out of both
-    # its MIDI thru paths, so whichever pedal echoes it to USB is the one
-    # the adapter is wired to.
+    # its MIDI thru paths, so whichever pedal echoes it to USB is the
+    # one that pair's OUT is wired to.
     #
-    target = None
-    for d in pedals:
-        if _saw_note(pedal.midi_listen(d["port"], args.seconds,
-                                       during=lambda: _note(dong))):
-            target = d
+    dong = target = None
+    for port in ports:
+        for d in pedals:
+            if _saw_note(pedal.midi_listen(d["port"], args.seconds,
+                                           during=lambda: _note(port))):
+                dong, target = port, d
+                break
+        if target:
             break
     if not target:
-        print("test-midi: SKIPPED - the adapter does not reach any pedal")
+        print("test-midi: SKIPPED - none of the adapter's ports reaches a "
+              "pedal (%s)" % ", ".join(d["label"] for d in pedals))
         return 0
 
-    print("test-midi: wired to %s" % target["label"])
+    #
+    # ...and separately, which port hears it coming back.  A pedal has
+    # one IN and one OUT and an adapter has a pair per port, so there is
+    # nothing saying the cable out of the pedal goes back to the pair
+    # the cable into it came from - on this bench it does not.  The
+    # status CCs are the probe because they need nothing sent.
+    #
+    back = next((p for p in ports if pedal.midi_alive(p, args.seconds)), None)
+
+    print("test-midi: %s -> %s, %s -> %s"
+          % (dong, target["label"], target["label"],
+             back or "nothing that answers"))
+
+    #
+    # The adapter's two pairs are two subdevices of one USB device, and
+    # letting go of one costs the next send on the other: 55 of 62 notes
+    # arrived when a check on the far pair came immediately before, 72 of
+    # 72 with half a second in between.  Nothing to do with the pedal -
+    # it is the same note over the same cable.  See issue 444.
+    #
+    def settle():
+        if back and back != dong:
+            time.sleep(0.5)
 
     alive = rx = tx = act = 0
     for _ in range(args.trials):
-        if pedal.midi_alive(dong, args.seconds):
+        if back and pedal.midi_alive(back, args.seconds):
             alive += 1
+        settle()
 
         # adapter -> pedal IN -> thru -> pedal USB
         if _saw_note(pedal.midi_listen(target["port"], args.seconds,
                                        during=lambda: _note(dong))):
             rx += 1
+        settle()
 
         # pedal USB -> thru -> pedal OUT -> adapter
-        if _saw_note(pedal.midi_listen(dong, args.seconds,
-                                       during=lambda: _note(target["port"]))):
+        if back and _saw_note(pedal.midi_listen(
+                back, args.seconds, during=lambda: _note(target["port"]))):
             tx += 1
+        settle()
 
         # and whether it *acts* on what arrives, which needs no thru at
         # all: CC 7 is the master volume, read back from the state it
@@ -157,7 +200,7 @@ def _chain_volume(d):
     if end < 0:
         return None
     for at in range(i + 4, end - 1, 2):
-        if blob[at] == pedal.CHAIN_VOLUME:
+        if blob[at] == effectmap.pot("Signal Chain", "Volume"):
             return blob[at + 1]
     return None
 

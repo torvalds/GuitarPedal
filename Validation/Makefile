@@ -51,8 +51,8 @@ BENCH_CFLAGS = -Wall -Wno-unused-function -O2 \
 	       -DSAMPLES_PER_SEC=48000.0f \
 	       -Ibench/shim -I$(BENCH_GEN) -I.. -I../Firmware -I../Audio
 
-$(BENCH_GEN)/effect_map.h: $(wildcard ../Effects/*.h) \
-			   ../scripts/gen_effects.py
+$(BENCH_GEN)/effect_map.h $(BENCH_GEN)/midi_schema.h &: \
+			   $(wildcard ../Effects/*.h) ../scripts/gen_effects.py
 	@mkdir -p $(BENCH_GEN)
 	python3 ../scripts/gen_effects.py ../Effects/ \
 		$(BENCH_GEN)/effect_map.h $(BENCH_GEN)/effects.js \
@@ -213,7 +213,7 @@ check-hw:
 # that over MIDI yet.  It leaves two scenes behind in the save area.
 #
 check-split:
-	./test-split.py
+	./test-split.py $(if $(TARGET),--target $(TARGET))
 
 #
 # Two pedals, patched output to input in both directions, one generating
@@ -263,9 +263,12 @@ check-reboot:
 	./test-reboot.py $(if $(TARGET),--target $(TARGET)) \
 			 $(if $(JSON),--json $(JSON)) $(BOOTARGS)
 
-check: test-midi-cin bench/coeff bench/gen/effect_map.h
+check: test-midi-cin bench/bench bench/coeff bench/gen/midi_schema.h
 	./test-midi-cin
 	./test-biquad.py
+	./test-effects.py
+	./effectmap.py
+	./pots.py
 	./check-effect-ids.py
 ifeq ($(NODE),)
 	@echo "test-webmidi: SKIPPED - no node in PATH"

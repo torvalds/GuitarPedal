@@ -25,6 +25,7 @@ import time
 import numpy as np
 
 import audio
+import effectmap
 import pedal
 
 FAILED = []
@@ -60,24 +61,10 @@ def main():
     # through discover() keeps the card and the port from the same
     # entry, and --target is how a caller says which entry.
     #
-    found = pedal.discover()
-    if not found:
-        print("test-audio: SKIPPED - no pedal on the USB")
+    d, why = pedal.sole(args.target)
+    if not d:
+        print("test-audio: SKIPPED - %s" % why)
         return 0
-    if args.target:
-        d = pedal.find(args.target, among=found)
-        if not d:
-            print("test-audio: SKIPPED - '%s' does not name exactly one of "
-                  "the %d pedals here: %s"
-                  % (args.target, len(found),
-                     ", ".join(x["label"] for x in found)))
-            return 0
-    elif len(found) > 1:
-        print("test-audio: SKIPPED - %d pedals and no --target; this wants "
-              "exactly one" % len(found))
-        return 0
-    else:
-        d = found[0]
     card, p = d["card"], d["port"]
     if card is None or p is None:
         print("test-audio: SKIPPED - no pedal on the USB")
@@ -91,9 +78,7 @@ def main():
     # same instant, so anything below can subtract one from the other
     # without aligning them first.
     #
-    settings = pedal.settings_effect()
-    if settings is not None:
-        pedal.wet_dry(p, settings)
+    pedal.wet_dry(p, effectmap.settings())
 
     d = audio.trim(audio.capture(args.seconds, card))
     wet, dry = d[:, 0], d[:, 1]

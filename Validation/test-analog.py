@@ -54,18 +54,35 @@ except ImportError:
     sys.exit(0)
 
 import audio
+import effectmap
 import pedal
-
-CHAIN = pedal.CHAIN
-TESTTONE = pedal.effect_id("TESTTONE")
-SETTINGS = pedal.settings_effect()
-
-CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME = 1, 4, 5
-TT_LEVEL, TT_FREQ, TT_SHAPE = 1, 2, 3
-SETTINGS_USB_OUT, USB_OUT_WET_DRY = 1, 3
+import pots as P
 
 TONE_HZ = 440.0
-SHAPE_SINE, SHAPE_NOISE = 0, 3
+
+# Asked for in main(), so --help works without a build.
+CHAIN = pedal.CHAIN
+TESTTONE = SETTINGS = USB_OUT = None
+CHAIN_GATE = CHAIN_TRIM = CHAIN_VOLUME = None
+TT_LEVEL = TT_FREQ = TT_SHAPE = None
+WET_DRY = DRY = SHAPE_SINE = SHAPE_NOISE = None
+
+
+def resolve():
+    global TESTTONE, SETTINGS, USB_OUT, WET_DRY, DRY
+    global CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME, TT_LEVEL, TT_FREQ, TT_SHAPE
+    global SHAPE_SINE, SHAPE_NOISE
+    TESTTONE = effectmap.effect("TESTTONE")
+    SETTINGS = effectmap.settings()
+    CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME = effectmap.pots(
+        "Signal Chain", "Gate", "Trim", "Volume")
+    TT_LEVEL, TT_FREQ, TT_SHAPE = effectmap.pots(
+        "Test Tone", "Level", "Freq", "Shape")
+    USB_OUT = effectmap.pot("Settings", "USB L/R Out")
+    WET_DRY = P.to_pot("Settings", "USB L/R Out", "Wet/Dry")
+    DRY = P.to_pot("Settings", "USB L/R Out", "Dry")
+    SHAPE_SINE = P.to_pot("Test Tone", "Shape", "Sine")
+    SHAPE_NOISE = P.to_pot("Test Tone", "Shape", "Noise")
 
 
 def configure(p, level, shape):
@@ -78,7 +95,7 @@ def configure(p, level, shape):
                           (TESTTONE, TT_FREQ, 60),      # 440 Hz exactly
                           (TESTTONE, TT_SHAPE, shape),
                           (TESTTONE, TT_LEVEL, level),
-                          (SETTINGS, SETTINGS_USB_OUT, USB_OUT_WET_DRY)):
+                          (SETTINGS, USB_OUT, WET_DRY)):
         pedal.set_pot(p, eff, pot, val)
         time.sleep(0.02)
     time.sleep(1.0)
@@ -116,29 +133,17 @@ def main():
                     help="serial, label or product substring naming one pedal")
     args = ap.parse_args()
 
-    if None in (SETTINGS, TESTTONE):
-        print("%s: SKIPPED - no effect map in ../build; run 'make' first"
-              % "test-analog")
+    d, why = pedal.sole(args.target)
+    if not d:
+        print("test-analog: SKIPPED - %s" % why)
         return 0
 
-    found = pedal.discover()
-    if not found:
-        print("%s: SKIPPED - no pedal on the USB" % "test-analog")
+    try:
+        print("test-analog:", pedal.use_map(d, strict=True))
+        resolve()
+    except (pedal.Stale, effectmap.MapError) as e:
+        print("test-analog: SKIPPED - %s" % e)
         return 0
-    if args.target:
-        d = pedal.find(args.target, among=found)
-        if not d:
-            print("%s: SKIPPED - '%s' does not name exactly one of the %d "
-                  "pedals here: %s"
-                  % ("test-analog", args.target, len(found),
-                     ", ".join(x["label"] for x in found)))
-            return 0
-    elif len(found) > 1:
-        print("%s: SKIPPED - %d pedals and no --target; this wants exactly one"
-              % ("test-analog", len(found)))
-        return 0
-    else:
-        d = found[0]
     p, card = d["port"], d["card"]
     print("test-analog: %s, card %d, port %s" % (d["label"], card, p))
 
@@ -234,10 +239,10 @@ def main():
              audio.delay_samples(sent, back, 2000) / 48.0))
 
     #
-    # Leave it quiet, and the USB output back where it was found.
+    # Leave it quiet, and the USB output on Dry.
     #
     pedal.set_routing(p)
-    pedal.set_pot(p, SETTINGS, SETTINGS_USB_OUT, 2)
+    pedal.set_pot(p, SETTINGS, USB_OUT, DRY)
     print()
     print("test-analog: reported, not judged - see the header of test-loop.py")
     print("             on why a bench measurement is a hypothesis until the")

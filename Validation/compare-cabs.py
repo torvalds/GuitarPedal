@@ -34,6 +34,7 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import audio
 import bench as B
+import effectmap
 import pots as P
 
 FS = 48000
@@ -41,14 +42,15 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 GATE = ["--pot", "Signal Chain:Gate=0"]
 
 
-ROWS = ["Small-Combo", "American-1x12", "British-4x12",
-        "Modern-4x12", "Bass-15"]
+def rows():
+    """The cabinets this build has, in the order the enum declares them."""
+    return effectmap.pot_info("Cabinet", "Cabinet")["enum"]
 
 
 def cab(row, **over):
     """One cabinet row at its defaults, except for what is named."""
-    a = ["--route", "Cabinet", "--mix", "Cabinet=120",
-         "--pot", f"Cabinet:Cabinet={ROWS.index(row)}"]
+    a = (["--route", "Cabinet", "--mix", "Cabinet=120"]
+         + P.arg("Cabinet", "Cabinet", row))
     for k, val in over.items():
         a += P.arg("Cabinet", k, val)
     return GATE + a
@@ -157,7 +159,7 @@ def main():
                     metavar="POT=VAL", help="a raw 0..120 pot on --pre")
     ap.add_argument("--trim", type=float, default=None,
                     help="[CHAIN] Trim in dB, for a guitar that is not hot")
-    ap.add_argument("--row", default=None, choices=ROWS,
+    ap.add_argument("--row", default=None, choices=rows(),
                     help="with --ladder, which cabinet to walk Drive on")
     ap.add_argument("--drive", type=float, default=15.0,
                     help="Drive for the row comparison, in dB")
@@ -219,7 +221,7 @@ def main():
         # each one lets go, which is the whole of what a row is.
         #
         takes = [("nocab", "no cab at all", GATE + pre)]
-        for row in ROWS:
+        for row in rows():
             takes.append((row.lower(), f"{row}, Drive {args.drive:+.0f} dB",
                           GATE + pre + cab(row, Drive=args.drive)[len(GATE):]))
 

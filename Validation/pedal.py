@@ -15,32 +15,24 @@
 #
 import os
 import re
+import select
 import subprocess
 import sys
 import tempfile
 import time
 
+import effectmap
+import pots
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+BUILD = os.path.join(HERE, "..", "build")
+
 HEADER = bytes([0xF0, 0x7D])
 
-# Effect 0 is the signal chain, and its pots in SysEx numbering, where 0
-# is the mix and 1-10 are the effect's own.
+# The signal chain is priority 0 and therefore effect 0.  It is the one
+# id written down on purpose, and check-effect-ids.py checks it against
+# the map rather than exempting it.
 CHAIN = 0
-CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME = 1, 4, 5
-
-# The settings pseudo-effect, in SysEx pot numbering.  Ask
-# settings_effect() which effect it *is* - it is not the last one and has
-# not been since something was given a priority above it.
-SETTINGS_USB_OUT = 1
-SETTINGS_USB_IN = 2
-
-# ENUM(None Wet Dry Wet/Dry).  Wet/Dry puts the processed signal on the
-# left and the untouched input on the right.
-USB_OUT_NONE, USB_OUT_WET, USB_OUT_DRY, USB_OUT_WET_DRY = 0, 1, 2, 3
-
-# ENUM(Off Pre-FX Mix).  Pre-FX *adds* the USB input to the analog input
-# ahead of the signal chain - it does not replace it - so whatever the
-# input jack is picking up sums in with it.
-USB_IN_OFF, USB_IN_PRE_FX, USB_IN_MIX, USB_IN_REPLACE = 0, 1, 2, 3
 
 
 def ports(match=""):
@@ -142,17 +134,23 @@ def discover():
         if port and product not in name:
             port = None
 
-        codec = (re.search(r"TAC\d+", product) or [None])
-        codec = codec.group(0) if hasattr(codec, "group") else None
+        #
+        # The product string is "<board> <codec> Pedal": the board name is
+        # compile-time because it is the pin map, and the codec is what
+        # probe_hardware() found.  Only the first word is a fact about
+        # which build this is - what the probe said is in the identity
+        # reply, and capabilities() is where to ask.
+        #
+        board = product.split()[0]
 
         found.append({
             "serial": serial,
             "product": product,
-            "codec": codec,
+            "board": board,
             "card": card,
             "port": port,
             # Unique and short, for saying which board a number came from
-            "label": "%s/%s" % (codec or product.split()[0], serial[-4:]),
+            "label": "%s/%s" % (board, serial[-4:]),
         })
     return sorted(found, key=lambda d: d["serial"])
 
@@ -161,8 +159,8 @@ def find(match, among=None):
     """The one pedal matching 'match', or None if it is not exactly one.
 
     Matches a serial, a label or a product string, and refuses to guess:
-    two boards of the same codec both match "TAC5242", and answering
-    either of them is how a test ends up measuring the wrong board.
+    two boards of one revision both match their board name, and
+    answering either is how a test measures the board nobody asked about.
     """
     pedals = among if among is not None else discover()
     m = match.lower()
@@ -172,27 +170,114 @@ def find(match, among=None):
     return hits[0] if len(hits) == 1 else None
 
 
-def dongle(match=""):
-    """A sequencer port that is not a pedal - the USB-MIDI adapter.
+def capabilities(d, ident=None):
+    """What a board can do, out of its own identity reply.
 
-    The hardware MIDI jacks go to the UART rather than to USB, so they
-    are reachable only through something else plugged into them, and
-    that something is not discoverable the way a pedal is: it has no
-    serial we care about and no audio side to join to.  It is simply
-    the MIDI port that is not one of ours.
+    Read by presence: a board old enough not to carry a key does not
+    have the thing it names, and a version number to compare against is
+    what the telemetry block got wrong.
+
+    The codec description comes from the product string rather than from
+    the reply, because every board sets it and firmware old enough to
+    omit "codec" from the reply still says it there.  What it means is
+    per family - "mono"/"stereo" on the boards with an audio card,
+    "DC-coupled"/"AC-coupled" on minimal - so 'stereo' is None on a board
+    that did not say either way rather than a guess.
+    """
+    ident = pedal_identity(d) if ident is None else ident
+    found = (ident or {}).get("found", {})
+
+    # "<board> <desc> Pedal"
+    words = (d.get("product") or "").split()
+    desc = " ".join(words[1:-1]) if len(words) > 2 else None
+    desc = found.get("codec", desc)
+
+    return {
+        "board": d.get("board"),
+        "build": (ident or {}).get("build"),
+        "codec": desc,
+        "stereo": {"stereo": True, "mono": False}.get(desc),
+        "dc_coupled": None if desc is None else desc == "DC-coupled",
+        "midi_hw": (ident or {}).get("midi_hw"),
+        "controls": (ident or {}).get("controls", []),
+        "scenes": (ident or {}).get("scenes"),
+    }
+
+
+def pedal_identity(d):
+    return identity(d["port"]) if d.get("port") else None
+
+
+def matches(target, among=None):
+    """Every pedal 'target' names.
+
+    find() collapses to "exactly one or nothing", and the difference
+    between nothing matched and several matched is worth having: one of
+    them is worth waiting for and the other never will be.
+    """
+    pedals = among if among is not None else discover()
+    return [d for d in pedals if find(target, among=[d])]
+
+
+def sole(target=None, among=None):
+    """The one pedal to drive, as (device, why not) - one is always None.
+
+    Refusing to guess is the default, for the reason find() gives.  What
+    to do about a refusal stays with the caller, because a check target
+    skips with 0 and a tool stops with a message, and the difference
+    between those is not this function's to decide.
+    """
+    found = among if among is not None else discover()
+    if not found:
+        return None, "no pedal on the USB"
+
+    here = ", ".join(d["label"] for d in found)
+    if target:
+        hits = matches(target, found)
+        if len(hits) == 1:
+            return _unheld(hits[0])
+        return None, ("%r names %s of the %d pedals here: %s"
+                      % (target, len(hits) or "none", len(found), here))
+    if len(found) > 1:
+        return None, ("%d pedals and no target; this wants exactly one: %s"
+                      % (len(found), here))
+    return _unheld(found[0])
+
+
+def _unheld(d):
+    """(board, None), or (None, who has its port) - see port_holder().
+
+    Checked here because this is where every script picks a board, and
+    because the alternative is each of them discovering it as "the pedal
+    did not answer" several seconds later.
+    """
+    held = port_holder(d["port"]) if d.get("port") else None
+    if held and held["kind"] == "raw":
+        return None, "%s: %s" % (d["label"], held["why"])
+    return d, None
+
+
+def dongles(match=""):
+    """Every sequencer port that is not a pedal, in order.
+
+    An adapter can have more than one DIN pair - the MIDIMATE has two,
+    48:0 and 48:1 - and which of them a pedal is wired to is a fact
+    about the bench rather than about the adapter.  So a caller that
+    wants to find the pedal tries them.
     """
     try:
         out = subprocess.run(["aplaymidi", "-l"], capture_output=True,
                              text=True, check=True).stdout
     except (FileNotFoundError, subprocess.CalledProcessError):
-        return None
+        return []
+    found = []
     for line in out.splitlines()[1:]:
         m = re.match(r"\s*(\d+:\d+)\s+(.*\S)", line)
         if not m or "pedal" in m.group(2).lower():
             continue
         if match.lower() in m.group(2).lower():
-            return m.group(1)
-    return None
+            found.append(m.group(1))
+    return found
 
 
 def midi_listen(port, seconds=1.5, during=None):
@@ -216,21 +301,11 @@ def midi_listen(port, seconds=1.5, during=None):
     # device and left it busy for everything after it.
     #
     try:
-        proc = subprocess.Popen(["amidi", "-p", dev, "-d"],
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.DEVNULL, text=True)
+        return list(_listen(["amidi", "-p", dev, "-a", "-c",
+                             "-r", "/dev/stdout"], during, seconds,
+                            settle=0.3))
     except FileNotFoundError:
         return []
-    try:
-        time.sleep(0.3)          # let it get the device open
-        if during:
-            during()
-        time.sleep(seconds)
-    finally:
-        proc.terminate()
-        out = proc.stdout.read()
-        proc.wait()
-    return [int(b, 16) for b in out.split()]
 
 
 def midi_alive(port, seconds=1.5):
@@ -282,16 +357,25 @@ def _rawmidi_devices():
 
 
 def rawmidi(port):
-    """hw:C,D,S for a sequencer port, or None if it cannot be had."""
+    """hw:C,D,S for a sequencer port, or None if it cannot be had.
+
+    The client number gives the card by the 16 + 4*N rule, and the port
+    number after the colon is the subdevice on it - 'ESI MIDIMATE eX
+    MIDI 2' is 48:1 and hw:8,0,1.  A pedal has one port and it is always
+    zero, which is why this used to read the client and ignore the rest,
+    and why a two-port adapter came back as its own first port whichever
+    half was asked for.
+    """
     if port in _rawmidi_cache:
         return _rawmidi_cache[port]
 
     dev = None
     try:
-        card, rem = divmod(int(port.split(":")[0]) - SEQ_GLOBAL_CLIENTS,
+        client, _, sub = port.partition(":")
+        card, rem = divmod(int(client) - SEQ_GLOBAL_CLIENTS,
                            SEQ_CLIENTS_PER_CARD)
         if card >= 0 and not rem:
-            cand = "hw:%d,0,0" % card
+            cand = "hw:%d,0,%d" % (card, int(sub or 0))
             dev = cand if cand in _rawmidi_devices() else None
     except ValueError:
         dev = None
@@ -435,6 +519,180 @@ def enter_bootsel(p, channel=1):
     _cc(p, 20, 126, channel)
 
 
+def port_holder(p):
+    """What else has this pedal's MIDI input open, or None.
+
+    "The pedal did not answer" is more often this than anything wrong
+    with the pedal, and it is one cheap question rather than a guess:
+    ALSA gives a rawmidi input one owner, and /proc names the process.
+
+    How that owner got there decides whether anything here can still
+    hear a reply, so the two are told apart by what it has open.  A
+    sequencer client - the web app in a tab - holds the raw device
+    underneath itself and the sequencer still fans replies out to
+    everyone subscribed.  Another raw reader takes the bytes before the
+    sequencer sees them, and then nothing here will hear anything at
+    all, however long it waits.
+    """
+    dev = rawmidi(p)
+    if not dev:
+        return None
+    _hw, card, _device, sub = re.split(r"[:,]", dev)
+    try:
+        text = open("/proc/asound/card%s/midi0" % card).read()
+    except OSError:
+        return None
+
+    #
+    # A section per subdevice, and the owner belongs to one of them: an
+    # adapter with two DIN pairs has an "Input 0" and an "Input 1", and
+    # taking the first owner in the file would call both of them busy
+    # whichever one was open.
+    #
+    m = re.search(r"^Input %s\b(.*?)(?=^\S|\Z)" % re.escape(sub),
+                  text, re.M | re.S)
+    if not m:
+        return None
+    m = re.search(r"Owner PID\s*:\s*(\d+)", m.group(1))
+    if not m or int(m.group(1)) == os.getpid():
+        return None
+    pid = int(m.group(1))
+
+    try:
+        name = open("/proc/%d/comm" % pid).read().strip()
+    except OSError:
+        name = "pid %d" % pid
+
+    kind = "seq"
+    try:
+        for fd in os.listdir("/proc/%d/fd" % pid):
+            try:
+                if os.readlink("/proc/%d/fd/%s" % (pid, fd)).startswith(
+                        "/dev/snd/midi"):
+                    kind = "raw"
+                    break
+            except OSError:
+                pass
+    except OSError:
+        pass
+
+    return {"pid": pid, "name": name, "kind": kind,
+            "why": "%s (pid %d) has the raw MIDI device open, so it is "
+                   "taking the pedal's replies before anything else can "
+                   "see them" % (name, pid) if kind == "raw" else
+                   "%s (pid %d) has the port open through the sequencer"
+                   % (name, pid)}
+
+
+def listen_sysex(p, opcode, wait, in_port=None):
+    """Send one request and hand back every byte that came back.
+
+    The reply is read *while* it arrives.  A dumper writes three
+    characters per byte, so a long reply is more than a pipe will hold,
+    and a pipe nobody is reading stops the dumper dead: it blocks on the
+    write and takes nothing more off the MIDI device.  Collecting only
+    after the dumper has been killed therefore caps every capture at one
+    pipeful, and what did arrive looks exactly like the pedal giving up
+    partway through.
+
+    The raw device first, because the sequencer's pool drops a long
+    reply, and the sequencer second.  A sequencer client - the web app
+    in a tab - holds the raw device open underneath itself, so the fast
+    route is refused and the slow one still works, which is the case the
+    fallback is for.
+
+    Another *raw* reader is a different thing and nothing here helps: it
+    takes the bytes before the sequencer sees them, so both routes come
+    back empty and the pedal looks silent while it is answering
+    perfectly well.  That is what port_holder() is asked about above.
+    """
+    held = port_holder(p) if in_port is None else None
+    if held and held["kind"] == "raw":
+        #
+        # Waiting here is waiting for a reply somebody else is already
+        # taking, for however long the caller asked for.
+        #
+        return b""
+
+    dev = rawmidi(p) if in_port is None and not held else None
+    if dev:
+        #
+        # -r rather than -d: the hex dump is three characters a byte and
+        # is meant to be read by a person, and this reads it straight
+        # back.  -a -c so that active sensing and clock arrive instead of
+        # being filtered out here, because a byte nobody ever sees is a
+        # byte nobody can notice the pedal sending.
+        #
+        got = _listen(["amidi", "-p", dev, "-a", "-c", "-r", "/dev/stdout"],
+                      lambda: send(p, opcode), wait)
+        if got:
+            return got
+
+    text = _listen(["aseqdump", "-p", in_port or p],
+                   lambda: send(p, opcode), wait)
+    return bytes.fromhex("".join(re.findall(
+        r"System exclusive\s+((?:[0-9A-Fa-f]{2} ?)+)",
+        text.decode("ascii", "replace"))).replace(" ", ""))
+
+
+def sysex_payload(blob, opcode):
+    """The body of an 'F0 7D <opcode> ... F7' in a captured stream.
+
+    The last one, because a request from before this one still arriving
+    leaves a partial reply in front of the real one, and half a message
+    parses rather than failing.
+
+    Real-time bytes are dropped here rather than upstream.  MIDI lets
+    them appear between any two bytes of a longer message, including
+    inside a SysEx, so a payload taken as a byte range has to allow for
+    it - and this pedal has never been seen to send one, which is worth
+    being able to find out rather than arranging not to see.
+    """
+    at = blob.rfind(bytes([0xF0, 0x7D, opcode]))
+    if at < 0:
+        return None
+    end = blob.find(0xF7, at)
+    if end < 0:
+        return None
+    return bytes(b for b in blob[at + 3:end] if not 0xF8 <= b <= 0xFE)
+
+
+def _listen(cmd, provoke, wait, settle=0.4):
+    """Run a dumper, provoke the reply, and read its output as it comes.
+
+    'provoke' is called once the dumper is actually up.  Provoking first
+    and listening after loses whatever arrives while it is still opening
+    the device, which does not show on a stream that never stops - like
+    the status CCs - and shows badly on a single note.
+    """
+    dump = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                            stderr=subprocess.DEVNULL)
+    chunks = []
+
+    def collect(seconds):
+        fd = dump.stdout.fileno()
+        until = time.monotonic() + seconds
+        while True:
+            left = until - time.monotonic()
+            if left <= 0 or not select.select([fd], [], [], left)[0]:
+                return
+            b = os.read(fd, 1 << 16)
+            if not b:
+                return              # the dumper is gone
+            chunks.append(b)
+
+    try:
+        collect(settle)             # let the dumper get the device open
+        if provoke:
+            provoke()
+        collect(wait)
+    finally:
+        dump.terminate()
+        collect(0.2)                # and whatever is still in the pipe
+        dump.wait()
+    return b"".join(chunks)
+
+
 def identity(p, in_port=None, wait=2.0):
     """The pedal's self-description, as a dict, or None.
 
@@ -442,26 +700,28 @@ def identity(p, in_port=None, wait=2.0):
     bus, and what the save area holds.
     """
     import json
-    dump = subprocess.Popen(["aseqdump", "-p", in_port or p],
-                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                            text=True)
-    try:
-        time.sleep(0.4)
-        send(p, 0x0A)
-        time.sleep(wait)
-    finally:
-        dump.terminate()
-        text = dump.stdout.read()
-        dump.wait()
-
-    blob = bytes.fromhex("".join(
-        re.findall(r"System exclusive\s+((?:[0-9A-Fa-f]{2} ?)+)", text)
-    ).replace(" ", ""))
-    i = blob.find(bytes([0xF0, 0x7D, 0x0A]))
-    if i < 0:
+    body = sysex_payload(listen_sysex(p, 0x0A, wait, in_port=in_port), 0x0A)
+    if body is None:
         return None
     try:
-        return json.loads(blob[i + 3:blob.find(0xF7, i)].decode())
+        return json.loads(body.decode())
+    except (ValueError, UnicodeDecodeError):
+        return None
+
+
+def schema(p, wait=6.0):
+    """The effect map the board is actually running, or None.
+
+    SysEx 0x01 asking, 0x02 answering, and the answer is the same JSON
+    the build writes into midi_schema.h - so effectmap reads it either
+    way and only the transport differs.  Which matters because the build
+    describes a commit and this describes the board in front of you.
+    """
+    body = sysex_payload(listen_sysex(p, 0x01, wait), 0x02)
+    if body is None:
+        return None
+    try:
+        return effectmap.parse(body.decode())
     except (ValueError, UnicodeDecodeError):
         return None
 
@@ -473,26 +733,8 @@ def telemetry(p, in_port=None, wait=1.5):
     floor, output peak, gate, load.  The levels are -dBFS, one byte per
     dB, counting down from full scale.
     """
-    dump = subprocess.Popen(["aseqdump", "-p", in_port or p],
-                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                            text=True)
-    try:
-        time.sleep(0.4)
-        send(p, 0x0B)
-        time.sleep(wait)
-    finally:
-        dump.terminate()
-        text = dump.stdout.read()
-        dump.wait()
-
-    blob = bytes.fromhex("".join(
-        re.findall(r"System exclusive\s+((?:[0-9A-Fa-f]{2} ?)+)", text)
-    ).replace(" ", ""))
-    i = blob.find(bytes([0xF0, 0x7D, 0x0B]))
-    if i < 0:
-        return None
-    body = blob[i + 3:blob.find(0xF7, i)]
-    if len(body) < 6:
+    body = sysex_payload(listen_sysex(p, 0x0B, wait, in_port=in_port), 0x0B)
+    if body is None or len(body) < 6:
         return None
     out = {"version": body[0], "in_dbfs": -body[1], "floor_dbfs": -body[2],
            "out_dbfs": -body[3], "gate": body[4], "load": body[5]}
@@ -518,6 +760,17 @@ def set_pot(p, effect, pot, value):
     send(p, 0x03, effect, pot, value)
 
 
+def set_named(p, effect, label, value):
+    """One pot, named all the way down.
+
+    The effect, the pot and - for an enum - the setting, each spelled the
+    way the header spells it, so nothing between here and the board has a
+    position written down in it.
+    """
+    set_pot(p, effectmap.effect(effect), effectmap.pot(effect, label),
+            pots.to_pot(effect, label, value))
+
+
 def set_routing(p, *effect_ids):
     send(p, 0x08, *effect_ids)
 
@@ -527,96 +780,65 @@ def save_scene(p, scene):
 
 
 def wet_dry(p, settings_effect):
-    """Put the processed signal and the raw input side by side."""
-    set_pot(p, settings_effect, SETTINGS_USB_OUT, USB_OUT_WET_DRY)
+    """Put the processed signal and the raw input side by side.
+
+    Wet/Dry is the processed signal on the left and the untouched input
+    on the right, in the same frame.
+    """
+    set_pot(p, settings_effect, effectmap.pot("Settings", "USB L/R Out"),
+            pots.to_pot("Settings", "USB L/R Out", "Wet/Dry"))
 
 
-def elf_build(elf="../build/pedal-unified.elf"):
-    """The build stamp compiled into an elf, as the identity reply says it.
+class Stale(Exception):
+    """The board is running firmware this tree cannot vouch for."""
+
+
+def elf_build(board):
+    """The build stamp in this tree's elf for that board, or None.
 
     The firmware builds "{\"build\":\"" __DATE__ " " __TIME__ "\"" into
     the reply to SysEx 0x0a, so the same literal is sitting in the binary
-    and the two can simply be compared.  That is the cheap way to answer
-    "is the board running what this tree just built" - which is the
-    question underneath every pot index in here, because an effect map
-    that has changed renumbers everything after the change and a pot
-    write to the wrong effect fails completely silently.
+    and the two can simply be compared.
+
+    Named for the board, because every artifact here is: there is no
+    pedal.elf, and comparing a minimal board against unified's stamp
+    refuses a board that is fine and accepts one that is not.
     """
     try:
-        blob = open(elf, "rb").read()
+        blob = open(os.path.join(BUILD, "pedal-%s.elf" % board), "rb").read()
     except OSError:
         return None
     m = re.search(rb'\{"build":"([^"]*)"', blob)
     return m.group(1).decode() if m else None
 
 
-def effect_id(short_name, map_h="../build/effect_map.h"):
-    """Which effect a short name is, out of the generated map.
+def use_map(d, strict=False):
+    """Point the lookups at the map this board is running, and say which.
 
-    The generator emits one of these per effect - CAB_EFFECT_ID,
-    TESTTONE_EFFECT_ID - so the answer is declared rather than counted.
-    See settings_effect() for what counting cost.
+    Two questions with one answer.  A board that can hand over its own
+    schema settles it: what it says is what it is.  A board that cannot -
+    no MIDI port, or firmware older than the schema request - leaves the
+    build's map as the only one there is, and that is the right map only
+    if the board is running this tree.
+
+    'strict' is the difference between a test and a tool.  A test refuses
+    firmware it cannot vouch for, because an effect id that has moved
+    lands on a real pot of a real effect and says nothing.  A tool says
+    what it is working from and carries on.
     """
-    try:
-        text = open(map_h).read()
-    except OSError:
-        return None
-    m = re.search(r"#define %s_EFFECT_ID (\d+)" % re.escape(short_name.upper()),
-                  text)
-    return int(m.group(1)) if m else None
+    running = schema(d["port"]) if d.get("port") else None
+    if running:
+        effectmap.use(running)
+        return "effects from the pedal"
 
+    effectmap.use(None)
+    want = elf_build(d["board"])
+    got = (identity(d["port"]) or {}).get("build") if d.get("port") else None
+    if want and got and want == got:
+        return "effects from ../build, which is what %s is running" % d["label"]
 
-def pot_index(short_name, label, map_h="../build/effect_map.h"):
-    """Which pot a label is, out of the generated enum.
-
-    The generator emits 'enum <prefix>_pot' from the POT: lines, so the
-    index is declared and does not have to be counted off the header -
-    which matters because reordering POT: lines is free in the source
-    and silently renumbers anything that counted.
-
-    The +1 is the mix: SysEx 0x03 takes pot 0 as the mix and 1-10 as the
-    effect's own, where the enum numbers only the effect's own.
-    """
-    try:
-        text = open(map_h).read()
-    except OSError:
-        return None
-    m = re.search(r"enum %s_pot \{(.*?)\}" % re.escape(short_name.lower()),
-                  text, re.S)
-    if not m:
-        return None
-    want = "%s_%s" % (short_name.upper(),
-                      re.sub(r"[^0-9A-Za-z]+", "_", label).strip("_").upper())
-    names = [n.strip().rstrip(",") for n in m.group(1).split("\n") if n.strip()]
-    return names.index(want) + 1 if want in names else None
-
-
-def settings_effect(map_h="../build/effect_map.h"):
-    """Which effect the settings are, declared rather than counted.
-
-    This used to be effect_count() - 1 in every caller, which was true of
-    the firmware it was written against and stopped being true the moment
-    anything took a priority above the settings.  Nothing failed when it
-    did: the pot write landed on a real effect and set a real pot, and
-    everything downstream measured the wrong thing and reported no error.
-
-    Same mistake effect_always_runs() in Firmware/effect-state.h exists to
-    prevent, made again on the host side.  The generator has always
-    emitted the answer.
-    """
-    try:
-        text = open(map_h).read()
-    except OSError:
-        return None
-    m = re.search(r"#define SETTINGS_EFFECT_ID (\d+)", text)
-    return int(m.group(1)) if m else None
-
-
-def effect_count(map_h="../build/effect_map.h"):
-    """How many effects this firmware has, so 'the last one' has a number."""
-    try:
-        text = open(map_h).read()
-    except OSError:
-        return None
-    m = re.search(r"#define EFFECT_COUNT (\d+)", text)
-    return int(m.group(1)) if m else None
+    why = ("%s is running %r and this tree builds %r"
+           % (d["label"], got or "nothing it would say", want or "nothing"))
+    if strict:
+        raise Stale(why + " - run 'make flash'")
+    return "effects from ../build, unverified: " + why

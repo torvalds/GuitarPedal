@@ -5,14 +5,13 @@
 # The chain is stereo inside even on a mono board - the front of it
 # duplicates the input - and an effect can be told which half to read
 # and where to put its answer.  That is worth exactly nothing unless
-# something checks it, and nothing could: there is no way to set it over
-# MIDI yet, and the difference is inaudible on a mono output unless you
-# know what to listen for.
+# something checks it, and the difference is inaudible on a mono output
+# unless you know what to listen for.
 #
-# So plant two scenes that differ in one field, and measure.
+# So set up two scenes that differ in one field, and measure:
 #
 #   scene 0     TONE   in=L out=L        the split: L shaped, R kept
-#               TONE 2 in=L out=merge    the join:  L = tone2(L) + R
+#               TONE 2 in=L out=Merge    the join:  L = tone2(L) + R
 #
 #   scene 1     TONE   in=L out=L        same split
 #               TONE 2 in=L out=L        no join
@@ -25,54 +24,60 @@
 #   scene 1     L = in                   ->   0.00 dB
 #
 # The two must differ by 6dB, and if they do not then either the kept
-# channel is not being kept or the merge is not merging. Planting takes
-# a trip through BOOTSEL, so both scenes go in at once and the test
-# switches between them with a Program Change afterwards.
+# channel is not being kept or the merge is not merging.
 #
-import subprocess
+# Everything here goes over SysEx: the pots, the routing, the steering
+# and the two saves.  So this also answers whether a scene carries
+# steering across a save and a Program Change, which is the other half
+# of the feature and is not separately testable.
+#
+import argparse
 import sys
-import time
 
 import numpy as np
 
 import audio
+import effectmap
 import pedal
-import scene
+import pots as P
 
-PICOTOOL = "picotool"
-
-
-def plant(scenes, picotool, base_seq):
-    """Both scenes, one trip through BOOTSEL."""
-    p = pedal.port()
-    pedal.enter_bootsel(p)
-
-    for _ in range(50):
-        time.sleep(0.2)
-        if subprocess.run([picotool, "info"], capture_output=True).returncode == 0:
-            break
-    else:
-        sys.exit("test-split: never reached BOOTSEL")
-
-    import tempfile
-    import os
-    for slot, (key, payload) in enumerate(scenes, start=40):
-        img = scene.slot_image(payload, key, base_seq + slot)
-        tmp = tempfile.NamedTemporaryFile(suffix=".bin", delete=False)
-        try:
-            tmp.write(img)
-            tmp.close()
-            subprocess.run([picotool, "load", "-o",
-                            hex(scene.slot_address(slot)), tmp.name],
-                           check=True, capture_output=True)
-        finally:
-            os.unlink(tmp.name)
-
-    subprocess.run([picotool, "reboot"], check=True, capture_output=True)
-    time.sleep(5)
+#
+# Something has to be on the analog input, and the line between "nothing"
+# and "something" has to sit above what the converter does on its own: an
+# unplugged jack reads about -91 dBFS here, so a guard below that can
+# never fire and the run reports FAILs about silence.  -60 leaves thirty
+# decibels of room either side, and the measurement wants a signal it can
+# see six decibels of difference in.
+#
+INPUT_FLOOR_DBFS = -60.0
 
 
-def measure(p, card, which, freq):
+def configure(p, out):
+    """Both tones routed and flat, with TONE 2's output where asked.
+
+    Every pot is written rather than only the steering, because a save
+    keeps what the pedal has and what it has is whatever the last
+    session left behind.
+    """
+    tone1, tone2 = effectmap.effect("Tone 1"), effectmap.effect("Tone 2")
+    msgs = [(0x08, tone1, tone2)]
+
+    for name in ("Signal Chain", "Tone 1", "Tone 2"):
+        eff = effectmap.effect(name)
+        for label, raw in P.defaults(name).items():
+            msgs.append((0x03, eff, effectmap.pot(name, label), raw))
+
+    for name, eff, where in (("Tone 1", tone1, "Left"), ("Tone 2", tone2, out)):
+        msgs.append((0x03, eff, effectmap.MIX, 120))
+        msgs.append((0x03, eff, effectmap.pot(name, "In"),
+                     P.to_pot(name, "In", "Left")))
+        msgs.append((0x03, eff, effectmap.pot(name, "Out"),
+                     P.to_pot(name, "Out", where)))
+
+    pedal.send_many(p, *msgs)
+
+
+def measure(p, card, which):
     pedal.program_change(p, which)
     d = audio.trim(audio.capture(3, card))
     wet, dry = d[:, 0], d[:, 1]
@@ -82,56 +87,53 @@ def measure(p, card, which, freq):
 
 
 def main():
-    picotool = PICOTOOL
-    if subprocess.run(["which", picotool], capture_output=True).returncode:
-        import os
-        picotool = os.path.expanduser("~/bin/picotool")
-        if not os.path.exists(picotool):
-            print("test-split: SKIPPED - no picotool")
-            return 0
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--target", default=None,
+                    help="serial, label or board name naming one pedal")
+    args = ap.parse_args()
 
-    card, p = audio.find_card(), pedal.port()
+    d, why = pedal.sole(args.target)
+    if not d:
+        print("test-split: SKIPPED - %s" % why)
+        return 0
+    card, p = d["card"], d["port"]
     if card is None or p is None:
-        print("test-split: SKIPPED - no pedal on the USB")
+        print("test-split: SKIPPED - %s has no card or no MIDI port"
+              % d["label"])
         return 0
 
-    effects = scene.effects_from_map()
-    t1 = scene.by_name(effects, "Tone 1")
-    t2 = scene.by_name(effects, "Tone 2")
-    routed = [effects.index(t1), effects.index(t2)]
-
-    t1["channels"] = scene.channels(scene.IN_LEFT, scene.OUT_LEFT)
-
-    t2["channels"] = scene.channels(scene.IN_LEFT, scene.OUT_MERGE)
-    merged = scene.build(effects, routed)
-
-    t2["channels"] = scene.channels(scene.IN_LEFT, scene.OUT_LEFT)
-    kept = scene.build(effects, routed)
-
-    #
-    # Above whatever the pedal has already written, not at some number
-    # chosen in advance.  A planted scene only wins if its sequence beats
-    # the ones already there, and the pedal has been saving scene 0 every
-    # time anything measured what a save costs - so a fixed base quietly
-    # stops working after enough of those, and the test then measures two
-    # scenes that never loaded.
-    #
-    ident = pedal.identity(p)
-    newest = (ident or {}).get("save", {}).get("newest", 0)
-    print(f"test-split: planting two scenes above sequence {newest}, "
-          f"one BOOTSEL trip")
-    plant([(0, merged), (1, kept)], picotool, newest + 10)
-
-    pedal.wet_dry(p, pedal.settings_effect())
-
-    merge_db, wet, dry = measure(p, card, 0, 440.0)
-    keep_db, _, _ = measure(p, card, 1, 440.0)
-
-    if audio.peak(dry) < 1e-6:
-        print("test-split: SKIPPED - nothing on the analog input")
+    try:
+        print("test-split:", pedal.use_map(d, strict=True))
+    except pedal.Stale as e:
+        print("test-split: SKIPPED - %s" % e)
         return 0
 
-    print(f"  scene 0, TONE 2 out=merge : {merge_db:+.2f} dB   (want +6.02)")
+    if pedal.capabilities(d)["stereo"] is False:
+        print("test-split: SKIPPED - %s is mono; there is no second channel "
+              "to keep" % d["label"])
+        return 0
+
+    pedal.wet_dry(p, effectmap.settings())
+
+    #
+    # Scenes 0 and 1, in the order the measurements want them.  Saving
+    # is the ordinary Save Scene command, so this leaves the pedal the
+    # way pressing save twice would.
+    #
+    for which, out in ((0, "Merge"), (1, "Left")):
+        configure(p, out)
+        pedal.save_scene(p, which)
+
+    merge_db, wet, dry = measure(p, card, 0)
+    keep_db, _, _ = measure(p, card, 1)
+
+    level = audio.dbfs(audio.rms(dry))
+    if level < INPUT_FLOOR_DBFS:
+        print("test-split: SKIPPED - the analog input is at %.1f dBFS, which "
+              "is nothing plugged in" % level)
+        return 0
+
+    print(f"  scene 0, TONE 2 out=Merge : {merge_db:+.2f} dB   (want +6.02)")
     print(f"  scene 1, TONE 2 out=L     : {keep_db:+.2f} dB   (want  0.00)")
     print(f"  difference                : {merge_db - keep_db:+.2f} dB")
 

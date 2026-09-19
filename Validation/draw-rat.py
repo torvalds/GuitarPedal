@@ -85,11 +85,19 @@ def edge(out, capture):
     t = T.target("rat")
     x = loop.tone(220.0, -12.0, len(hw))
 
-    model, _i = B.through(B.BENCH, T.pot_args(t, t["knobs"]), x.astype(np.float32))
+    #
+    # One setting, and both legs asked for it.  The hardware leg was
+    # captured with the Helios at noon, so the other two are put there
+    # rather than at the target's default - and the netlist takes the
+    # same taper the model does rather than a number worked out once by
+    # hand, which is how the two came to be a knob apart.
+    #
+    knobs = dict(t["knobs"], Distortion=0.5)
+
+    model, _i = B.through(B.BENCH, T.pot_args(t, knobs), x.astype(np.float32))
     model = np.asarray(model, float)
     deck = NG.tran("rat-helios", "out", x * VPEAK, fs=FS, settle=0.2,
-                   params=dict(dist=0.120, filter=0.125, sweep=0.0,
-                               mode=1)) / VPEAK
+                   params=t["spice"](knobs)) / VPEAK
 
     a = int(0.12 * len(hw))
     sl = slice(a, a + int(2.2 * FS / 220.0))
@@ -385,10 +393,12 @@ def deck_travel():
 
     x = np.asarray(loop.tone(220.0, -12.0, 48000), float)
     out = []
+    t = T.target("rat")
     for pot in FINE:
+        params = t["spice"](dict(t["knobs"], Distortion=pot))
+        params["dist"] = max(params["dist"], 1e-6)   # ngspice wants a resistor
         v = NG.tran("rat-helios", "out", x * VPEAK, fs=FS, settle=0.3,
-                    params=dict(dist=max(pot ** 3, 1e-6), filter=0.125,
-                                sweep=0.0, mode=1))
+                    params=params)
         b = v[int(0.5 * len(v)):]
         out.append(100.0 * np.mean((b - b.mean()) > 0))
     return out

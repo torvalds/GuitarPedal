@@ -26,9 +26,7 @@
 # and the script measures it rather than assuming it.
 #
 import argparse
-import glob
 import os
-import re
 import subprocess
 import sys
 import time
@@ -38,6 +36,7 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import audio
 import bench as B
+import effectmap
 import pedal
 import pots as P
 
@@ -54,25 +53,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 #
 EDGE = RATE // 3
 
-ROWS = ["Small-Combo", "American-1x12", "British-4x12",
-        "Modern-4x12", "Bass-15"]
-
-
-def display_name(short):
-    """"CAB" -> "Cabinet", out of the same headers pots.py reads.
-
-    The board wants the short name, because that is what the generated
-    map declares an id for; pots.py wants the display name, because that
-    is what a POT: line is under.  One lookup rather than a table, for
-    the same reason labels() asks the header rather than holding
-    constants: the headers move and a table does not.
-    """
-    for path in sorted(glob.glob(os.path.join(HERE, "..", "Effects", "*.h"))):
-        with open(path) as f:
-            m = re.search(r"^// NAME:\s*(.+?)\s*\[(\w+)\]\s*$", f.read(), re.M)
-        if m and m.group(2) == short:
-            return m.group(1)
-    return None
+def rows():
+    """The cabinets this build has, for --row; empty without a build."""
+    try:
+        return effectmap.pot_info("Cabinet", "Cabinet")["enum"] or []
+    except effectmap.MapError:
+        return []
 
 
 def under_test(args):
@@ -83,18 +69,15 @@ def under_test(args):
     back the other way for the bench's command line.
     """
     short = args.effect.upper()
-    name = display_name(short)
-    if name is None:
-        sys.exit(f"feed: no effect header declares [{short}]")
+    name = effectmap.display(short)
 
     over = {}
     if short == "CAB":
         #
         # The cabinet's own options, kept because they predate --pot and
-        # because a row is an index rather than a value P.to_pot() can
-        # convert.
+        # because the row is the thing --pot cannot spell.
         #
-        over["Cabinet"] = ROWS.index(args.row)
+        over["Cabinet"] = P.to_pot(name, "Cabinet", args.row)
         over["Drive"] = P.to_pot(name, "Drive", args.drive)
         over["Resonance"] = P.to_pot(name, "Resonance", args.resonance)
         over["Axis"] = P.to_pot(name, "Axis", args.axis)
@@ -236,10 +219,8 @@ def verify(args, card, p, dry):
     against nothing.
     """
     short, name, over = under_test(args)
-    eff = pedal.effect_id(short)
-    settings = pedal.settings_effect()
-    if eff is None or settings is None:
-        sys.exit(f"feed: no {name} in the built map - is build/ current?")
+    eff = effectmap.effect(short)
+    settings = effectmap.settings()
 
     #
     # Put both effects where the bench starts from, pot by pot, and only
@@ -252,6 +233,11 @@ def verify(args, card, p, dry):
     # error to be divided out afterwards - it is a different signal - and
     # it read as a 9.3 dB gain difference and a null of only -25 dB.
     #
+    def setting(label, value):
+        """(pot, raw) for one Settings pot, both by name."""
+        return (effectmap.pot("Settings", label),
+                P.to_pot("Settings", label, value))
+
     def pots_of(effect_id, effect_name, override=()):
         order = P.labels(effect_name)
         want = dict(P.defaults(effect_name))
@@ -272,8 +258,8 @@ def verify(args, card, p, dry):
     #
     pedal.send_many(
         p,
-        (0x03, settings, pedal.SETTINGS_USB_IN, pedal.USB_IN_REPLACE),
-        (0x03, settings, pedal.SETTINGS_USB_OUT, pedal.USB_OUT_WET),
+        (0x03, settings, *setting("USB L/R In", "Replace")),
+        (0x03, settings, *setting("USB L/R Out", "Wet")),
         *pots_of(pedal.CHAIN, "Signal Chain", {"Gate": 0}),
         (0x08, eff),                            # routing: the one effect
         (0x03, eff, 0, 120),                    # mix, fully wet
@@ -469,7 +455,8 @@ def main():
                          "does on the bench")
     ap.add_argument("--repeat", default="forever",
                     help="how many times round, or 'forever'")
-    ap.add_argument("--pedal", default="", help="which board, by serial")
+    ap.add_argument("--target", default=None,
+                    help="serial, label or board name naming one pedal")
     ap.add_argument("--force", action="store_true",
                     help="write pots even if the board is running a "
                          "different build than this tree")
@@ -485,44 +472,30 @@ def main():
                     help="a pot of that effect, in the units its header "
                          "declares; repeatable.  Everything not named here "
                          "is set to its default rather than left alone")
-    ap.add_argument("--row", default="Modern-4x12", choices=ROWS)
+    ap.add_argument("--row", default="Modern-4x12", choices=rows() or None)
     ap.add_argument("--drive", type=float, default=15.0)
     ap.add_argument("--resonance", type=float, default=4.0)
     ap.add_argument("--axis", type=float, default=0.5)
     args = ap.parse_args()
 
-    found = pedal.discover()
-    if not found:
-        sys.exit("feed: no pedal found")
-    d = pedal.find(args.pedal, found) if args.pedal else found[0]
+    d, why = pedal.sole(args.target)
     if not d:
-        sys.exit(f"feed: '{args.pedal}' is not exactly one of these boards")
+        sys.exit("feed: " + why)
     card, port, key = d["card"], d["port"], d["label"]
     if port is None:
         sys.exit(f"feed: {key} has no MIDI port - nothing can be set on it")
 
     #
-    # Refuse to write a pot to a board that is not running this tree.
+    # Which map this board's pot numbers mean.  Adding or removing an
+    # effect renumbers everything after it, and a pot write to the wrong
+    # effect sets a real pot on a real effect and says nothing - see
+    # issue 285, which is that mistake found by accident after it had
+    # been shipping for a while.
     #
-    # Every effect index in here comes out of build/effect_map.h, and
-    # adding or removing an effect renumbers everything after it.  A pot
-    # write to the wrong effect sets a real pot on a real effect and says
-    # nothing - see issue 285, which is that mistake found by accident
-    # after it had been shipping for a while.
-    #
-    if not args.force:
-        want = pedal.elf_build()
-        got = (pedal.identity(port) or {}).get("build")
-        if want and got and want != got:
-            sys.exit(f"feed: the board is running {got!r} and this tree "
-                     f"built {want!r}.\n"
-                     f"      Effect numbering may have moved under it, and a "
-                     f"pot write would land\n"
-                     f"      somewhere silently wrong.  'make flash', or "
-                     f"--force if you know better.")
-        if want and not got:
-            print("feed: could not read the board's build stamp - is the "
-                  "web app holding the port?", file=sys.stderr)
+    try:
+        print("feed:", pedal.use_map(d, strict=not args.force))
+    except pedal.Stale as e:
+        sys.exit("feed: %s, or --force if you know better" % e)
 
     off = None if args.offset == "auto" else float(args.offset)
     dry, off = audio.decode(args.source, args.seconds, off)
@@ -537,11 +510,7 @@ def main():
         return 0
 
     if not args.no_set:
-        settings = pedal.settings_effect()
-        if settings is None:
-            sys.exit("feed: no settings effect in the built map")
-        pedal.set_pot(port, settings, pedal.SETTINGS_USB_IN,
-                      pedal.USB_IN_PRE_FX)
+        pedal.set_named(port, "Settings", "USB L/R In", "Pre-FX")
         print("USB L/R In set to Pre-FX - it adds to the jack rather than "
               "replacing it, so unplug\n"
               "  anything you are not playing along with.  --verify uses "

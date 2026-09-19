@@ -96,10 +96,12 @@ import sys
 import time
 
 sys.path.insert(0, ".")
+import effectmap
 import pedal
+import pots as P
 
 SETTLE = 1.0            # effect fades are 100 ms, the load meter 21 ms
-DEFAULT = [11]          # Reverb
+DEFAULT = ["Reverb"]
 
 #
 # The settings pseudo-effect is last in effects[], and its first pot is
@@ -110,22 +112,11 @@ DEFAULT = [11]          # Reverb
 # Asked rather than written down.  It has already moved once, from 18 to
 # 19, when an effect went in above it - and a pinned setting that
 # silently pins some other effect's pot instead is a baseline that has
-# quietly stopped being the baseline.  See settings_effect()'s
-# docstring, and check-effect-ids.py, which is what finds the ones that
-# get written down anyway.
-SETTINGS = pedal.settings_effect()
-USB_OUT_POT = 1
-USB_OUT_NONE = 0
+# quietly stopped being the baseline.  See effectmap.settings(), and
+# check-effect-ids.py, which is what finds the ones written down anyway.
+SETTINGS = USB_OUT_POT = USB_OUT_NONE = None
 STEP_PCT = 100.0 / 16383   # what one telemetry step is worth, 14-bit
 COARSE = 128               # ...and how many of them the old 7-bit step was
-
-
-def effect_names(map_h="../build/effect_map.h"):
-    try:
-        text = open(map_h).read()
-    except OSError:
-        return {}
-    return {i: n for i, n in enumerate(re.findall(r'\.name = "([^"]*)"', text))}
 
 
 def _frames(text):
@@ -261,38 +252,42 @@ def main():
             #
             spec, _, val = args[1].partition("=")
             short, _, num = spec.partition(":")
-            eid = pedal.effect_id(short)
-            if eid is None:
-                sys.exit("measure-load: no effect [%s]" % short)
-            pots.append((eid, int(num), int(val)))
+            pots.append((short, int(num), int(val)))
         args = args[2:]
-    ids = [int(a) for a in args] or DEFAULT
-
-    names = effect_names()
-    label = " + ".join(names.get(i, "effect %d" % i) for i in ids)
 
     #
     # Refusing to guess, for the same reason pedal.find() does: two
     # boards of one revision differ only in their serial, and answering
     # either is how a run reports on the board nobody asked about.
     #
-    found = pedal.discover()
-    if not found:
-        sys.exit("measure-load: no pedal on the USB")
-    if target:
-        d = pedal.find(target, among=found)
-        if not d:
-            sys.exit("measure-load: '%s' names none or several of the %d "
-                     "pedals here: %s"
-                     % (target, len(found),
-                        ", ".join(x["label"] for x in found)))
-    elif len(found) > 1:
-        sys.exit("measure-load: %d pedals and no -t; this wants exactly one "
-                 "(%s)" % (len(found), ", ".join(x["label"] for x in found)))
-    else:
-        d = found[0]
+    d, why = pedal.sole(target)
+    if not d:
+        sys.exit("measure-load: " + why)
     p = d["port"]
-    print("%s on %s, %s, %d boot(s)" % (d["label"], p, label, boots))
+
+    #
+    # Ask the board for its own map.  A pot number means whatever the
+    # firmware on the board says it means, and that is frequently not
+    # what this tree just built - so the build is the fallback and not
+    # the answer.
+    #
+    print("%s on %s, %s" % (d["label"], p, pedal.use_map(d)))
+
+    global SETTINGS, USB_OUT_POT, USB_OUT_NONE
+    SETTINGS = effectmap.settings()
+    USB_OUT_POT = effectmap.pot("Settings", "USB L/R Out")
+    USB_OUT_NONE = P.to_pot("Settings", "USB L/R Out", "None")
+    names = dict((i, n) for i, n, _short in effectmap.names())
+    #
+    # An effect on the command line is a name, and stays a number only
+    # for whoever already knows one.
+    #
+    ids = [int(a) if a.isdigit() else effectmap.effect(a)
+           for a in args] or [effectmap.effect(n) for n in DEFAULT]
+    pots = [(effectmap.effect(s), n, v) for s, n, v in pots]
+    label = " + ".join(names.get(i, "effect %d" % i) for i in ids)
+
+    print("%s, %d boot(s)" % (label, boots))
     print("USB L/R Out pinned to None; the scene goes back at the end\n")
     print("  boot   empty (noisy)     routed          routed load")
 

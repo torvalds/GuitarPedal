@@ -47,6 +47,7 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import audio
 import feed
+import effectmap
 import pedal
 import targets as T
 
@@ -69,37 +70,6 @@ class LoopError(Exception):
     pass
 
 
-def refuse_if_stale(p):
-    """The hardware twin of bench.refuse_if_stale().
-
-    An effect map that has changed renumbers everything after the
-    change, so a pot write to a board running yesterday's firmware lands
-    on a different effect and says nothing at all.
-    """
-    want = pedal.elf_build()
-    if want is None:
-        raise LoopError("no built elf to compare against - run 'make'")
-    #
-    # Asked more than once before giving up.  The first request after
-    # the bench has been idle for a while goes unanswered often enough
-    # to have happened twice in one session, and works every time on the
-    # next try - so a single miss says nothing about the firmware, and a
-    # guard that reports one as a fault is a guard that gets commented
-    # out.  A real mismatch answers, and answers wrong.
-    #
-    got = None
-    for _ in range(3):
-        got = (pedal.identity(p, wait=3.0) or {}).get("build")
-        if got is not None:
-            break
-    if got is None:
-        raise LoopError("the pedal did not answer three identity requests")
-    if got != want:
-        raise LoopError("the pedal is running %r and this tree builds %r"
-                        " - run 'make flash'" % (got, want))
-    return got
-
-
 def configure(p, leg, t=None, knobs=None, settle=0.3):
     """Put the pedal into one of the two legs, from scratch.
 
@@ -112,30 +82,26 @@ def configure(p, leg, t=None, knobs=None, settle=0.3):
     if leg not in ("hardware", "model"):
         raise LoopError("no such leg: %r" % (leg,))
 
-    settings = pedal.settings_effect()
-    pedal.set_pot(p, settings, pedal.SETTINGS_USB_IN, pedal.USB_IN_REPLACE)
-    pedal.set_pot(p, settings, pedal.SETTINGS_USB_OUT, pedal.USB_OUT_WET_DRY)
+    pedal.set_named(p, "Settings", "USB L/R In", "Replace")
+    pedal.set_named(p, "Settings", "USB L/R Out", "Wet/Dry")
 
     #
     # The gate off, and the trim and volume where the bench has them.
     # A gate is the one thing here that would silence exactly the part
     # of a decaying note the measurement is about.
     #
-    pedal.set_pot(p, pedal.CHAIN, pedal.CHAIN_GATE, 0)
+    pedal.set_pot(p, pedal.CHAIN, effectmap.pot("Signal Chain", "Gate"), 0)
 
     if leg == "hardware":
         pedal.set_routing(p)
     else:
         if t is None:
             raise LoopError("the model leg needs a target")
-        eff = pedal.effect_id(t["short"])
+        eff = effectmap.effect(t["short"])
         pedal.set_routing(p, eff)
         for name, v in (knobs or t["knobs"]).items():
             raw = int(v) if isinstance(t["knobs"][name], int) else round(v * 120)
-            idx = pedal.pot_index(t["short"], name)
-            if idx is None:
-                raise LoopError("%s has no pot %r in the generated map"
-                                % (t["short"], name))
+            idx = effectmap.pot(t["short"], name)
             pedal.set_pot(p, eff, idx, raw)
 
     time.sleep(settle)
