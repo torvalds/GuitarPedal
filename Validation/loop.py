@@ -49,9 +49,8 @@ import audio
 import feed
 import effectmap
 import pedal
-import targets as T
 
-FS = 48000.0
+FS = float(audio.RATE)
 
 #
 # A sine's crest factor, and how far out is far enough to complain.

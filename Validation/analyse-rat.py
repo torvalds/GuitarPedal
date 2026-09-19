@@ -39,11 +39,12 @@ import sys
 import numpy as np
 
 sys.path.insert(0, ".")
+import audio
 import bench as B
 import loop
 import targets as T
 
-FS = 48000.0
+FS = float(audio.RATE)
 RAT = "Rat Sketch"
 MODES = ("Silicon", "Stacked", "LED")
 

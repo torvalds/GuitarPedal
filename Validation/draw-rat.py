@@ -36,7 +36,7 @@ A = importlib.util.module_from_spec(
         "analyse_rat", os.path.join(HERE, "analyse-rat.py")))
 A.__spec__.loader.exec_module(A)
 
-FS = 48000.0
+FS = float(audio.RATE)
 
 
 def need(path, how):

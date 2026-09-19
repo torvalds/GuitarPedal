@@ -34,8 +34,6 @@
 import argparse
 import sys
 
-import numpy as np
-
 import audio
 import effectmap
 import pedal

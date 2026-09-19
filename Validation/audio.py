@@ -28,6 +28,11 @@ import wave
 
 import numpy as np
 
+#
+# The one sample rate.  Everything here derives it rather than writing
+# it down again: the pedal has exactly one, and two copies that could
+# disagree are two copies that will.
+#
 RATE = 48000
 
 #

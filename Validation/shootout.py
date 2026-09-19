@@ -30,7 +30,9 @@ import wave
 
 import numpy as np
 
-FS = 48000
+import audio
+
+FS = audio.RATE
 
 
 def rms(x):

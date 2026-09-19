@@ -40,7 +40,7 @@ import effectmap
 import pedal
 import pots as P
 
-RATE = 48000
+RATE = audio.RATE
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 #

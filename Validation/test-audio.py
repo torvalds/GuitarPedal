@@ -211,7 +211,6 @@ def main():
     # floor is not zero that is itself worth knowing: it means the USB
     # audio path drops samples continuously, not just when busy.
     #
-    b = audio.bursts(breaks)
     per_s = len(breaks) / (len(dry) / audio.RATE)
     check("usb stream idle", not breaks,
           f"{len(breaks)} breaks in {len(dry) / audio.RATE:.1f}s "

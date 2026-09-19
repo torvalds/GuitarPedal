@@ -46,10 +46,11 @@ import subprocess
 
 import numpy as np
 
+import audio
 import effectmap
 import pots
 
-FS = 48000.0
+FS = float(audio.RATE)
 
 BENCH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bench", "bench")
 
