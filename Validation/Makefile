@@ -270,6 +270,7 @@ check: test-midi-cin bench/bench bench/coeff bench/gen/midi_schema.h
 	./effectmap.py
 	./pots.py
 	./check-effect-ids.py
+	./test-diagnose.py
 ifeq ($(NODE),)
 	@echo "test-webmidi: SKIPPED - no node in PATH"
 else

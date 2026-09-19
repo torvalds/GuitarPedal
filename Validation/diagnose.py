@@ -102,6 +102,24 @@ def measured_ladder(card, loop_db, report=print):
     return np.asarray(rows)
 
 
+def blameable(parts, exclude):
+    """The parts a fault could be in, minus the ones named in --exclude.
+
+    A name that matches nothing is refused rather than ignored: it leaves
+    the part it was meant to protect in the dictionary, and says so only
+    by naming it half an hour later.
+    """
+    skip = {r.strip() for r in exclude.split(",") if r.strip()}
+    unknown = sorted(skip - set(parts))
+    if unknown:
+        sys.exit("diagnose: --exclude names %s, which the netlist does not "
+                 "have.  It has: %s" % (", ".join(unknown), " ".join(sorted(parts))))
+    refs = [r for r in sorted(parts) if r not in skip]
+    if not refs:
+        sys.exit("diagnose: nothing left to blame after --exclude")
+    return refs
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("target", nargs="?", default="rat",
@@ -117,11 +135,10 @@ def main():
     t = targets.target(args.target)
     src = ngspice.netlist(t["netlist"])
     parts = netfault.components(src)
-    skip = {r.strip() for r in args.exclude.split(",") if r.strip()}
-    refs = [r for r in sorted(parts) if r not in skip]
-    if not refs:
-        sys.exit("diagnose: %s has no plain-valued R/C/L to blame"
-                 % t["netlist"])
+    if not parts:
+        sys.exit("diagnose: %s has no plain-valued R/C/L to blame" % t["netlist"])
+    refs = blameable(parts, args.exclude)
+    skip = set(parts) - set(refs)
 
     d, why = pedal.sole(args.pedal)
     if not d:
