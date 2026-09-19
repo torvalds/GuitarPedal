@@ -218,15 +218,25 @@ def harmonics(y, f0, n=WINDOW):
 def alias_db(y, f0, n=WINDOW):
     """Energy off the harmonic grid, in dB below the fundamental.
 
-    Everything a periodic input can honestly produce lands on a multiple
-    of f0.  What is left over came back from over Nyquist, which is what
-    a corner sounds like rather than what it looks like.
+    Everything a *time-invariant* effect can honestly do to a sine lands
+    on a multiple of f0.  What is left over came back from over Nyquist,
+    which is what a corner sounds like rather than what it looks like.
+
+    That precondition is the whole of it, and it is not checked.  Any
+    modulation puts sidebands at f0 +/- fm, which are off the grid and
+    are not aliasing: a clean 440 Hz sine with a 5 Hz, 5% wobble on it
+    reads -29 dB here with nothing folded at all.  So this says nothing
+    about a tremolo, a chorus, a vibrato, a flanger, or a compressor
+    working hard enough for its envelope to show - see 129.
+
+    The low bins cannot be excluded to fix that: a real alias lands
+    wherever |k*f0 - m*Fs| puts it, and at 440 Hz the 109th harmonic
+    folds back to 40 Hz, under the fundamental.
     """
     mag = spectrum(y, n)
     b0 = bin_of(f0, n)
     grid = np.zeros(len(mag), dtype=bool)
-    grid[::b0] = True
-    grid[0] = True                      # DC is not aliasing
+    grid[::b0] = True                   # index 0 is DC, and is on it
     off = mag[~grid]
     fund = mag[b0]
     if fund <= 0:
