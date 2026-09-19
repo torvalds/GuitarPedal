@@ -127,23 +127,14 @@ pedal's output back to its own input, ``make check-bench`` to ask whether
 a real board agrees with the host build, and ``make check-loop`` if you
 have two pedals to patch into each other.
 
-`Validation/diagnose.py` is the odd one out, because it measures
-something that isn't the pedal.  With an analog pedal in the loop it asks
-which *component* of that pedal disagrees with the netlist in
-`Validation/spice`, rather than only that something does - every
-single-component fault the netlist could have is simulated, and the one
-that best explains the measurement wins.  The ranking is
-[netfault](https://github.com/quotentiroler/netfault), which has to be
-installed separately; the method is a fault dictionary and is older than
-any of this, the survey being Bandler and Salama, Proc. IEEE 73 (1985).
-
-It asks at several drive levels rather than sweeping once.  [RAT]'s clamp
-is a logarithm, so the part that decides where it folds does nothing at
-all until the drive reaches it, and a single sweep cannot tell a wrong
-one from a right one - it ranks on the noise instead and does not say so.
-That costs what it sounds like: an ngspice transient is about 1.8s, so a
-dictionary over the whole netlist is a couple of hours.  It is built once
-for a board and matched in milliseconds after that.
+`Validation/diagnose.py` is the odd one out: what it measures isn't the
+pedal.  With an analog pedal in the loop it names which *component* of
+that pedal disagrees with the netlist in `Validation/spice`, by
+simulating every single-component fault the netlist could have and
+keeping the closest.  Ranking is
+[netfault](https://github.com/quotentiroler/netfault), installed
+separately.  Building the dictionary is the slow part, and is done once
+for a board rather than once per measurement.
 
 ## Hardware
 
