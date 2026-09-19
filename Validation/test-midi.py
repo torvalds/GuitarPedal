@@ -97,20 +97,34 @@ def main():
           % (dong, target["label"], target["label"],
              back or "nothing that answers"))
 
+    #
+    # The adapter's two pairs are two subdevices of one USB device, and
+    # letting go of one costs the next send on the other: 55 of 62 notes
+    # arrived when a check on the far pair came immediately before, 72 of
+    # 72 with half a second in between.  Nothing to do with the pedal -
+    # it is the same note over the same cable.  See issue 444.
+    #
+    def settle():
+        if back and back != dong:
+            time.sleep(0.5)
+
     alive = rx = tx = act = 0
     for _ in range(args.trials):
         if back and pedal.midi_alive(back, args.seconds):
             alive += 1
+        settle()
 
         # adapter -> pedal IN -> thru -> pedal USB
         if _saw_note(pedal.midi_listen(target["port"], args.seconds,
                                        during=lambda: _note(dong))):
             rx += 1
+        settle()
 
         # pedal USB -> thru -> pedal OUT -> adapter
         if back and _saw_note(pedal.midi_listen(
                 back, args.seconds, during=lambda: _note(target["port"]))):
             tx += 1
+        settle()
 
         # and whether it *acts* on what arrives, which needs no thru at
         # all: CC 7 is the master volume, read back from the state it
