@@ -47,9 +47,6 @@ def note(name, detail):
     print(f"  --    {name}: {detail}")
 
 
-# The test tone's pots and the two shapes, resolved in main().
-TONE_LEVEL = TONE_FREQ = TONE_SHAPE = None
-SHAPE_SINE = SHAPE_NOISE = None
 LEVEL_OFF = 0
 
 # Freq is EXPONENTIAL(13.75 14080) over 120 steps: ten octaves, twelve
@@ -62,7 +59,6 @@ LEVEL_OFF = 0
 # to stay a multiple of twelve so that 440 Hz - the point everything is
 # reported against - is one of the points.
 SWEEP_LOW_POT, SWEEP_HIGH_POT = 0, 108
-FREQ_440_POT = None
 
 #
 # The tone topology detection uses, deliberately not 440 Hz.
@@ -74,9 +70,6 @@ FREQ_440_POT = None
 # channel is then checked for the frequency rather than for a level.
 #
 TOPOLOGY_FREQ_HZ = 220.0
-TOPOLOGY_FREQ_POT = None
-
-LR_WET = LR_DRY = LR_WETDRY = None
 
 #
 # Channel steering, and the defaults every helper below re-asserts.
@@ -87,18 +80,53 @@ LR_WET = LR_DRY = LR_WETDRY = None
 # silence.  So a stale steering setting quietly turns mute() into a
 # pass-through, and then the topology says one pedal feeds two others.
 #
-POT_CH_IN = POT_CH_OUT = POT_MERGE = None
-STRAIGHT = ()
 
 
-def straight(eff):
-    return tuple((c, eff, pot, val) for c, _, pot, val in STRAIGHT)
+class Ids:
+    """Every number this test writes, as one board means them.
+
+    Effect ids are positions in effects[], so two boards on different
+    firmware disagree about them, and a stale id is still a valid id -
+    it lands on a real pot of a real effect and nothing complains.  So
+    each board gets its own, resolved from the map it serves.
+    """
+
+    def __init__(self, schema):
+        self.schema = schema
+        with effectmap.using(schema):
+            self.tone = effectmap.effect("TESTTONE")
+            self.settings = effectmap.settings()
+            self.gate, self.trim, self.volume = effectmap.pots(
+                "Signal Chain", "Gate", "Trim", "Volume")
+            self.level, self.freq, self.shape = effectmap.pots(
+                "Test Tone", "Level", "Freq", "Shape")
+            self.sine = P.to_pot("Test Tone", "Shape", "Sine")
+            self.noise = P.to_pot("Test Tone", "Shape", "Noise")
+            self.freq_440 = P.to_pot("Test Tone", "Freq", 440.0)
+            self.topology_freq = P.to_pot("Test Tone", "Freq", TOPOLOGY_FREQ_HZ)
+            self.wet, self.dry, self.wetdry = (
+                P.to_pot("Settings", "USB L/R Out", v)
+                for v in ("Wet", "Dry", "Wet/Dry"))
+            self.ch_in, self.ch_out, self.merge = effectmap.pots(
+                "Test Tone", "In", "Out", "Merge")
+
+    def level_pot(self, dbfs):
+        with effectmap.using(self.schema):
+            return P.to_pot("Test Tone", "Level", dbfs)
+
+    def level_dbfs(self, pot):
+        with effectmap.using(self.schema):
+            return P.value("Test Tone", "Level", pot)
+
+    def straight(self, eff):
+        """The steering defaults, re-asserted on one effect."""
+        return ((0x03, eff, self.ch_in, 0),
+                (0x03, eff, self.ch_out, 0),
+                (0x03, eff, self.merge, 120))
+
 
 # Room for a trip around a ring of pedals.
 MAX_LAG = audio.RATE // 10
-
-SETTINGS = TONE = None
-CHAIN_GATE = CHAIN_TRIM = CHAIN_VOLUME = None
 
 #
 # The two notes that decide whether this is a bass problem: the bottom
@@ -119,16 +147,6 @@ CORNER_LIMIT_HZ = 50.0
 RESULTS = {"links": []}
 
 
-def level_pot(dbfs):
-    return P.to_pot("Test Tone", "Level", dbfs)
-
-
-def level_dbfs(pot):
-    return P.value("Test Tone", "Level", pot)
-
-
-
-
 #
 # Which USB output mode each pedal is already in.
 #
@@ -142,8 +160,9 @@ _usb_mode = {}
 def usb_mode(d, mode):
     if _usb_mode.get(d["serial"]) == mode:
         return
-    pedal.set_pot(d["port"], SETTINGS,
-                  effectmap.pot("Settings", "USB L/R Out"), mode)
+    with effectmap.using(d["ids"].schema):
+        pedal.set_pot(d["port"], d["ids"].settings,
+                      effectmap.pot("Settings", "USB L/R Out"), mode)
     _usb_mode[d["serial"]] = mode
     time.sleep(0.4)
 
@@ -160,32 +179,35 @@ def generate(d, dbfs, shape=None, freq=None):
     this also cuts the ring at this pedal - which is what stops the whole
     thing being an oscillator.
     """
+    i = d["ids"]
     pedal.send_many(d["port"],
-                    (0x08, TONE),
-                    (0x03, TONE, effectmap.MIX, 120),
-                    (0x03, TONE, TONE_SHAPE,
-                     SHAPE_SINE if shape is None else shape),
-                    (0x03, TONE, TONE_FREQ,
-                     FREQ_440_POT if freq is None else freq),
-                    (0x03, TONE, TONE_LEVEL, level_pot(dbfs)),
-                    *straight(TONE))
+                    (0x08, i.tone),
+                    (0x03, i.tone, effectmap.MIX, 120),
+                    (0x03, i.tone, i.shape,
+                     i.sine if shape is None else shape),
+                    (0x03, i.tone, i.freq,
+                     i.freq_440 if freq is None else freq),
+                    (0x03, i.tone, i.level, i.level_pot(dbfs)),
+                    *i.straight(i.tone))
 
 
 def mute(d):
     """Full mix, no level: digital silence out, and the input ignored."""
+    i = d["ids"]
     pedal.send_many(d["port"],
-                    (0x08, TONE),
-                    (0x03, TONE, effectmap.MIX, 120),
-                    (0x03, TONE, TONE_LEVEL, LEVEL_OFF),
-                    *straight(TONE))
+                    (0x08, i.tone),
+                    (0x03, i.tone, effectmap.MIX, 120),
+                    (0x03, i.tone, i.level, LEVEL_OFF),
+                    *i.straight(i.tone))
 
 
 def passthrough(d):
+    i = d["ids"]
     pedal.send_many(d["port"],
-                    (0x08,),                             # nothing routed
-                    (0x03, pedal.CHAIN, CHAIN_GATE, 0),    # down is off
-                    (0x03, pedal.CHAIN, CHAIN_TRIM, 60),   # 0 dB
-                    (0x03, pedal.CHAIN, CHAIN_VOLUME, 80))  # 0 dB
+                    (0x08,),                            # nothing routed
+                    (0x03, pedal.CHAIN, i.gate, 0),     # down is off
+                    (0x03, pedal.CHAIN, i.trim, 60),    # 0 dB
+                    (0x03, pedal.CHAIN, i.volume, 80))  # 0 dB
 
 
 def raw_in(d, seconds):
@@ -196,17 +218,12 @@ def raw_in(d, seconds):
     copies left over right before anything else runs (issue 56), so
     anything asked after that point cannot see a second channel.
     """
-    usb_mode(d, LR_DRY)
+    usb_mode(d, d["ids"].dry)
     x = audio.capture(seconds, d["card"])
     return x[:, 0] * audio.SAMPLE_TO_FLOAT, x[:, 1] * audio.SAMPLE_TO_FLOAT
 
 
 def main():
-    global SETTINGS, TONE, CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME
-    global TONE_LEVEL, TONE_FREQ, TONE_SHAPE, SHAPE_SINE, SHAPE_NOISE
-    global FREQ_440_POT, TOPOLOGY_FREQ_POT, LR_WET, LR_DRY, LR_WETDRY
-    global POT_CH_IN, POT_CH_OUT, POT_MERGE, STRAIGHT
-
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--seconds", type=float, default=2.0)
     ap.add_argument("--level", type=float, default=-30.0,
@@ -245,53 +262,30 @@ def main():
         return 0
 
     #
-    # One map has to describe every board here, because the ids below are
-    # written to all of them.  Asking each board for its own would give
-    # several maps and no way to use them at once, so this is the one
-    # place that wants them all running this tree.
+    # Each board answers for itself.  A board that cannot - no MIDI, or
+    # firmware older than the schema request - falls back to the build,
+    # which is right only if that board is running this tree, so say
+    # which was used.
     #
-    stale = []
     for d in found:
-        want = pedal.elf_build(d["board"])
-        got = (pedal.identity(d["port"]) or {}).get("build")
-        if want is None or got != want:
-            stale.append("%s is running %r and this tree builds %r"
-                         % (d["label"], got, want))
-    if stale:
-        print("test-loop: SKIPPED - every board has to be running this tree, "
-              "since one map\n           has to mean the same thing on all "
-              "of them")
-        for s in stale:
-            print("           " + s)
-        return 0
-
-    try:
-        TONE = effectmap.effect("TESTTONE")
-        SETTINGS = effectmap.settings()
-        CHAIN_GATE = effectmap.pot("Signal Chain", "Gate")
-        CHAIN_TRIM = effectmap.pot("Signal Chain", "Trim")
-        CHAIN_VOLUME = effectmap.pot("Signal Chain", "Volume")
-        TONE_LEVEL, TONE_FREQ, TONE_SHAPE = effectmap.pots(
-            "Test Tone", "Level", "Freq", "Shape")
-        SHAPE_SINE = P.to_pot("Test Tone", "Shape", "Sine")
-        SHAPE_NOISE = P.to_pot("Test Tone", "Shape", "Noise")
-        FREQ_440_POT = P.to_pot("Test Tone", "Freq", 440.0)
-        TOPOLOGY_FREQ_POT = P.to_pot("Test Tone", "Freq", TOPOLOGY_FREQ_HZ)
-        LR_WET, LR_DRY, LR_WETDRY = (
-            P.to_pot("Settings", "USB L/R Out", v)
-            for v in ("Wet", "Dry", "Wet/Dry"))
-        POT_CH_IN, POT_CH_OUT, POT_MERGE = effectmap.pots(
-            "Test Tone", "In", "Out", "Merge")
-        STRAIGHT = ((0x03, None, POT_CH_IN, 0),
-                    (0x03, None, POT_CH_OUT, 0),
-                    (0x03, None, POT_MERGE, 120))
-    except effectmap.MapError as e:
-        print("test-loop: SKIPPED - %s" % e)
-        return 0
+        try:
+            schema, d["map"] = pedal.schema(d["port"]), "its own"
+        except Exception:
+            schema, d["map"] = None, "the build"
+        #
+        # Outside the fallback on purpose: a board that answered and is
+        # missing something this test needs is a result, not a reason to
+        # go and ask the build instead.
+        #
+        try:
+            d["ids"] = Ids(schema)
+        except effectmap.MapError as e:
+            print("test-loop: SKIPPED - %s: %s" % (d["label"], e))
+            return 0
 
     print("test-loop: " + ", ".join(
-        "%s (card %s, midi %s)" % (d["label"], d["card"], d["port"])
-        for d in found))
+        "%s (card %s, midi %s, map %s)"
+        % (d["label"], d["card"], d["port"], d["map"]) for d in found))
 
     ring, loops = topology(found, args)
     if not ring:
@@ -381,7 +375,7 @@ def topology(found, args):
 
     nxt = {}
     for src in found:
-        generate(src, args.level, freq=TOPOLOGY_FREQ_POT)
+        generate(src, args.level, freq=src["ids"].topology_freq)
         time.sleep(0.8)
         heard = []
         for dst in found:
@@ -552,7 +546,7 @@ def one_edge(src, dst, found, args):
     gains = []
     for want in (args.level, args.level - 15.0, args.level - 30.0):
         generate(src, want)
-        sent = level_dbfs(level_pot(want))
+        sent = src["ids"].level_dbfs(src["ids"].level_pot(want))
         L, _ = raw_in(dst, args.seconds)
         gains.append(audio.dbfs(audio.rms(L) * np.sqrt(2)) - sent)
 
@@ -568,7 +562,7 @@ def one_edge(src, dst, found, args):
     generate(src, args.level)
     resp = []
     for pot in range(SWEEP_LOW_POT, SWEEP_HIGH_POT + 1, 12):
-        pedal.set_pot(src["port"], TONE, TONE_FREQ, pot)
+        pedal.set_pot(src["port"], src["ids"].tone, src["ids"].freq, pot)
         L, _ = raw_in(dst, args.seconds)
         resp.append((P.value("Test Tone", "Freq", pot),
                      audio.dbfs(audio.rms(L))))
@@ -608,7 +602,8 @@ def one_edge(src, dst, found, args):
         "noise_uv_rms": audio.rms(quiet_L) * 1e6,
     })
 
-    pedal.set_pot(src["port"], TONE, TONE_FREQ, FREQ_440_POT)
+    pedal.set_pot(src["port"], src["ids"].tone, src["ids"].freq,
+                  src["ids"].freq_440)
     stereo(src, dst, found, args)
     mute(src)
 
@@ -651,8 +646,9 @@ def stereo(src, dst, found, args):
     seen = {}
     for side in ("Left", "Right"):
         out = P.to_pot("Test Tone", "Out", side)
-        generate(src, args.level, freq=TOPOLOGY_FREQ_POT)
-        pedal.send_many(src["port"], (0x03, TONE, POT_CH_OUT, out))
+        generate(src, args.level, freq=src["ids"].topology_freq)
+        pedal.send_many(src["port"],
+                        (0x03, src["ids"].tone, src["ids"].ch_out, out))
         time.sleep(0.3)
         L, R = raw_in(dst, args.seconds)
         seen[side[0]] = (audio.tone_level(L, TOPOLOGY_FREQ_HZ),
@@ -732,8 +728,8 @@ def latency(loops, ring, found, args):
             if d is src:
                 continue
             passthrough(d) if d in cyc else mute(d)
-        generate(src, args.level, shape=SHAPE_NOISE)
-        usb_mode(src, LR_WETDRY)
+        generate(src, args.level, shape=src["ids"].noise)
+        usb_mode(src, src["ids"].wetdry)
         time.sleep(0.8)
 
         d = audio.capture(args.seconds, src["card"])
@@ -823,7 +819,7 @@ def sysex_load(src, dst, args):
     only moment that is true of.
     """
     generate(src, args.level)
-    usb_mode(dst, LR_DRY)
+    usb_mode(dst, dst["ids"].dry)
     time.sleep(0.6)
 
     opcode, marker = LOADS[args.load]
