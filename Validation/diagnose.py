@@ -2,27 +2,16 @@
 #
 # Which component of the pedal under test is wrong?
 #
-# loop.py already drives an analog pedal and hands back a calibrated
-# answer.  compare-spice.py already asks a netlist the same question the
-# model is asked.  What neither does is say which PART of the circuit the
-# disagreement lives in, and that is the only answer somebody holding a
+# loop.py drives an analog pedal and hands back a calibrated answer, and
+# compare-spice.py asks a netlist the same question.  Neither says which
+# PART the disagreement lives in, which is the answer somebody holding a
 # soldering iron can act on.
 #
-# So every single-component fault the netlist could have is simulated,
-# and the one that best explains the measurement wins.  The ranking is
-# netfault, which is a packaged fault dictionary - the method is old, and
-# the survey is Bandler and Salama, Proc. IEEE 73 (1985).  This file is
-# the part that is specific to this bench: the legs, the ladder, and the
-# refusal to answer when nothing fits.
+# netfault does the ranking and the refusing.  What is here is specific
+# to this bench: the legs, the rungs, and the deck they ask about.
 #
-# WHY A LADDER AND NOT A SWEEP
-#
-# [RAT]'s clamp is a logarithm, so the pedal keeps getting louder after
-# it starts clipping and the Distortion pot drags the closed-loop corner
-# across most of the audio band.  One sweep at one level characterises
-# almost none of that, and the part that sets where it folds does nothing
-# at all until the drive reaches it.  So a signature here is one response
-# per drive level, and a candidate is compared rung by rung.
+# [RAT]'s clamp is a logarithm and the Distortion pot drags the corner
+# across most of the band, which is why the rungs are where they are.
 #
 import argparse
 import os
