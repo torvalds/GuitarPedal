@@ -38,7 +38,7 @@ try:
     import netfault
 except ImportError:
     print("diagnose: SKIPPED - netfault is not installed")
-    print("          pip install git+https://github.com/quotentiroler/netfault@v0.2.0")
+    print("          pip install git+https://github.com/quotentiroler/netfault@v0.2.1")
     sys.exit(0)
 
 import loop
