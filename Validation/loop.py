@@ -104,7 +104,6 @@ def configure(p, leg, t=None, knobs=None, settle=0.3):
             pedal.set_pot(p, eff, idx, raw)
 
     time.sleep(settle)
-    return settings
 
 
 def crest(x, trim=0.0):
