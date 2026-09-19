@@ -49,6 +49,7 @@ import audio
 import feed
 import effectmap
 import pedal
+import targets as T
 
 FS = float(audio.RATE)
 
@@ -97,10 +98,8 @@ def configure(p, leg, t=None, knobs=None, settle=0.3):
             raise LoopError("the model leg needs a target")
         eff = effectmap.effect(t["short"])
         pedal.set_routing(p, eff)
-        for name, v in (knobs or t["knobs"]).items():
-            raw = int(v) if isinstance(t["knobs"][name], int) else round(v * 120)
-            idx = effectmap.pot(t["short"], name)
-            pedal.set_pot(p, eff, idx, raw)
+        for name, raw in T.raw_pots(t, knobs):
+            pedal.set_pot(p, eff, effectmap.pot(t["short"], name), raw)
 
     time.sleep(settle)
 

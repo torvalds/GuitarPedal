@@ -95,18 +95,29 @@ def display(t):
     return effectmap.display(t["short"])
 
 
+def raw_pots(t, knobs=None, effect=None):
+    """Each knob this target names, as (label, the raw 0..120 it means).
+
+    A knob here is a fraction of the pot's travel, because that is the
+    scale the spice translation beside it takes.  A named pot is a
+    position rather than a fraction, and the map says which is which -
+    asking it is the point, because the two are indistinguishable from
+    the value on its own.
+
+    Two things set a pedal up from a target - the bench, through argv,
+    and loop.py, over MIDI - and this is the half they share.
+    """
+    on = effect or display(t)
+    for name, v in (knobs or t["knobs"]).items():
+        curve = effectmap.pot_info(on, name)["curve"]
+        yield name, (int(v) if curve in P.NAMED else round(v * 120))
+
+
 def pot_args(t, knobs, effect=None):
-    #
-    # A knob here is a fraction of the pot's travel, because that is the
-    # scale the spice translation beside it takes.  A named pot is a
-    # position rather than a fraction, and the map says which is which.
-    #
     on = effect or display(t)
     args = B.quiet() + B.route(on)
-    for name, v in knobs.items():
-        curve = effectmap.pot_info(on, name)["curve"]
-        raw = int(v) if curve in P.NAMED else round(v * 120)
-        args += ["--pot", "%s:%s=%d" % (on, name, raw)]
+    for label, raw in raw_pots(t, knobs, on):
+        args += B.pot(on, label, raw)
     return args
 
 
