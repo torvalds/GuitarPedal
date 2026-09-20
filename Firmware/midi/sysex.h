@@ -1080,8 +1080,23 @@ bool handle_midi_packet(const uint8_t packet[4])
 	} else if ((status & 0xF0) == 0xC0) {
 		handled = true;
 		// Program Change -> Load Scene
-		if (data1 < MAX_SCENES) {
+		//
+		// Only to a scene that has something in it, the same way the
+		// switch path does.  load_scene() on an empty one resets
+		// every effect and routes nothing, and a program change sent
+		// to a scene nobody has saved would take a working pedal to
+		// silence - silently, on the far end of a USB cable, with
+		// no stomp switch to be its "never mind".
+		//
+		if (data1 < MAX_SCENES &&
+		    (populated_scenes() & (1u << data1))) {
 			load_scene(data1);
+			//
+			// The state changed; ask the web app to re-read it
+			// rather than leaving its cache describing the old
+			// scene.  Same handshake the switch path does.
+			//
+			state_dump_tx = true;
 		}
 	}
 
