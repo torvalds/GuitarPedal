@@ -357,24 +357,24 @@ static bool load_scene(uint8_t scene_id)
 		if (!eff)
 			continue;
 
-		//
-		// Not the settings.  They are the pedal's rather than the
-		// song's and live under their own key - see load_globals()
-		// - and a scene that restored them would put the MIDI
-		// channel and the USB routing back to whatever they were
-		// when it was saved, which is the thing making them global
-		// was meant to stop.
-		//
-		// Skipped here as well as left out of save_scene(), so a
-		// scene written before that stops being true does not get
-		// to apply what it kept.
-		//
-		if (effect_is_global(i))
-			continue;
-		scene_load_effect(eff, &scene->effects[i]);
 		for (int n = 0; n < EFFECT_COUNT; n++) {
 			if (effects[n] == eff) {
-				remap[i] = n;
+				//
+				// Not the settings.  They are the pedal's rather than the
+				// song's and live under their own key - see load_globals()
+				// - and a scene that restored them would put the MIDI
+				// channel and the USB routing back to whatever they were
+				// when it was saved, which is the thing making them global
+				// was meant to stop.
+				//
+				// Skipped here as well as left out of save_scene(), so a
+				// scene written before that stops being true does not get
+				// to apply what it kept.
+				//
+				if (!effect_is_global(n)) {
+					scene_load_effect(eff, &scene->effects[i]);
+					remap[i] = n;
+				}
 				break;
 			}
 		}
