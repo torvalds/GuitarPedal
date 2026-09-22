@@ -128,9 +128,18 @@ static void init_effects(void)
 	//
 	load_scene(0);
 
+	//
+	// By hand, both of them, because core 1 is not running yet:
+	// nothing will reach init() on its own until the audio loop
+	// starts.
+	//
 	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
 		struct effect *effect = effects[i];
-		effect->init(effect->pot_values[0]);
+
+		if (effect->prepare)
+			effect->prepare(effect_pots(effect));
+		if (effect->init)
+			effect->init(effect_pots(effect));
 	}
 }
 

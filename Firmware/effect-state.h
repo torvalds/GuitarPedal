@@ -46,6 +46,19 @@ static void reset_effect(struct effect *eff)
 }
 
 //
+// Set an effect up on core 0, from the pot row that is about to go live.
+// Does nothing unless the effect asked for it.
+//
+// Before the publish rather than after, so that an effect reaching
+// hardware has already reached it by the time the pot row goes live.
+//
+static void effect_prepare(struct effect *e, unsigned int seq)
+{
+	if (e->prepare)
+		e->prepare(effect_spare_pots(e, seq));
+}
+
+//
 // Unrouting an effect throws its values away.  An effect that isn't in
 // the chain isn't supposed to have any state at all, so routing it again
 // starts from the defaults in the schema rather than from wherever it
@@ -79,6 +92,7 @@ static void unroute_effect(struct effect *eff)
 	eff->channels = 0;
 	eff->merge = 1.0f;
 
+	effect_prepare(eff, seq);
 	effect_publish(eff, seq);
 }
 
@@ -200,6 +214,7 @@ static void set_effect_pot(struct effect *e, unsigned int pot_idx, unsigned char
 
 	memcpy(new_pot, cur_pot, 10);
 	new_pot[pot_idx] = val;
+	effect_prepare(e, seq);
 	effect_publish(e, seq);
 }
 

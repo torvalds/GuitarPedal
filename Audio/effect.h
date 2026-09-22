@@ -182,7 +182,24 @@ struct effect {
 	unsigned int seq, last;
 	unsigned char intense, active_pot;
 	unsigned char pot_values[2][10];
+	//
+	// Two places an effect can turn pot values into whatever it
+	// works from, and it may have either.
+	//
+	// init() is the common one.  It runs on the audio core, at the
+	// next block boundary after the pots move, and is marked as
+	// audio-core code - so it may not reach a bus or the flash.
+	//
+	// prepare() runs on core 0 instead, in the call that moves the
+	// pots, and has none of those restrictions.  It is for an effect
+	// whose parameters do not live in memory: one that has to talk
+	// to hardware has to do it from the core that owns the bus.
+	//
+	// Nothing stops a header from wanting both.  They are two
+	// pointers and each is called where it belongs.
+	//
 	void (*init)(unsigned char[10]);
+	void (*prepare)(const unsigned char[10]);
 	sample_t (*step)(sample_t);
 	const struct pot_descr pots[10];
 };
@@ -720,7 +737,8 @@ static __attribute__((noinline)) void __audio_func(make_one_noise)(void)
 			continue;
 
 		effect->last = seq;
-		effect->init(effect_pots_at(effect, seq));
+		if (effect->init)
+			effect->init(effect_pots_at(effect, seq));
 	}
 
 	static int disable = 0;

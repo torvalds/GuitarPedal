@@ -495,6 +495,15 @@ def generate(audio_dir, out_h, out_js, out_md):
             'roles': roles,
             'is_global': is_global,
             'full_name': full_name,
+            #
+            # 'INIT: core0' asks for prepare() instead of init(): the
+            # effect is set up on core 0, in the call that moves the
+            # pots, rather than on the audio core at the next block
+            # boundary.  An effect that has to reach a bus has no
+            # choice, because init() is audio-core code and may not.
+            #
+            'init_core0': bool(re.search(r'//[ \t]*INIT:[ \t]*core0\b',
+                                         content)),
             'short_name': short_name,
             'priority': priority,
             'def_mix': def_mix,
@@ -770,7 +779,10 @@ def generate(audio_dir, out_h, out_js, out_md):
             # don't have to know about any of this.
             channels = e_data['channels']
 
-            f.write(f"static void __audio_func({self_name}_init)(unsigned char[10]);\n")
+            if e_data['init_core0']:
+                f.write(f"static void {self_name}_prepare(const unsigned char[10]);\n")
+            else:
+                f.write(f"static void __audio_func({self_name}_init)(unsigned char[10]);\n")
             if channels in ('STEREO', 'NONE'):
                 f.write(f"static sample_t __audio_func({self_name}_step)(sample_t);\n")
             else:
@@ -829,7 +841,10 @@ def generate(audio_dir, out_h, out_js, out_md):
             f.write(f"\t.mix_law = MIX_{e_data['mix_law']},\n")
             if e_data['channels'] == 'STEREO':
                 f.write("\t.stereo = 1,\n")
-            f.write(f"\t.init = {self_name}_init,\n")
+            if e_data['init_core0']:
+                f.write(f"\t.prepare = {self_name}_prepare,\n")
+            else:
+                f.write(f"\t.init = {self_name}_init,\n")
             if step:
                 f.write(f"\t.step = {step},\n")
             else:
