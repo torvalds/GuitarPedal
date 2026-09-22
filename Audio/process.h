@@ -118,6 +118,12 @@ static inline sample_t process_input(raw_sample_t sample)
 		.right = sample.right * SAMPLE_TO_FLOAT_MULTIPLIER
 	};
 
+	// A TS plug leaves the ring at sleeve, so the jack delivers one
+	// signal.  Folding it here covers bypass too, which takes the
+	// input untouched.
+	if (settings.analog_in == ANALOG_IN_MONO)
+		val.right = val.left;
+
 	if (tuner_mode) {
 		analyze_process_sample(val);
 		val.left = val.right = 0.0;

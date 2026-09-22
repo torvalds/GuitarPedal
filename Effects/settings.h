@@ -6,6 +6,28 @@
 // and not of any one sound.
 //
 // GLOBAL
+//
+// The input jack, and what to do about the channel it is not carrying.
+//
+// A TS plug shorts the ring to sleeve, so the jack carries one signal
+// and the right arrives as silence.  Mono says so, and the right becomes
+// a copy of the left before anything else reads it - which is what a
+// bypassed pedal needs to come out of both sides of a headphone jack,
+// and what a split path needs if it is to have two branches rather than
+// one and an absence.
+//
+// Stereo is a TRS cable or a Y-splitter, where the right is a channel
+// rather than a missing one.
+//
+// Mono by default because a guitar cable is a TS cable.  It costs a
+// stereo source its right channel, which is the other way round from
+// what it costs a guitar, and only one of the two arrives by accident.
+//
+// POT: "Analog In" ENUM(Stereo Mono) = Mono
+// INFO: A TS guitar cable carries one channel, so Mono copies it to both
+// INFO: before the chain - otherwise a bypassed pedal is silent on one
+// INFO: side of a headphone jack. Stereo is for a TRS cable or a
+// INFO: splitter, where the right channel is really there.
 // POT: "MIDI Ch" ENUM(Omni Ch1 Ch2 Ch3 Ch4 Ch5 Ch6 Ch7 Ch8 Ch9 Ch10 Ch11 Ch12 Ch13 Ch14 Ch15 Ch16) = Omni
 // POT: "LED" LINEAR(0 100) = 10 %
 // POT: "  ATTN" LINEAR(0 100) = 50 %
@@ -21,7 +43,12 @@
 //
 // Settings "effect" - dummy effect to save various settings
 //
+enum analog_in {
+	ANALOG_IN_STEREO, ANALOG_IN_MONO
+};
+
 struct {
+	enum analog_in analog_in;
 	int midi_channel;
 	float led_pwm, led_intense;
 	int tuning;
@@ -29,6 +56,7 @@ struct {
 
 static void settings_init(unsigned char pot[10])
 {
+	settings.analog_in = pot[SETTINGS_ANALOG_IN];
 	settings.midi_channel = pot[SETTINGS_MIDI_CH];
 
 	settings.led_pwm = settings_led_pot(pot) / 100;
