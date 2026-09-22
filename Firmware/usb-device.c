@@ -475,30 +475,26 @@ bool tud_audio_set_req_itf_cb(uint8_t rhport, tusb_control_request_t const * p_r
 	return false;
 }
 
-//
-// Feature unit controls, per channel: 0 is the master, 1 and 2 are
-// left and right.
-//
-// The channel number arrives inside the host's control request, so it
-// can be anything at all.  Hand out a pointer or NULL and check it in
-// one place, rather than having every call site index the arrays and
-// hope for the best.
-//
-#define AUDIO_CHANNELS 3
-
-static bool mute[AUDIO_CHANNELS];
-static int16_t volume[AUDIO_CHANNELS];
 static uint32_t sampFreq = 48000;
 static uint8_t clkValid = 1;
 
-static bool *channel_mute(uint8_t ch)
+//
+// Which end of the device the host is addressing.  The state and the
+// arithmetic are in usb-volume.h; this only has to say which unit a
+// control request landed on, and the channel inside it is checked there
+// because it arrives from the host and can be anything at all.
+//
+static bool audio_feature_unit(uint8_t entity, unsigned *unit)
 {
-	return ch < AUDIO_CHANNELS ? &mute[ch] : NULL;
-}
-
-static int16_t *channel_volume(uint8_t ch)
-{
-	return ch < AUDIO_CHANNELS ? &volume[ch] : NULL;
+	switch (entity) {
+	case UAC2_ENTITY_SPK_FEATURE_UNIT:
+		*unit = USB_FU_SPK;
+		return true;
+	case UAC2_ENTITY_MIC_FEATURE_UNIT:
+		*unit = USB_FU_MIC;
+		return true;
+	}
+	return false;
 }
 
 // Invoked when audio class specific set request received for an entity
@@ -509,23 +505,16 @@ bool tud_audio_set_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
 	uint8_t ctrlSel = TU_U16_HIGH(p_request->wValue);
 	uint8_t entityID = TU_U16_HIGH(p_request->wIndex);
 
+	unsigned unit;
+
 	if (p_request->bRequest == AUDIO20_CS_REQ_CUR) {
-		if (entityID == UAC2_ENTITY_MIC_FEATURE_UNIT || entityID == UAC2_ENTITY_SPK_FEATURE_UNIT) {
-			if (ctrlSel == AUDIO20_FU_CTRL_MUTE) {
-				bool *mutep = channel_mute(channelNum);
-
-				if (!mutep)
-					return false;
-				*mutep = ((audio20_control_cur_1_t *) pBuff)->bCur;
-				return true;
-			} else if (ctrlSel == AUDIO20_FU_CTRL_VOLUME) {
-				int16_t *volp = channel_volume(channelNum);
-
-				if (!volp)
-					return false;
-				*volp = (int16_t) ((audio20_control_cur_2_t *) pBuff)->bCur;
-				return true;
-			}
+		if (audio_feature_unit(entityID, &unit)) {
+			if (ctrlSel == AUDIO20_FU_CTRL_MUTE)
+				return usb_mute_set(unit, channelNum,
+					((audio20_control_cur_1_t *) pBuff)->bCur);
+			else if (ctrlSel == AUDIO20_FU_CTRL_VOLUME)
+				return usb_volume_set(unit, channelNum,
+					(int16_t) ((audio20_control_cur_2_t *) pBuff)->bCur);
 		} else if (entityID == UAC2_ENTITY_CLOCK) {
 			if (ctrlSel == AUDIO20_CS_CTRL_SAM_FREQ) {
 				return true;
@@ -555,6 +544,7 @@ bool tud_audio_get_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
 	uint8_t channelNum = TU_U16_LOW(p_request->wValue);
 	uint8_t ctrlSel = TU_U16_HIGH(p_request->wValue);
 	uint8_t entityID = TU_U16_HIGH(p_request->wIndex);
+	unsigned unit;
 
 	if (entityID == UAC2_ENTITY_MIC_INPUT_TERMINAL || entityID == UAC2_ENTITY_SPK_INPUT_TERMINAL) { // Input Terminal
 		if (ctrlSel == AUDIO20_TE_CTRL_CONNECTOR) {
@@ -564,25 +554,30 @@ bool tud_audio_get_req_entity_cb(uint8_t rhport, tusb_control_request_t const * 
 			ret.iChannelNames = 0;
 			return tud_audio_buffer_and_schedule_control_xfer(rhport, p_request, (void *) &ret, sizeof(ret));
 		}
-	} else if (entityID == UAC2_ENTITY_MIC_FEATURE_UNIT || entityID == UAC2_ENTITY_SPK_FEATURE_UNIT) { // Feature Unit
+	} else if (audio_feature_unit(entityID, &unit)) { // Feature Unit
 		if (ctrlSel == AUDIO20_FU_CTRL_MUTE) {
-			bool *mutep = channel_mute(channelNum);
+			bool *mutep = usb_mute_ptr(unit, channelNum);
 
 			if (!mutep)
 				return false;
 			return tud_audio_buffer_and_schedule_control_xfer(rhport, p_request, mutep, 1);
 		} else if (ctrlSel == AUDIO20_FU_CTRL_VOLUME) {
 			if (p_request->bRequest == AUDIO20_CS_REQ_CUR) {
-				int16_t *volp = channel_volume(channelNum);
+				int16_t *volp = usb_volume_ptr(unit, channelNum);
 
 				if (!volp)
 					return false;
 				return tud_audio_buffer_and_schedule_control_xfer(rhport, p_request, volp, sizeof(*volp));
 			} else if (p_request->bRequest == AUDIO20_CS_REQ_RANGE) {
+				//
+				// Stops at unity: this is a digital gain and
+				// above 0 dB it can only clip.  See the head
+				// of usb-volume.h.
+				//
 				audio20_control_range_2_n_t(1) ret;
 				ret.wNumSubRanges = 1;
-				ret.subrange[0].bMin = -90 * 256;	// -90 dB (1/256 dB per step)
-				ret.subrange[0].bMax = 90 * 256;	// +90 dB
+				ret.subrange[0].bMin = USB_VOL_MIN_DB * 256;
+				ret.subrange[0].bMax = USB_VOL_MAX_DB * 256;
 				ret.subrange[0].bRes = 1 * 256;		// 1 dB steps
 				return tud_audio_buffer_and_schedule_control_xfer(rhport, p_request, (void *) &ret, sizeof(ret));
 			}
@@ -635,6 +630,7 @@ void usb_audio_task(void)
 			unsigned nr = get_audio_samples(buf, max_samples_to_write);
 
 			if (nr > 0) {
+				usb_scale_capture(buf, nr);
 				tud_audio_write((uint8_t *)buf, nr * 2 * sizeof(int32_t));
 			}
 		}
@@ -647,6 +643,12 @@ void usb_audio_task(void)
 			rx_avail = sizeof(temp_buf);
 		uint16_t bytes_read = tud_audio_read(temp_buf, rx_avail);
 		unsigned samples_read = bytes_read / sizeof(raw_sample_t);
+
+		//
+		// Scaled before the ring rather than as core 1 drains it, so
+		// the whole of the host's volume lives on this core.
+		//
+		usb_scale_playback(temp_buf, samples_read);
 
 		for (unsigned i = 0; i < samples_read; i++) {
 			unsigned head = usb_rx_head;
