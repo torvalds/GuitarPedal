@@ -687,11 +687,19 @@ schema.forEach((eff, idx) => {
     check(`${eff.name} hides only the pots the graph draws`,
           hidden.children.length === eff.graph.length * 2,
           `${hidden.children.length} hidden, ${eff.graph.length * 2} banded`);
+    //
+    // Plus the Mix control, where there is one.  'MIX: NONE' says there
+    // is not - an effect can be switched by the chain and still do its
+    // work somewhere the wet and the dry cannot reach - and 'steerable'
+    // is that same declaration as the schema carries it.
+    //
+    const expect = spare + (eff.steerable ? 1 : 0);
+
     check(`${eff.name} puts its ${spare} spare pot(s) where they can be used`,
           footer.children.filter(
               (c) => (c.className || '').includes('pot-control')).length
-          === spare + 1,      // and the Mix control
-          `${footer.children.length} in the footer`);
+          === expect,
+          `${footer.children.length} in the footer, wanted ${expect}`);
 });
 
 //
