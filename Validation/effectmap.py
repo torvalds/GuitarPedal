@@ -201,6 +201,11 @@ def settings(path=None):
     return effect("Settings", path)
 
 
+def usb(path=None):
+    """The USB audio pseudo-effect: what crosses the wire, each way."""
+    return effect("USB Audio", path)
+
+
 def names(path=None):
     """[(id, display name, short name)], in effects[] order."""
     return [(e["id"], e["name"], e["shortName"]) for e in _effects(path)]

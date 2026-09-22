@@ -75,7 +75,7 @@ def main():
     # Every setting below is written by effect id, and an id is a
     # position in effects[] - so against the wrong map they land on a
     # real pot of a real effect and nothing reports anything. On a board
-    # one effect short, "USB L/R Out" went to the Expression Jack, the
+    # one effect short, "USB Audio L/R Out" went to the Expression Jack, the
     # capture mode never changed, and the three checks that compare the
     # wet channel against the dry one failed against a pedal that was
     # working.
@@ -94,7 +94,7 @@ def main():
     # same instant, so anything below can subtract one from the other
     # without aligning them first.
     #
-    pedal.wet_dry(p, effectmap.settings())
+    pedal.wet_dry(p, effectmap.usb())
 
     d = audio.trim(audio.capture(args.seconds, card))
     wet, dry = d[:, 0], d[:, 1]

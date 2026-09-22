@@ -624,10 +624,10 @@ static inline void __audio_func(single_sample)(float mix)
 	// what comes out is a function of what the host sent and nothing
 	// else.
 	//
-	if (settings.usb_input == USB_IN_PRE_FX) {
+	if (usbaudio.input == USB_IN_PRE_FX) {
 		in.left += usb_in.left;
 		in.right += usb_in.right;
-	} else if (settings.usb_input == USB_IN_REPLACE) {
+	} else if (usbaudio.input == USB_IN_REPLACE) {
 		in = usb_in;
 	}
 
@@ -668,7 +668,7 @@ static inline void __audio_func(single_sample)(float mix)
 	out.left = linear(mix, in.left, out.left);
 	out.right = linear(mix, in.right, out.right);
 
-	if (settings.usb_input == USB_IN_MIX) {
+	if (usbaudio.input == USB_IN_MIX) {
 		out.left += usb_in.left;
 		out.right += usb_in.right;
 	}

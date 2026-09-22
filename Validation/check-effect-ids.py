@@ -12,8 +12,8 @@
 #
 # The failure is silent by construction.  A stale id is still a valid
 # id, so the SysEx write is accepted and sets a real pot on a real
-# effect - just not the one that was meant.  A script pinning "USB L/R
-# Out to None" pins a Cabinet pot instead and goes on printing a
+# effect - just not the one that was meant.  A script pinning "USB
+# Audio L/R Out" to None pins a Cabinet pot instead and goes on printing a
 # plausible baseline that is quietly wrong by a fraction of a percent; a
 # script configuring one effect and measuring another goes on passing.
 # Nothing errors, and nothing in the numbers looks like a mistake.
@@ -63,7 +63,7 @@ ID_ARGS = {
 ID_KWARGS = {
     "set_pot": ("effect",),
     "set_named": ("effect",),
-    "wet_dry": ("settings_effect",),
+    "wet_dry": ("usb_effect",),
 }
 
 

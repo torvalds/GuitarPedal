@@ -111,7 +111,7 @@ def main():
               "to keep" % d["label"])
         return 0
 
-    pedal.wet_dry(p, effectmap.settings())
+    pedal.wet_dry(p, effectmap.usb())
 
     #
     # Scenes 0 and 1, in the order the measurements want them.  Saving

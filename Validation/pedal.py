@@ -779,14 +779,14 @@ def save_scene(p, scene):
     send(p, 0x04, scene)
 
 
-def wet_dry(p, settings_effect):
+def wet_dry(p, usb_effect):
     """Put the processed signal and the raw input side by side.
 
     Wet/Dry is the processed signal on the left and the untouched input
     on the right, in the same frame.
     """
-    set_pot(p, settings_effect, effectmap.pot("Settings", "USB L/R Out"),
-            pots.to_pot("Settings", "USB L/R Out", "Wet/Dry"))
+    set_pot(p, usb_effect, effectmap.pot("USB Audio", "L/R Out"),
+            pots.to_pot("USB Audio", "L/R Out", "Wet/Dry"))
 
 
 class Stale(Exception):
