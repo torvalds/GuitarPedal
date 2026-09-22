@@ -105,6 +105,7 @@ def player(card, blob, repeats):
     One invocation rather than one per repeat: aplay reopens the device
     between runs, and that is a gap and a click at every wrap.
     """
+    audio.unity_gain(card)
     p = subprocess.Popen(
         ["aplay", "-D", f"hw:{card},0", "-f", "S32_LE", "-c", "2",
          "-r", str(RATE), "-t", "raw", "-q", "-"],
