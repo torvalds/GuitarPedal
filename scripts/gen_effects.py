@@ -275,6 +275,23 @@ def generate(audio_dir, out_h, out_js, out_md):
         always = is_global or re.search(r'//[ \t]*ALWAYS[ \t]*(//.*)?$',
                                         content, re.M) is not None
 
+        #
+        # What the board has to have for the effect to mean anything.
+        #
+        # A name, not a test: the effect cannot know whether the answer
+        # is a pin that either exists or does not, or a chip that has to
+        # be asked.  board.h turns the name into HAVE_<name>, which is a
+        # constant on some boards and a probe on others, and the effect
+        # is none the wiser either way.
+        #
+        # Nothing here gates a *pot* - that is 'NEEDS:', which is about
+        # one pot's value and not about the board.
+        #
+        needs_hw = None
+        hw_match = re.search(r'//[ \t]*HW:[ \t]*([A-Z0-9_]+)', content)
+        if hw_match:
+            needs_hw = hw_match.group(1)
+
         def_mix_match = re.search(r'//\s*DEFAULT_MIX:\s*(\S+)', content)
         def_mix = float(def_mix_match.group(1)) if def_mix_match else 1.0
 
@@ -563,6 +580,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             'is_global': is_global,
             'position': position,
             'always': always,
+            'needs_hw': needs_hw,
             'full_name': full_name,
             #
             # 'INIT: core0' asks for prepare() instead of init(): the
@@ -716,6 +734,13 @@ def generate(audio_dir, out_h, out_js, out_md):
             # scene cannot switch off has no control to draw for it.
             #
             **({"always": True} if e_data['always'] else {}),
+            #
+            # What this effect needs the board to have, for the app to
+            # match against what the pedal says it found.  A build-time
+            # fact, which is why it is here and not in the hello reply.
+            #
+            **({"needs": e_data['needs_hw'].lower()}
+               if e_data['needs_hw'] else {}),
             "roles": e_data['roles'],
             "graph": [{"type": b['type'], "q": b['q']} if 'q' in b
                       else {"type": b['type'], "qPot": b['q_pot']}
@@ -975,6 +1000,32 @@ def generate(audio_dir, out_h, out_js, out_md):
         #
         mask = sum(1 << i for i, e in enumerate(effects_data) if e['always'])
         f.write(f"#define ALWAYS_EFFECTS 0x{mask:x}u\n\n")
+
+        #
+        # Which effects want something of the board, as an X-macro
+        # rather than as code.
+        #
+        # Expanding it needs HAVE_<name>, and the only place that knows
+        # those is the firmware: the host bench compiles these headers
+        # too and has no board under it.  A list nobody expands costs it
+        # nothing, so hardware.h expands this and the bench does not.
+        #
+        f.write("#define EFFECT_HW_LIST \\\n")
+        for i, e in enumerate(effects_data):
+            if e['needs_hw']:
+                f.write(f"\tHW_NEEDS({i}, {e['needs_hw']}) \\\n")
+        f.write("\t/* end */\n\n")
+
+        #
+        # And the capability names themselves, once each, so the pedal
+        # can report what it found without the app having to infer the
+        # list from the effects that wanted them.
+        #
+        seen = sorted({e['needs_hw'] for e in effects_data if e['needs_hw']})
+        f.write("#define EFFECT_HW_NAMES \\\n")
+        for name in seen:
+            f.write(f"\tHW_NAME(\"{name.lower()}\", {name}) \\\n")
+        f.write("\t/* end */\n\n")
 
     # Generate midi_schema.h next to effect_map.h
     schema_path = os.path.join(os.path.dirname(out_h), "midi_schema.h")

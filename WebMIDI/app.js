@@ -1999,6 +1999,44 @@ function drawnOrder(ids) {
 }
 
 //
+// What the pedal said it found, keyed by the names the effects ask
+// under.  Empty until the hello reply lands, and empty is not "nothing
+// is there" - firmware older than this says nothing at all, and an
+// effect that asks for something it cannot hear about is shown, which
+// is what that firmware already does.
+//
+let PEDAL_HAVE = {};
+
+function effectPresent(e) {
+    return !e || !e.needs || PEDAL_HAVE[e.needs] !== false;
+}
+
+//
+// The same names in words.  A capability is named for the effect header
+// that asks for it, so it arrives as an identifier - 'codec_dsp' is not
+// a thing anybody owns.  Anything unlisted falls back to the name with
+// its underscores opened out, which is wrong but readable.
+//
+const HW_NAMES = {
+    expression: 'expression jack',
+    codec_dsp: 'programmable codec',
+};
+
+function hwName(what) {
+    return HW_NAMES[what] || what.replace(/_/g, ' ');
+}
+
+//
+// What is hidden right now, as something two answers can be compared
+// by.  A string because that is enough to tell "the same" from "not",
+// which is the only question asked of it.
+//
+function hiddenEffects() {
+    return PEDAL_EFFECTS.filter((e) => !effectPresent(e))
+                        .map((e) => e.id).join();
+}
+
+//
 // The same question asked for a list rather than for one effect: the
 // anchors at each end, in the order they are drawn.
 //
@@ -2275,6 +2313,26 @@ document.addEventListener('visibilitychange', updateTelemetryPolling);
 function handleIdentity(id) {
     pedalIdentity = id;
     CONTROLS = id.controls || [];
+
+    //
+    // What this board turned out to have, against what each effect
+    // said it needed.  Both halves are the pedal's: the schema carries
+    // 'needs' because that is a fact about the build, and this reply
+    // carries 'have' because only running on the board settles it.
+    //
+    // Redrawn rather than filtered once, because the schema can arrive
+    // either side of this reply - and only when the answer changes
+    // something, since a redraw drops the chain until the pedal says it
+    // again.
+    //
+    const was = hiddenEffects();
+
+    PEDAL_HAVE = id.have || {};
+    if (PEDAL_EFFECTS.length && hiddenEffects() !== was) {
+        renderUI();
+        sendSysex([SYSEX_CMD.REQ_STATE]);
+    }
+
     renderBindings();
 
     const found = id.found || {};
@@ -2309,6 +2367,16 @@ function handleIdentity(id) {
     if (found.codec)
         notes.push(`Codec ${found.i2c_codec ? 'set up over i2c' : 'strapped'}` +
                    `: ${found.codec}.`);
+    //
+    // Named, because "some effects are missing" is not something anyone
+    // can act on and "no expression jack on this board" is.
+    //
+    const missing = Object.keys(id.have || {}).filter((k) => !id.have[k]);
+    if (missing.length)
+        notes.push(`No ${missing.map(hwName).join(', ')} on this board: ` +
+                   `the effects that need ${missing.length > 1 ? 'them' : 'it'} ` +
+                   `are not shown.`);
+
     if (found.legacy_screen)
         early.push('An SH1106 screen answered on i2c, from a generation ' +
                    'that had one. Nothing drives it.');
@@ -3047,6 +3115,8 @@ function renderPool() {
     PEDAL_EFFECTS.forEach((effect, idx) => {
         if (isAnchorEffect(idx) || currentRouting.includes(effect.id))
             return;
+        if (!effectPresent(effect))
+            return;
 
         const chip = document.createElement('button');
         chip.className = 'effect-chip';
@@ -3105,6 +3175,15 @@ function renderUI() {
     effectPool.id = 'effect-pool';
 
     PEDAL_EFFECTS.forEach((effect, idx) => {
+        //
+        // Nothing at all for an effect this board cannot run.  Not
+        // greyed out: a control that cannot do anything on this pedal
+        // is not a setting, it is a different pedal's setting, and the
+        // hardware note below says which piece is missing.
+        //
+        if (!effectPresent(effect))
+            return;
+
         const card = document.createElement('section');
         card.className = 'glass-panel effect-card';
         card.id = `effect-${idx}`;

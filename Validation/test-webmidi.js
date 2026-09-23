@@ -198,7 +198,7 @@ const WANT = ['handleIdentity', 'populateScenePicker', 'updateSceneLabels',
               'routeEffect', 'unrouteEffect',
               'potToValue', 'valueToPot', 'clampToNeighbours', 'pileAt',
               'uiPref', 'setUiPref',
-              'controlDef', 'actionsFor'];
+              'controlDef', 'actionsFor', 'hwName'];
 
 //
 // The chain is a list held in a variable rather than anything the dom
@@ -210,6 +210,12 @@ const src = fs.readFileSync(effectsJs, 'utf8') + '\n'
           + fs.readFileSync(path.join(WEB, 'app.js'), 'utf8') + '\n'
           + `;globalThis.__app = { ${WANT.join(', ')} };`
           + `;globalThis.__app.routing = () => currentRouting;`
+          //
+          // Which cards exist, from the app's own register rather than
+          // from the id lookup: this dom never forgets an id, so an
+          // element that was replaced is still findable by it.
+          //
+          + `;globalThis.__app.cards = () => [...effectCards.keys()];`
           + `;globalThis.__app.controls = () => CONTROLS;`
           //
           // What a control is wired to, and what it puts on the wire.
@@ -470,6 +476,34 @@ check('unrouting one leaves the others alone',
 check('and puts just that one back in the pool',
       chipNames().includes(routable[5].name)
       && !chipNames().includes(routable[1].name));
+
+//
+// What an effect needs is in the schema because it is a fact about the
+// build; what the board has is in the hello reply because only running
+// on it settles that.  An effect whose need went unanswered is drawn -
+// firmware older than this says nothing at all, and saying nothing has
+// to keep meaning what it used to.
+//
+const needy = schema.filter((e) => e.needs);
+
+check('some effects say what hardware they need',
+      needy.length >= 1 && needy.every((e) => typeof e.needs === 'string'));
+check('and they are drawn when the pedal does not say either way',
+      needy.every((e) => app.cards().includes(e.id)));
+
+app.handleIdentity(identity({ have: Object.fromEntries(
+    needy.map((e) => [e.needs, false])) }));
+check('an effect the board cannot run gets no card at all',
+      needy.every((e) => !app.cards().includes(e.id)));
+check('and the board note names what is missing, in words',
+      new RegExp(app.hwName(needy[0].needs)).test(
+          document.getElementById('identity-info').textContent),
+      document.getElementById('identity-info').textContent);
+
+app.handleIdentity(identity({ have: Object.fromEntries(
+    needy.map((e) => [e.needs, true])) }));
+check('and it comes back when a board does have it',
+      needy.every((e) => app.cards().includes(e.id)));
 
 //
 // Telemetry.  The layout is append-only, so the interesting cases are the

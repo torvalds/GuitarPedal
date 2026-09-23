@@ -73,6 +73,24 @@
 #endif
 
 //
+// What an effect's 'HW:' line is asking about.
+//
+// One per capability an effect can declare, named HAVE_<what it said>.
+// EXPRESSION is a pin that either exists on this board or does not, so
+// it is a constant and folds away; an effect asking for it cannot tell
+// that from a capability only a running board could answer.
+//
+// Here rather than in the per-board files because it is derived from
+// something those files already say.  A capability no board can derive
+// would belong there instead, the way MIDI_HW does.
+//
+#ifdef EXP_TIP_GPIO
+#define HAVE_EXPRESSION		1
+#else
+#define HAVE_EXPRESSION		0
+#endif
+
+//
 // The i2c devices that are not the codec.  Both are on i2c1, which only
 // the boards with a screen header ever wired, so both are conditional on
 // its pins existing.  The codec's own address is a board fact and lives

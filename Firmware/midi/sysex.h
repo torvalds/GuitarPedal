@@ -184,6 +184,32 @@ static void sysex_send_identity(void)
 	sysex_write_str("}");
 
 	//
+	// And the answers to what the effects asked for, by the name they
+	// asked under.  The schema says which effect needs which, because
+	// that is a fact about the build; this says what this board turned
+	// out to have, which only running on it can settle.
+	//
+	// Named rather than a list of absent effect ids, so that two
+	// effects wanting the same thing cost one answer - and so the app
+	// can say which piece of hardware is missing rather than only that
+	// something is.
+	//
+	sysex_write_str(",\"have\":{");
+	{
+		const char *sep = "";
+
+#define HW_NAME(text, what) do {					\
+		sysex_write_str(sep);					\
+		sysex_write_str("\"" text "\":");			\
+		sysex_write_str((HAVE_##what) ? "true" : "false");	\
+		sep = ",";						\
+	} while (0);
+		EFFECT_HW_NAMES
+#undef HW_NAME
+	}
+	sysex_write_str("}");
+
+	//
 	// The controls this board has, so the app draws what is there
 	// rather than a list of its own.  Which ones exist depends on the
 	// board, and shortly on what is in the expression jack, so it
@@ -783,6 +809,8 @@ static void sysex_send_state_dump(void)
 		unsigned char *pot_values = effect_pots(e);
 		struct pot_batch batch;
 
+		if (!effect_present(i))
+			continue;
 		if (!effect_always_runs(i) && !effect_is_routed(e))
 			continue;
 
