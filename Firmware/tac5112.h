@@ -33,6 +33,44 @@ static bool __tac5112_array_write(const unsigned char arr[][2], int nr)
 }
 #define tac5112_array_write(arr) __tac5112_array_write(arr, ARRAY_SIZE(arr))
 
+static void tac5112_set_page(int page)
+{
+	static int current = -1;
+	if (page != current) {
+		unsigned char bytes[2] = { 0, page };
+		current = page;
+		tac5112_write(bytes, 2);
+	}
+}
+
+static void bq_convert(float f, unsigned char *buf)
+{
+	int val = lrintf(f * (float)0x7fffffff);
+
+	if (f > 0 && val < 0)
+		val = 0x7fffffff;
+
+	buf[0] = val >> 24;
+	buf[1] = val >> 16;
+	buf[2] = val >> 8;
+	buf[3] = val;
+}
+
+static inline void tac_write_biquad(const struct biquad_coeff *bq, int page, int reg)
+{
+	unsigned char buf[1+5*4];
+
+	buf[0] = reg;
+	bq_convert(bq->b0, buf+1);
+	bq_convert(0.5 * bq->b1, buf+5);
+	bq_convert(bq->b2, buf+9);
+	bq_convert(-0.5 * bq->a1, buf+13);
+	bq_convert(-bq->a2, buf+17);
+
+	tac5112_set_page(page);
+	tac5112_write(buf, sizeof(buf));
+}
+
 // TAC5112 Datasheet 9.2.5:
 // Example Device Register Configuration Script for EVM Setup
 // Stereo differential AC-coupled analog recording and line output playback
