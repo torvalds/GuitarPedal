@@ -103,13 +103,13 @@ def main():
 
     if not missing and not extra:
         #
-        # "headers" rather than "effects" because the two counts differ
-        # and both are right: tone.h is one header and two effects.  The
-        # README says seventeen, meaning routable ones.  Saying "effects"
-        # here would look like one of them was wrong.
+        # Names, because the three counts all differ and all are right:
+        # tone.h is one header and two effects sharing a name,
+        # analog_tone.h is one header and two effects that do not, and
+        # the README's own count leaves out the four that always run.
         #
-        print(f"check-readme: {len(have)} effect headers, "
-              f"all named in the README")
+        print(f"check-readme: {len(have)} effect names, "
+              f"all in the README")
         return 0
 
     print("check-readme: WARNING - the README's effect list has drifted")

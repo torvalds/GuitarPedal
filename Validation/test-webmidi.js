@@ -419,6 +419,14 @@ check('there is more than one way to anchor the chain',
       anchors.length >= 2 && anchors.length + routable.length === schema.length);
 check('an anchor is never steerable',
       anchors.every((e) => !e.steerable));
+//
+// And a routable one may or may not be. Nothing stops an effect from
+// being switched by the chain and having no wet and no dry of its own,
+// which is what the codec's tone stacks are: routed like anything
+// else, and doing their work somewhere the mix cannot reach.
+//
+check('a routable effect may have a mix or not',
+      routable.some((e) => e.steerable) && routable.some((e) => !e.steerable));
 
 const pool = document.getElementById('effect-pool');
 

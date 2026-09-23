@@ -71,6 +71,79 @@ static inline void tac_write_biquad(const struct biquad_coeff *bq, int page, int
 	tac5112_write(buf, sizeof(buf));
 }
 
+//
+// Where a channel's three biquads live.  The allocation is round-robin
+// across the device's four channels, so channel 1 gets filters 1, 5 and
+// 9 - see SLAAEH6, and ADC_DSP_BQ_CFG/DAC_DSP_BQ_CFG in tac5112_init()
+// for the three-per-channel setting that puts them there.
+//
+struct tac_biquad_slot { unsigned char page, reg; };
+
+static const struct tac_biquad_slot tac_adc_biquad[2][3] = {
+	{ { 8, 0x08 }, { 8, 0x58 }, { 9, 0x30 } },	// channel 1
+	{ { 8, 0x1c }, { 8, 0x6c }, { 9, 0x44 } },	// channel 2
+};
+static const struct tac_biquad_slot tac_dac_biquad[2][3] = {
+	{ { 15, 0x08 }, { 15, 0x58 }, { 16, 0x30 } },	// channel 1
+	{ { 15, 0x1c }, { 15, 0x6c }, { 16, 0x44 } },	// channel 2
+};
+
+//
+// Core 0, from the main loop.  Does nothing until something moves.
+//
+// Whether there is a codec to write to is the caller's to know: this is
+// included before hardware.h, which is where the probe lives.
+//
+// No barrier anywhere: prepare() wrote want[] on this core too.
+//
+// Only the sections that moved are written.  With one band under a
+// finger that is one section of three.
+//
+// 'running' is whether the effect should be doing anything, and it
+// picks the target rather than skipping the write: a filter in the
+// codec keeps filtering, so switching it off means writing the band at
+// 0 dB rather than leaving the codec alone.
+//
+static void hwtone_task(struct hwtone *ht, enum hwtone_path path,
+			bool running)
+{
+	const struct tac_biquad_slot (*slot)[3];
+	struct biquad_coeff send[3];
+	bool moved[3];
+	bool any = false;
+	int i, ch;
+
+	for (i = 0; i < 3; i++) {
+		struct hwtone_band want = hwtone_target(ht, i, running);
+		struct hwtone_band *live = &ht->live[i];
+
+		moved[i] = live->lfreq != want.lfreq ||
+			   live->lq != want.lq || live->gain != want.gain;
+		if (moved[i]) {
+			*live = want;
+			any = true;
+		}
+	}
+	if (!any)
+		return;
+
+	//
+	// Designed once and written twice: the two channels are the same
+	// filter and only the pages differ.
+	//
+	for (i = 0; i < 3; i++)
+		hwtone_design(&send[i], i, &ht->live[i]);
+
+	slot = path == HWTONE_PLAYBACK ? tac_dac_biquad : tac_adc_biquad;
+	for (ch = 0; ch < 2; ch++) {
+		for (i = 0; i < 3; i++) {
+			if (moved[i])
+				tac_write_biquad(&send[i], slot[ch][i].page,
+						 slot[ch][i].reg);
+		}
+	}
+}
+
 // TAC5112 Datasheet 9.2.5:
 // Example Device Register Configuration Script for EVM Setup
 // Stereo differential AC-coupled analog recording and line output playback

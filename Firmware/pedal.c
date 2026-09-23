@@ -38,6 +38,7 @@
 #include "Audio/biquad.h"
 #include "Audio/fft.h"
 #include "Audio/analyze.h"
+#include "hwtone.h"
 #include "tac5112.h"
 
 //
@@ -312,6 +313,26 @@ int main()
 		exp_detect_task();
 		exp_tell_accessory();
 #endif
+		//
+		// Bypass and the scene both have to reach these by hand.
+		// The crossfade in single_sample() is upstream of the
+		// playback sections and downstream of the record ones, so
+		// it cannot take either of them out, and do_effect_step()
+		// hands a 'MIX: NONE' effect straight back - so being in
+		// effect_chain[] does not move a coefficient either.
+		//
+		// Asked of effect_present() rather than of the codec
+		// probe directly, so that what the effect declared and
+		// what runs here cannot come apart.
+		//
+		if (effect_present(INTONE_EFFECT_ID))
+			hwtone_task(&intone_state, HWTONE_RECORD,
+				    !disable_all &&
+				    effect_is_routed(&intone_effect));
+		if (effect_present(OUTTONE_EFFECT_ID))
+			hwtone_task(&outtone_state, HWTONE_PLAYBACK,
+				    !disable_all &&
+				    effect_is_routed(&outtone_effect));
 		sysex_send_schema();
 		sysex_send_state_dump();
 		sysex_send_status();
