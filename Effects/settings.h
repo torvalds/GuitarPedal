@@ -6,6 +6,7 @@
 // and not of any one sound.
 //
 // GLOBAL
+// POSITION: BACK
 //
 // The input jack, and what to do about the channel it is not carrying.
 //
@@ -85,9 +86,9 @@ static void settings_init(unsigned char pot[10])
 // There is no audio here, and that is the point.
 //
 // This exists to carry settings, and init() above is the whole of it.
-// It cannot even be routed: 'GLOBAL' above puts it in GLOBAL_EFFECTS,
-// which ROUTABLE_EFFECTS in effect-state.h masks out, so this function
-// is unreachable by construction.  Declaring it 'MIX: NONE' says so in
+// It cannot even be routed: 'GLOBAL' above implies 'ALWAYS', which
+// ROUTABLE_EFFECTS in effect-state.h masks out, so this function is
+// unreachable by construction.  Declaring it 'MIX: NONE' says so in
 // the one place a reader will look, and means nothing generates a mixing
 // wrapper for a thing that makes no sound.
 //

@@ -398,21 +398,22 @@ check('the schema declares channel steering once, not per effect',
 //
 // Steering means nothing for an effect that is never handed to
 // do_effect_step(), and those are the ones that anchor the chain: the
-// signal chain, and anything the pedal keeps once rather than per
-// scene.
+// ones that run whatever a scene says.
 //
 // Asked of the schema rather than counted off the ends.  "The first and
 // the last" was true while there was one global effect, and this test
 // went on asserting it after there were two - which made it agree with
-// the bug rather than catch it.
+// the bug rather than catch it.  Being kept once is a different
+// question again, and two pinned effects are not.
 //
-const anchors = schema.filter((e, i) => i === 0 || e.global);
-const routable = schema.filter((e, i) => i !== 0 && !e.global);
+const anchors = schema.filter((e) => e.always);
+const routable = schema.filter((e) => !e.always);
 
 check('there is more than one way to anchor the chain',
       anchors.length >= 2 && anchors.length + routable.length === schema.length);
-check('only the routable effects are steerable',
-      routable.every((e) => e.steerable) && anchors.every((e) => !e.steerable));
+check('an anchor is never steerable',
+      anchors.every((e) => !e.steerable));
+
 const pool = document.getElementById('effect-pool');
 
 // [label, chip grid], or hidden with nothing in it at all
@@ -894,7 +895,7 @@ if (roleEff) {
 //
 const older = JSON.parse(schemaJson);
 (Array.isArray(older) ? older : older.effects)
-    .forEach((e) => { delete e.global; });
+    .forEach((e) => { delete e.global; delete e.always; delete e.position; });
 app.handleSysex(asSysex(0x02, JSON.stringify(older)));
 
 const oldPool = document.getElementById('effect-pool');

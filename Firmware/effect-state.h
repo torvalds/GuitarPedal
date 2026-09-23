@@ -114,17 +114,21 @@ typedef uint32_t routing_bitmap_t;
 _Static_assert(EFFECT_COUNT <= 32, "routing_bitmap_t is too narrow for this many effects");
 
 //
-// Everything that can go in the chain: all of them but the signal
-// chain, which always runs first and outside it, and anything kept
-// once rather than per scene - something stored once cannot be part of
-// an arrangement that is stored per scene.
+// Everything that can go in the chain: all of them but the ones that
+// always run, which is what 'ALWAYS' in an effect header says.
 //
-// GLOBAL_EFFECTS comes from the headers rather than from a position in
-// this array.  It used to be "the last one", which was true of the only
-// one there was and would have been quietly wrong for the second.
+// Not the pinned ones.  Where an effect is drawn and whether a scene
+// can switch it off are different questions - 'POSITION:' answers the
+// first and does not reach this - so a pinned effect is routed like any
+// other, and being routed is the whole of being on.
+//
+// ALWAYS_EFFECTS comes from the headers rather than from a position in
+// this array.  The signal chain used to be spelled as effect 0 here and
+// the rest as GLOBAL_EFFECTS, which said "kept once" and was read as
+// "not routable" because every effect that was one was also the other.
 //
 #define ALL_EFFECTS ((routing_bitmap_t)((1u << EFFECT_COUNT) - 1))
-#define ROUTABLE_EFFECTS (ALL_EFFECTS & ~((routing_bitmap_t)1 | GLOBAL_EFFECTS))
+#define ROUTABLE_EFFECTS (ALL_EFFECTS & ~(routing_bitmap_t)ALWAYS_EFFECTS)
 
 #define effect_is_global(i) (((GLOBAL_EFFECTS) >> (i)) & 1)
 
@@ -161,28 +165,15 @@ static void routing_end(routing_bitmap_t routable)
 }
 
 //
-// The effects that always run, asked of ROUTABLE_EFFECTS rather than
-// spelled out again.
-//
-// Effect 0 is [CHAIN] - the trim, the gate and the master volume - which
-// runs ahead of the chain rather than in it; the rest are the globals,
-// which are not audio effects at all.  None of them is ever in
-// effect_chain[], so "is it routed" is the wrong question to ask about
-// them and always gets the wrong answer.
-//
-// Derived from the routing bitmap instead of counting from the ends by
-// hand so that the two cannot drift apart: whatever is not routable is
-// what always runs, by construction.  That is not a hypothetical tidiness
-// - this was written when there were exactly two and the second was the
-// last effect, and there are three now.
-//
-// They happen to be exactly the effects declaring 'MIX: NONE' today, so
-// e->no_mix would answer this correctly - by coincidence.  Nothing stops
-// a routable effect from having no mix, and then it would not.
+// The effects a scene never gets to switch off: [CHAIN], which is the
+// trim, the gate and the master volume, and the pseudo-effects, which
+// are not audio at all.  None of them is ever in effect_chain[], so
+// "is it routed" is the wrong question to ask about them and always
+// gets the wrong answer.
 //
 static bool effect_always_runs(unsigned int id)
 {
-	return !(ROUTABLE_EFFECTS & ((routing_bitmap_t)1 << id));
+	return (ALWAYS_EFFECTS >> id) & 1;
 }
 
 //

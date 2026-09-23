@@ -1,5 +1,7 @@
 // NAME: Signal Chain [CHAIN]
-// PRIORITY: 0 (Special: always runs first, and is never in effect_chain)
+// PRIORITY: 0
+// POSITION: FRONT	// the trim and the gate, ahead of everything routed
+// ALWAYS		// and no scene gets to switch the master volume off
 // MIX: NONE		// not an effect - it is the two ends of the chain
 // POT: "Gate" LINEAR(-100.0 -40.0) = -70.0 dB
 // INFO: Everything quieter than this is silenced. Set it just above the

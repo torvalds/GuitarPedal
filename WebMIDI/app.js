@@ -831,6 +831,37 @@ function handleSysex(data) {
                 if (PEDAL_EFFECTS.length && !PEDAL_EFFECTS.some((e) => 'global' in e))
                     PEDAL_EFFECTS[PEDAL_EFFECTS.length - 1].global = true;
 
+                //
+                // Which effects a scene cannot switch off. Absent from
+                // firmware that had no word for it, where the answer
+                // was the same as "not routable": effect 0 and
+                // anything kept once.
+                //
+                if (PEDAL_EFFECTS.length &&
+                    !PEDAL_EFFECTS.some((e) => 'always' in e)) {
+                    PEDAL_EFFECTS.forEach((e, idx) => {
+                        if (idx === 0 || e.global)
+                            e.always = true;
+                    });
+                }
+
+                //
+                // And where the pinned ones sit, which is absent on
+                // every effect that is free to be moved - so the test
+                // is whether any of them carries it at all.  Older
+                // firmware pinned effect 0 to the front and anything
+                // kept once to the back.
+                //
+                if (PEDAL_EFFECTS.length &&
+                    !PEDAL_EFFECTS.some((e) => 'position' in e)) {
+                    PEDAL_EFFECTS.forEach((e, idx) => {
+                        if (idx === 0)
+                            e.position = 'front';
+                        else if (e.global)
+                            e.position = 'back';
+                    });
+                }
+
                 effectIdMap.clear();
                 PEDAL_EFFECTS.forEach((e, idx) => effectIdMap.set(e.id, idx));
                 renderUI();
@@ -1927,25 +1958,56 @@ let effectPool = null;
 // label is what is running.
 //
 //
-// Effects that are not part of the chain and cannot be moved into it:
-// the signal chain, which always runs first and outside it, and
-// anything the pedal keeps once rather than per scene.
+// Effects that are not part of the chain and cannot be moved into it,
+// because the pedal pins them to one end of it.
 //
-// The pedal says which are global.  It used to be "the last one", which
-// was true while there was only one.
+// The pedal says which, and at which end.  It used to be effect 0 at
+// the front and anything kept once at the back - two spellings of
+// pinning, neither of which was the word, and the second of which was
+// really about where the pots are stored.
 //
 function isAnchorEffect(idx) {
     const e = PEDAL_EFFECTS[idx];
 
-    return idx === 0 || (e && e.global);
+    return !!(e && e.always);
+}
+
+//
+// Where an effect is drawn when it *is* in the chain.
+//
+// A pinned effect is routed like any other - the pedal switches it by
+// whether it is in the chain - but it cannot be anywhere in the signal
+// except where it is, so it is drawn at its end and has no drag handle.
+// The codec's tone stacks are in the converter at each end; a card for
+// one in the middle would be a picture of something that cannot happen.
+//
+function pinnedEnd(e) {
+    return e && !e.always ? e.position : undefined;
+}
+
+//
+// The chain in the order it is drawn: pinned to the front, then
+// everything free, then pinned to the back. What order the pedal is
+// told about the pinned ones does not matter, because where they sit
+// in the signal is not ours to set.
+//
+function drawnOrder(ids) {
+    const at = (where) => ids.filter(
+        (id) => pinnedEnd(PEDAL_EFFECTS[effectIdMap.get(id)]) === where);
+
+    return [...at('front'), ...at(undefined), ...at('back')];
 }
 
 //
 // The same question asked for a list rather than for one effect: the
-// anchors that come after the chain, in the order they are drawn.
+// anchors at each end, in the order they are drawn.
 //
+function leadingAnchors() {
+    return PEDAL_EFFECTS.filter((e) => e.always && e.position === 'front');
+}
+
 function trailingAnchors() {
-    return PEDAL_EFFECTS.filter((e, idx) => idx !== 0 && e.global);
+    return PEDAL_EFFECTS.filter((e) => e.always && e.position === 'back');
 }
 
 //
@@ -2364,8 +2426,7 @@ function potTargets() {
         });
     };
 
-    if (PEDAL_EFFECTS.length)
-        add(PEDAL_EFFECTS[0].id);
+    leadingAnchors().forEach((e) => add(e.id));
     currentRouting.forEach(add);
     trailingAnchors().forEach((e) => add(e.id));
 
@@ -2915,11 +2976,10 @@ function applyRouting(routeIds) {
     // The chain bits are by position, so what they mean just changed
     renderAttention();
 
-    // Front anchor, then the chain in order, then the globals
+    // The front anchors, then the chain in order, then the back ones
     const order = [];
-    if (PEDAL_EFFECTS.length)
-        order.push(PEDAL_EFFECTS[0].id);
-    routeIds.forEach(id => order.push(id));
+    leadingAnchors().forEach((e) => order.push(e.id));
+    drawnOrder(routeIds).forEach(id => order.push(id));
     trailingAnchors().forEach((e) => order.push(e.id));
 
     const placed = new Set(order);
@@ -3060,9 +3120,9 @@ function renderUI() {
         title.style.display = 'flex';
         title.style.alignItems = 'center';
 
-        // The anchors are not in the chain, so there is nothing to
-        // reorder them relative to and no handle on them
-        if (!isAnchorEffect(idx)) {
+        // An anchor is not in the chain and a pinned effect cannot be
+        // moved within it, so neither gets a handle or a drag
+        if (!isAnchorEffect(idx) && !pinnedEnd(effect)) {
             title.innerHTML = `<span class="drag-handle">≡</span>
                                <span class="collapse-chevron" style="cursor: pointer; margin-right: 8px; font-size: 0.8em; transition: transform 0.2s;">▼</span>
                                <span>${effect.name}</span>`;

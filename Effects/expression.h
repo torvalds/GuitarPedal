@@ -6,6 +6,7 @@
 // true of the pedal and not of any one sound.
 //
 // GLOBAL
+// POSITION: BACK
 //
 // Whether the pedal is allowed to answer the next question itself.
 //

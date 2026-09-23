@@ -185,8 +185,9 @@ def generate(audio_dir, out_h, out_js, out_md):
         short_name = name_lines[0][1]
         priority = int(priority_match.group(1)) if priority_match else 100
 
-        instances = [{'full_name': disp, 'short_name': short}
-                     for disp, short, _extra in name_lines]
+        instances = [{'full_name': disp, 'short_name': short,
+                      'extra': extra}
+                     for disp, short, extra in name_lines]
 
         #
         # The copies differ in exactly one way, which is that each has
@@ -206,7 +207,73 @@ def generate(audio_dir, out_h, out_js, out_md):
         # Declared rather than positional.  It used to be "the last
         # effect", which was true of the only one there was.
         #
-        is_global = re.search(r'//[ \t]*GLOBAL[ \t]*$', content, re.M) is not None
+        is_global = re.search(r'//[ \t]*GLOBAL[ \t]*(//.*)?$',
+                              content, re.M) is not None
+
+        #
+        # Where the effect sits, when it is not free to be moved.
+        #
+        # A pinned effect is never in effect_chain[] and takes no place
+        # in the routing order: FRONT runs ahead of the chain, BACK
+        # after it.  Free is the default and is what an ordinary effect
+        # wants.
+        #
+        # Independent of GLOBAL, which says where the pots are kept.
+        # The two were one declaration for as long as every effect that
+        # was pinned was also stored once, and 'the signal chain is
+        # effect 0' covered the rest.
+        #
+        def read_position(text, where):
+            found = None
+            m = re.search(r'POSITION:[ \t]*([A-Z \t]*)', text)
+            for word in m.group(1).split() if m else []:
+                if word in ('FRONT', 'BACK'):
+                    found = word
+                else:
+                    sys.exit(f"gen_effects: {filename}: unknown POSITION: "
+                             f"'{word}' in {where} (want FRONT or BACK)")
+            return found
+
+        #
+        # Anchored at the start of a line, so that a POSITION: written on
+        # a NAME: line belongs to that name and does not leak to the file.
+        #
+        position = read_position(
+            "\n".join(re.findall(r'^//[ \t]*POSITION:.*$', content, re.M)),
+            "the file")
+
+        #
+        # Where an effect sits is so far the one thing two copies of one
+        # definition have needed to disagree about, so a NAME: line may
+        # answer it for itself and otherwise takes the file's answer.
+        #
+        for inst in instances:
+            inst['position'] = read_position(
+                inst.pop('extra'), f"'{inst['full_name']}'") or position
+
+        #
+        # Pots kept once cannot be part of an arrangement kept per
+        # scene, so a global has to say which end it sits at.
+        #
+        if is_global and not position:
+            sys.exit(f"gen_effects: {filename}: GLOBAL needs a POSITION: "
+                     f"as well - something stored once cannot be routed")
+
+        #
+        # Whether a scene gets to switch the effect off.
+        #
+        # The third axis, after where the pots are kept and where the
+        # effect sits.  Most effects are switched by being in the chain
+        # or out of it; a pinned one has no place in the chain to be
+        # in, so it needs somewhere else to say - and one or two of them
+        # have nothing to say, because they are not audio.
+        #
+        # GLOBAL implies it: pots kept once for the whole pedal have no
+        # per-scene presence to vary.  [CHAIN] is the one that has to
+        # declare it, being the trim, the gate and the master volume.
+        #
+        always = is_global or re.search(r'//[ \t]*ALWAYS[ \t]*(//.*)?$',
+                                        content, re.M) is not None
 
         def_mix_match = re.search(r'//\s*DEFAULT_MIX:\s*(\S+)', content)
         def_mix = float(def_mix_match.group(1)) if def_mix_match else 1.0
@@ -494,6 +561,8 @@ def generate(audio_dir, out_h, out_js, out_md):
             'graph': graph,
             'roles': roles,
             'is_global': is_global,
+            'position': position,
+            'always': always,
             'full_name': full_name,
             #
             # 'INIT: core0' asks for prepare() instead of init(): the
@@ -636,6 +705,17 @@ def generate(audio_dir, out_h, out_js, out_md):
             # such effect there was.
             #
             "global": e_data['is_global'],
+            #
+            # Absent when the effect is free to be moved, which is most
+            # of them - the schema is big enough already (issue 78).
+            #
+            **({"position": e_data['position'].lower()}
+               if e_data['position'] else {}),
+            #
+            # Absent unless it is true, which is rare: an effect a
+            # scene cannot switch off has no control to draw for it.
+            #
+            **({"always": True} if e_data['always'] else {}),
             "roles": e_data['roles'],
             "graph": [{"type": b['type'], "q": b['q']} if 'q' in b
                       else {"type": b['type'], "qPot": b['q_pot']}
@@ -884,6 +964,17 @@ def generate(audio_dir, out_h, out_js, out_md):
         mask = sum(1 << i for i, e in enumerate(effects_data) if e['is_global'])
         f.write(f"#define GLOBAL_EFFECTS 0x{mask:x}u\n")
         f.write(f"#define GLOBAL_EFFECT_COUNT {bin(mask).count('1')}\n\n")
+
+        #
+        # And which of them run whatever a scene says.  Everything else
+        # is switched by being in the chain or not.
+        #
+        # Where an effect is *drawn* is a separate question and does not
+        # appear here at all: 'POSITION:' goes out in the schema, for
+        # the app, and the pedal has no use for it.
+        #
+        mask = sum(1 << i for i, e in enumerate(effects_data) if e['always'])
+        f.write(f"#define ALWAYS_EFFECTS 0x{mask:x}u\n\n")
 
     # Generate midi_schema.h next to effect_map.h
     schema_path = os.path.join(os.path.dirname(out_h), "midi_schema.h")

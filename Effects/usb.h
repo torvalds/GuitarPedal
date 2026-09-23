@@ -6,6 +6,7 @@
 // is true of the pedal and not of any one sound.
 //
 // GLOBAL
+// POSITION: BACK
 //
 // What leaves for the host.
 //
