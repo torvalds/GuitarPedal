@@ -188,12 +188,15 @@ static const struct tac_biquad_slot tac_dac_biquad[2][3] = {
 // No barrier anywhere: prepare() wrote want[] on this core too.
 //
 // Only the sections that moved are written.  With one band under a
-// finger that is one section of three.
+// finger that is one section of three, which is what makes a step every
+// couple of milliseconds affordable - and taking small steps is the
+// whole point, because the noise scales with how far the poles jump
+// rather than with how often they are written.
 //
 // 'running' is whether the effect should be doing anything, and it
 // picks the target rather than skipping the write: a filter in the
-// codec keeps filtering, so switching it off means writing the band at
-// 0 dB rather than leaving the codec alone.
+// codec keeps filtering, so switching it off is a walk down to 0 dB and
+// takes the same care as any other move.
 //
 static void hwtone_task(struct hwtone *ht, enum hwtone_path path,
 			bool running)
@@ -207,15 +210,26 @@ static void hwtone_task(struct hwtone *ht, enum hwtone_path path,
 	int half_db;
 	int i, ch;
 
-	for (i = 0; i < 3; i++) {
-		struct hwtone_band want = hwtone_target(ht, i, running);
-		struct hwtone_band *live = &ht->live[i];
+	if (time_us_64() < ht->next_us)
+		return;
+	ht->next_us = time_us_64() + HWTONE_STEP_US;
 
-		moved[i] = live->lfreq != want.lfreq ||
-			   live->lq != want.lq || live->gain != want.gain;
-		if (moved[i]) {
-			*live = want;
-			any = true;
+	//
+	// The first set goes in whole.  There is nothing to ease away
+	// from at boot, and easing away from silence would be audible in
+	// its own right.
+	//
+	if (!ht->live_valid) {
+		for (i = 0; i < 3; i++) {
+			ht->live[i] = hwtone_target(ht, i, running);
+			any = moved[i] = true;
+		}
+		ht->live_valid = true;
+	} else {
+		for (i = 0; i < 3; i++) {
+			struct hwtone_band want = hwtone_target(ht, i, running);
+
+			any |= moved[i] = hwtone_approach(&ht->live[i], &want);
 		}
 	}
 	if (!any)

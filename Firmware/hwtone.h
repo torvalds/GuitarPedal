@@ -48,10 +48,28 @@ struct hwtone_band {
 	float gain;			// dB
 };
 
+//
+// How fast a band is allowed to move, and how close counts as arrived.
+//
+// The pot cannot help here.  'Mid Freq' is 120 steps over ten octaves,
+// so it moves in semitones however slowly a knob is turned, and a
+// semitone is a large enough jump in the poles that the state left over
+// from the old filter rings audibly against the new one.  Spacing the
+// writes out does not help - measured, 10ms to 250ms apart is the same
+// noise - because the transients are not overlapping, they are each
+// simply too big.  So the step that matters is the one taken here,
+// between what the codec holds and where the pot has got to.
+//
+#define HWTONE_STEP_US	2000
+#define HWTONE_APPROACH	0.08f
+#define HWTONE_SNAP	0.01f
+
 struct hwtone {
 	struct hwtone_band want[3];	// where the pots say to be
 	struct hwtone_band live[3];	// what the codec is holding
+	bool live_valid;
 	float live_scale[3];		// and what each numerator was divided by
+	unsigned long long next_us;	// when it may next be moved
 };
 
 //
@@ -82,6 +100,40 @@ static inline struct hwtone_band hwtone_target(const struct hwtone *ht,
 	if (!running)
 		b.gain = 0.0f;
 	return b;
+}
+
+//
+// One band, one step closer.  True if anything moved, because a band
+// that did not is a write not worth making - and not making it is what
+// buys the time to take small steps at all.
+//
+// The step is taken here rather than in the coefficients, and that is
+// the whole of why this works.  A straight line between two sets of
+// coefficients is not a path between two filters: from flat, both
+// denominator terms start at zero, so the poles start out at a quarter
+// of the sample rate and walk down, and the band sweeps the spectrum on
+// its way to where it was asked for.  Easing what the pot is marked in
+// leaves the band where it is and only changes its size.
+//
+static inline bool hwtone_approach(struct hwtone_band *c,
+				   const struct hwtone_band *t)
+{
+	bool moved = false;
+
+#define HWTONE_NUDGE(f) do {						\
+		float d = t->f - c->f;					\
+		if (d != 0.0f) {					\
+			c->f = fabsf(d) <= HWTONE_SNAP			\
+			     ? t->f : c->f + d * HWTONE_APPROACH;	\
+			moved = true;					\
+		}							\
+	} while (0)
+
+	HWTONE_NUDGE(lfreq);
+	HWTONE_NUDGE(lq);
+	HWTONE_NUDGE(gain);
+#undef HWTONE_NUDGE
+	return moved;
 }
 
 //
