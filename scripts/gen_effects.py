@@ -53,9 +53,11 @@ def short_hash(*parts):
 def effect_id_hash(short_name, copy):
     """Which effect this is, for matching saved state against.
 
-    The copy index is in there because copies share a short name -
+    The copy index is in there because copies may share a short name -
     tone and tone2 are both [TONE] - and two effects that cannot be told
-    apart would load each other's settings.
+    apart would load each other's settings.  It counts only within one
+    short name, so giving a copy a name of its own does not renumber
+    anything and does not invalidate a saved scene.
     """
     return short_hash(short_name, str(copy))
 
@@ -158,42 +160,43 @@ def generate(audio_dir, out_h, out_js, out_md):
         with open(header_path, 'r') as f:
             content = f.read()
 
-        name_match = re.search(r'//\s*NAME:\s*(.*?)\s*\[(.*?)\]', content)
+        #
+        # One NAME: line per effect the file asks for.
+        #
+        # An effect owns one set of state, so routing the same one twice
+        # would run a filter through its own delay line - which is why
+        # there have to be two of a thing you might want twice.  This
+        # used to be a count, 'COPIES: 2', and before that a symlink:
+        # one file under two names, with the duplication invisible from
+        # inside it.  Saying the names is what the rest of this needs
+        # anyway - a display name and a C prefix each.
+        #
+        name_lines = re.findall(
+            r'^//[ \t]*NAME:[ \t]*(.*?)[ \t]*\[(.*?)\][ \t]*(.*?)[ \t]*$',
+            content, re.M)
         priority_match = re.search(r'//\s*PRIORITY:\s*(\d+)', content)
-        if not name_match:
+        if not name_lines:
             continue
 
         # effect_id will be assigned later based on sorted index
         effect_id = 0
 
-        full_name = name_match.group(1).strip()
-        short_name = name_match.group(2).strip()
+        full_name = name_lines[0][0]
+        short_name = name_lines[0][1]
         priority = int(priority_match.group(1)) if priority_match else 100
 
-        #
-        # 'COPIES: 2' asks for two of this effect rather than one.
-        #
-        # An effect owns one set of state, so routing the same one twice
-        # would run a filter through its own delay line - which is why
-        # there have to be two of a thing you might want twice.  This
-        # used to be done with a symlink, one file under two names, and
-        # the duplication was invisible from inside the file: nothing in
-        # tone.h said there were two of it, and the second name existed
-        # only in a directory listing.
+        instances = [{'full_name': disp, 'short_name': short}
+                     for disp, short, _extra in name_lines]
+
         #
         # The copies differ in exactly one way, which is that each has
         # its own state.  So everything derived from the POT: lines -
         # the constants, the accessors, the Q table - is emitted once and
-        # shared, and only _state, _init and _step are generated per
-        # copy.  That is also the whole remaining job of SELF(): a header
-        # that has copies cannot name those three itself.
+        # shared under the first name's prefix, and only _state, _init
+        # and _step are generated per copy.  That is also the whole
+        # remaining job of SELF(): a header with more than one NAME:
+        # cannot write those three names itself.
         #
-        copies_match = re.search(r'//[ \t]*COPIES:[ \t]*(\d+)', content)
-        copies = int(copies_match.group(1)) if copies_match else 1
-        if copies < 1:
-            raise SystemExit(f"{header_path}: COPIES: {copies} - an effect "
-                             f"that exists no times is a file you can delete")
-
         #
         # Where an effect's pots are kept.  Per scene unless it says
         # otherwise, and saying otherwise also takes it out of the
@@ -487,7 +490,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             # CHAIN.
             #
             'prefix': c_ident(header_path, 'short name', short_name).lower(),
-            'copies': copies,
+            'instances': instances,
             'graph': graph,
             'roles': roles,
             'is_global': is_global,
@@ -513,39 +516,45 @@ def generate(audio_dir, out_h, out_js, out_md):
     sources.sort(key=lambda x: (x['priority'], x['base']))
 
     #
+    # One file becomes one effect, or several.  They land next to each
+    # other because they share every part of the sort key, so the ids
+    # come out in the order the file wrote the names in.
+    #
+    # A name of its own gives a copy a C prefix of its own.  Two lines
+    # that share a short name fall back to numbering from two - 'tone'
+    # and 'tone2', which is what the symlink produced back when the
+    # second copy was a second filename.  Keeping that spelling is not
+    # nostalgia: those names are in the ELF, in every map file, and in
+    # whatever anybody has been reading while debugging.
+    #
+    for src in sources:
+        seen_short = Counter()
+        for inst in src['instances']:
+            e = dict(src)
+            e.update(inst)
+            copy = seen_short[inst['short_name']]
+            seen_short[inst['short_name']] += 1
+            base = c_ident(src['header_path'], 'short name',
+                           inst['short_name']).lower()
+            e['copy'] = copy
+            e['self_name'] = base if not copy else f"{base}{copy + 1}"
+            effects_data.append(e)
+
+    #
     # Every generated name hangs off the prefix, and they all land in one
     # translation unit, so two effects sharing one is a pile of
     # redefinitions rather than a style problem.  Filenames cannot
     # collide - a directory sees to that - but short names are written by
     # hand and nothing else checks them.
     #
-    by_prefix = {}
-    for src in sources:
-        first = by_prefix.setdefault(src['prefix'], src)
-        if first is not src:
-            raise SystemExit(f"{src['header_path']}: short name "
-                             f"'{src['short_name']}' gives the prefix "
-                             f"'{src['prefix']}', which "
+    by_name = {}
+    for e in effects_data:
+        first = by_name.setdefault(e['self_name'], e)
+        if first is not e:
+            raise SystemExit(f"{e['header_path']}: short name "
+                             f"'{e['short_name']}' gives the prefix "
+                             f"'{e['self_name']}', which "
                              f"{first['header_path']} already uses")
-
-    #
-    # One file becomes one effect, or several.  The copies land next to
-    # each other because they share every part of the sort key, so the
-    # ids come out in the order the file asked for them and the first
-    # copy keeps the id the single effect had.
-    #
-    # The first copy is named for the effect and the rest are numbered
-    # from two - 'tone' and 'tone2', which is what the symlink produced
-    # back when the second copy was a second filename.  Keeping that
-    # spelling is not nostalgia: those names are in the ELF, in every map
-    # file, and in whatever anybody has been reading while debugging.
-    #
-    for src in sources:
-        for copy in range(src['copies']):
-            e = dict(src)
-            e['copy'] = copy
-            e['self_name'] = src['prefix'] if not copy else f"{src['prefix']}{copy + 1}"
-            effects_data.append(e)
 
     #
     # A file included twice brings its display name twice with it, and
