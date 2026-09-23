@@ -72,6 +72,97 @@ static inline void tac_write_biquad(const struct biquad_coeff *bq, int page, int
 }
 
 //
+// How far outside 1.31 a section's numerator reaches.
+//
+// A boost always reaches outside it somewhere and a cut never does, but
+// by how much depends on where the band sits rather than on how much
+// boost it is: the same +15dB peak reaches 5.62 at 3kHz and 1.001 at
+// 24Hz, because down there the poles and zeros crowd together near z=1
+// and every coefficient sits near 1 whatever the gain.  The denominator
+// of a stable section always fits once it is halved.
+//
+// This is a bound on storing the coefficients and on nothing else.  It
+// is not the section's gain - scaling to fit does not normalise the
+// response - and it says nothing about what the codec does with a
+// signal between its own sections.
+//
+// Returned as the peak rather than as a scale, because what to do about
+// it is a question about the whole channel and not about one section.
+//
+static float tac_numerator_peak(const struct biquad_coeff *bq)
+{
+	float peak = fabsf(bq->b0);
+
+	if (fabsf(0.5f * bq->b1) > peak)
+		peak = fabsf(0.5f * bq->b1);
+	if (fabsf(bq->b2) > peak)
+		peak = fabsf(bq->b2);
+	return peak;
+}
+
+//
+// A channel's digital volume, in the half-decibel steps the register
+// counts.
+//
+// Two scales, because the two paths do not share one: the ADC's zero is
+// 161 and the DAC's is 201, both in half-decibel steps, and both mute at
+// zero.  The DAC has an A and a B register for each channel and both are
+// written, since on this board the pair is one output.
+//
+// Steps rather than decibels because the caller has already divided the
+// numerators by exactly what this restores, and a float dB here would
+// round a second time and undo that.  Clamping is still possible - three
+// bands at +15 dB ask for more than the DAC's register can count - and
+// then the filter is right and the channel is quiet, which is the way
+// round to be wrong.
+//
+static void tac_set_dvol(enum hwtone_path path, int ch, int half_db)
+{
+	static const unsigned char adc_reg[2] = { 0x52, 0x57 };
+	static const unsigned char dac_reg[2][2] = {
+		{ 0x67, 0x69 }, { 0x6e, 0x70 }
+	};
+	bool dac = path == HWTONE_PLAYBACK;
+	int v = (dac ? 201 : 161) + half_db;
+	unsigned char buf[2];
+
+	if (v < 1)
+		v = 1;
+	if (v > 255)
+		v = 255;
+	buf[1] = v;
+
+	tac5112_set_page(0);
+	if (!dac) {
+		buf[0] = adc_reg[ch];
+		tac5112_write(buf, 2);
+		return;
+	}
+	for (int i = 0; i < 2; i++) {
+		buf[0] = dac_reg[ch][i];
+		tac5112_write(buf, 2);
+	}
+}
+
+//
+// How much makeup to ask for, in the register's own steps.
+//
+// Rounded away from unity rather than to nearest, so the step is never
+// smaller than what the sections gave away: the numerators are then
+// divided by at least as much as they needed, and dividing a numerator
+// further always still fits.
+//
+static int tac_dvol_steps(float carried)
+{
+	float steps = -40.0f * log10f(carried);
+	int whole = (int)steps;
+
+	if (carried >= 1.0f)
+		return 0;
+	return steps > (float)whole ? whole + 1 : whole;
+}
+
+//
 // Where a channel's three biquads live.  The allocation is round-robin
 // across the device's four channels, so channel 1 gets filters 1, 5 and
 // 9 - see SLAAEH6, and ADC_DSP_BQ_CFG/DAC_DSP_BQ_CFG in tac5112_init()
@@ -111,6 +202,9 @@ static void hwtone_task(struct hwtone *ht, enum hwtone_path path,
 	struct biquad_coeff send[3];
 	bool moved[3];
 	bool any = false;
+	float carried = 1.0f;
+	float scale[3];
+	int half_db;
 	int i, ch;
 
 	for (i = 0; i < 3; i++) {
@@ -128,11 +222,63 @@ static void hwtone_task(struct hwtone *ht, enum hwtone_path path,
 		return;
 
 	//
-	// Designed once and written twice: the two channels are the same
-	// filter and only the pages differ.
+	// What each section's numerator is divided by, worked out across
+	// all three before any of them is written.
 	//
-	for (i = 0; i < 3; i++)
+	// Dividing a numerator scales that section's response, so what
+	// decides the channel's level is the product over the three and
+	// not what any one of them does.  Each is divided only as far as
+	// it has to be, and a later section with room to spare is scaled
+	// back up by as much as the earlier ones gave away - so a boost
+	// and a cut that cancel need no makeup at all, where dividing
+	// each section on its own would have taken the boost out and
+	// asked the volume control to put it back.
+	//
+	// 'carried' never rises above 1, so the restoring only ever
+	// happens after the attenuating and no point inside the channel
+	// is hotter than the designed filter would make it.
+	//
+	for (i = 0; i < 3; i++) {
+		float peak;
+
+		scale[i] = 1.0f / carried;
 		hwtone_design(&send[i], i, &ht->live[i]);
+		peak = tac_numerator_peak(&send[i]);
+		if (scale[i] * peak > 1.0f)
+			scale[i] = 1.0f / peak;
+		carried *= scale[i];
+	}
+
+	//
+	// What the volume control will actually give back, which is a
+	// whole number of half-decibel steps and not what the sections
+	// asked for.  Divide by exactly that instead, so the two cancel
+	// rather than nearly cancelling - otherwise the channel sits up to
+	// a quarter of a decibel away from the level it was asked for, and
+	// by a different amount for every setting.
+	//
+	// The difference is one scalar on the whole channel, so it can go
+	// on any one section and the first is as good as any.  It only ever
+	// makes that numerator smaller.
+	//
+	half_db = tac_dvol_steps(carried);
+	scale[0] *= db_to_level(-0.5f * half_db) / carried;
+
+	for (i = 0; i < 3; i++) {
+		send[i].b0 *= scale[i];
+		send[i].b1 *= scale[i];
+		send[i].b2 *= scale[i];
+
+		//
+		// A band that did not move can still need writing, because
+		// what it is divided by depends on what the sections before
+		// it gave away.
+		//
+		if (scale[i] != ht->live_scale[i]) {
+			ht->live_scale[i] = scale[i];
+			moved[i] = true;
+		}
+	}
 
 	slot = path == HWTONE_PLAYBACK ? tac_dac_biquad : tac_adc_biquad;
 	for (ch = 0; ch < 2; ch++) {
@@ -142,6 +288,13 @@ static void hwtone_task(struct hwtone *ht, enum hwtone_path path,
 						 slot[ch][i].reg);
 		}
 	}
+
+	//
+	// And what the sections gave away, for the volume control to put
+	// back.  Never an attenuation: the sections only ever divide.
+	//
+	for (ch = 0; ch < 2; ch++)
+		tac_set_dvol(path, ch, half_db);
 }
 
 // TAC5112 Datasheet 9.2.5:

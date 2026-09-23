@@ -14,6 +14,11 @@
 // coefficients to the codec, and core 1 is left with an activate() that
 // has nothing to pick up.
 //
+// Boosts do not fit the codec's 1.31 coefficients - the largest
+// numerator coefficient of a section is its own boost - so the channel
+// gives the gain away and its digital volume control puts it back.
+// hwtone_task() is where that is worked out.
+//
 
 //
 // Which set of sections a stack drives.  Not a property of the stack:
@@ -46,6 +51,7 @@ struct hwtone_band {
 struct hwtone {
 	struct hwtone_band want[3];	// where the pots say to be
 	struct hwtone_band live[3];	// what the codec is holding
+	float live_scale[3];		// and what each numerator was divided by
 };
 
 //
