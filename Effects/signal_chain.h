@@ -170,24 +170,13 @@ static inline void chain_init(unsigned char pot[10])
 static inline sample_t chain_step(sample_t in)
 {
 	//
-	// Mono in, two channels inside.
+	// Both channels run through here as a pair: trim, the gate and
+	// Volume apply to the two identically, and neither is folded into
+	// the other.  Mono-ising belongs to whatever needs it - a mono
+	// effect's generated wrapper puts its single answer into both
+	// halves - so a stereo input reaches the effects intact and a
+	// chain with nothing routed passes it straight through.
 	//
-	// The jacks on every board built so far are mono - only the left
-	// is wired to the codec - so the right arrives as silence.  That
-	// is fine while the second channel is just the other half of a
-	// stereo pair nobody has, and useless the moment it becomes an
-	// internal path: a split has nothing to preserve if the thing it
-	// preserves is silence.
-	//
-	// So the front of the chain makes the input into both, before
-	// trim and the gate, so they apply to the two identically.
-	//
-	// A board with a stereo input will want to stop doing this, and
-	// the reserved CH_IN value for "both" is where that goes - see
-	// do_effect_step().  Nothing can currently tell the difference,
-	// which is issue 56.
-	//
-	in.right = in.left;
 
 	chain.trim += (chain.trim_target - chain.trim) * CHAIN_SLEW;
 	chain.volume += (chain.volume_target - chain.volume) * CHAIN_SLEW;

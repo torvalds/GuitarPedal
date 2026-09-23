@@ -7,7 +7,7 @@
 # The pedal's output goes into the pedal being measured and its output
 # comes back into the pedal's input.  With 'USB In = Replace' the host's
 # audio is the pedal's input and whatever is in the input jack is
-# ignored, and with 'USB L/R Out = Wet/Dry' one capture carries both
+# ignored, and with 'USB Audio L/R Out = Wet/Dry' one capture carries both
 # sides of that loop in one frame:
 #
 #	left    what the pedal sent to its DAC, and so what the pedal
@@ -81,8 +81,8 @@ def configure(p, leg, t=None, knobs=None, settle=0.3):
     if leg not in ("hardware", "model"):
         raise LoopError("no such leg: %r" % (leg,))
 
-    pedal.set_named(p, "Settings", "USB L/R In", "Replace")
-    pedal.set_named(p, "Settings", "USB L/R Out", "Wet/Dry")
+    pedal.set_named(p, "USB Audio", "L/R In", "Replace")
+    pedal.set_named(p, "USB Audio", "L/R Out", "Wet/Dry")
 
     #
     # The gate off, and the trim and volume where the bench has them.

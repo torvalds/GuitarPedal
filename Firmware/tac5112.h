@@ -82,6 +82,10 @@ static void tac5112_init(void)
 		//
 		{ 0x0a, 0b00000000 },	// GPIO1 disabled
 		{ 0x1a, 0b01100000 },	// I2S protocol with 24-bit word length
+		{ 0x1e, 0b00100000 },	// ADC channel 1 enabled, I2S left slot 0
+		{ 0x1f, 0b00110000 },	// ADC channel 2 enabled, I2S right slot 0
+		{ 0x28, 0b00100000 },	// DAC channel 1 enabled, I2S left slot 0
+		{ 0x29, 0b00110000 },	// DAC channel 2 enabled, I2S right slot 0
 		{ 0x4d, 0b00010100 },	// VREF set to 2.75V and MICBIAS set to VREF/2 with LDO GAIN 1.096 for 1V_{rms} single-ended input
 		//
 		// The input and output halves are the *board's* business

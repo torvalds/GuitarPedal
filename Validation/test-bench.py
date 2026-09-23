@@ -57,7 +57,7 @@ import pots as P
 # order 'bench --list' prints, since it is printing that array.  Asked
 # for in main(), so --help works without a build.
 CHAIN = pedal.CHAIN
-BOOST = TESTTONE = SETTINGS = USB_OUT = None
+BOOST = TESTTONE = USBAUDIO = USB_OUT = None
 CHAIN_GATE = CHAIN_TRIM = CHAIN_VOLUME = None
 TT_LEVEL = TT_FREQ = TT_SHAPE = SHAPE_SINE = None
 BOOST_BOOST = BOOST_LEVEL = BOOST_BASSCUT = BOOST_HIGHCUT = None
@@ -66,21 +66,21 @@ WET = DRY = None
 
 # Pot numbers as the SysEx sees them: 0 is the mix, 1-10 are the effect's.
 def resolve():
-    global BOOST, TESTTONE, SETTINGS, USB_OUT, WET, DRY, SHAPE_SINE
+    global BOOST, TESTTONE, USBAUDIO, USB_OUT, WET, DRY, SHAPE_SINE
     global CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME, TT_LEVEL, TT_FREQ, TT_SHAPE
     global BOOST_BOOST, BOOST_LEVEL, BOOST_BASSCUT, BOOST_HIGHCUT
     BOOST = effectmap.effect("BOOST")
     TESTTONE = effectmap.effect("TESTTONE")
-    SETTINGS = effectmap.settings()
+    USBAUDIO = effectmap.usb()
     CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME = effectmap.pots(
         "Signal Chain", "Gate", "Trim", "Volume")
     TT_LEVEL, TT_FREQ, TT_SHAPE = effectmap.pots(
         "Test Tone", "Level", "Freq", "Shape")
     BOOST_BOOST, BOOST_LEVEL, BOOST_BASSCUT, BOOST_HIGHCUT = effectmap.pots(
         "Boost", "Boost", "Level", "Basscut", "Highcut")
-    USB_OUT = effectmap.pot("Settings", "USB L/R Out")
-    WET = P.to_pot("Settings", "USB L/R Out", "Wet")
-    DRY = P.to_pot("Settings", "USB L/R Out", "Dry")
+    USB_OUT = effectmap.pot("USB Audio", "L/R Out")
+    WET = P.to_pot("USB Audio", "L/R Out", "Wet")
+    DRY = P.to_pot("USB Audio", "L/R Out", "Dry")
     SHAPE_SINE = P.to_pot("Test Tone", "Shape", "Sine")
 
 N = B.WINDOW                    # 12000 samples: 110 whole cycles of 440 Hz
@@ -111,7 +111,7 @@ def configure(p, boost, level):
             (BOOST, BOOST_LEVEL, level),
             (BOOST, BOOST_BASSCUT, 120),
             (BOOST, BOOST_HIGHCUT, 120),
-            (SETTINGS, USB_OUT, WET)):
+            (USBAUDIO, USB_OUT, WET)):
         pedal.set_pot(p, eff, pot, val)
         time.sleep(0.02)
     #
@@ -230,7 +230,7 @@ def main():
     # be playing when the next person picks the pedal up.
     #
     pedal.set_routing(d["port"])
-    pedal.set_pot(d["port"], SETTINGS, USB_OUT, DRY)
+    pedal.set_pot(d["port"], USBAUDIO, USB_OUT, DRY)
 
     if FAILED:
         print("test-bench: FAILED - %s" % ", ".join(FAILED))

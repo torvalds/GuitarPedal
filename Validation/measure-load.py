@@ -51,7 +51,7 @@
 #
 # THE BASELINE IS A SETTING, NOT JUST A BUILD
 #
-# process_output() returns immediately when "USB L/R Out" is None and
+# process_output() returns immediately when "USB Audio L/R Out" is None and
 # otherwise stores a frame into a ring with a release barrier every
 # sample, on the audio core, whether or not a host is listening.
 # Measured, that is +0.306% of the sample period for the default Dry,
@@ -105,7 +105,7 @@ DEFAULT = ["Reverb"]
 
 #
 # The settings pseudo-effect is last in effects[], and its first pot is
-# "USB L/R Out".  Pinned to None for the duration of a run - see the note
+# "USB Audio L/R Out".  Pinned to None for the duration of a run - see the note
 # on the baseline below - and put back by the program change at the end,
 # the same way the routing is.
 #
@@ -114,7 +114,7 @@ DEFAULT = ["Reverb"]
 # silently pins some other effect's pot instead is a baseline that has
 # quietly stopped being the baseline.  See effectmap.settings(), and
 # check-effect-ids.py, which is what finds the ones written down anyway.
-SETTINGS = USB_OUT_POT = USB_OUT_NONE = None
+USBAUDIO = USB_OUT_POT = USB_OUT_NONE = None
 STEP_PCT = 100.0 / 16383   # what one telemetry step is worth, 14-bit
 COARSE = 128               # ...and how many of them the old 7-bit step was
 
@@ -225,7 +225,7 @@ def reboot(d):
 
 
 def one_pass(p, ids, n=6, pots=()):
-    pedal.set_pot(p, SETTINGS, USB_OUT_POT, USB_OUT_NONE)
+    pedal.set_pot(p, USBAUDIO, USB_OUT_POT, USB_OUT_NONE)
     pedal.set_routing(p)
     time.sleep(SETTLE)
     empty = sample_loads(p, n)
@@ -281,10 +281,10 @@ def main():
     #
     print("%s on %s, %s" % (d["label"], p, pedal.use_map(d)))
 
-    global SETTINGS, USB_OUT_POT, USB_OUT_NONE
-    SETTINGS = effectmap.settings()
-    USB_OUT_POT = effectmap.pot("Settings", "USB L/R Out")
-    USB_OUT_NONE = P.to_pot("Settings", "USB L/R Out", "None")
+    global USBAUDIO, USB_OUT_POT, USB_OUT_NONE
+    USBAUDIO = effectmap.usb()
+    USB_OUT_POT = effectmap.pot("USB Audio", "L/R Out")
+    USB_OUT_NONE = P.to_pot("USB Audio", "L/R Out", "None")
     names = dict((i, n) for i, n, _short in effectmap.names())
     #
     # An effect on the command line is a name, and stays a number only
@@ -296,7 +296,7 @@ def main():
     label = " + ".join(names.get(i, "effect %d" % i) for i in ids)
 
     print("%s, %d boot(s)" % (label, boots))
-    print("USB L/R Out pinned to None; the scene goes back at the end\n")
+    print("USB Audio L/R Out pinned to None; the scene goes back at the end\n")
     print("  boot   empty (noisy)     routed          routed load")
 
     routed_all = []

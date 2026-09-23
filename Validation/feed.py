@@ -2,7 +2,7 @@
 #
 # Play a recording into the pedal's USB audio input, on a loop.
 #
-# The pedal is a USB audio device in both directions and its 'USB L/R In'
+# The pedal is a USB audio device in both directions and its 'L/R In'
 # setting decides what happens to what arrives: Pre-FX adds it to the
 # analog input ahead of the signal chain, which is the one that makes the
 # board process a recording as though it had been played into the jack.
@@ -105,6 +105,7 @@ def player(card, blob, repeats):
     One invocation rather than one per repeat: aplay reopens the device
     between runs, and that is a gap and a click at every wrap.
     """
+    audio.unity_gain(card)
     p = subprocess.Popen(
         ["aplay", "-D", f"hw:{card},0", "-f", "S32_LE", "-c", "2",
          "-r", str(RATE), "-t", "raw", "-q", "-"],
@@ -221,6 +222,7 @@ def verify(args, card, p, dry):
     short, name, over = under_test(args)
     eff = effectmap.effect(short)
     settings = effectmap.settings()
+    usbaudio = effectmap.usb()
 
     #
     # Put both effects where the bench starts from, pot by pot, and only
@@ -237,6 +239,11 @@ def verify(args, card, p, dry):
         """(pot, raw) for one Settings pot, both by name."""
         return (effectmap.pot("Settings", label),
                 P.to_pot("Settings", label, value))
+
+    def usb_setting(label, value):
+        """The same, for a USB Audio pot."""
+        return (effectmap.pot("USB Audio", label),
+                P.to_pot("USB Audio", label, value))
 
     def pots_of(effect_id, effect_name, override=()):
         order = P.labels(effect_name)
@@ -258,8 +265,8 @@ def verify(args, card, p, dry):
     #
     pedal.send_many(
         p,
-        (0x03, settings, *setting("USB L/R In", "Replace")),
-        (0x03, settings, *setting("USB L/R Out", "Wet")),
+        (0x03, usbaudio, *usb_setting("L/R In", "Replace")),
+        (0x03, usbaudio, *usb_setting("L/R Out", "Wet")),
         *pots_of(pedal.CHAIN, "Signal Chain", {"Gate": 0}),
         (0x08, eff),                            # routing: the one effect
         (0x03, eff, 0, 120),                    # mix, fully wet
@@ -509,8 +516,8 @@ def main():
         return 0
 
     if not args.no_set:
-        pedal.set_named(port, "Settings", "USB L/R In", "Pre-FX")
-        print("USB L/R In set to Pre-FX - it adds to the jack rather than "
+        pedal.set_named(port, "USB Audio", "L/R In", "Pre-FX")
+        print("USB Audio L/R In set to Pre-FX - it adds to the jack rather than "
               "replacing it, so unplug\n"
               "  anything you are not playing along with.  --verify uses "
               "Replace instead.")

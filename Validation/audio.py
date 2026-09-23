@@ -114,6 +114,36 @@ def find_card(match=""):
     return cards[0][0] if cards else None
 
 
+#
+# The two USB feature units, and the word each one's switch takes.
+#
+UNITY_CONTROLS = (("PCM", "unmute"), ("Mic", "cap"))
+
+
+def unity_gain(card):
+    """Both USB feature units to 0 dB and unmuted.  True if it all took."""
+    ok = True
+    for name, on in UNITY_CONTROLS:
+        for index in (0, 1):
+            r = subprocess.run(
+                ["amixer", "-c", str(card), "-q", "sset",
+                 "%s,%d" % (name, index), "100%", on],
+                capture_output=True, text=True)
+            ok = ok and r.returncode == 0
+    return ok
+
+
+def gain_is_unity(card):
+    """True when every control on this card reads 0.00dB."""
+    try:
+        out = subprocess.run(["amixer", "-c", str(card)], check=True,
+                             capture_output=True, text=True).stdout
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return None
+    levels = re.findall(r"\[(-?\d+\.\d+)dB\]", out)
+    return bool(levels) and all(float(v) == 0.0 for v in levels)
+
+
 def discard(card):
     """One capture thrown away, to get the stale one out of the way.
 
@@ -161,6 +191,8 @@ def capture(seconds, card, during=None, warm=True):
     The warm-up is deliberately outside that clock: it is the host being
     got ready, not the pedal being measured.
     """
+    unity_gain(card)
+
     if warm:
         discard(card)
 

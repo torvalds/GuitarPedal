@@ -96,6 +96,7 @@ class Ids:
         with effectmap.using(schema):
             self.tone = effectmap.effect("TESTTONE")
             self.settings = effectmap.settings()
+            self.usb = effectmap.usb()
             self.gate, self.trim, self.volume = effectmap.pots(
                 "Signal Chain", "Gate", "Trim", "Volume")
             self.level, self.freq, self.shape = effectmap.pots(
@@ -105,7 +106,7 @@ class Ids:
             self.freq_440 = P.to_pot("Test Tone", "Freq", 440.0)
             self.topology_freq = P.to_pot("Test Tone", "Freq", TOPOLOGY_FREQ_HZ)
             self.wet, self.dry, self.wetdry = (
-                P.to_pot("Settings", "USB L/R Out", v)
+                P.to_pot("USB Audio", "L/R Out", v)
                 for v in ("Wet", "Dry", "Wet/Dry"))
             self.ch_in, self.ch_out, self.merge = effectmap.pots(
                 "Test Tone", "In", "Out", "Merge")
@@ -161,8 +162,8 @@ def usb_mode(d, mode):
     if _usb_mode.get(d["serial"]) == mode:
         return
     with effectmap.using(d["ids"].schema):
-        pedal.set_pot(d["port"], d["ids"].settings,
-                      effectmap.pot("Settings", "USB L/R Out"), mode)
+        pedal.set_pot(d["port"], d["ids"].usb,
+                      effectmap.pot("USB Audio", "L/R Out"), mode)
     _usb_mode[d["serial"]] = mode
     time.sleep(0.4)
 

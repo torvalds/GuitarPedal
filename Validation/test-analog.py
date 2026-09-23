@@ -62,25 +62,25 @@ TONE_HZ = 440.0
 
 # Asked for in main(), so --help works without a build.
 CHAIN = pedal.CHAIN
-TESTTONE = SETTINGS = USB_OUT = None
+TESTTONE = USBAUDIO = USB_OUT = None
 CHAIN_GATE = CHAIN_TRIM = CHAIN_VOLUME = None
 TT_LEVEL = TT_FREQ = TT_SHAPE = None
 WET_DRY = DRY = SHAPE_SINE = SHAPE_NOISE = None
 
 
 def resolve():
-    global TESTTONE, SETTINGS, USB_OUT, WET_DRY, DRY
+    global TESTTONE, USBAUDIO, USB_OUT, WET_DRY, DRY
     global CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME, TT_LEVEL, TT_FREQ, TT_SHAPE
     global SHAPE_SINE, SHAPE_NOISE
     TESTTONE = effectmap.effect("TESTTONE")
-    SETTINGS = effectmap.settings()
+    USBAUDIO = effectmap.usb()
     CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME = effectmap.pots(
         "Signal Chain", "Gate", "Trim", "Volume")
     TT_LEVEL, TT_FREQ, TT_SHAPE = effectmap.pots(
         "Test Tone", "Level", "Freq", "Shape")
-    USB_OUT = effectmap.pot("Settings", "USB L/R Out")
-    WET_DRY = P.to_pot("Settings", "USB L/R Out", "Wet/Dry")
-    DRY = P.to_pot("Settings", "USB L/R Out", "Dry")
+    USB_OUT = effectmap.pot("USB Audio", "L/R Out")
+    WET_DRY = P.to_pot("USB Audio", "L/R Out", "Wet/Dry")
+    DRY = P.to_pot("USB Audio", "L/R Out", "Dry")
     SHAPE_SINE = P.to_pot("Test Tone", "Shape", "Sine")
     SHAPE_NOISE = P.to_pot("Test Tone", "Shape", "Noise")
 
@@ -95,7 +95,7 @@ def configure(p, level, shape):
                           (TESTTONE, TT_FREQ, 60),      # 440 Hz exactly
                           (TESTTONE, TT_SHAPE, shape),
                           (TESTTONE, TT_LEVEL, level),
-                          (SETTINGS, USB_OUT, WET_DRY)):
+                          (USBAUDIO, USB_OUT, WET_DRY)):
         pedal.set_pot(p, eff, pot, val)
         time.sleep(0.02)
     time.sleep(1.0)
@@ -242,7 +242,7 @@ def main():
     # Leave it quiet, and the USB output on Dry.
     #
     pedal.set_routing(p)
-    pedal.set_pot(p, SETTINGS, USB_OUT, DRY)
+    pedal.set_pot(p, USBAUDIO, USB_OUT, DRY)
     print()
     print("test-analog: reported, not judged - see the header of test-loop.py")
     print("             on why a bench measurement is a hypothesis until the")

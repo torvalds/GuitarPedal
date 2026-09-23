@@ -118,6 +118,12 @@ static inline sample_t process_input(raw_sample_t sample)
 		.right = sample.right * SAMPLE_TO_FLOAT_MULTIPLIER
 	};
 
+	// A TS plug leaves the ring at sleeve, so the jack delivers one
+	// signal.  Folding it here covers bypass too, which takes the
+	// input untouched.
+	if (settings.analog_in == ANALOG_IN_MONO)
+		val.right = val.left;
+
 	if (tuner_mode) {
 		analyze_process_sample(val);
 		val.left = val.right = 0.0;
@@ -154,7 +160,7 @@ static inline raw_sample_t process_output(sample_t out, raw_sample_t dry)
 	};
 	raw_sample_t usb;
 
-	switch (settings.usb_output) {
+	switch (usbaudio.output) {
 	case LR_None: return wet;
 	case LR_Wet: usb = wet; break;
 	case LR_Dry: usb = dry; break;

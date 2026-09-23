@@ -57,6 +57,7 @@
 #include "midi/uart.h"
 #include "tusb.h"
 #include "usb-audio.h"
+#include "usb-volume.h"
 #include "switch.h"
 
 static int tuner_mode = 0;
