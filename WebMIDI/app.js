@@ -3873,8 +3873,15 @@ function renderUI() {
             controls.className = 'effect-controls';
         }
 
-        // Generate Mix slider - the anchors have no wet and no dry
-        if (!isAnchorEffect(idx)) {
+        //
+        // Generate Mix slider, for an effect that has one.  'steerable'
+        // is the pedal saying 'MIX: NONE', which is the same fact as
+        // "no wet and no dry" and the same one that decides whether it
+        // gets the steering pots below.  Asking whether this was an
+        // anchor answered it only while every effect without a mix was
+        // one.
+        //
+        if (effect.steerable) {
             const mixPotDef = { name: 'Mix', curve: 'LINEAR', min: 0, max: 100, unit: '%' };
             const mixDiv = document.createElement('div');
             mixDiv.className = 'pot-control mix-pot-control';

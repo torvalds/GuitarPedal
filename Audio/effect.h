@@ -387,6 +387,15 @@ enum ch_out {
 //
 static inline sample_t do_effect_step(struct effect *effect, sample_t val)
 {
+	//
+	// An effect declaring 'MIX: NONE' is routed like any other - it
+	// is switched by being in the chain and drawn from it - but it
+	// has no wet and no dry and does its work somewhere the chain
+	// cannot see, so there is no step() to call here.
+	//
+	if (effect->no_mix)
+		return val;
+
 	if (effect->mix != effect->target) {
 		int dir = effect->mix < effect->target ? +1 : -1;
 		effect->mix += dir;
