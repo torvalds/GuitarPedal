@@ -470,6 +470,22 @@ input[type=range]:focus::-moz-range-thumb {
   touch-action: pan-y;
 }
 
+/*
+ * Reset belongs to the contents, so it is only offered with them.
+ *
+ * It throws away every value the effect has, and on a closed card that
+ * is a destructive action one tap away from something you have not
+ * looked at - you lose a setting without ever having seen it. Closed by
+ * default made that the ordinary case rather than a corner of it.
+ *
+ * Eject stays. Removing an effect discards its values too, but that is
+ * a thing you do *to the chain*, and the chain is what a closed list is
+ * for; reset is editing, and editing happens with the card open.
+ */
+.effect-card.collapsed .effect-reset-btn {
+  display: none;
+}
+
 /* Only while it springs back - a card following a finger must not lag */
 .effect-card.swipe-return {
   transition: transform 180ms ease-out, opacity 180ms ease-out;

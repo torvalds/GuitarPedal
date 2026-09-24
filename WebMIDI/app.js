@@ -3250,6 +3250,13 @@ function setCardCollapsed(card, collapsed) {
 
     if (controls) controls.style.display = collapsed ? 'none' : '';
     if (chevron) chevron.style.transform = collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+
+    //
+    // Named on the card so the stylesheet can answer questions about a
+    // closed one - the reset button is the reason, see .effect-card
+    // .effect-reset-btn.
+    //
+    card.classList.toggle('collapsed', collapsed);
 }
 
 //
