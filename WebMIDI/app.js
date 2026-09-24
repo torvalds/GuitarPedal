@@ -3645,15 +3645,20 @@ function renderUI() {
         // while the card is in the list - so the row does not grow a
         // second line to hold it.  Hidden everywhere else.
         //
-        const backBtn = document.createElement('button');
-        backBtn.className = 'action-btn effect-back-btn';
-        backBtn.title = 'Back to the chain';
-        backBtn.textContent = '\u2190';
-        backBtn.addEventListener('click', (e) => {
+        // The same cross every other panel in the app closes with, and
+        // at the left end, away from the reset button: those two are
+        // the only things on this row and one of them throws the
+        // effect's settings away.
+        //
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'action-btn effect-close-btn';
+        closeBtn.title = 'Close this effect';
+        closeBtn.textContent = '\u2715';
+        closeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             closeFullScreen(false);
         });
-        title.insertBefore(backBtn, title.firstChild);
+        title.insertBefore(closeBtn, title.firstChild);
 
         const enableGroup = document.createElement('div');
         enableGroup.className = 'control-group enable-group';

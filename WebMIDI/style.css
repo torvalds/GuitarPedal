@@ -722,13 +722,42 @@ body.fullscreen-open {
   display: none;
 }
 
-.effect-back-btn {
+.effect-close-btn {
   display: none;
 }
 
-#fullscreen-panel .effect-back-btn {
+/*
+ * Bigger than the round buttons beside it.  It is the way out of a view
+ * that covers everything else, so it is the one control on the screen
+ * that has to be found without looking for it - a thin glyph at 32px
+ * was neither.
+ */
+#fullscreen-panel .effect-close-btn {
   display: flex;
-  margin-right: 8px;
+  width: 44px;
+  height: 44px;
+  margin-right: 10px;
+  font-size: 1.4rem;
+  color: var(--text-main);
+}
+
+/*
+ * One pot to a row, at the full width of the screen.
+ *
+ * The two-column grid is there to save height in a list, and in here
+ * there is no list to save it for - so spend it on width, which is the
+ * axis a slider is read and set along.  A pot has 121 settings (0 to
+ * 120), and this roughly doubles the travel they are spread over: 160
+ * px of track becomes about 340, which is the difference between a
+ * thumb aiming at one setting and aiming at three.
+ *
+ * The effect may then be taller than the screen and scroll, and that is
+ * fine here in a way it is not in the list: the effects that scroll are
+ * the ones with no curve in them, and a curve is the only thing that
+ * wanted the vertical axis for itself.
+ */
+#fullscreen-panel .effect-controls {
+  grid-template-columns: 1fr;
 }
 
 /*
