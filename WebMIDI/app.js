@@ -4489,7 +4489,18 @@ function renderUI() {
         // one, where a card is one of several on screen at once and its
         // contents are the point.
         //
-        setCardCollapsed(card, !uiPref('open.' + effect.id, !compactUi));
+        // And closed either way for a global, whose pots are kept once
+        // for the whole pedal rather than per scene - the input jack,
+        // the MIDI channel, what goes out over USB.  That is setup, not
+        // a sound: you do it once and then you are done with it, so it
+        // costs room every time for something looked at almost never.
+        // Signal Chain is not one of these, and stays open where there
+        // is room: it is the trim, the gate and the master volume, and
+        // it carries the meters.
+        //
+        setCardCollapsed(card,
+                         !uiPref('open.' + effect.id,
+                                 !compactUi && !effect.global));
 
         effectCards.set(effect.id, card);
         effectsContainer.appendChild(card);
