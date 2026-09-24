@@ -813,7 +813,7 @@ body.fullscreen-open {
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
-  z-index: 900;
+  z-index: 1600;
   transition: opacity 0.3s;
 }
 
@@ -945,9 +945,15 @@ body.fullscreen-open {
  * sized to its content instead of anchored to the bottom edge, because
  * nothing about it is phone-shaped any more.
  */
+/*
+ * The stacking order, top down: a dialog, the backdrop that dims what
+ * is behind it, then the views that take the whole screen - the tuner
+ * and the full screen effect - then the page.  A dialog opened over a
+ * view has to be on top of it, and used not to be.
+ */
 .dialog-panel {
   position: fixed;
-  z-index: 1000;
+  z-index: 1700;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -1149,7 +1155,8 @@ body.fullscreen-open {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   background: var(--bg-color);
-  z-index: 2000;
+  /* A view, like the full screen effect - so under a dialog */
+  z-index: 1550;
   display: flex;
   flex-direction: column;
   padding: 30px;
