@@ -668,7 +668,7 @@ static void set_led(unsigned int ms, bool on, uint8_t global, unsigned int chain
 		LEDS[1].r = settings.led_intense;
 
 	if (on) {
-		LEDS[2].g = settings.led_pwm;
+		LEDS[0].g = settings.led_pwm;
 
 		// Noise gate active?
 		if (global & STATUS_FRONT_ATTN)
@@ -676,11 +676,11 @@ static void set_led(unsigned int ms, bool on, uint8_t global, unsigned int chain
 
 		// Other effects active?
 		if (chain)
-			LEDS[0].g = settings.led_pwm;
+			LEDS[1].g = settings.led_intense;
 	}
 
 	if (attention_preview)
-		LEDS[2].g = settings.led_intense;
+		LEDS[0].g = settings.led_intense;
 
 	// Three LEDs or five - the five-LED version
 	// will just show a mirror image
