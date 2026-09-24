@@ -1873,7 +1873,7 @@ function cardDragStart(card, grip, e) {
 
     // The header carries controls of its own. A press that lands on one
     // of those belongs to it, not to a drag.
-    if (e.target.closest('.collapse-chevron, .action-btn'))
+    if (e.target.closest('.action-btn'))
         return;
 
     //
@@ -1992,7 +1992,7 @@ function cardSwipeStart(card, e) {
         return;
 
     // The handle reorders, and the header's own controls keep their presses
-    if (e.target.closest('.drag-handle, .collapse-chevron, .action-btn'))
+    if (e.target.closest('.drag-handle, .action-btn'))
         return;
 
     cardSwipe = { card, id: e.pointerId,
@@ -2081,6 +2081,72 @@ function cardSwipeEnd(e) {
     // it can travel. Which is the intent: it went the way it was thrown.
     //
     unrouteEffect(parseInt(swipe.card.dataset.effectId));
+}
+
+//
+// The whole header opens the effect, not just the chevron.
+//
+// A row whose only job is to be opened should be the thing you open,
+// and a 0.8em glyph is not a target: people reach for the name, having
+// been told twice that the triangle is the control.
+//
+// The chevron stays as a picture of which way the row is facing, and
+// stops being a button.
+//
+// A tap is a press that never travelled, which is exactly what tells it
+// apart from the two other gestures this same header carries: a drag
+// reorders and a sideways flick removes, and both move.  So the three
+// cannot be confused, and the test is the same sticky flag the pots use
+// - see openOnTap(), which this is the card-sized version of.
+//
+// Both pointer types wait for the release.  A mouse has no scroll to be
+// confused with, but it does have the drag, and acting on the press
+// would open a card on the way to picking it up.
+//
+const CARD_TAP_SLOP = 10;
+
+function openCardOnTap(card, header, open) {
+    let tap = null;
+
+    const end = (e) => {
+        const was = tap;
+
+        tap = null;
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', end);
+        window.removeEventListener('pointercancel', cancel);
+        if (was && !was.moved && e.pointerId === was.id)
+            open();
+    };
+    const cancel = () => {
+        tap = null;
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', end);
+        window.removeEventListener('pointercancel', cancel);
+    };
+    const move = (e) => {
+        if (tap && e.pointerId === tap.id &&
+            (Math.abs(e.clientX - tap.x) > CARD_TAP_SLOP ||
+             Math.abs(e.clientY - tap.y) > CARD_TAP_SLOP))
+            tap.moved = true;
+    };
+
+    header.addEventListener('pointerdown', (e) => {
+        if (!e.isPrimary)
+            return;
+
+        // A press on the drag handle starts a reorder and a press on
+        // a round button is that button's; neither may also count as
+        // a tap and open the card
+        if (e.target.closest('.drag-handle, .action-btn'))
+            return;
+
+        cancel();
+        tap = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', end);
+        window.addEventListener('pointercancel', cancel);
+    });
 }
 
 //
@@ -3461,7 +3527,7 @@ function renderUI() {
         // moved within it, so neither gets a handle or a drag
         if (!isAnchorEffect(idx) && !pinnedEnd(effect)) {
             title.innerHTML = `<span class="drag-handle">≡</span>
-                               <span class="collapse-chevron" style="cursor: pointer; margin-right: 8px; font-size: 0.8em; transition: transform 0.2s;">▼</span>
+                               <span class="collapse-chevron">▼</span>
                                <span>${effect.name}</span>`;
 
             // A drag starts on the header and nowhere else, so there is
@@ -3479,7 +3545,7 @@ function renderUI() {
             header.addEventListener('pointerdown',
                                     (e) => cardSwipeStart(card, e));
         } else {
-            title.innerHTML = `<span class="collapse-chevron" style="cursor: pointer; margin-right: 8px; font-size: 0.8em; transition: transform 0.2s;">▼</span>
+            title.innerHTML = `<span class="collapse-chevron">▼</span>
                                <span>${effect.name}</span>`;
         }
 
@@ -3513,17 +3579,13 @@ function renderUI() {
         header.appendChild(enableGroup);
         card.appendChild(header);
 
-        const chevron = title.querySelector('.collapse-chevron');
-        if (chevron) {
-            chevron.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const controls = card.querySelector('.effect-controls');
-                const collapse = controls.style.display !== 'none';
+        openCardOnTap(card, header, () => {
+            const controls = card.querySelector('.effect-controls');
+            const collapse = controls.style.display !== 'none';
 
-                setCardCollapsed(card, collapse);
-                setUiPref('open.' + effect.id, !collapse);
-            });
-        }
+            setCardCollapsed(card, collapse);
+            setUiPref('open.' + effect.id, !collapse);
+        });
 
         // The Reset button resets all pots. We should also reset the Mix pot!
         const resetBtn = enableGroup.querySelector('.effect-reset-btn');

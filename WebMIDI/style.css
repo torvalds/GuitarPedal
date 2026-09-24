@@ -531,6 +531,29 @@ textarea {
   color: var(--accent);
 }
 
+/*
+ * The row is what you open, so the row is what looks openable - the
+ * name most of all, because that is what a thumb goes for whatever the
+ * chevron is doing.  A header that can also be dragged keeps 'grab',
+ * which is the more specific thing it does.
+ */
+.effect-header {
+  cursor: pointer;
+}
+
+/*
+ * A picture of which way the row is facing, and no longer a button.
+ * It was one because collapsing was an afterthought on a card that was
+ * always open, and at 0.8em it was a target nobody could hit - see
+ * openCardOnTap().
+ */
+.collapse-chevron {
+  margin-right: 8px;
+  font-size: 0.8em;
+  transition: transform 0.2s;
+  pointer-events: none;
+}
+
 .effect-controls {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
