@@ -627,6 +627,15 @@ function updateMidiState() {
 
     if (foundInput && foundOutput) {
         if (midiInput !== foundInput) {
+            //
+            // Let go of the old one first.  A port keeps delivering to
+            // whatever handler it was given, so switching away from a
+            // pedal left it talking: with two plugged in, both fed the
+            // app, and the one you had just stopped listening to could
+            // still answer over the one you picked.
+            //
+            if (midiInput)
+                midiInput.onmidimessage = null;
             midiInput = foundInput;
             midiInput.onmidimessage = handleMidiMessage;
         }
