@@ -758,6 +758,20 @@ body.fullscreen-open {
  */
 #fullscreen-panel .effect-controls {
   grid-template-columns: 1fr;
+  /*
+   * Kept clear of the screen edges, which belong to the system.
+   *
+   * A slider at its maximum - Mix, nearly always - put its thumb in the
+   * few tens of pixels an Android back-swipe starts from, so reaching
+   * for it navigated back instead: the effect closed under your finger.
+   * The gesture belongs to the system, so the answer is not to put
+   * anything grabbable where it starts.
+   *
+   * It costs travel, and there is travel to spend: 340px of track
+   * becomes 300, which is still more than twice what the same slider
+   * gets in the list.
+   */
+  padding: 0 20px;
 }
 
 /*
