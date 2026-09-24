@@ -325,14 +325,18 @@ int main()
 		// probe directly, so that what the effect declared and
 		// what runs here cannot come apart.
 		//
-		if (effect_present(INTONE_EFFECT_ID))
-			hwtone_task(&intone_state, HWTONE_RECORD,
-				    !disable_all &&
-				    effect_is_routed(&intone_effect));
-		if (effect_present(OUTTONE_EFFECT_ID))
-			hwtone_task(&outtone_state, HWTONE_PLAYBACK,
-				    !disable_all &&
-				    effect_is_routed(&outtone_effect));
+		// Both stacks into one burst, which goes out once here.
+		if (tac_dma_ready()) {
+			if (effect_present(INTONE_EFFECT_ID))
+				hwtone_task(&intone_state, HWTONE_RECORD,
+					    !disable_all &&
+					    effect_is_routed(&intone_effect));
+			if (effect_present(OUTTONE_EFFECT_ID))
+				hwtone_task(&outtone_state, HWTONE_PLAYBACK,
+					    !disable_all &&
+					    effect_is_routed(&outtone_effect));
+			tac_dma_flush();
+		}
 		sysex_send_schema();
 		sysex_send_state_dump();
 		sysex_send_status();

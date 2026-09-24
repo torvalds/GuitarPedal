@@ -33,13 +33,108 @@ static bool __tac5112_array_write(const unsigned char arr[][2], int nr)
 }
 #define tac5112_array_write(arr) __tac5112_array_write(arr, ARRAY_SIZE(arr))
 
-static void tac5112_set_page(int page)
+//
+// Everything the codec is told while audio runs, handed to DMA.
+//
+// Taken from sh1106_task(), as it was before it was removed in "Bulk
+// remove stale SH1106 and TAC5112 code": one channel paced by the i2c
+// transmit DREQ, a buffer
+// of 16-bit words where the low byte is the data and bit 9 is the STOP
+// that ends a transaction, and the target address written to the
+// peripheral by hand because nothing goes through the SDK's blocking
+// call any more.  The screen wanted it for the same reason this does.
+//
+// **This works because the codec is alone on i2c0.**  The address is in
+// the peripheral's TAR register and not in the buffer, so every byte
+// DMA hands over goes to the same device.  A second address on this bus
+// means changing TAR between transactions, which means waiting for the
+// FIFO to drain first - serialising exactly what this exists to avoid.
+// Nothing else is programmed over i2c at all right now, so this is a
+// constraint on whatever gets added rather than a description of
+// anything that is here.
+//
+// The size is one pass of hwtone_task() for each stack: six biquads at
+// 21 bytes, four page selects, and a volume write per channel, twice
+// over, which is 288.
+//
+#define TAC_DMA_ENTRIES 320
+
+static int tac_dma_chan = -1;
+static unsigned tac_dma_used;
+static uint16_t tac_dma_buf[TAC_DMA_ENTRIES];
+static int tac_page = -1;
+
+static void tac_dma_setup(void)
 {
-	static int current = -1;
-	if (page != current) {
+	const struct {
+		i2c_inst_t *i2c;
+		unsigned char addr;
+	} tac = { TAC5112_I2C };
+	i2c_hw_t *hw = i2c_get_hw(tac.i2c);
+	dma_channel_config c;
+
+	tac_dma_chan = dma_claim_unused_channel(true);
+	c = dma_channel_get_default_config(tac_dma_chan);
+	channel_config_set_transfer_data_size(&c, DMA_SIZE_16);
+	channel_config_set_dreq(&c, i2c_get_dreq(tac.i2c, true));
+	dma_channel_configure(tac_dma_chan, &c, &hw->data_cmd, tac_dma_buf,
+			      0, false);	// count is per transfer
+
+	hw->enable = 0;
+	hw->tar = tac.addr;
+	hw->enable = 1;
+}
+
+//
+// Whether a burst can be built right now, which is also the whole of
+// the pacing: nothing new is worked out until the last lot has gone.
+//
+// Both stacks share the bus, so they share one burst - whoever has
+// something to say adds it and it goes out once, at the end.  A channel
+// each would interleave two transactions into one FIFO.
+//
+static bool tac_dma_ready(void)
+{
+	if (tac_dma_chan >= 0 && dma_channel_is_busy(tac_dma_chan))
+		return false;
+	tac_dma_used = 0;
+	return true;
+}
+
+//
+// The channel is claimed the first time there is something to send, so
+// a board whose codec is strapped never takes one.
+//
+static void tac_dma_flush(void)
+{
+	if (!tac_dma_used)
+		return;
+	if (tac_dma_chan < 0)
+		tac_dma_setup();
+	dma_channel_transfer_from_buffer_now(tac_dma_chan, tac_dma_buf,
+					     tac_dma_used);
+}
+
+//
+// One transaction.  The STOP on the last byte is what ends it; the
+// hardware puts a START and the address in front of whatever is written
+// next.
+//
+static void tac_queue(const unsigned char *data, int len)
+{
+	if (tac_dma_used + len > TAC_DMA_ENTRIES)
+		return;
+	for (int i = 0; i < len; i++)
+		tac_dma_buf[tac_dma_used++] = data[i];
+	tac_dma_buf[tac_dma_used - 1] |= I2C_IC_DATA_CMD_STOP_BITS;
+}
+
+static void tac_queue_page(int page)
+{
+	if (page != tac_page) {
 		unsigned char bytes[2] = { 0, page };
-		current = page;
-		tac5112_write(bytes, 2);
+		tac_page = page;
+		tac_queue(bytes, 2);
 	}
 }
 
@@ -56,7 +151,7 @@ static void bq_convert(float f, unsigned char *buf)
 	buf[3] = val;
 }
 
-static inline void tac_write_biquad(const struct biquad_coeff *bq, int page, int reg)
+static inline void tac_queue_biquad(const struct biquad_coeff *bq, int page, int reg)
 {
 	unsigned char buf[1+5*4];
 
@@ -67,8 +162,8 @@ static inline void tac_write_biquad(const struct biquad_coeff *bq, int page, int
 	bq_convert(-0.5 * bq->a1, buf+13);
 	bq_convert(-bq->a2, buf+17);
 
-	tac5112_set_page(page);
-	tac5112_write(buf, sizeof(buf));
+	tac_queue_page(page);
+	tac_queue(buf, sizeof(buf));
 }
 
 //
@@ -116,7 +211,7 @@ static float tac_numerator_peak(const struct biquad_coeff *bq)
 // then the filter is right and the channel is quiet, which is the way
 // round to be wrong.
 //
-static void tac_set_dvol(enum hwtone_path path, int ch, int half_db)
+static void tac_queue_dvol(enum hwtone_path path, int ch, int half_db)
 {
 	static const unsigned char adc_reg[2] = { 0x52, 0x57 };
 	static const unsigned char dac_reg[2][2] = {
@@ -132,15 +227,15 @@ static void tac_set_dvol(enum hwtone_path path, int ch, int half_db)
 		v = 255;
 	buf[1] = v;
 
-	tac5112_set_page(0);
+	tac_queue_page(0);
 	if (!dac) {
 		buf[0] = adc_reg[ch];
-		tac5112_write(buf, 2);
+		tac_queue(buf, 2);
 		return;
 	}
 	for (int i = 0; i < 2; i++) {
 		buf[0] = dac_reg[ch][i];
-		tac5112_write(buf, 2);
+		tac_queue(buf, 2);
 	}
 }
 
@@ -298,7 +393,7 @@ static void hwtone_task(struct hwtone *ht, enum hwtone_path path,
 	for (ch = 0; ch < 2; ch++) {
 		for (i = 0; i < 3; i++) {
 			if (moved[i])
-				tac_write_biquad(&send[i], slot[ch][i].page,
+				tac_queue_biquad(&send[i], slot[ch][i].page,
 						 slot[ch][i].reg);
 		}
 	}
@@ -308,7 +403,7 @@ static void hwtone_task(struct hwtone *ht, enum hwtone_path path,
 	// back.  Never an attenuation: the sections only ever divide.
 	//
 	for (ch = 0; ch < 2; ch++)
-		tac_set_dvol(path, ch, half_db);
+		tac_queue_dvol(path, ch, half_db);
 }
 
 // TAC5112 Datasheet 9.2.5:
