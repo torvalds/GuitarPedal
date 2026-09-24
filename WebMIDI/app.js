@@ -517,6 +517,13 @@ async function initMidi() {
             console.error(insecure
                 ? "Web MIDI needs a secure origin: https, localhost, or this origin allowed in chrome://flags/#unsafely-treat-insecure-origin-as-secure"
                 : "Web MIDI API is not supported in this browser.");
+            //
+            // Still draw the menu.  There is no MIDI here and there is
+            // still a test pedal, and this is exactly the case it is
+            // for - a phone on a plain http address, or a browser that
+            // has never had Web MIDI at all.
+            //
+            populateMidiSelects();
             return;
         }
         midiAccess = await navigator.requestMIDIAccess({ sysex: true });
@@ -533,6 +540,8 @@ async function initMidi() {
         } else {
             appTitleEl.textContent = "MIDI Error: " + (err.name || "Unknown");
         }
+        // Refused, or broken, and the demo pedal is still there
+        populateMidiSelects();
     }
 }
 
@@ -553,6 +562,125 @@ let selectedOutputId = null;
 //
 const PEDAL_PORT = /(^|\s)Pedal(\s|$)/;
 
+//
+// A simulated pedal, selected by hand and never auto-detected.
+//
+// It answers with the schema this copy of the app was built from, which
+// is the one firmware of the same commit would have sent - so the
+// effects, their pots, their curves and their defaults are the real
+// ones.  The app can be shown to somebody, or learnt, before any
+// hardware arrives.
+//
+// Never auto-detected and never the fallback.  If this answered when
+// nothing was plugged in, "why is my pedal not responding" would have
+// been answered wrongly, by us, on screen.  So it is picked from the
+// menu on purpose, and the title says what it is for while it is.
+//
+// What it has not got is a signal. No telemetry, no meters, no sound,
+// and a knob moved here moves nothing.
+//
+const DEMO_PEDAL_ID = 'demo-pedal';
+
+const demoPedal = {
+    id: DEMO_PEDAL_ID,
+    name: 'Demo Pedal (no hardware)',
+    onmidimessage: null,
+
+    //
+    // JSON that is pure ASCII, which is what the wire can carry.
+    //
+    // SysEx data bytes are seven bits, so the firmware writes anything
+    // outside ASCII as the six characters of a '\uXXXX' escape and lets
+    // the far end put it back together - 'Footswitch \u2014 press' is
+    // six ASCII characters where the dash is, not one em dash.
+    // JSON.stringify() does not do that for you: it emits the character
+    // itself, which would arrive here with its high bits cut off and
+    // make a control character in the middle of a string, so the whole
+    // reply would fail to parse and be dropped without a word.
+    //
+    wireJson(obj) {
+        return JSON.stringify(obj).replace(
+            /[\u0080-\uffff]/g,
+            (ch) => '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0'));
+    },
+
+    reply(cmd, text) {
+        const body = [];
+
+        for (const ch of text) {
+            const code = ch.charCodeAt(0);
+
+            // Masking to 7 bits is the silent corruption wireJson()
+            // exists to avoid, so refuse instead
+            if (code > 0x7f) {
+                console.error('[WebMIDI] demo pedal: non-ASCII in a reply',
+                              ch, text);
+                return;
+            }
+            body.push(code);
+        }
+
+        //
+        // Next turn rather than now.  Answering inside the call that
+        // sent to us would re-enter the app underneath whatever asked,
+        // which a real port never does.
+        //
+        const msg = new Uint8Array([0xF0, 0x7D, cmd, ...body, 0xF7]);
+
+        setTimeout(() => {
+            if (this.onmidimessage)
+                this.onmidimessage({ data: msg });
+        }, 0);
+    },
+
+    //
+    // The same fields a real board's reply has, filled in for a
+    // 'minimal' board - one of the hardware variants, the one with two
+    // footswitch actions and no MIDI jacks.
+    //
+    // What the board *has* is read off each effect's 'needs' field in
+    // the schema rather than listed here.  An effect that starts asking
+    // for something new would otherwise be hidden here silently, and
+    // this is the one place with no board to plug in and find out.
+    //
+    identity() {
+        const have = {};
+
+        for (const effect of (BUILT_IN_SCHEMA.effects || []))
+            if (effect.needs)
+                have[effect.needs] = true;
+
+        return {
+            build: 'the schema this app was built with',
+            scenes: 8,
+            midi_hw: false,
+            found: { i2c_codec: true, codec: 'none - demo pedal',
+                     legacy_screen: false },
+            have,
+            controls: [
+                { id: 3, name: 'Footswitch \u2014 press', kind: 'click' },
+                { id: 4, name: 'Footswitch \u2014 hold', kind: 'click' },
+            ],
+        };
+    },
+
+    //
+    // Only the two questions worth answering.  A parameter, a routing
+    // order or a scene save has arrived somewhere that cannot make a
+    // sound, and the app has already drawn the change, so these are
+    // accepted and dropped.
+    //
+    send(bytes) {
+        if (bytes[0] !== 0xF0 || bytes[1] !== 0x7D)
+            return;
+
+        if (bytes[2] === SYSEX_CMD.REQ_SCHEMA)
+            this.reply(SYSEX_CMD.RES_SCHEMA, this.wireJson(BUILT_IN_SCHEMA));
+        else if (bytes[2] === SYSEX_CMD.IDENTITY)
+            this.reply(SYSEX_CMD.IDENTITY, this.wireJson(this.identity()));
+    },
+};
+
 function populateMidiSelects() {
     const inSelect = document.getElementById('midi-input-select');
     const outSelect = document.getElementById('midi-output-select');
@@ -560,6 +688,27 @@ function populateMidiSelects() {
 
     inSelect.innerHTML = '<option value="">-- Auto-detect pedal --</option>';
     outSelect.innerHTML = '<option value="">-- Auto-detect pedal --</option>';
+
+    // In both lists, because it is both ends of the conversation
+    for (const sel of [inSelect, outSelect]) {
+        const opt = document.createElement('option');
+
+        opt.value = DEMO_PEDAL_ID;
+        opt.textContent = demoPedal.name;
+        if ((sel === inSelect ? selectedInputId : selectedOutputId)
+            === DEMO_PEDAL_ID)
+            opt.selected = true;
+        sel.appendChild(opt);
+    }
+
+    //
+    // Real ports only if there are any.  Web MIDI can be missing
+    // outright - an insecure origin removes the API rather than failing
+    // the call - and the menu still has to open, because the entry
+    // above is the one that works without it.
+    //
+    if (!midiAccess)
+        return;
 
     for (let input of midiAccess.inputs.values()) {
         const opt = document.createElement('option');
@@ -588,16 +737,29 @@ function updateMidiState() {
     // by far the most of what lands in the console - so it is debug
     // output, which browsers hide until asked.
     //
-    console.debug("[WebMIDI] updating MIDI state. Available inputs:");
-    for (let input of midiAccess.inputs.values()) {
-        console.debug("  Input:", input.name, input.id);
-    }
-    console.debug("[WebMIDI] Available outputs:");
-    for (let output of midiAccess.outputs.values()) {
-        console.debug("  Output:", output.name, output.id);
+    if (midiAccess) {
+        console.debug("[WebMIDI] updating MIDI state. Available inputs:");
+        for (let input of midiAccess.inputs.values()) {
+            console.debug("  Input:", input.name, input.id);
+        }
+        console.debug("[WebMIDI] Available outputs:");
+        for (let output of midiAccess.outputs.values()) {
+            console.debug("  Output:", output.name, output.id);
+        }
     }
 
-    if (selectedInputId && midiAccess.inputs.has(selectedInputId)) {
+    //
+    // Asked for by name, so nothing goes looking.  Both ends at once:
+    // registered as both, or sends would go nowhere and nothing would
+    // answer.
+    //
+    if (selectedInputId === DEMO_PEDAL_ID ||
+        selectedOutputId === DEMO_PEDAL_ID) {
+        selectedInputId = selectedOutputId = DEMO_PEDAL_ID;
+        foundInput = foundOutput = demoPedal;
+    } else if (!midiAccess) {
+        /* nothing to look through */
+    } else if (selectedInputId && midiAccess.inputs.has(selectedInputId)) {
         foundInput = midiAccess.inputs.get(selectedInputId);
     } else {
         for (let input of midiAccess.inputs.values()) {
@@ -610,7 +772,11 @@ function updateMidiState() {
         if (foundInput && !selectedInputId) selectedInputId = foundInput.id;
     }
 
-    if (selectedOutputId && midiAccess.outputs.has(selectedOutputId)) {
+    if (foundOutput) {
+        /* the demo pedal above answered for both ends */
+    } else if (!midiAccess) {
+        /* the demo pedal above answered for both ends */
+    } else if (selectedOutputId && midiAccess.outputs.has(selectedOutputId)) {
         foundOutput = midiAccess.outputs.get(selectedOutputId);
     } else {
         for (let output of midiAccess.outputs.values()) {
@@ -631,8 +797,9 @@ function updateMidiState() {
             // Let go of the old one first.  A port keeps delivering to
             // whatever handler it was given, so switching away from a
             // pedal left it talking: with two plugged in, both fed the
-            // app, and the one you had just stopped listening to could
-            // still answer over the one you picked.
+            // app, and picking the demo pedal with a real one attached
+            // showed the real one's answers under the demo pedal's
+            // name.
             //
             if (midiInput)
                 midiInput.onmidimessage = null;
@@ -640,8 +807,19 @@ function updateMidiState() {
             midiInput.onmidimessage = handleMidiMessage;
         }
         midiOutput = foundOutput;
-        appTitleEl.className = "title-connected";
-        appTitleEl.textContent = `Connected: ${foundInput.name}`;
+
+        //
+        // Its own word, not "Connected": nothing is, and the one thing
+        // this must never do is let somebody believe their pedal is
+        // talking when it is not plugged in.
+        //
+        if (foundInput === demoPedal) {
+            appTitleEl.className = "title-demo-pedal";
+            appTitleEl.textContent = "Demo Pedal - no hardware, nothing to hear";
+        } else {
+            appTitleEl.className = "title-connected";
+            appTitleEl.textContent = `Connected: ${foundInput.name}`;
+        }
 
         // Who is this, then what does it have
         sendSysex([SYSEX_CMD.IDENTITY]);

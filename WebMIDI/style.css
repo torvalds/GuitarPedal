@@ -147,6 +147,16 @@ h2 {
   color: var(--text-muted);
 }
 
+/*
+ * Shown in neither of the other two colours.  Connected is a claim
+ * about hardware and disconnected is a state to get out of; the demo
+ * pedal is neither, and must not be mistaken for either at a glance.
+ */
+.title-demo-pedal {
+  color: var(--accent);
+  font-style: italic;
+}
+
 body.local-dev .title-connected {
   color: var(--dev);
 }
