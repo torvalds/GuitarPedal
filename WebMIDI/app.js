@@ -1360,6 +1360,47 @@ function setUiPref(key, val) {
 }
 
 //
+// Which of the two interfaces to use: 'compact' is the touch one and
+// the other is the desktop one the app was built with.
+//
+// The question is what is pointing at the screen rather than how big it
+// is.  A tablet has a desktop's room and a thumb's precision, and width
+// cannot tell those apart; 'pointer' asks about the primary pointer,
+// which is the one actually in use.  'any-pointer' would call a laptop
+// with a touchscreen a phone.
+//
+// Modal, never fitted.  The mode decides what a gesture does, and it
+// does the same thing whatever happens to be on screen - a behaviour
+// that changes once the chain gets long enough not to fit is one nobody
+// can learn.
+//
+// '?ui=touch' or '?ui=mouse' overrides it and is remembered, which is
+// both how a tablet gets the other one and how this gets tried from a
+// desktop.  Remembered rather than per-visit for the same reason as
+// above: a mode that forgets is adaptive after all.
+//
+function pickCompactUi() {
+    const asked = new URLSearchParams(location.search).get('ui');
+
+    if (asked === 'touch' || asked === 'mouse')
+        setUiPref('mode.compact', asked === 'touch');
+
+    //
+    // uiPref() hands back the fallback when nothing is stored, so the
+    // detected answer is the default and a stored one wins over it
+    // without having to tell "unset" from "false".
+    //
+    const coarse = window.matchMedia &&
+                   window.matchMedia('(pointer: coarse)').matches;
+
+    return uiPref('mode.compact', !!coarse);
+}
+
+const compactUi = pickCompactUi();
+
+document.body.classList.toggle('compact-ui', compactUi);
+
+//
 // Whether the EQ's bands are held in order while you drag them.
 //
 // On by default, and a switch rather than a decision made for you: the
