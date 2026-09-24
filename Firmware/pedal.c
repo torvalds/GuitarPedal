@@ -238,7 +238,7 @@ int main()
 #ifdef EXP_TIP_GPIO
 	exp_init();
 #endif
-	init_i2c_bus(i2c0, 400, I2C0_SDA, I2C0_SCL);
+	init_i2c_bus(i2c0, 1000, I2C0_SDA, I2C0_SCL);
 #ifdef I2C1_SDA
 	init_i2c_bus(i2c1, 400, I2C1_SDA, I2C1_SCL);
 #endif
