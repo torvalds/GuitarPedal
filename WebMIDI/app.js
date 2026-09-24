@@ -3296,13 +3296,15 @@ function renderUI() {
         header.appendChild(enableGroup);
         card.appendChild(header);
 
-        // Collapse toggle
         const chevron = title.querySelector('.collapse-chevron');
         if (chevron) {
             chevron.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const controls = card.querySelector('.effect-controls');
-                setCardCollapsed(card, controls.style.display !== 'none');
+                const collapse = controls.style.display !== 'none';
+
+                setCardCollapsed(card, collapse);
+                setUiPref('open.' + effect.id, !collapse);
             });
         }
 
@@ -4283,6 +4285,24 @@ function renderUI() {
             meters.textContent = 'no readings yet';
             card.appendChild(meters);
         }
+
+        //
+        // Open or closed, as it was left - and only here, because
+        // setCardCollapsed() hides '.effect-controls' and the controls
+        // are built further up this same pass.  Asking any earlier finds
+        // nothing to hide and quietly does nothing.
+        //
+        // Remembered per effect, because this list is rebuilt from
+        // scratch on every schema and on every change to what the board
+        // can run, so a list collapsed by hand sprang open again at the
+        // next one.  That is most of why collapsing was not worth the
+        // bother.
+        //
+        // Closed by default in the compact interface, open in the roomy
+        // one, where a card is one of several on screen at once and its
+        // contents are the point.
+        //
+        setCardCollapsed(card, !uiPref('open.' + effect.id, !compactUi));
 
         effectCards.set(effect.id, card);
         effectsContainer.appendChild(card);
