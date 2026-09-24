@@ -430,17 +430,6 @@ input[type=range]:focus::-moz-range-thumb {
   align-items: center;
   border-bottom: 1px solid var(--panel-border);
   padding-bottom: 10px;
-  /*
-   * The header is what you grab to reorder, so none of it may behave
-   * like text.  A long press on text is the browser's select gesture,
-   * which on a phone is what you got instead of a drag, and iOS puts
-   * its callout menu up on top of that.  This has to be here rather
-   * than switched on once a drag is recognised: by then the selection
-   * has already started.
-   */
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
 }
 
 /*
@@ -484,6 +473,32 @@ input[type=range]:focus::-moz-range-thumb {
  */
 .effect-card.collapsed .effect-reset-btn {
   display: none;
+}
+
+/*
+ * None of this is text to select, because none of it is text to read:
+ * it is names on controls.
+ *
+ * A long press on text is the browser's select gesture, and on Android
+ * it brings up a selection bar and an offer to look the word up - over
+ * an app where a long press is only ever a slightly slow tap.  Tapping
+ * a pot called "Sat" asked Google what SAT means instead of saying what
+ * the control does, and a drag on a card header selected the name.
+ *
+ */
+body {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* The two places with something worth copying, and anything typed into */
+.menu-hint,
+#identity-info,
+input,
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 /* Only while it springs back - a card following a finger must not lag */
