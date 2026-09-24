@@ -94,6 +94,12 @@
       <!-- Effect cards populated dynamically -->
     </main>
 
+    <!-- One effect with the list out of the way, which on a phone is
+         where editing happens: the card is moved in here rather than
+         rebuilt, because the pedal addresses the controls inside it and
+         ccToElementMap points straight at them.  See openFullScreen(). -->
+    <div id="fullscreen-panel" class="hidden"></div>
+
     <!-- Panel Backdrop -->
     <div id="panel-backdrop" class="hidden"></div>
 

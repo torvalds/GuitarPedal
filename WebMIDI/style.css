@@ -673,6 +673,73 @@ textarea {
 
 
 
+/*
+ * One effect, with the list out of the way.
+ *
+ * The compact layout has no expanding in place: a row is closed or it
+ * is the whole screen.  Expanding in place would leave the effect in a
+ * scrolling column, and a curve cannot live in one - it needs both axes
+ * for dragging its control points and takes them with touch-action:
+ * none, so it swallows scroll gestures, and it is half the height of an
+ * open card.
+ *
+ * The card itself is moved in here and moved back out, rather than
+ * drawn again: the pedal addresses the controls inside it by id.
+ */
+#fullscreen-panel {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 1500;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--bg-color);
+  padding: 10px;
+}
+
+#fullscreen-panel.hidden {
+  display: none;
+}
+
+/* The list must not scroll behind it */
+body.fullscreen-open {
+  overflow: hidden;
+}
+
+#fullscreen-panel .effect-card {
+  margin: 0;
+}
+
+/*
+ * The header keeps the name and the reset, and loses everything that
+ * was about the card's place in a list it is no longer in: the drag
+ * handle, the chevron, and the eject that would delete the thing being
+ * looked at.  Back takes the handle's slot, so the row does not grow a
+ * second line to hold it.
+ */
+#fullscreen-panel .drag-handle,
+#fullscreen-panel .collapse-chevron,
+#fullscreen-panel .effect-unroute-btn {
+  display: none;
+}
+
+.effect-back-btn {
+  display: none;
+}
+
+#fullscreen-panel .effect-back-btn {
+  display: flex;
+  margin-right: 8px;
+}
+
+/*
+ * Room for the curve, which is the whole reason a graphed effect wants
+ * this screen.  It is the control, not an illustration of one.
+ */
+#fullscreen-panel .eq-curve-wrapper {
+  height: 46vh;
+  margin-top: 10px;
+}
+
 /* Bottom Panels (Generic) */
 /* Panel Backdrop */
 #panel-backdrop {

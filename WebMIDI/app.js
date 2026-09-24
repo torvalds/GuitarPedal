@@ -2084,6 +2084,84 @@ function cardSwipeEnd(e) {
 }
 
 //
+// One effect, with the list out of the way.
+//
+// The compact layout has no expanding in place: a row is closed or it
+// is the whole screen.  Expanding in place would leave the effect in a
+// scrolling column, and a scrolling column is what a curve cannot live
+// in.  '.eq-canvas' needs both axes for dragging its control points and
+// takes them with touch-action: none, so it swallows scroll gestures -
+// and it is half the height of an open card.
+//
+// The card is *moved* here and moved back, never rebuilt.  The pedal
+// addresses the controls inside it by id and ccToElementMap points
+// straight at them, which is the same reason an unrouted card is parked
+// rather than removed.
+//
+let fullScreenId = null;
+
+function fullScreenPanel() {
+    return document.getElementById('fullscreen-panel');
+}
+
+function openFullScreen(id) {
+    const panel = fullScreenPanel();
+    const card = effectCards.get(id);
+
+    if (!panel || !card || fullScreenId !== null)
+        return;
+
+    fullScreenId = id;
+    setCardCollapsed(card, false);
+    panel.appendChild(card);
+    panel.classList.remove('hidden');
+    document.body.classList.add('fullscreen-open');
+    panel.scrollTop = 0;
+
+    //
+    // A history entry, so Back closes this instead of leaving the app.
+    //
+    history.pushState({ fullScreen: id }, '');
+
+    // It was measured while parked or while narrower, and neither is
+    // the size it is now
+    const effect = PEDAL_EFFECTS[effectIdMap.get(id)];
+    if (effect && effect.redrawCurve)
+        effect.redrawCurve();
+}
+
+//
+// 'fromPop' is whether the browser has already taken the history entry
+// back off, which is the one thing this cannot ask.
+//
+function closeFullScreen(fromPop) {
+    const panel = fullScreenPanel();
+    const id = fullScreenId;
+
+    if (id === null)
+        return;
+
+    fullScreenId = null;
+    panel.classList.add('hidden');
+    document.body.classList.remove('fullscreen-open');
+
+    const card = effectCards.get(id);
+    if (card) {
+        setCardCollapsed(card, true);
+        effectsContainer.appendChild(card);
+    }
+
+    // Back where it belongs in the chain, rather than at the end of the
+    // container where the line above put it
+    applyRouting(currentRouting);
+
+    if (!fromPop && history.state && history.state.fullScreen === id)
+        history.back();
+}
+
+window.addEventListener('popstate', () => closeFullScreen(true));
+
+//
 // The whole header opens the effect, not just the chevron.
 //
 // A row whose only job is to be opened should be the thing you open,
@@ -3380,6 +3458,12 @@ function applyRouting(routeIds) {
         const card = effectCards.get(id);
         if (!card)
             return;
+
+        // The one being looked at is not in the list to be sorted into
+        // it.  closeFullScreen() puts it back and runs this again.
+        if (id === fullScreenId)
+            return;
+
         effectsContainer.appendChild(card);
         card.classList.remove('parked');
 
@@ -3403,7 +3487,7 @@ function applyRouting(routeIds) {
 
     PEDAL_EFFECTS.forEach(effect => {
         const card = effectCards.get(effect.id);
-        if (!card || placed.has(effect.id))
+        if (!card || placed.has(effect.id) || effect.id === fullScreenId)
             return;
         effectsContainer.appendChild(card);
         card.classList.add('parked');
@@ -3491,6 +3575,13 @@ style.textContent = `
 document.head.appendChild(style);
 
 function renderUI() {
+    //
+    // Whatever is open belongs to the cards about to be thrown away, so
+    // it goes first.  Otherwise the panel keeps a card nothing points at
+    // any more while a fresh one is built behind it.
+    //
+    closeFullScreen(false);
+
     effectsContainer.innerHTML = '';
     effectCards.clear();
 
@@ -3549,6 +3640,21 @@ function renderUI() {
                                <span>${effect.name}</span>`;
         }
 
+        //
+        // Out of the full-screen view, in the slot the drag handle has
+        // while the card is in the list - so the row does not grow a
+        // second line to hold it.  Hidden everywhere else.
+        //
+        const backBtn = document.createElement('button');
+        backBtn.className = 'action-btn effect-back-btn';
+        backBtn.title = 'Back to the chain';
+        backBtn.textContent = '\u2190';
+        backBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeFullScreen(false);
+        });
+        title.insertBefore(backBtn, title.firstChild);
+
         const enableGroup = document.createElement('div');
         enableGroup.className = 'control-group enable-group';
         enableGroup.innerHTML = `
@@ -3579,7 +3685,21 @@ function renderUI() {
         header.appendChild(enableGroup);
         card.appendChild(header);
 
+        //
+        // What opening means, which is the one thing the two interfaces
+        // disagree about.  Compact has nowhere to expand into, so the
+        // row leads to a screen; roomy has room, so it expands where it
+        // sits and you keep the rest of the chain around it.
+        //
         openCardOnTap(card, header, () => {
+            if (fullScreenId !== null)
+                return;                 // Back is how you leave it
+
+            if (compactUi) {
+                openFullScreen(effect.id);
+                return;
+            }
+
             const controls = card.querySelector('.effect-controls');
             const collapse = controls.style.display !== 'none';
 
