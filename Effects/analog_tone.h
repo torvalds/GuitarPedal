@@ -6,12 +6,29 @@
 // HW: CODEC_DSP
 // GRAPH: LOSHELF:0.707 PEAKING:MID_Q HISHELF:0.707
 // POT: "Bass Freq" EXPONENTIAL(20.0 20480.0) = 200.0 Hz
+// INFO: Where the Bass control starts working: everything below this
+// INFO: is lifted or cut, so raising it takes in more of the sound.
 // POT: "Bass" LINEAR(-15.0 15.0) = 0.0 dB
+// INFO: How much low end, in dB. Centre is flat: left thins the sound
+// INFO: out, right fills it in.
 // POT: "Mid Freq" EXPONENTIAL(20.0 20480.0) = 800.0 Hz
+// INFO: The middle of the band the Mid control moves. Most of what
+// INFO: makes a guitar sound boxy or nasal is between 400 Hz and
+// INFO: 1 kHz.
 // POT: "Mid" LINEAR(-15.0 15.0) = 0.0 dB
+// INFO: How much of the middle, in dB. Cutting it hollows the sound
+// INFO: out; boosting it pushes a lead forward.
 // POT: "Treble Freq" EXPONENTIAL(20.0 20480.0) = 3000.0 Hz
+// INFO: Where the Treble control starts working: everything above
+// INFO: this is lifted or cut.
 // POT: "Treble" LINEAR(-15.0 15.0) = 0.0 dB
+// INFO: How much top end, in dB. Right adds air and pick attack,
+// INFO: left takes the fizz off a bright amp.
 // POT: "Mid Q" EXPONENTIAL(0.3 4.0) = 0.707
+// INFO: How wide the mid band is. Around 0.7 it covers about two
+// INFO: octaves, which is the broad "more body" a tone control is
+// INFO: for; the narrow end reaches far enough to pull a single
+// INFO: resonance out of a boxy guitar.
 //
 // The same three bands as [TONE], run by the codec's own biquads rather
 // than by us.  Two of them: the converter has three sections per channel

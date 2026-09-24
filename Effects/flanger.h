@@ -1,9 +1,15 @@
 // NAME: Flanger [FLANGER]
 // PRIORITY: 60
 // POT: "Freq" SQUARED(0.0 10.0) = 2.5 Hz
+// INFO: How fast the sweep runs, in cycles per second.
 // POT: "Delay" LINEAR(0.0 4.0) = 2.0 ms
+// INFO: The delay the sweep is centred on. Short is a metallic jet
+// INFO: whoosh, long drifts towards chorus.
 // POT: "Depth" LINEAR(0.0 1.0) = 0.5
+// INFO: How far the delay swings either side of that.
 // POT: "Feedback" LINEAR(0.0 1.0) = 0.5
+// INFO: How much of the output goes back in. More makes it
+// INFO: sharper and more resonant.
 // Flanger effect based on the MIT-licensed DaisySP library by Electrosmith
 // which in turn seems to be based on Soundpipe by Paul Batchelor
 

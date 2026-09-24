@@ -95,8 +95,12 @@
 // each doubles what a 0..120 pot can carry: 0.5% a step.
 //
 // POT: "Heel" LINEAR(0 60) = 0 %
+// INFO: What the treadle reads with your heel down. Raise it to give
+// INFO: the pedal a floor other than nothing at all.
 // NEEDS: ACCESSORY = Expression
 // POT: "Toe" LINEAR(40 100) = 100 %
+// INFO: What the treadle reads with your toe down. Lower it if the last
+// INFO: of the travel has nowhere left to go.
 // NEEDS: ACCESSORY = Expression
 //
 // Which pots the app has to be able to find rather than merely show: one

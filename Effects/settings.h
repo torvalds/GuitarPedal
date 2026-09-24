@@ -30,9 +30,21 @@
 // INFO: side of a headphone jack. Stereo is for a TRS cable or a
 // INFO: splitter, where the right channel is really there.
 // POT: "MIDI Ch" ENUM(Omni Ch1 Ch2 Ch3 Ch4 Ch5 Ch6 Ch7 Ch8 Ch9 Ch10 Ch11 Ch12 Ch13 Ch14 Ch15 Ch16) = Omni
+// INFO: Which MIDI channel the pedal listens on for bypass, the
+// INFO: tuner and scene changes. Omni is all of them. Parameter
+// INFO: edits from this app arrive either way, which is how it can
+// INFO: still fix this when it is wrong.
 // POT: "LED" LINEAR(0 100) = 10 %
+// INFO: How bright the status LED sits normally. Down for a dark
+// INFO: stage, up for daylight.
 // POT: "  ATTN" LINEAR(0 100) = 50 %
+// INFO: How bright the LED goes when something wants you to notice -
+// INFO: clipping, or a compressor working hard. It flashes at this
+// INFO: setting while you move it, because the LED is the only thing
+// INFO: that can show it.
 // POT: "Tuning" ENUM(EADGBE DADGAD BEADGC EADG) = EADGBE
+// INFO: Which strings the tuner names. It still hears any note; this
+// INFO: is what it expects them to be.
 //
 // Which pot the app has to be able to find rather than merely show.  It
 // filters Control Change and Program Change by this, so the app has to

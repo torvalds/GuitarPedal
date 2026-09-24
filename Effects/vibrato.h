@@ -2,7 +2,10 @@
 // PRIORITY: 70
 // MIX: POWER		// a modulated delay - the wet is the dry displaced in time
 // POT: "Rate" FREQUENCY(0.1 8.0) = 2.0 Hz
+// INFO: How fast the pitch wavers, in cycles per second.
 // POT: "Depth" LINEAR(0.0 5.0) = 0.875 ms
+// INFO: How far the pitch moves, set as the delay it swings
+// INFO: through. Small is a shimmer; large is seasick.
 // Vibrato: LFO-modulated delay line for a classic Doppler shift.
 // Blending dry signal with the wet signal produces a rich chorus-like effect.
 // At 100% wet only the pitch-shifted signal is audible; fun for rotary speaker emulation.

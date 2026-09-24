@@ -10,6 +10,9 @@
 // INFO: Ten octaves in 120 steps, so one step is a semitone and the
 // INFO: middle of the range is A440 exactly.
 // POT: "Shape" ENUM(Sine Triangle Saw Noise) = Sine
+// INFO: Sine is one frequency and nothing else, and is what to
+// INFO: measure with. The others have harmonics, and Noise has
+// INFO: everything at once.
 //
 // A signal generator, in the pedal.
 //
