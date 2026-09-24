@@ -513,17 +513,13 @@ async function initMidi() {
         //
         if (!navigator.requestMIDIAccess) {
             const insecure = !window.isSecureContext;
-            appTitleEl.textContent = insecure ? "HTTPS Required" : "Browser Not Supported";
             console.error(insecure
                 ? "Web MIDI needs a secure origin: https, localhost, or this origin allowed in chrome://flags/#unsafely-treat-insecure-origin-as-secure"
                 : "Web MIDI API is not supported in this browser.");
-            //
-            // Still draw the menu.  There is no MIDI here and there is
-            // still a test pedal, and this is exactly the case it is
-            // for - a phone on a plain http address, or a browser that
-            // has never had Web MIDI at all.
-            //
-            populateMidiSelects();
+            noMidi(insecure
+                   ? 'Web MIDI needs a secure origin, and this page is not '
+                     + 'on one, so the browser does not offer it at all.'
+                   : 'This browser has no Web MIDI.');
             return;
         }
         midiAccess = await navigator.requestMIDIAccess({ sysex: true });
@@ -531,18 +527,45 @@ async function initMidi() {
         updateMidiState();
     } catch (err) {
         console.error("MIDI access denied", err);
-        if (err.name === 'SecurityError') {
-            appTitleEl.textContent = "HTTPS Required";
-        } else if (err.name === 'NotAllowedError') {
-            appTitleEl.textContent = "Permission Denied";
-        } else if (err.name === 'InvalidStateError') {
-            appTitleEl.textContent = "Tap to Connect";
-        } else {
-            appTitleEl.textContent = "MIDI Error: " + (err.name || "Unknown");
-        }
-        // Refused, or broken, and the demo pedal is still there
-        populateMidiSelects();
+        noMidi({
+            SecurityError: 'Web MIDI needs a secure origin and this page is '
+                           + 'not on one.',
+            NotAllowedError: 'Permission for MIDI was refused.',
+            InvalidStateError: 'MIDI is not ready yet \u2014 tap the title to '
+                               + 'ask again.',
+        }[err.name] || ('MIDI failed: ' + (err.name || 'unknown') + '.'));
     }
+}
+
+//
+// No MIDI at all, and the Demo Pedal in the menu still works - so say
+// that, rather than only why MIDI is missing.
+//
+// The title is the only text always on screen and it is one short line
+// that ellipsises, so it carries the way out rather than the reason:
+// "HTTPS Required" is accurate and is a dead end, because the thing it
+// does not say is that the menu has a pedal in it that needs no MIDI at
+// all.  Tapping it goes there.
+//
+// The reason is worth keeping and goes where there is room for it - the
+// same dialog the tap opens, under Pedal.
+//
+let noMidiReason = null;
+
+function noMidi(reason) {
+    noMidiReason = reason;
+    appTitleEl.className = 'title-disconnected';
+    appTitleEl.textContent = 'No MIDI \u2014 tap to pick a pedal';
+
+    const info = document.getElementById('identity-info');
+    if (info)
+        info.textContent = reason + ' The Demo Pedal below needs none of it: '
+                         + 'it answers with this app\u2019s own effects, so '
+                         + 'there is something to look at and nothing to hear.';
+
+    // The entry that works without MIDI is in there, so the menu has to
+    // exist even though nothing was found
+    populateMidiSelects();
 }
 
 let selectedInputId = null;
@@ -4522,11 +4545,24 @@ function renderUI() {
     applyRouting([]);
 }
 
+//
+// The title is a button when there is nothing on the other end.
+//
+// Two jobs, and which one depends on why there is nothing.  With no MIDI
+// at all there is nothing to retry, so it opens the dialog, where the
+// reason is written out and the Demo Pedal is one pick away.  With MIDI
+// that has not come up yet, asking again is the useful thing.
+//
 appTitleEl.addEventListener('click', () => {
-    if (appTitleEl.textContent.includes('Tap to Connect') || appTitleEl.textContent.includes('Error')) {
-        appTitleEl.textContent = "Connecting...";
-        initMidi();
+    if (midiOutput)
+        return;
+
+    if (noMidiReason && !/not ready/.test(noMidiReason)) {
+        openMidiDialog();
+        return;
     }
+    appTitleEl.textContent = 'Connecting\u2026';
+    initMidi();
 });
 
 // Event Listeners
@@ -4581,6 +4617,20 @@ appTitleEl.addEventListener('click', () => {
         const burger = document.getElementById('burger-btn');
         if (menu) menu.classList.add('hidden');
         if (burger) burger.setAttribute('aria-expanded', 'false');
+    }
+
+    //
+    // Where the ports are picked, reached from the menu and from the
+    // title when there is no pedal - see the title's click handler.
+    //
+    function openMidiDialog() {
+        const panel = document.getElementById('settings-panel');
+
+        if (!panel)
+            return;
+        closeAllPanels();
+        panel.classList.remove('hidden');
+        if (backdrop) backdrop.classList.remove('hidden');
     }
 
     function closeAllPanels() {
@@ -4685,11 +4735,7 @@ appTitleEl.addEventListener('click', () => {
     const closeSettingsBtn = document.getElementById('close-settings');
 
     if (openSettingsBtn && settingsPanel) {
-        openSettingsBtn.addEventListener('click', () => {
-            closeAllPanels();
-            settingsPanel.classList.remove('hidden');
-            if (backdrop) backdrop.classList.remove('hidden');
-        });
+        openSettingsBtn.addEventListener('click', openMidiDialog);
     }
 
     if (closeSettingsBtn) {
