@@ -1,6 +1,8 @@
 // NAME: Vibrato [VIB]
 // PRIORITY: 70
 // MIX: POWER		// a modulated delay - the wet is the dry displaced in time
+// ABOUT: Moves the pitch up and down, the way a singer does.
+// ABOUT: Mixed with the dry signal it becomes a chorus instead.
 // POT: "Rate" FREQUENCY(0.1 8.0) = 2.0 Hz
 // INFO: How fast the pitch wavers, in cycles per second.
 // POT: "Depth" LINEAR(0.0 5.0) = 0.875 ms

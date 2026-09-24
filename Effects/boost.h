@@ -1,5 +1,8 @@
 // NAME: Boost [BOOST]
 // PRIORITY: 40
+// ABOUT: Just louder, with the low and high ends trimmed so it
+// ABOUT: stays tight. In front of an amp that is already working
+// ABOUT: it is what pushes it over.
 // POT: "Boost" LINEAR(0.0 40.0) = 0.0 dB
 // INFO: How much gain goes in, in dB. This is the whole effect;
 // INFO: everything else here shapes what it does.

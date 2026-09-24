@@ -1,5 +1,9 @@
 // NAME: Compressor [COMPRESSOR]
 // PRIORITY: 30
+// ABOUT: Evens out how loud you play. Quiet notes come up, loud
+// ABOUT: ones are held back, and the sustain goes on longer.
+// ABOUT: Set Level down until it starts working, then use Boost
+// ABOUT: to put the volume back.
 // POT: "Level" LINEAR(-60.0 -10.0) = -35.0 dB
 // INFO: The level playing has to reach before anything is turned
 // INFO: down - a threshold, not an output volume. Lower it until

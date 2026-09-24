@@ -1,6 +1,8 @@
 // NAME: Tremolo [TREM]
 // PRIORITY: 110
 // MIX: STEREO		// NORM pans, so it needs somewhere to pan *to*
+// ABOUT: Moves the volume up and down. This is the wobble on old
+// ABOUT: surf records; in stereo it swings side to side as well.
 // POT: "Rate" FREQUENCY(0.1 10.0) = 2.5 Hz
 // INFO: How fast the volume wobbles, in cycles per second.
 // POT: "Depth" LINEAR(0.0 1.0) = 0.5

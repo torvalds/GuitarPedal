@@ -26,6 +26,9 @@
 // So the two are not degrees of the same thing.  Manual holds what you
 // tell it; Auto tells you what is there.
 //
+// ABOUT: What is on the expression jack - a treadle, footswitches
+// ABOUT: or nothing - and what it does. The pedal can work it
+// ABOUT: out for itself, or you can tell it.
 // POT: "Detect" ENUM(Manual Auto) = Manual
 // INFO: Auto notices what you plug in and unplug, and will overrule a
 // INFO: setting that does not match. It waits for the readings to stop

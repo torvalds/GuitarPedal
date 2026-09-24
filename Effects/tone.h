@@ -2,6 +2,10 @@
 // NAME: Tone 2 [TONE]
 // PRIORITY: 10
 // GRAPH: LOSHELF:0.707 PEAKING:MID_Q HISHELF:0.707
+// ABOUT: Bass, mid and treble, as three points on a curve you drag.
+// ABOUT: Two of them, so one can fix the guitar and the other can
+// ABOUT: shape the sound. The mid is a hump you can move and
+// ABOUT: narrow; the other two are shelves.
 // POT: "Bass Freq" EXPONENTIAL(20.0 20480.0) = 200.0 Hz
 // INFO: Where the Bass control starts working: everything below this
 // INFO: is lifted or cut, so raising it takes in more of the sound.

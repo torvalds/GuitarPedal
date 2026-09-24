@@ -24,6 +24,8 @@
 // stereo source its right channel, which is the other way round from
 // what it costs a guitar, and only one of the two arrives by accident.
 //
+// ABOUT: What is true of the pedal rather than of any one sound,
+// ABOUT: so these are kept once and not per scene.
 // POT: "Analog In" ENUM(Stereo Mono) = Mono
 // INFO: A TS guitar cable carries one channel, so Mono copies it to both
 // INFO: before the chain - otherwise a bypassed pedal is silent on one

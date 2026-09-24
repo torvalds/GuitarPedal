@@ -1,5 +1,7 @@
 // NAME: Flanger [FLANGER]
 // PRIORITY: 60
+// ABOUT: Mixes the signal with a copy of itself a moment behind,
+// ABOUT: and sweeps how far behind. A jet going over.
 // POT: "Freq" SQUARED(0.0 10.0) = 2.5 Hz
 // INFO: How fast the sweep runs, in cycles per second.
 // POT: "Delay" LINEAR(0.0 4.0) = 2.0 ms

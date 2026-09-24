@@ -3,6 +3,9 @@
 // POSITION: FRONT	// the trim and the gate, ahead of everything routed
 // ALWAYS		// and no scene gets to switch the master volume off
 // MIX: NONE		// not an effect - it is the two ends of the chain
+// ABOUT: Always first, and always on. It sets your pickup to the
+// ABOUT: level everything after it expects, silences the hiss
+// ABOUT: between notes, and sets how loud the pedal is.
 // POT: "Gate" LINEAR(-100.0 -40.0) = -70.0 dB
 // INFO: Everything quieter than this is silenced. Set it just above the
 // INFO: noise floor shown below. Fully down switches the gate off.

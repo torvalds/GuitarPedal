@@ -5,6 +5,11 @@
 // INIT: core0		// and core 0 is what talks to the codec
 // HW: CODEC_DSP
 // GRAPH: LOSHELF:0.707 PEAKING:MID_Q HISHELF:0.707
+// ABOUT: The same three bands as Tone, but run by the audio converter
+// ABOUT: chip rather than by the pedal's processor, so they cost no
+// ABOUT: processing time at all. Analog In shapes the guitar on the
+// ABOUT: way in, before everything else; Analog Out shapes whatever
+// ABOUT: leaves, after everything else.
 // POT: "Bass Freq" EXPONENTIAL(20.0 20480.0) = 200.0 Hz
 // INFO: Where the Bass control starts working: everything below this
 // INFO: is lifted or cut, so raising it takes in more of the sound.

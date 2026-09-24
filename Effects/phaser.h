@@ -1,5 +1,8 @@
 // NAME: Phaser [PHASER]
 // PRIORITY: 50
+// ABOUT: Sweeps a set of notches through the sound, which reads
+// ABOUT: as a slow whoosh. Related to the flanger and gentler
+// ABOUT: about it.
 // POT: "LFO" FREQUENCY(25.0 2000.0) = 270.0 ms
 // INFO: Sweep speed, set as the time one sweep takes rather than as a
 // INFO: rate - so turning it up makes the sweep slower, not faster.
