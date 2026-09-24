@@ -412,10 +412,21 @@ input[type=range]:focus::-moz-range-thumb {
 }
 
 /* Effect Cards */
+/*
+ * The chain, and nothing in it anchors the scroll.
+ *
+ * applyRouting() re-appends every card to put them in order, so the
+ * element the browser picked to hold still moves to a different place
+ * in the list - and the browser scrolls by however far it moved to
+ * "keep" it there. Measured at 390x844: routing one effect threw the
+ * page 1486px towards the top, and further with every effect already
+ * in the chain.
+ */
 #effects-container {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  overflow-anchor: none;
 }
 
 .effect-card {
