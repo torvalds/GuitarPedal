@@ -2,8 +2,15 @@
 // PRIORITY: 90
 // MIX: POWER		// same as the echo, only more so
 // DEFAULT_MIX: 0.18
+// ABOUT: Puts the guitar in a room. Room is how big, Damp is how
+// ABOUT: soft the walls are, and Mix is how far away you are
+// ABOUT: standing - a little goes a long way.
 // POT: "Room" LINEAR(0.70 0.98) = 0.88
+// INFO: How long the tail rings on for. This is the size of the
+// INFO: room more than anything else about it.
 // POT: "Damp" LINEAR(0.1 0.5) = 0.25
+// INFO: How fast the top end dies away in the tail. Up is a soft
+// INFO: room with curtains in it, down is a bright and tiled one.
 //
 // Freeverb: Schroeder-Moorer reverberator for mono 48 kHz.
 // Algorithm by Jezar at Dreampoint, released as public domain.

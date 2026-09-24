@@ -1,10 +1,27 @@
 // NAME: Compressor [COMPRESSOR]
 // PRIORITY: 30
+// ABOUT: Evens out how loud you play. Quiet notes come up, loud
+// ABOUT: ones are held back, and the sustain goes on longer.
+// ABOUT: Set Level down until it starts working, then use Boost
+// ABOUT: to put the volume back.
 // POT: "Level" LINEAR(-60.0 -10.0) = -35.0 dB
+// INFO: The level playing has to reach before anything is turned
+// INFO: down - a threshold, not an output volume. Lower it until
+// INFO: the quiet notes come up.
 // POT: "Attack" LINEAR(2.0 100.0) = 15.0 ms
+// INFO: How long it takes to turn a note down once it crosses the
+// INFO: threshold. Short squashes the pick attack; long lets it
+// INFO: through and catches what follows.
 // POT: "Release" LINEAR(50.0 500.0) = 150.0 ms
+// INFO: How long it takes to let go again after the note falls
+// INFO: back. Too short breathes audibly between notes.
 // POT: "Ratio" EXPONENTIAL(1.0 20.0) = 4.8 x
+// INFO: How hard it pushes back on everything above the threshold. At
+// INFO: 4x, a note 4 dB over the threshold comes out only 1 dB over.
+// INFO: 1x is off.
 // POT: "Boost" LINEAR(0.0 24.0) = 6.0 dB
+// INFO: Make-up gain, in dB. Compression only ever takes level
+// INFO: away, so this is what puts it back.
 //
 // Compressor Effect
 //

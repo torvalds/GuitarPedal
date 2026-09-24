@@ -2,6 +2,8 @@
 // PRIORITY: 128
 // MIX: LINEAR
 // DEFAULT_MIX: 1.0
+// ABOUT: Makes its own signal instead of listening to yours, for
+// ABOUT: checking the rig without a guitar plugged in.
 // POT: "Level" LINEAR(-90.0 0.0) = -20.0 dBFS
 // INFO: How loud the tone is, as dBFS out. Fully down is digital
 // INFO: silence rather than a very quiet tone, so it can be used to
@@ -10,6 +12,9 @@
 // INFO: Ten octaves in 120 steps, so one step is a semitone and the
 // INFO: middle of the range is A440 exactly.
 // POT: "Shape" ENUM(Sine Triangle Saw Noise) = Sine
+// INFO: Sine is one frequency and nothing else, and is what to
+// INFO: measure with. The others have harmonics, and Noise has
+// INFO: everything at once.
 //
 // A signal generator, in the pedal.
 //

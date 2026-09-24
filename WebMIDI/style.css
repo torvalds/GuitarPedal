@@ -27,7 +27,18 @@ body {
   padding: 20px;
 }
 
+/*
+ * A card flicked out of the chain travels sideways under the finger,
+ * and on the way out it is wider than the window. That gave the page a
+ * horizontal scroll range for as long as the card was moving, so the
+ * page could be panned sideways mid-gesture and left there.  Clip it:
+ * the card leaves at the edge, which is where it was going.
+ *
+ * clip rather than hidden, which would make this a scroll container.
+ * On html it had no effect at all - measured, both ways round.
+ */
 .app-container {
+  overflow-x: clip;
   max-width: 800px;
   margin: 0 auto;
   display: flex;
@@ -145,6 +156,16 @@ h2 {
 
 .title-disconnected {
   color: var(--text-muted);
+}
+
+/*
+ * Shown in neither of the other two colours.  Connected is a claim
+ * about hardware and disconnected is a state to get out of; the demo
+ * pedal is neither, and must not be mistaken for either at a glance.
+ */
+.title-demo-pedal {
+  color: var(--accent);
+  font-style: italic;
 }
 
 body.local-dev .title-connected {
@@ -313,9 +334,41 @@ input:checked + .slider:before {
   display: none;
 }
 
+/*
+ * The same dotted underline a pot's name carries, and it means the same
+ * thing: there is something here to read. Only while the effect has the
+ * screen, because in the list the name is what opens the effect.
+ */
+#fullscreen-panel .effect-card.has-about .effect-name {
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
 .pot-control.has-info > .pot-label {
   text-decoration: underline dotted;
   text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+/*
+ * What the pot is for, in the card.  The effect supplies the words and
+ * the hover text is the same ones - but a phone has no hover, so the
+ * name is tappable and this is what the tap reveals.
+ */
+.pot-info {
+  align-self: stretch;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  text-align: left;
+  color: var(--text-muted);
+  border-left: 2px solid var(--accent);
+  padding: 2px 0 2px 10px;
+}
+
+/* No general .hidden rule to inherit, so declare it (see above). */
+.pot-info.hidden {
+  display: none;
 }
 
 .pot-value {
@@ -402,10 +455,21 @@ input[type=range]:focus::-moz-range-thumb {
 }
 
 /* Effect Cards */
+/*
+ * The chain, and nothing in it anchors the scroll.
+ *
+ * applyRouting() re-appends every card to put them in order, so the
+ * element the browser picked to hold still moves to a different place
+ * in the list - and the browser scrolls by however far it moved to
+ * "keep" it there. Measured at 390x844: routing one effect threw the
+ * page 1486px towards the top, and further with every effect already
+ * in the chain.
+ */
 #effects-container {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  overflow-anchor: none;
 }
 
 .effect-card {
@@ -420,17 +484,6 @@ input[type=range]:focus::-moz-range-thumb {
   align-items: center;
   border-bottom: 1px solid var(--panel-border);
   padding-bottom: 10px;
-  /*
-   * The header is what you grab to reorder, so none of it may behave
-   * like text.  A long press on text is the browser's select gesture,
-   * which on a phone is what you got instead of a drag, and iOS puts
-   * its callout menu up on top of that.  This has to be here rather
-   * than switched on once a drag is recognised: by then the selection
-   * has already started.
-   */
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
 }
 
 /*
@@ -458,6 +511,48 @@ input[type=range]:focus::-moz-range-thumb {
 .effect-header.draggable {
   cursor: grab;
   touch-action: pan-y;
+}
+
+/*
+ * Reset belongs to the contents, so it is only offered with them.
+ *
+ * It throws away every value the effect has, and on a closed card that
+ * is a destructive action one tap away from something you have not
+ * looked at - you lose a setting without ever having seen it. Closed by
+ * default made that the ordinary case rather than a corner of it.
+ *
+ * Eject stays. Removing an effect discards its values too, but that is
+ * a thing you do *to the chain*, and the chain is what a closed list is
+ * for; reset is editing, and editing happens with the card open.
+ */
+.effect-card.collapsed .effect-reset-btn {
+  display: none;
+}
+
+/*
+ * None of this is text to select, because none of it is text to read:
+ * it is names on controls.
+ *
+ * A long press on text is the browser's select gesture, and on Android
+ * it brings up a selection bar and an offer to look the word up - over
+ * an app where a long press is only ever a slightly slow tap.  Tapping
+ * a pot called "Sat" asked Google what SAT means instead of saying what
+ * the control does, and a drag on a card header selected the name.
+ *
+ */
+body {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* The two places with something worth copying, and anything typed into */
+.menu-hint,
+#identity-info,
+input,
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 /* Only while it springs back - a card following a finger must not lag */
@@ -490,10 +585,53 @@ input[type=range]:focus::-moz-range-thumb {
   color: var(--accent);
 }
 
+/*
+ * The row is what you open, so the row is what looks openable - the
+ * name most of all, because that is what a thumb goes for whatever the
+ * chevron is doing.  A header that can also be dragged keeps 'grab',
+ * which is the more specific thing it does.
+ */
+.effect-header {
+  cursor: pointer;
+}
+
+/*
+ * A picture of which way the row is facing, and no longer a button.
+ * It was one because collapsing was an afterthought on a card that was
+ * always open, and at 0.8em it was a target nobody could hit - see
+ * openCardOnTap().
+ */
+.collapse-chevron {
+  margin-right: 8px;
+  font-size: 0.8em;
+  transition: transform 0.2s;
+  pointer-events: none;
+}
+
 .effect-controls {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 20px;
+}
+
+/*
+ * What the effect is, across the top of it.  The whole width in the
+ * grid the pots are laid out in, and a plain block in the EQ's own
+ * container, which is not a grid.
+ */
+/* No general .hidden rule to inherit, so declare it (see above). */
+.effect-about.hidden {
+  display: none;
+}
+
+.effect-about {
+  grid-column: 1 / -1;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  border-left: 2px solid var(--panel-border);
+  padding: 2px 0 2px 12px;
+  margin-bottom: 4px;
 }
 
 /* Graphic EQ specific styles */
@@ -609,6 +747,116 @@ input[type=range]:focus::-moz-range-thumb {
 
 
 
+/*
+ * One effect, with the list out of the way.
+ *
+ * The compact layout has no expanding in place: a row is closed or it
+ * is the whole screen.  Expanding in place would leave the effect in a
+ * scrolling column, and a curve cannot live in one - it needs both axes
+ * for dragging its control points and takes them with touch-action:
+ * none, so it swallows scroll gestures, and it is half the height of an
+ * open card.
+ *
+ * The card itself is moved in here and moved back out, rather than
+ * drawn again: the pedal addresses the controls inside it by id.
+ */
+#fullscreen-panel {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 1500;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--bg-color);
+  padding: 10px;
+}
+
+#fullscreen-panel.hidden {
+  display: none;
+}
+
+/* The list must not scroll behind it */
+body.fullscreen-open {
+  overflow: hidden;
+}
+
+#fullscreen-panel .effect-card {
+  margin: 0;
+}
+
+/*
+ * The header keeps the name and the reset, and loses everything that
+ * was about the card's place in a list it is no longer in: the drag
+ * handle, the chevron, and the eject that would delete the thing being
+ * looked at.  Back takes the handle's slot, so the row does not grow a
+ * second line to hold it.
+ */
+#fullscreen-panel .drag-handle,
+#fullscreen-panel .collapse-chevron,
+#fullscreen-panel .effect-unroute-btn {
+  display: none;
+}
+
+.effect-close-btn {
+  display: none;
+}
+
+/*
+ * Bigger than the round buttons beside it.  It is the way out of a view
+ * that covers everything else, so it is the one control on the screen
+ * that has to be found without looking for it - a thin glyph at 32px
+ * was neither.
+ */
+#fullscreen-panel .effect-close-btn {
+  display: flex;
+  width: 44px;
+  height: 44px;
+  margin-right: 10px;
+  font-size: 1.4rem;
+  color: var(--text-main);
+}
+
+/*
+ * One pot to a row, at the full width of the screen.
+ *
+ * The two-column grid is there to save height in a list, and in here
+ * there is no list to save it for - so spend it on width, which is the
+ * axis a slider is read and set along.  A pot has 121 settings (0 to
+ * 120), and this roughly doubles the travel they are spread over: 160
+ * px of track becomes about 340, which is the difference between a
+ * thumb aiming at one setting and aiming at three.
+ *
+ * The effect may then be taller than the screen and scroll, and that is
+ * fine here in a way it is not in the list: the effects that scroll are
+ * the ones with no curve in them, and a curve is the only thing that
+ * wanted the vertical axis for itself.
+ */
+#fullscreen-panel .effect-controls {
+  grid-template-columns: 1fr;
+  /*
+   * Kept clear of the screen edges, which belong to the system.
+   *
+   * A slider at its maximum - Mix, nearly always - put its thumb in the
+   * few tens of pixels an Android back-swipe starts from, so reaching
+   * for it navigated back instead: the effect closed under your finger.
+   * The gesture belongs to the system, so the answer is not to put
+   * anything grabbable where it starts.
+   *
+   * It costs travel, and there is travel to spend: 340px of track
+   * becomes 300, which is still more than twice what the same slider
+   * gets in the list.
+   */
+  padding: 0 20px;
+}
+
+/*
+ * Room for the curve, which is the whole reason a graphed effect wants
+ * this screen.  It is the control, not an illustration of one.
+ */
+#fullscreen-panel .eq-curve-wrapper {
+  height: 46vh;
+  margin-top: 10px;
+}
+
 /* Bottom Panels (Generic) */
 /* Panel Backdrop */
 #panel-backdrop {
@@ -617,32 +865,12 @@ input[type=range]:focus::-moz-range-thumb {
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
-  z-index: 900;
+  z-index: 1600;
   transition: opacity 0.3s;
 }
 
 #panel-backdrop.hidden {
   display: none !important;
-}
-
-.bottom-panel {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  margin: 0;
-  border-radius: 20px 20px 0 0;
-  border-bottom: none;
-  z-index: 1000;
-  padding: 20px 30px;
-  background: rgba(15, 17, 21, 0.95);
-  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8);
-  transform: translateY(110%);
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.bottom-panel:not(.hidden) {
-  transform: translateY(0);
 }
 
 .panel-header {
@@ -769,9 +997,15 @@ input[type=range]:focus::-moz-range-thumb {
  * sized to its content instead of anchored to the bottom edge, because
  * nothing about it is phone-shaped any more.
  */
+/*
+ * The stacking order, top down: a dialog, the backdrop that dims what
+ * is behind it, then the views that take the whole screen - the tuner
+ * and the full screen effect - then the page.  A dialog opened over a
+ * view has to be on top of it, and used not to be.
+ */
 .dialog-panel {
   position: fixed;
-  z-index: 1000;
+  z-index: 1700;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -857,55 +1091,6 @@ input[type=range]:focus::-moz-range-thumb {
   background: rgba(239, 68, 68, 0.2) !important;
   color: var(--danger) !important;
   border-color: var(--danger) !important;
-}
-
-.active-pot-info {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-#active-pot-title {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: var(--text-main);
-}
-
-#active-pot-value {
-  font-size: 1.3rem;
-  color: var(--accent);
-  background: rgba(0, 0, 0, 0.3);
-  padding: 4px 12px;
-  border-radius: 8px;
-}
-
-.active-pot-slider-container {
-  padding-bottom: 20px;
-}
-
-/* The knob shortcut, and what it is about to take the knob away from. */
-.active-pot-knob {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-bottom: 18px;
-}
-
-.active-pot-knob > .menu-hint {
-  margin-top: 0;
-}
-
-#assign-knob-btn {
-  flex: none;
-  width: auto;
-  padding: 6px 12px;
-  font-size: 0.85rem;
-  white-space: nowrap;
-}
-
-#assign-knob-btn:disabled {
-  opacity: 0.45;
-  cursor: default;
 }
 
 /* One gesture, and everything it does. */
@@ -1012,23 +1197,6 @@ input[type=range]:focus::-moz-range-thumb {
   white-space: nowrap;
 }
 
-/* Larger slider for fine adjustments */
-input[type=range].large-slider {
-  height: 40px;
-}
-
-input[type=range].large-slider::-webkit-slider-thumb {
-  height: 32px;
-  width: 32px;
-  margin-top: -14px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-}
-
-input[type=range].large-slider::-webkit-slider-runnable-track {
-  height: 8px;
-  border-radius: 4px;
-}
-
 /* Make pot-controls clickable */
 .pot-control, .pot-control * {
   cursor: pointer;
@@ -1039,7 +1207,8 @@ input[type=range].large-slider::-webkit-slider-runnable-track {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   background: var(--bg-color);
-  z-index: 2000;
+  /* A view, like the full screen effect - so under a dialog */
+  z-index: 1550;
   display: flex;
   flex-direction: column;
   padding: 30px;

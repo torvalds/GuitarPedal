@@ -1,9 +1,22 @@
 // NAME: Phaser [PHASER]
 // PRIORITY: 50
+// ABOUT: Sweeps a set of notches through the sound, which reads
+// ABOUT: as a slow whoosh. Related to the flanger and gentler
+// ABOUT: about it.
 // POT: "LFO" FREQUENCY(25.0 2000.0) = 270.0 ms
+// INFO: Sweep speed, set as the time one sweep takes rather than as a
+// INFO: rate - so turning it up makes the sweep slower, not faster.
+// INFO: Around 500 ms is the classic slow swirl; near 100 ms it turns
+// INFO: into a wobble.
 // POT: "Feedback" LINEAR(0.0 0.75) = 0.376
+// INFO: How much of the output goes back in. More makes the
+// INFO: notches sharper and the sweep more vocal.
 // POT: "Freq" FREQUENCY(220.0 6460.0) = 1000.0 Hz
+// INFO: The middle of the sweep. The notches move around this.
 // POT: "Q" LINEAR(0.25 2.0) = 1.125
+// INFO: How sharp the dips in the frequency response are. Turned up
+// INFO: they are narrow and the sweep is a pronounced whoosh; down
+// INFO: they are wide and it is a gentle one.
 struct {
 	struct lfo_state lfo;
 	struct biquad_coeff coeff;

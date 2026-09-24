@@ -372,7 +372,19 @@ if (!schemaFile) {
 }
 
 const literal = fs.readFileSync(schemaFile, 'utf8').match(/"((?:[^"\\]|\\.)*)"/);
-const schemaJson = literal[1].replace(/\\"/g, '"');
+
+//
+// The C literal is the JSON with a second layer of escaping over it.
+// gen_effects.py's c_string() spells a backslash \\ and a quote \", and
+// json.dumps() has already dealt with everything else - non-ASCII
+// included, as \\uXXXX - so those two are the whole of what to undo.
+//
+// One pass, because two are wrong: undoing the quotes on their own left
+// the \\ in \\\" alone, and JSON.parse() stopped at the bare quote that
+// was left standing next to it. Nothing in the schema had a quote in it
+// until an effect wrote one into an INFO: line.
+//
+const schemaJson = literal[1].replace(/\\([\\"])/g, '$1');
 const asSysex = (cmd, text) => [0xF0, 0x7D, cmd,
                                 ...[...text].map((c) => c.charCodeAt(0)), 0xF7];
 

@@ -1,6 +1,11 @@
 // NAME: Parametric EQ [EQ]
 // PRIORITY: 120
 // GRAPH: LOSHELF PEAKING PEAKING PEAKING HISHELF
+// ABOUT: Five bands you drag on the curve: a shelf at each end and
+// ABOUT: three movable humps between them. Reach for this when Tone's
+// ABOUT: three bands are not enough to place the cut or boost where
+// ABOUT: you want it. The bands are a fixed width; Tone's mid is the
+// ABOUT: one that narrows.
 // POT: "LS Freq" EXPONENTIAL(20.0 20480.0) = 100.0 Hz
 // POT: "LS Gain" LINEAR(-20.0 20.0) = 0.0 dB
 // POT: "P1 Freq" EXPONENTIAL(20.0 20480.0) = 250.0 Hz

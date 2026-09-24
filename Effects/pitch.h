@@ -1,8 +1,16 @@
 // NAME: Pitch [PITCH]
 // PRIORITY: 100
 // MIX: POWER		// shifted, so it decorrelates almost immediately
+// ABOUT: Adds a copy of what you play at another pitch. Feedback
+// ABOUT: shifts the copy again and again, so it climbs or falls
+// ABOUT: away in steps.
 // POT: "Octave" LINEAR(-2.0 2.0) = 1.0
+// INFO: How far the copy is shifted, in octaves. 1 is an octave up,
+// INFO: -1 an octave down, 0 no shift at all.
 // POT: "Feedback" LINEAR(0.0 1.0) = 0.5
+// INFO: How much of the shifted copy is fed back to be shifted again,
+// INFO: so it climbs or falls away in steps. Near the top it barely
+// INFO: dies away at all.
 // DEFAULT_MIX: 0.5
 //
 // Entirely random pitch shifting effect walking the

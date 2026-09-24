@@ -57,7 +57,12 @@ const BIND_FOLLOW = 0x7f;
 // drawn from - the same one the effect cards use for their own mix
 // slider.
 //
-const MIX_POT_DEF = { name: 'Mix', curve: 'LINEAR', min: 0, max: 100, unit: '%' };
+const MIX_POT_DEF = {
+    name: 'Mix', curve: 'LINEAR', min: 0, max: 100, unit: '%',
+    info: 'How much of this effect you hear against the signal that '
+        + 'went into it. Fully down is the effect doing nothing at '
+        + 'all; fully up is the effect on its own.',
+};
 
 let CONTROLS = [];
 
@@ -143,8 +148,6 @@ const effectsContainer = document.getElementById('effects-container');
 const ccToElementMap = new Map();
 
 let isGlobalEnabled = false;
-let activePotCc = null;
-let activePotDef = null;
 //
 // The pedal filters Control Change and Program Change by
 // settings.midi_channel and lets SysEx through regardless.  Transmit on
@@ -513,10 +516,13 @@ async function initMidi() {
         //
         if (!navigator.requestMIDIAccess) {
             const insecure = !window.isSecureContext;
-            appTitleEl.textContent = insecure ? "HTTPS Required" : "Browser Not Supported";
             console.error(insecure
                 ? "Web MIDI needs a secure origin: https, localhost, or this origin allowed in chrome://flags/#unsafely-treat-insecure-origin-as-secure"
                 : "Web MIDI API is not supported in this browser.");
+            noMidi(insecure
+                   ? 'Web MIDI needs a secure origin, and this page is not '
+                     + 'on one, so the browser does not offer it at all.'
+                   : 'This browser has no Web MIDI.');
             return;
         }
         midiAccess = await navigator.requestMIDIAccess({ sysex: true });
@@ -524,16 +530,45 @@ async function initMidi() {
         updateMidiState();
     } catch (err) {
         console.error("MIDI access denied", err);
-        if (err.name === 'SecurityError') {
-            appTitleEl.textContent = "HTTPS Required";
-        } else if (err.name === 'NotAllowedError') {
-            appTitleEl.textContent = "Permission Denied";
-        } else if (err.name === 'InvalidStateError') {
-            appTitleEl.textContent = "Tap to Connect";
-        } else {
-            appTitleEl.textContent = "MIDI Error: " + (err.name || "Unknown");
-        }
+        noMidi({
+            SecurityError: 'Web MIDI needs a secure origin and this page is '
+                           + 'not on one.',
+            NotAllowedError: 'Permission for MIDI was refused.',
+            InvalidStateError: 'MIDI is not ready yet \u2014 tap the title to '
+                               + 'ask again.',
+        }[err.name] || ('MIDI failed: ' + (err.name || 'unknown') + '.'));
     }
+}
+
+//
+// No MIDI at all, and the Demo Pedal in the menu still works - so say
+// that, rather than only why MIDI is missing.
+//
+// The title is the only text always on screen and it is one short line
+// that ellipsises, so it carries the way out rather than the reason:
+// "HTTPS Required" is accurate and is a dead end, because the thing it
+// does not say is that the menu has a pedal in it that needs no MIDI at
+// all.  Tapping it goes there.
+//
+// The reason is worth keeping and goes where there is room for it - the
+// same dialog the tap opens, under Pedal.
+//
+let noMidiReason = null;
+
+function noMidi(reason) {
+    noMidiReason = reason;
+    appTitleEl.className = 'title-disconnected';
+    appTitleEl.textContent = 'No MIDI \u2014 tap to pick a pedal';
+
+    const info = document.getElementById('identity-info');
+    if (info)
+        info.textContent = reason + ' The Demo Pedal below needs none of it: '
+                         + 'it answers with this app\u2019s own effects, so '
+                         + 'there is something to look at and nothing to hear.';
+
+    // The entry that works without MIDI is in there, so the menu has to
+    // exist even though nothing was found
+    populateMidiSelects();
 }
 
 let selectedInputId = null;
@@ -553,6 +588,125 @@ let selectedOutputId = null;
 //
 const PEDAL_PORT = /(^|\s)Pedal(\s|$)/;
 
+//
+// A simulated pedal, selected by hand and never auto-detected.
+//
+// It answers with the schema this copy of the app was built from, which
+// is the one firmware of the same commit would have sent - so the
+// effects, their pots, their curves and their defaults are the real
+// ones.  The app can be shown to somebody, or learnt, before any
+// hardware arrives.
+//
+// Never auto-detected and never the fallback.  If this answered when
+// nothing was plugged in, "why is my pedal not responding" would have
+// been answered wrongly, by us, on screen.  So it is picked from the
+// menu on purpose, and the title says what it is for while it is.
+//
+// What it has not got is a signal. No telemetry, no meters, no sound,
+// and a knob moved here moves nothing.
+//
+const DEMO_PEDAL_ID = 'demo-pedal';
+
+const demoPedal = {
+    id: DEMO_PEDAL_ID,
+    name: 'Demo Pedal (no hardware)',
+    onmidimessage: null,
+
+    //
+    // JSON that is pure ASCII, which is what the wire can carry.
+    //
+    // SysEx data bytes are seven bits, so the firmware writes anything
+    // outside ASCII as the six characters of a '\uXXXX' escape and lets
+    // the far end put it back together - 'Footswitch \u2014 press' is
+    // six ASCII characters where the dash is, not one em dash.
+    // JSON.stringify() does not do that for you: it emits the character
+    // itself, which would arrive here with its high bits cut off and
+    // make a control character in the middle of a string, so the whole
+    // reply would fail to parse and be dropped without a word.
+    //
+    wireJson(obj) {
+        return JSON.stringify(obj).replace(
+            /[\u0080-\uffff]/g,
+            (ch) => '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0'));
+    },
+
+    reply(cmd, text) {
+        const body = [];
+
+        for (const ch of text) {
+            const code = ch.charCodeAt(0);
+
+            // Masking to 7 bits is the silent corruption wireJson()
+            // exists to avoid, so refuse instead
+            if (code > 0x7f) {
+                console.error('[WebMIDI] demo pedal: non-ASCII in a reply',
+                              ch, text);
+                return;
+            }
+            body.push(code);
+        }
+
+        //
+        // Next turn rather than now.  Answering inside the call that
+        // sent to us would re-enter the app underneath whatever asked,
+        // which a real port never does.
+        //
+        const msg = new Uint8Array([0xF0, 0x7D, cmd, ...body, 0xF7]);
+
+        setTimeout(() => {
+            if (this.onmidimessage)
+                this.onmidimessage({ data: msg });
+        }, 0);
+    },
+
+    //
+    // The same fields a real board's reply has, filled in for a
+    // 'minimal' board - one of the hardware variants, the one with two
+    // footswitch actions and no MIDI jacks.
+    //
+    // What the board *has* is read off each effect's 'needs' field in
+    // the schema rather than listed here.  An effect that starts asking
+    // for something new would otherwise be hidden here silently, and
+    // this is the one place with no board to plug in and find out.
+    //
+    identity() {
+        const have = {};
+
+        for (const effect of (BUILT_IN_SCHEMA.effects || []))
+            if (effect.needs)
+                have[effect.needs] = true;
+
+        return {
+            build: 'the schema this app was built with',
+            scenes: 8,
+            midi_hw: false,
+            found: { i2c_codec: true, codec: 'none - demo pedal',
+                     legacy_screen: false },
+            have,
+            controls: [
+                { id: 3, name: 'Footswitch \u2014 press', kind: 'click' },
+                { id: 4, name: 'Footswitch \u2014 hold', kind: 'click' },
+            ],
+        };
+    },
+
+    //
+    // Only the two questions worth answering.  A parameter, a routing
+    // order or a scene save has arrived somewhere that cannot make a
+    // sound, and the app has already drawn the change, so these are
+    // accepted and dropped.
+    //
+    send(bytes) {
+        if (bytes[0] !== 0xF0 || bytes[1] !== 0x7D)
+            return;
+
+        if (bytes[2] === SYSEX_CMD.REQ_SCHEMA)
+            this.reply(SYSEX_CMD.RES_SCHEMA, this.wireJson(BUILT_IN_SCHEMA));
+        else if (bytes[2] === SYSEX_CMD.IDENTITY)
+            this.reply(SYSEX_CMD.IDENTITY, this.wireJson(this.identity()));
+    },
+};
+
 function populateMidiSelects() {
     const inSelect = document.getElementById('midi-input-select');
     const outSelect = document.getElementById('midi-output-select');
@@ -560,6 +714,27 @@ function populateMidiSelects() {
 
     inSelect.innerHTML = '<option value="">-- Auto-detect pedal --</option>';
     outSelect.innerHTML = '<option value="">-- Auto-detect pedal --</option>';
+
+    // In both lists, because it is both ends of the conversation
+    for (const sel of [inSelect, outSelect]) {
+        const opt = document.createElement('option');
+
+        opt.value = DEMO_PEDAL_ID;
+        opt.textContent = demoPedal.name;
+        if ((sel === inSelect ? selectedInputId : selectedOutputId)
+            === DEMO_PEDAL_ID)
+            opt.selected = true;
+        sel.appendChild(opt);
+    }
+
+    //
+    // Real ports only if there are any.  Web MIDI can be missing
+    // outright - an insecure origin removes the API rather than failing
+    // the call - and the menu still has to open, because the entry
+    // above is the one that works without it.
+    //
+    if (!midiAccess)
+        return;
 
     for (let input of midiAccess.inputs.values()) {
         const opt = document.createElement('option');
@@ -588,16 +763,29 @@ function updateMidiState() {
     // by far the most of what lands in the console - so it is debug
     // output, which browsers hide until asked.
     //
-    console.debug("[WebMIDI] updating MIDI state. Available inputs:");
-    for (let input of midiAccess.inputs.values()) {
-        console.debug("  Input:", input.name, input.id);
-    }
-    console.debug("[WebMIDI] Available outputs:");
-    for (let output of midiAccess.outputs.values()) {
-        console.debug("  Output:", output.name, output.id);
+    if (midiAccess) {
+        console.debug("[WebMIDI] updating MIDI state. Available inputs:");
+        for (let input of midiAccess.inputs.values()) {
+            console.debug("  Input:", input.name, input.id);
+        }
+        console.debug("[WebMIDI] Available outputs:");
+        for (let output of midiAccess.outputs.values()) {
+            console.debug("  Output:", output.name, output.id);
+        }
     }
 
-    if (selectedInputId && midiAccess.inputs.has(selectedInputId)) {
+    //
+    // Asked for by name, so nothing goes looking.  Both ends at once:
+    // registered as both, or sends would go nowhere and nothing would
+    // answer.
+    //
+    if (selectedInputId === DEMO_PEDAL_ID ||
+        selectedOutputId === DEMO_PEDAL_ID) {
+        selectedInputId = selectedOutputId = DEMO_PEDAL_ID;
+        foundInput = foundOutput = demoPedal;
+    } else if (!midiAccess) {
+        /* nothing to look through */
+    } else if (selectedInputId && midiAccess.inputs.has(selectedInputId)) {
         foundInput = midiAccess.inputs.get(selectedInputId);
     } else {
         for (let input of midiAccess.inputs.values()) {
@@ -610,7 +798,11 @@ function updateMidiState() {
         if (foundInput && !selectedInputId) selectedInputId = foundInput.id;
     }
 
-    if (selectedOutputId && midiAccess.outputs.has(selectedOutputId)) {
+    if (foundOutput) {
+        /* the demo pedal above answered for both ends */
+    } else if (!midiAccess) {
+        /* the demo pedal above answered for both ends */
+    } else if (selectedOutputId && midiAccess.outputs.has(selectedOutputId)) {
         foundOutput = midiAccess.outputs.get(selectedOutputId);
     } else {
         for (let output of midiAccess.outputs.values()) {
@@ -627,12 +819,33 @@ function updateMidiState() {
 
     if (foundInput && foundOutput) {
         if (midiInput !== foundInput) {
+            //
+            // Let go of the old one first.  A port keeps delivering to
+            // whatever handler it was given, so switching away from a
+            // pedal left it talking: with two plugged in, both fed the
+            // app, and picking the demo pedal with a real one attached
+            // showed the real one's answers under the demo pedal's
+            // name.
+            //
+            if (midiInput)
+                midiInput.onmidimessage = null;
             midiInput = foundInput;
             midiInput.onmidimessage = handleMidiMessage;
         }
         midiOutput = foundOutput;
-        appTitleEl.className = "title-connected";
-        appTitleEl.textContent = `Connected: ${foundInput.name}`;
+
+        //
+        // Its own word, not "Connected": nothing is, and the one thing
+        // this must never do is let somebody believe their pedal is
+        // talking when it is not plugged in.
+        //
+        if (foundInput === demoPedal) {
+            appTitleEl.className = "title-demo-pedal";
+            appTitleEl.textContent = "Demo Pedal - no hardware, nothing to hear";
+        } else {
+            appTitleEl.className = "title-connected";
+            appTitleEl.textContent = `Connected: ${foundInput.name}`;
+        }
 
         // Who is this, then what does it have
         sendSysex([SYSEX_CMD.IDENTITY]);
@@ -782,12 +995,6 @@ function applyPotValue(effId, potIdx, val) {
         }
         if (el.redrawCurve) {
             el.redrawCurve();
-        }
-        if (activePotDef && activePotCc === idKey) { // activePotCc is now acting as string key
-            const activeSlider = document.getElementById('active-pot-slider');
-            if (activeSlider) activeSlider.value = val;
-            const activeValue = document.getElementById('active-pot-value');
-            if (activeValue) activeValue.textContent = formatPotValue(activePotDef, val);
         }
     }
 }
@@ -972,7 +1179,6 @@ function handleSysex(data) {
                 sendSysex([SYSEX_BINDINGS, RULES_EFFECTIVE]);
 
             renderBindings();
-            renderKnobHint();
             break;
         }
 
@@ -1360,6 +1566,47 @@ function setUiPref(key, val) {
 }
 
 //
+// Which of the two interfaces to use: 'compact' is the touch one and
+// the other is the desktop one the app was built with.
+//
+// The question is what is pointing at the screen rather than how big it
+// is.  A tablet has a desktop's room and a thumb's precision, and width
+// cannot tell those apart; 'pointer' asks about the primary pointer,
+// which is the one actually in use.  'any-pointer' would call a laptop
+// with a touchscreen a phone.
+//
+// Modal, never fitted.  The mode decides what a gesture does, and it
+// does the same thing whatever happens to be on screen - a behaviour
+// that changes once the chain gets long enough not to fit is one nobody
+// can learn.
+//
+// '?ui=touch' or '?ui=mouse' overrides it and is remembered, which is
+// both how a tablet gets the other one and how this gets tried from a
+// desktop.  Remembered rather than per-visit for the same reason as
+// above: a mode that forgets is adaptive after all.
+//
+function pickCompactUi() {
+    const asked = new URLSearchParams(location.search).get('ui');
+
+    if (asked === 'touch' || asked === 'mouse')
+        setUiPref('mode.compact', asked === 'touch');
+
+    //
+    // uiPref() hands back the fallback when nothing is stored, so the
+    // detected answer is the default and a stored one wins over it
+    // without having to tell "unset" from "false".
+    //
+    const coarse = window.matchMedia &&
+                   window.matchMedia('(pointer: coarse)').matches;
+
+    return uiPref('mode.compact', !!coarse);
+}
+
+const compactUi = pickCompactUi();
+
+document.body.classList.toggle('compact-ui', compactUi);
+
+//
 // Whether the EQ's bands are held in order while you drag them.
 //
 // On by default, and a switch rather than a decision made for you: the
@@ -1622,7 +1869,7 @@ function cardDragStart(card, grip, e) {
 
     // The header carries controls of its own. A press that lands on one
     // of those belongs to it, not to a drag.
-    if (e.target.closest('.collapse-chevron, .action-btn'))
+    if (e.target.closest('.action-btn'))
         return;
 
     //
@@ -1741,7 +1988,7 @@ function cardSwipeStart(card, e) {
         return;
 
     // The handle reorders, and the header's own controls keep their presses
-    if (e.target.closest('.drag-handle, .collapse-chevron, .action-btn'))
+    if (e.target.closest('.drag-handle, .action-btn'))
         return;
 
     cardSwipe = { card, id: e.pointerId,
@@ -1833,92 +2080,148 @@ function cardSwipeEnd(e) {
 }
 
 //
-// A tap, as opposed to a touch.
+// One effect, with the list out of the way.
 //
-// These are two different things and the difference is the whole bug:
-// this used to open the panel from 'touchstart', which is the moment a
-// finger lands and before anybody - the browser included - knows what
-// the gesture is going to be.  So scrolling the page with a finger that
-// happened to start on a pot threw a modal up over what you were
-// scrolling towards, every time.
+// The compact layout has no expanding in place: a row is closed or it
+// is the whole screen.  Expanding in place would leave the effect in a
+// scrolling column, and a scrolling column is what a curve cannot live
+// in.  '.eq-canvas' needs both axes for dragging its control points and
+// takes them with touch-action: none, so it swallows scroll gestures -
+// and it is half the height of an open card.
 //
-// A tap is a press that never goes anywhere.  That can only be known at
-// the end, so the decision is made on pointerup, and a gesture the
-// browser takes over for scrolling comes back as pointercancel, which is
-// exactly the answer we want: not a tap.
+// The card is *moved* here and moved back, never rebuilt.  The pedal
+// addresses the controls inside it by id and ccToElementMap points
+// straight at them, which is the same reason an unrouted card is parked
+// rather than removed.
 //
-// "Never went anywhere" has to be remembered rather than measured at the
-// end.  Comparing where the finger landed against where it left is not
-// the same question, and gets the interesting case backwards: drag a
-// slider up and back down and you release within a few px of where you
-// started, having very much moved.  That is not a hypothetical - it is
-// the ordinary way to use a slider, and it put the panel up on top of
-// the value you had just finished setting.
-//
-// So the flag is sticky, exactly like cardDrag.moved next door: once
-// this gesture has moved, it is not a tap again.
-//
-const TAP_SLOP = 10;    // px of travel a tap is allowed
+let fullScreenId = null;
 
-let potTap = null;
-
-function releasePotTap() {
-    potTap = null;
-    window.removeEventListener('pointermove', movePotTap);
-    window.removeEventListener('pointerup', endPotTap);
-    window.removeEventListener('pointercancel', releasePotTap);
+function fullScreenPanel() {
+    return document.getElementById('fullscreen-panel');
 }
 
-function movePotTap(e) {
-    if (!potTap || e.pointerId !== potTap.id)
+function openFullScreen(id) {
+    const panel = fullScreenPanel();
+    const card = effectCards.get(id);
+
+    if (!panel || !card || fullScreenId !== null)
         return;
 
-    if (Math.abs(e.clientX - potTap.x) > TAP_SLOP ||
-        Math.abs(e.clientY - potTap.y) > TAP_SLOP)
-        potTap.moved = true;
-}
+    fullScreenId = id;
+    setCardCollapsed(card, false);
+    panel.appendChild(card);
+    panel.classList.remove('hidden');
+    document.body.classList.add('fullscreen-open');
+    panel.scrollTop = 0;
 
-function endPotTap(e) {
-    const tap = potTap;
+    //
+    // A history entry, so Back closes this instead of leaving the app.
+    //
+    history.pushState({ fullScreen: id }, '');
 
-    releasePotTap();
-    if (!tap || e.pointerId !== tap.id)
-        return;
-
-    // It travelled: a scroll, or a drag of the control itself
-    if (tap.moved)
-        return;
-
-    tap.open();
+    // It was measured while parked or while narrower, and neither is
+    // the size it is now
+    const effect = PEDAL_EFFECTS[effectIdMap.get(id)];
+    if (effect && effect.redrawCurve)
+        effect.redrawCurve();
 }
 
 //
-// Open something when this element is tapped, without stealing a scroll
-// that happens to begin on it.
+// 'fromPop' is whether the browser has already taken the history entry
+// back off, which is the one thing this cannot ask.
 //
-// 'grab' is the part of it that a mouse can already operate directly -
-// the inline slider - and a mouse press there is a drag of it rather
-// than a request to open anything.  A mouse has no scroll gesture to be
-// confused with, so it does not wait for the release: anywhere else on
-// the control opens immediately, which is how it always behaved.
+function closeFullScreen(fromPop) {
+    const panel = fullScreenPanel();
+    const id = fullScreenId;
+
+    if (id === null)
+        return;
+
+    fullScreenId = null;
+    panel.classList.add('hidden');
+    document.body.classList.remove('fullscreen-open');
+
+    const card = effectCards.get(id);
+    if (card) {
+        setCardCollapsed(card, true);
+        effectsContainer.appendChild(card);
+    }
+
+    // Back where it belongs in the chain, rather than at the end of the
+    // container where the line above put it
+    applyRouting(currentRouting);
+
+    if (!fromPop && history.state && history.state.fullScreen === id)
+        history.back();
+}
+
+window.addEventListener('popstate', () => closeFullScreen(true));
+
 //
-function openOnTap(el, grab, open) {
-    el.addEventListener('pointerdown', (e) => {
+// The whole header opens the effect, not just the chevron.
+//
+// A row whose only job is to be opened should be the thing you open,
+// and a 0.8em glyph is not a target: people reach for the name, having
+// been told twice that the triangle is the control.
+//
+// The chevron stays as a picture of which way the row is facing, and
+// stops being a button.
+//
+// A tap is a press that never travelled, which is exactly what tells it
+// apart from the two other gestures this same header carries: a drag
+// reorders and a sideways flick removes, and both move.  So the three
+// cannot be confused.  "Never travelled" has to be remembered as it
+// happens rather than measured at the end: pressing and returning to
+// where you started is very much having moved, and comparing the two
+// ends would call that a tap.
+//
+// Both pointer types wait for the release.  A mouse has no scroll to be
+// confused with, but it does have the drag, and acting on the press
+// would open a card on the way to picking it up.
+//
+const CARD_TAP_SLOP = 10;
+
+function openCardOnTap(card, header, open) {
+    let tap = null;
+
+    const end = (e) => {
+        const was = tap;
+
+        tap = null;
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', end);
+        window.removeEventListener('pointercancel', cancel);
+        if (was && !was.moved && e.pointerId === was.id)
+            open();
+    };
+    const cancel = () => {
+        tap = null;
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', end);
+        window.removeEventListener('pointercancel', cancel);
+    };
+    const move = (e) => {
+        if (tap && e.pointerId === tap.id &&
+            (Math.abs(e.clientX - tap.x) > CARD_TAP_SLOP ||
+             Math.abs(e.clientY - tap.y) > CARD_TAP_SLOP))
+            tap.moved = true;
+    };
+
+    header.addEventListener('pointerdown', (e) => {
         if (!e.isPrimary)
             return;
 
-        if (e.pointerType === 'mouse') {
-            if (e.target !== grab)
-                open();
+        // A press on the drag handle starts a reorder and a press on
+        // a round button is that button's; neither may also count as
+        // a tap and open the card
+        if (e.target.closest('.drag-handle, .action-btn'))
             return;
-        }
 
-        releasePotTap();
-        potTap = { id: e.pointerId, x: e.clientX, y: e.clientY,
-                   moved: false, open };
-        window.addEventListener('pointermove', movePotTap);
-        window.addEventListener('pointerup', endPotTap);
-        window.addEventListener('pointercancel', releasePotTap);
+        cancel();
+        tap = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', end);
+        window.addEventListener('pointercancel', cancel);
     });
 }
 
@@ -2811,50 +3114,6 @@ function renderBindings() {
     });
 }
 
-//
-// What the knob is on, said next to the pot you are looking at.
-//
-// Without this the shortcut below is a button that silently steals the
-// knob from wherever it was - and with one knob, every assignment is a
-// theft from something.
-//
-function renderKnobHint() {
-    const hintEl = document.getElementById('knob-target-hint');
-    const btn = document.getElementById('assign-knob-btn');
-    if (!hintEl || !btn)
-        return;
-
-    const b = pedalRules.find(r => r.control === 0 && r.action === ACT.POT);
-    const here = activePotTarget();
-
-    if (here && b && b.effect === here.effId && b.pot === here.pot) {
-        hintEl.textContent = 'The knob is on this.';
-        btn.disabled = true;
-    } else {
-        hintEl.textContent = b
-            ? `Knob is on ${potLabel(b.effect, b.pot)}.`
-            : 'The knob drives nothing.';
-        btn.disabled = !here;
-    }
-}
-
-// Which (effect, parameter) the open panel is showing, mix included.
-function activePotTarget() {
-    if (!activePotCc)
-        return null;
-
-    const parts = activePotCc.split('-');
-    const eff = PEDAL_EFFECTS[parseInt(parts[1])];
-    if (!eff)
-        return null;
-
-    if (parts.length >= 4 && parts[2] === 'pot')
-        return { effId: eff.id, pot: parseInt(parts[3]) + 1 };
-    if (parts.length === 3 && parts[2] === 'mix')
-        return { effId: eff.id, pot: 0 };
-    return null;
-}
-
 function handleGlobalStatus(val) {
     const dropped = val & STATUS_DROPPED_MASK;
 
@@ -2938,39 +3197,24 @@ function setRouting(ids) {
 }
 
 //
-// Onto the end of the chain, which is where a new effect goes - and then
-// go and look at it, because the end of the chain is somewhere else.
+// Onto the end of the chain, which is where a new effect goes.
 //
-// Tapping a chip is asking for that effect, and what you get back is a
-// card you cannot see: the pool is below the whole chain, the card lands
-// at the far end of it, and everything shifts as the pool shrinks.  So
-// the one thing you asked for is the one thing not on the screen.
+// And the screen stays where it is.  The pool is below the chain, so
+// tapping a chip means you are already at the bottom, which is where
+// the new row appears - and routing is usually several effects in a
+// row, each tap needing the next chip to still be under your finger.
 //
-// Centred rather than just scrolled into view, because "just far enough"
-// puts it hard against an edge with its controls half off - and the
-// movement is worth having in its own right. It is what says where the
-// effect went, which is a thing about the chain worth knowing.
+// This used to centre the new card instead, on the grounds that the end
+// of the chain is somewhere else.  With a long chain that scrolls a long
+// way, and because applyRouting() re-appends every card afterwards, the
+// smooth scroll finishes somewhere that no longer holds the card it was
+// aimed at.
 //
 function routeEffect(id) {
     if (currentRouting.includes(id) || currentRouting.length >= MAX_ROUTED)
         return;
 
     setRouting([...currentRouting, id]);
-    showEffectCard(id);
-}
-
-function showEffectCard(id) {
-    const card = effectCards.get(id);
-    if (!card)
-        return;
-
-    // Somebody who has asked not to be moved about gets put there
-    // directly instead
-    const still = window.matchMedia &&
-                  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    card.scrollIntoView({ block: 'center',
-                          behavior: still ? 'auto' : 'smooth' });
 }
 
 function unrouteEffect(id) {
@@ -3022,6 +3266,13 @@ function setCardCollapsed(card, collapsed) {
 
     if (controls) controls.style.display = collapsed ? 'none' : '';
     if (chevron) chevron.style.transform = collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+
+    //
+    // Named on the card so the stylesheet can answer questions about a
+    // closed one - the reset button is the reason, see .effect-card
+    // .effect-reset-btn.
+    //
+    card.classList.toggle('collapsed', collapsed);
 }
 
 //
@@ -3034,12 +3285,28 @@ function setCardCollapsed(card, collapsed) {
 //
 function applyRouting(routeIds) {
     const wasRouted = new Set(currentRouting);
+
+    //
+    // Where the pool is on the screen, so it can be put back there.
+    //
+    // Routing is usually several effects in a row, and the chips are
+    // all in the pool: each tap has to leave the next one under your
+    // finger. A new card goes in above the pool, so leaving the scroll
+    // alone pushes the chips down by a card every time - measured at
+    // 390x844, one tap was enough to put the next chip off the bottom.
+    //
+    // This only works because #effects-container turns the browser's
+    // own scroll anchoring off.  Left on, it picks a card of its own,
+    // sees this function move it, and scrolls to follow.
+    //
+    const anchor = effectPool && effectPool.offsetParent
+                 ? effectPool.getBoundingClientRect().top : null;
+
     currentRouting = routeIds.slice();
 
     // What the knob can be pointed at is a function of what is in the
     // chain, so it changed just now too.
     renderBindings();
-    renderKnobHint();
 
     // The chain bits are by position, so what they mean just changed
     renderAttention();
@@ -3056,6 +3323,12 @@ function applyRouting(routeIds) {
         const card = effectCards.get(id);
         if (!card)
             return;
+
+        // The one being looked at is not in the list to be sorted into
+        // it.  closeFullScreen() puts it back and runs this again.
+        if (id === fullScreenId)
+            return;
+
         effectsContainer.appendChild(card);
         card.classList.remove('parked');
 
@@ -3073,13 +3346,21 @@ function applyRouting(routeIds) {
         // Open it on the way in.  An effect that has just been added is
         // one you are about to set up - but only on the way in, or
         // reordering the chain would keep reopening a card you closed.
-        if (!wasRouted.has(id) && !isAnchorEffect(effectIdMap.get(id)))
+        //
+        // Not in the compact interface, where adding effects and putting
+        // them in order is work done in the list, and a card that opens
+        // to six hundred pixels pushes the list off the screen.  There
+        // the row appears and nothing else moves.
+        if (!compactUi && !wasRouted.has(id) &&
+            !isAnchorEffect(effectIdMap.get(id))) {
             setCardCollapsed(card, false);
+            setUiPref('open.' + id, true);
+        }
     });
 
     PEDAL_EFFECTS.forEach(effect => {
         const card = effectCards.get(effect.id);
-        if (!card || placed.has(effect.id))
+        if (!card || placed.has(effect.id) || effect.id === fullScreenId)
             return;
         effectsContainer.appendChild(card);
         card.classList.add('parked');
@@ -3088,6 +3369,15 @@ function applyRouting(routeIds) {
     if (effectPool) {
         effectsContainer.appendChild(effectPool);
         renderPool();
+    }
+
+    // getBoundingClientRect() settles the layout first, so this is
+    // the finished position and not a guess at one.
+    if (anchor !== null && effectPool.offsetParent) {
+        const moved = effectPool.getBoundingClientRect().top - anchor;
+
+        if (moved)
+            window.scrollBy(0, moved);
     }
 }
 
@@ -3166,7 +3456,41 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+//
+// What a control is for, on the control.
+//
+// The hover text and a line in the card say the same thing, because a
+// phone has no hover at all.  Tapping the name is what people try, and
+// the dotted underline under it says there is something to read - what
+// the tap used to get was the browser selecting the word and offering
+// to search for it.
+//
+// Hands back the line to go under the control, or null.  The caller
+// appends it last, after whatever kind of control this turned out to
+// be.
+//
+function potInfoLine(potDiv, label, pot) {
+    if (!pot.info)
+        return null;
+
+    potDiv.title = `${pot.name} \u2014 ${pot.info}`;
+    potDiv.classList.add('has-info');
+
+    const line = document.createElement('div');
+    line.className = 'pot-info hidden';
+    line.textContent = pot.info;
+    label.addEventListener('click', () => line.classList.toggle('hidden'));
+    return line;
+}
+
 function renderUI() {
+    //
+    // Whatever is open belongs to the cards about to be thrown away, so
+    // it goes first.  Otherwise the panel keeps a card nothing points at
+    // any more while a fresh one is built behind it.
+    //
+    closeFullScreen(false);
+
     effectsContainer.innerHTML = '';
     effectCards.clear();
 
@@ -3203,8 +3527,8 @@ function renderUI() {
         // moved within it, so neither gets a handle or a drag
         if (!isAnchorEffect(idx) && !pinnedEnd(effect)) {
             title.innerHTML = `<span class="drag-handle">≡</span>
-                               <span class="collapse-chevron" style="cursor: pointer; margin-right: 8px; font-size: 0.8em; transition: transform 0.2s;">▼</span>
-                               <span>${effect.name}</span>`;
+                               <span class="collapse-chevron">▼</span>
+                               <span class="effect-name">${effect.name}</span>`;
 
             // A drag starts on the header and nowhere else, so there is
             // never any question of whether you meant the card or the
@@ -3221,9 +3545,29 @@ function renderUI() {
             header.addEventListener('pointerdown',
                                     (e) => cardSwipeStart(card, e));
         } else {
-            title.innerHTML = `<span class="collapse-chevron" style="cursor: pointer; margin-right: 8px; font-size: 0.8em; transition: transform 0.2s;">▼</span>
-                               <span>${effect.name}</span>`;
+            title.innerHTML = `<span class="collapse-chevron">▼</span>
+                               <span class="effect-name">${effect.name}</span>`;
         }
+
+        //
+        // Out of the full-screen view, in the slot the drag handle has
+        // while the card is in the list - so the row does not grow a
+        // second line to hold it.  Hidden everywhere else.
+        //
+        // The same cross every other panel in the app closes with, and
+        // at the left end, away from the reset button: those two are
+        // the only things on this row and one of them throws the
+        // effect's settings away.
+        //
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'action-btn effect-close-btn';
+        closeBtn.title = 'Close this effect';
+        closeBtn.textContent = '\u2715';
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeFullScreen(false);
+        });
+        title.insertBefore(closeBtn, title.firstChild);
 
         const enableGroup = document.createElement('div');
         enableGroup.className = 'control-group enable-group';
@@ -3255,15 +3599,39 @@ function renderUI() {
         header.appendChild(enableGroup);
         card.appendChild(header);
 
-        // Collapse toggle
-        const chevron = title.querySelector('.collapse-chevron');
-        if (chevron) {
-            chevron.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const controls = card.querySelector('.effect-controls');
-                setCardCollapsed(card, controls.style.display !== 'none');
-            });
-        }
+        //
+        // What opening means, which is the one thing the two interfaces
+        // disagree about.  Compact has nowhere to expand into, so the
+        // row leads to a screen; roomy has room, so it expands where it
+        // sits and you keep the rest of the chain around it.
+        //
+        openCardOnTap(card, header, () => {
+            //
+            // Already open and filling the screen, so the name has no
+            // opening left to do - and the effect's own description is
+            // the thing it can say. Shown on a tap rather than always,
+            // because a paragraph on top of the tone curve is enough to
+            // push it off a phone. Back is how you leave the effect.
+            //
+            if (fullScreenId !== null) {
+                const about = card.querySelector('.effect-about');
+
+                if (about)
+                    about.classList.toggle('hidden');
+                return;
+            }
+
+            if (compactUi) {
+                openFullScreen(effect.id);
+                return;
+            }
+
+            const controls = card.querySelector('.effect-controls');
+            const collapse = controls.style.display !== 'none';
+
+            setCardCollapsed(card, collapse);
+            setUiPref('open.' + effect.id, !collapse);
+        });
 
         // The Reset button resets all pots. We should also reset the Mix pot!
         const resetBtn = enableGroup.querySelector('.effect-reset-btn');
@@ -3287,6 +3655,44 @@ function renderUI() {
 
         // Controls
         const controls = document.createElement('div');
+
+        //
+        // What the effect is, before any of its controls.
+        //
+        // Always shown rather than behind a tap, unlike a pot's: this
+        // is what somebody who has not met the pedal reads to decide
+        // whether they want this effect at all, and they will not tap a
+        // name to find out.  It is also the only thing a graphed effect
+        // can say, because its band controls are never drawn.
+        //
+        if (effect.about) {
+            //
+            // On the name, which is all a closed row shows: hover it
+            // and you are told what the effect is without opening it.
+            //
+            const nameEl = title.querySelector('.effect-name');
+
+            if (nameEl)
+                nameEl.title = effect.about;
+
+            //
+            // A finger has no hover, so the compact layout puts the
+            // same words in the card and a tap on the name shows them -
+            // see openCardOnTap() below.  Not on screen the whole time:
+            // a paragraph above the tone curve pushes the curve off a
+            // phone, and the tone effect is the one that most needs
+            // explaining, because its controls are points on a curve
+            // with no pot names to hover over.
+            //
+            if (compactUi) {
+                const about = document.createElement('div');
+
+                about.className = 'effect-about hidden';
+                about.textContent = effect.about;
+                controls.appendChild(about);
+                card.classList.add('has-about');
+            }
+        }
 
         let slidersContainer = null;
         let eqPotsInputs = [];
@@ -3961,7 +4367,7 @@ function renderUI() {
         // one.
         //
         if (effect.steerable) {
-            const mixPotDef = { name: 'Mix', curve: 'LINEAR', min: 0, max: 100, unit: '%' };
+            const mixPotDef = MIX_POT_DEF;
             const mixDiv = document.createElement('div');
             mixDiv.className = 'pot-control mix-pot-control';
 
@@ -3990,13 +4396,13 @@ function renderUI() {
                 sendSysex([SYSEX_CMD.PARAM_UPDATE, effect.id, 0, midiVal]);
             });
 
+            const mixInfo = potInfoLine(mixDiv, mixLabel, mixPotDef);
+
             mixDiv.appendChild(mixLabel);
             mixDiv.appendChild(mixValDisplay);
             mixDiv.appendChild(mixInput);
-
-            openOnTap(mixDiv, mixInput, () =>
-                setActivePot(`eff-${idx}-mix`, mixPotDef,
-                             parseInt(mixInput.value), effect.name));
+            if (mixInfo)
+                mixDiv.appendChild(mixInfo);
 
             // The EQ puts it in a row with its own switches
             (eqFooter || controls).appendChild(mixDiv);
@@ -4028,10 +4434,7 @@ function renderUI() {
             // reports about itself, so a firmware that gains a pot gains
             // its explanation too, without the app being redeployed.
             //
-            if (pot.info) {
-                potDiv.title = `${pot.name} — ${pot.info}`;
-                potDiv.classList.add('has-info');
-            }
+            const potInfo = potInfoLine(potDiv, label, pot);
 
             const initialVal = getInitialPotValue(pot);
 
@@ -4139,21 +4542,10 @@ function renderUI() {
                 potDiv.appendChild(label);
                 potDiv.appendChild(valDisplay);
                 potDiv.appendChild(input);
-
-                //
-                // Tapping the pot opens the big slider panel - except for
-                // a mouse grab of the inline slider itself, which is
-                // someone dragging it, and having the panel and its
-                // backdrop appear on top mid-drag is no help to anybody.
-                //
-                // A tap with a finger opens it wherever it lands, the
-                // inline slider included: that slider is about 100px wide
-                // for 121 values, which is not something a thumb can
-                // aim at, and the panel is what it has instead.
-                //
-                openOnTap(potDiv, input, () =>
-                    setActivePot(potIdKey, pot, parseInt(input.value), effect.name));
             }
+
+            if (potInfo)
+                potDiv.appendChild(potInfo);
 
             if (!isEq) {
                 controls.appendChild(potDiv);
@@ -4243,6 +4635,35 @@ function renderUI() {
             card.appendChild(meters);
         }
 
+        //
+        // Open or closed, as it was left - and only here, because
+        // setCardCollapsed() hides '.effect-controls' and the controls
+        // are built further up this same pass.  Asking any earlier finds
+        // nothing to hide and quietly does nothing.
+        //
+        // Remembered per effect, because this list is rebuilt from
+        // scratch on every schema and on every change to what the board
+        // can run, so a list collapsed by hand sprang open again at the
+        // next one.  That is most of why collapsing was not worth the
+        // bother.
+        //
+        // Closed by default in the compact interface, open in the roomy
+        // one, where a card is one of several on screen at once and its
+        // contents are the point.
+        //
+        // And closed either way for a global, whose pots are kept once
+        // for the whole pedal rather than per scene - the input jack,
+        // the MIDI channel, what goes out over USB.  That is setup, not
+        // a sound: you do it once and then you are done with it, so it
+        // costs room every time for something looked at almost never.
+        // Signal Chain is not one of these, and stays open where there
+        // is room: it is the trim, the gate and the master volume, and
+        // it carries the meters.
+        //
+        setCardCollapsed(card,
+                         !uiPref('open.' + effect.id,
+                                 !compactUi && !effect.global));
+
         effectCards.set(effect.id, card);
         effectsContainer.appendChild(card);
     });
@@ -4256,11 +4677,24 @@ function renderUI() {
     applyRouting([]);
 }
 
+//
+// The title is a button when there is nothing on the other end.
+//
+// Two jobs, and which one depends on why there is nothing.  With no MIDI
+// at all there is nothing to retry, so it opens the dialog, where the
+// reason is written out and the Demo Pedal is one pick away.  With MIDI
+// that has not come up yet, asking again is the useful thing.
+//
 appTitleEl.addEventListener('click', () => {
-    if (appTitleEl.textContent.includes('Tap to Connect') || appTitleEl.textContent.includes('Error')) {
-        appTitleEl.textContent = "Connecting...";
-        initMidi();
+    if (midiOutput)
+        return;
+
+    if (noMidiReason && !/not ready/.test(noMidiReason)) {
+        openMidiDialog();
+        return;
     }
+    appTitleEl.textContent = 'Connecting\u2026';
+    initMidi();
 });
 
 // Event Listeners
@@ -4317,14 +4751,25 @@ appTitleEl.addEventListener('click', () => {
         if (burger) burger.setAttribute('aria-expanded', 'false');
     }
 
+    //
+    // Where the ports are picked, reached from the menu and from the
+    // title when there is no pedal - see the title's click handler.
+    //
+    function openMidiDialog() {
+        const panel = document.getElementById('settings-panel');
+
+        if (!panel)
+            return;
+        closeAllPanels();
+        panel.classList.remove('hidden');
+        if (backdrop) backdrop.classList.remove('hidden');
+    }
+
     function closeAllPanels() {
         if (document.getElementById('panel-backdrop')) document.getElementById('panel-backdrop').classList.add('hidden');
         if (document.getElementById('settings-panel')) document.getElementById('settings-panel').classList.add('hidden');
         if (document.getElementById('bindings-panel')) document.getElementById('bindings-panel').classList.add('hidden');
-        if (document.getElementById('active-pot-panel')) document.getElementById('active-pot-panel').classList.add('hidden');
         closeMenu();
-        activePotCc = null;
-        activePotDef = null;
     }
 
     const backdrop = document.getElementById('panel-backdrop');
@@ -4419,11 +4864,7 @@ appTitleEl.addEventListener('click', () => {
     const closeSettingsBtn = document.getElementById('close-settings');
 
     if (openSettingsBtn && settingsPanel) {
-        openSettingsBtn.addEventListener('click', () => {
-            closeAllPanels();
-            settingsPanel.classList.remove('hidden');
-            if (backdrop) backdrop.classList.remove('hidden');
-        });
+        openSettingsBtn.addEventListener('click', openMidiDialog);
     }
 
     if (closeSettingsBtn) {
@@ -4444,103 +4885,6 @@ appTitleEl.addEventListener('click', () => {
     const closeBindingsBtn = document.getElementById('close-bindings');
     if (closeBindingsBtn)
         closeBindingsBtn.addEventListener('click', closeAllPanels);
-
-    //
-    // Point the knob at whatever pot the panel is showing.  The hint
-    // beside it says what is being taken away, because with one knob
-    // every assignment takes it off something else.
-    //
-    const assignKnobBtn = document.getElementById('assign-knob-btn');
-    if (assignKnobBtn) {
-        assignKnobBtn.addEventListener('click', () => {
-            const t = activePotTarget();
-            if (!t)
-                return;
-            //
-            // Move the knob's first rule rather than adding another,
-            // since "assign" means point it here and a second rule
-            // would mean drive both.
-            //
-            const i = pedalRules.findIndex(r => r.control === 0 &&
-                                                r.action === ACT.POT);
-            const r = { control: 0, action: ACT.POT,
-                        effect: t.effId, pot: t.pot, val: [0, 0] };
-            if (i < 0)
-                sendRules(pedalRules.concat([r]));
-            else
-                putRule(i, r);
-        });
-    }
-
-    const closeActivePotBtn = document.getElementById('close-active-pot');
-    if (closeActivePotBtn) {
-        closeActivePotBtn.addEventListener('click', () => {
-            closeAllPanels();
-        });
-    }
-
-    const activePotSlider = document.getElementById('active-pot-slider');
-    if (activePotSlider) {
-        // the whole panel: its name and readout are part of the pot too
-        enableWheelAdjust(activePotSlider,
-                          document.getElementById('active-pot-panel') || activePotSlider);
-        activePotSlider.addEventListener('input', (e) => {
-            if (activePotCc === null || !activePotDef) return;
-
-            const val = parseInt(e.target.value);
-            const valDisplay = document.getElementById('active-pot-value');
-
-            if (valDisplay)
-                valDisplay.textContent = formatPotValue(activePotDef, val);
-
-            // Update original element
-            const origInput = ccToElementMap.get(activePotCc);
-            if (origInput) {
-                origInput.value = val;
-                const valDisplay = origInput.parentElement.querySelector('.pot-value');
-                if (valDisplay) valDisplay.textContent = formatPotValue(activePotDef, val);
-                if (origInput.redrawCurve) origInput.redrawCurve();
-            }
-
-            // Parse activePotCc to get effectId and potIdx
-            // activePotCc is like "eff-2-pot-0" or "eff-2-mix"
-            const parts = activePotCc.split('-');
-            if (parts.length >= 4 && parts[2] === 'pot') {
-                const idx = parseInt(parts[1]);
-                const pIdx = parseInt(parts[3]);
-                const effId = PEDAL_EFFECTS[idx].id;
-                sendSysex([SYSEX_CMD.PARAM_UPDATE, effId, pIdx + 1, val]);
-            } else if (parts.length === 3 && parts[2] === 'mix') {
-                const idx = parseInt(parts[1]);
-                const effId = PEDAL_EFFECTS[idx].id;
-                sendSysex([SYSEX_CMD.PARAM_UPDATE, effId, 0, val]);
-            }
-        });
-    }
-
-    function setActivePot(cc, potDef, currentVal, effectName) {
-        const panel = document.getElementById('active-pot-panel');
-        const name = document.getElementById('active-pot-title');
-        const valDisplay = document.getElementById('active-pot-value');
-
-        // No panel, nothing to make active - and in particular don't set
-        // activePotCc, which everything else takes as "the panel is up".
-        if (!panel)
-            return;
-
-        closeAllPanels();
-        activePotCc = cc;
-        activePotDef = potDef;
-
-        if (name) name.textContent = `${effectName} - ${potDef.name}`;
-        if (valDisplay) valDisplay.textContent = formatPotValue(potDef, currentVal);
-        if (activePotSlider) activePotSlider.value = currentVal;
-
-        renderKnobHint();
-
-        panel.classList.remove('hidden');
-        if (backdrop) backdrop.classList.remove('hidden');
-    }
 
     const globalUnrouteBtn = document.getElementById('global-unroute-btn');
     if (globalUnrouteBtn) {
