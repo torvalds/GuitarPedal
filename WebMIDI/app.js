@@ -3192,39 +3192,24 @@ function setRouting(ids) {
 }
 
 //
-// Onto the end of the chain, which is where a new effect goes - and then
-// go and look at it, because the end of the chain is somewhere else.
+// Onto the end of the chain, which is where a new effect goes.
 //
-// Tapping a chip is asking for that effect, and what you get back is a
-// card you cannot see: the pool is below the whole chain, the card lands
-// at the far end of it, and everything shifts as the pool shrinks.  So
-// the one thing you asked for is the one thing not on the screen.
+// And the screen stays where it is.  The pool is below the chain, so
+// tapping a chip means you are already at the bottom, which is where
+// the new row appears - and routing is usually several effects in a
+// row, each tap needing the next chip to still be under your finger.
 //
-// Centred rather than just scrolled into view, because "just far enough"
-// puts it hard against an edge with its controls half off - and the
-// movement is worth having in its own right. It is what says where the
-// effect went, which is a thing about the chain worth knowing.
+// This used to centre the new card instead, on the grounds that the end
+// of the chain is somewhere else.  With a long chain that scrolls a long
+// way, and because applyRouting() re-appends every card afterwards, the
+// smooth scroll finishes somewhere that no longer holds the card it was
+// aimed at.
 //
 function routeEffect(id) {
     if (currentRouting.includes(id) || currentRouting.length >= MAX_ROUTED)
         return;
 
     setRouting([...currentRouting, id]);
-    showEffectCard(id);
-}
-
-function showEffectCard(id) {
-    const card = effectCards.get(id);
-    if (!card)
-        return;
-
-    // Somebody who has asked not to be moved about gets put there
-    // directly instead
-    const still = window.matchMedia &&
-                  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    card.scrollIntoView({ block: 'center',
-                          behavior: still ? 'auto' : 'smooth' });
 }
 
 function unrouteEffect(id) {
@@ -3339,8 +3324,16 @@ function applyRouting(routeIds) {
         // Open it on the way in.  An effect that has just been added is
         // one you are about to set up - but only on the way in, or
         // reordering the chain would keep reopening a card you closed.
-        if (!wasRouted.has(id) && !isAnchorEffect(effectIdMap.get(id)))
+        //
+        // Not in the compact interface, where adding effects and putting
+        // them in order is work done in the list, and a card that opens
+        // to six hundred pixels pushes the list off the screen.  There
+        // the row appears and nothing else moves.
+        if (!compactUi && !wasRouted.has(id) &&
+            !isAnchorEffect(effectIdMap.get(id))) {
             setCardCollapsed(card, false);
+            setUiPref('open.' + id, true);
+        }
     });
 
     PEDAL_EFFECTS.forEach(effect => {
