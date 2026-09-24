@@ -3528,7 +3528,7 @@ function renderUI() {
         if (!isAnchorEffect(idx) && !pinnedEnd(effect)) {
             title.innerHTML = `<span class="drag-handle">≡</span>
                                <span class="collapse-chevron">▼</span>
-                               <span>${effect.name}</span>`;
+                               <span class="effect-name">${effect.name}</span>`;
 
             // A drag starts on the header and nowhere else, so there is
             // never any question of whether you meant the card or the
@@ -3546,7 +3546,7 @@ function renderUI() {
                                     (e) => cardSwipeStart(card, e));
         } else {
             title.innerHTML = `<span class="collapse-chevron">▼</span>
-                               <span>${effect.name}</span>`;
+                               <span class="effect-name">${effect.name}</span>`;
         }
 
         //
@@ -3606,8 +3606,20 @@ function renderUI() {
         // sits and you keep the rest of the chain around it.
         //
         openCardOnTap(card, header, () => {
-            if (fullScreenId !== null)
-                return;                 // Back is how you leave it
+            //
+            // Already open and filling the screen, so the name has no
+            // opening left to do - and the effect's own description is
+            // the thing it can say. Shown on a tap rather than always,
+            // because a paragraph on top of the tone curve is enough to
+            // push it off a phone. Back is how you leave the effect.
+            //
+            if (fullScreenId !== null) {
+                const about = card.querySelector('.effect-about');
+
+                if (about)
+                    about.classList.toggle('hidden');
+                return;
+            }
 
             if (compactUi) {
                 openFullScreen(effect.id);
@@ -3643,6 +3655,44 @@ function renderUI() {
 
         // Controls
         const controls = document.createElement('div');
+
+        //
+        // What the effect is, before any of its controls.
+        //
+        // Always shown rather than behind a tap, unlike a pot's: this
+        // is what somebody who has not met the pedal reads to decide
+        // whether they want this effect at all, and they will not tap a
+        // name to find out.  It is also the only thing a graphed effect
+        // can say, because its band controls are never drawn.
+        //
+        if (effect.about) {
+            //
+            // On the name, which is all a closed row shows: hover it
+            // and you are told what the effect is without opening it.
+            //
+            const nameEl = title.querySelector('.effect-name');
+
+            if (nameEl)
+                nameEl.title = effect.about;
+
+            //
+            // A finger has no hover, so the compact layout puts the
+            // same words in the card and a tap on the name shows them -
+            // see openCardOnTap() below.  Not on screen the whole time:
+            // a paragraph above the tone curve pushes the curve off a
+            // phone, and the tone effect is the one that most needs
+            // explaining, because its controls are points on a curve
+            // with no pot names to hover over.
+            //
+            if (compactUi) {
+                const about = document.createElement('div');
+
+                about.className = 'effect-about hidden';
+                about.textContent = effect.about;
+                controls.appendChild(about);
+                card.classList.add('has-about');
+            }
+        }
 
         let slidersContainer = null;
         let eqPotsInputs = [];

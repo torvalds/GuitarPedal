@@ -334,6 +334,17 @@ input:checked + .slider:before {
   display: none;
 }
 
+/*
+ * The same dotted underline a pot's name carries, and it means the same
+ * thing: there is something here to read. Only while the effect has the
+ * screen, because in the list the name is what opens the effect.
+ */
+#fullscreen-panel .effect-card.has-about .effect-name {
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
 .pot-control.has-info > .pot-label {
   text-decoration: underline dotted;
   text-underline-offset: 0.2em;
@@ -601,6 +612,26 @@ textarea {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 20px;
+}
+
+/*
+ * What the effect is, across the top of it.  The whole width in the
+ * grid the pots are laid out in, and a plain block in the EQ's own
+ * container, which is not a grid.
+ */
+/* No general .hidden rule to inherit, so declare it (see above). */
+.effect-about.hidden {
+  display: none;
+}
+
+.effect-about {
+  grid-column: 1 / -1;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  border-left: 2px solid var(--panel-border);
+  padding: 2px 0 2px 12px;
+  margin-bottom: 4px;
 }
 
 /* Graphic EQ specific styles */
