@@ -27,7 +27,18 @@ body {
   padding: 20px;
 }
 
+/*
+ * A card flicked out of the chain travels sideways under the finger,
+ * and on the way out it is wider than the window. That gave the page a
+ * horizontal scroll range for as long as the card was moving, so the
+ * page could be panned sideways mid-gesture and left there.  Clip it:
+ * the card leaves at the edge, which is where it was going.
+ *
+ * clip rather than hidden, which would make this a scroll container.
+ * On html it had no effect at all - measured, both ways round.
+ */
 .app-container {
+  overflow-x: clip;
   max-width: 800px;
   margin: 0 auto;
   display: flex;
