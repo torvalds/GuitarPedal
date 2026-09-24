@@ -328,10 +328,12 @@ def generate(audio_dir, out_h, out_js, out_md):
         # Match: // POT: "Name" CURVE(a b c) = 1.0 Unit
         pot_re = re.compile(r'//[ \t]*POT:[ \t]*"([^"]+)"[ \t]+(LINEAR|FREQUENCY|SQUARED|EXPONENTIAL|RAW|ENUM|BOOL)(?:\(([^)]+)\))?(?:[ \t]*=[ \t]*(\S+))?(?:[ \t]+(\S+))?[ \t]*$')
         info_re = re.compile(r'//[ \t]*INFO:[ \t]*(.*?)[ \t]*$')
+        about_re = re.compile(r'//[ \t]*ABOUT:[ \t]*(.*?)[ \t]*$')
         needs_re = re.compile(r'//[ \t]*NEEDS:[ \t]*([A-Z0-9_]+)[ \t]*'
                               r'=[ \t]*(\S+)[ \t]*$')
 
         pots = []
+        about = []          # what the effect is, as opposed to its pots
         open_pot = None     # the pot an INFO: line would belong to
 
         for lineno, line in enumerate(content.splitlines(), 1):
@@ -348,6 +350,24 @@ def generate(audio_dir, out_h, out_js, out_md):
             # word, and quietly attaching it to whichever pot came last
             # would be worse than refusing.
             #
+            #
+            # What the effect is for, which is not a property of any one
+            # pot.  A word of its own rather than an INFO: that floats:
+            # an INFO: before the first POT: would mean the effect and
+            # after it would mean a control, so moving a POT: line would
+            # silently change what a paragraph was about - and POT:
+            # lines are free to be reordered.
+            #
+            # The graphed effects are why this exists. [TONE] and [EQ]
+            # draw their bands as nodes on a curve and their pot
+            # controls are never shown, so what those effects have to
+            # say cannot be said one pot at a time.
+            #
+            about_line = about_re.match(line)
+            if about_line:
+                about.append(about_line.group(1))
+                continue
+
             info = info_re.match(line)
             if info:
                 if not open_pot:
@@ -437,6 +457,8 @@ def generate(audio_dir, out_h, out_js, out_md):
 
         for pot in pots:
             pot['info'] = ' '.join(pot['info']) or None
+
+        about = ' '.join(about) or None
 
         #
         # Two labels that come out as one identifier would define one
@@ -592,6 +614,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             'init_core0': bool(re.search(r'//[ \t]*INIT:[ \t]*core0\b',
                                          content)),
             'short_name': short_name,
+            'about': about,
             'priority': priority,
             'def_mix': def_mix,
             'mix_law': mix_law,
@@ -713,6 +736,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             "base": e_data['base'],
             "name": e_data['full_name'],
             "shortName": e_data['short_name'],
+            "about": e_data['about'],
             "defMix": e_data['def_mix'],
             "mixLaw": e_data['mix_law'],
             # The schema is camelCase, the python is not
@@ -1273,6 +1297,8 @@ def generate(audio_dir, out_h, out_js, out_md):
         f.write("### Effects Reference\n\n")
         for e_idx, e_data in enumerate(effects_data):
             f.write(f"#### {e_data['full_name']} (ID: {e_data['id']})\n\n")
+            if e_data['about']:
+                f.write(f"{e_data['about']}\n\n")
             for p_idx, pot in enumerate(e_data['pots']):
                 if pot['enum']:
                     range_str = ", ".join([f"{i}={v}" for i, v in enumerate(pot['enum'])])
