@@ -57,7 +57,12 @@ const BIND_FOLLOW = 0x7f;
 // drawn from - the same one the effect cards use for their own mix
 // slider.
 //
-const MIX_POT_DEF = { name: 'Mix', curve: 'LINEAR', min: 0, max: 100, unit: '%' };
+const MIX_POT_DEF = {
+    name: 'Mix', curve: 'LINEAR', min: 0, max: 100, unit: '%',
+    info: 'How much of this effect you hear against the signal that '
+        + 'went into it. Fully down is the effect doing nothing at '
+        + 'all; fully up is the effect on its own.',
+};
 
 let CONTROLS = [];
 
@@ -3451,6 +3456,33 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+//
+// What a control is for, on the control.
+//
+// The hover text and a line in the card say the same thing, because a
+// phone has no hover at all.  Tapping the name is what people try, and
+// the dotted underline under it says there is something to read - what
+// the tap used to get was the browser selecting the word and offering
+// to search for it.
+//
+// Hands back the line to go under the control, or null.  The caller
+// appends it last, after whatever kind of control this turned out to
+// be.
+//
+function potInfoLine(potDiv, label, pot) {
+    if (!pot.info)
+        return null;
+
+    potDiv.title = `${pot.name} \u2014 ${pot.info}`;
+    potDiv.classList.add('has-info');
+
+    const line = document.createElement('div');
+    line.className = 'pot-info hidden';
+    line.textContent = pot.info;
+    label.addEventListener('click', () => line.classList.toggle('hidden'));
+    return line;
+}
+
 function renderUI() {
     //
     // Whatever is open belongs to the cards about to be thrown away, so
@@ -4285,7 +4317,7 @@ function renderUI() {
         // one.
         //
         if (effect.steerable) {
-            const mixPotDef = { name: 'Mix', curve: 'LINEAR', min: 0, max: 100, unit: '%' };
+            const mixPotDef = MIX_POT_DEF;
             const mixDiv = document.createElement('div');
             mixDiv.className = 'pot-control mix-pot-control';
 
@@ -4314,9 +4346,13 @@ function renderUI() {
                 sendSysex([SYSEX_CMD.PARAM_UPDATE, effect.id, 0, midiVal]);
             });
 
+            const mixInfo = potInfoLine(mixDiv, mixLabel, mixPotDef);
+
             mixDiv.appendChild(mixLabel);
             mixDiv.appendChild(mixValDisplay);
             mixDiv.appendChild(mixInput);
+            if (mixInfo)
+                mixDiv.appendChild(mixInfo);
 
             // The EQ puts it in a row with its own switches
             (eqFooter || controls).appendChild(mixDiv);
@@ -4348,10 +4384,7 @@ function renderUI() {
             // reports about itself, so a firmware that gains a pot gains
             // its explanation too, without the app being redeployed.
             //
-            if (pot.info) {
-                potDiv.title = `${pot.name} — ${pot.info}`;
-                potDiv.classList.add('has-info');
-            }
+            const potInfo = potInfoLine(potDiv, label, pot);
 
             const initialVal = getInitialPotValue(pot);
 
@@ -4460,6 +4493,9 @@ function renderUI() {
                 potDiv.appendChild(valDisplay);
                 potDiv.appendChild(input);
             }
+
+            if (potInfo)
+                potDiv.appendChild(potInfo);
 
             if (!isEq) {
                 controls.appendChild(potDiv);

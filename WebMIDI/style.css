@@ -337,6 +337,27 @@ input:checked + .slider:before {
 .pot-control.has-info > .pot-label {
   text-decoration: underline dotted;
   text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+/*
+ * What the pot is for, in the card.  The effect supplies the words and
+ * the hover text is the same ones - but a phone has no hover, so the
+ * name is tappable and this is what the tap reveals.
+ */
+.pot-info {
+  align-self: stretch;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  text-align: left;
+  color: var(--text-muted);
+  border-left: 2px solid var(--accent);
+  padding: 2px 0 2px 10px;
+}
+
+/* No general .hidden rule to inherit, so declare it (see above). */
+.pot-info.hidden {
+  display: none;
 }
 
 .pot-value {
