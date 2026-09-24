@@ -124,8 +124,9 @@ every sweep on every page, which is slow.
 Then there are the ones that want hardware: ``make check-hw`` with a
 signal generator, ``make check-analog`` with a patch cable from the
 pedal's output back to its own input, ``make check-bench`` to ask whether
-a real board agrees with the host build, and ``make check-loop`` if you
-have two pedals to patch into each other.
+a real board agrees with the host build, ``make check-hwtone`` to sweep
+the tone stack the codec runs in its own biquads, and ``make check-loop``
+if you have two pedals to patch into each other.
 
 ## Hardware
 
