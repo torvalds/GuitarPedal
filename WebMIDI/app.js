@@ -3280,6 +3280,23 @@ function setCardCollapsed(card, collapsed) {
 //
 function applyRouting(routeIds) {
     const wasRouted = new Set(currentRouting);
+
+    //
+    // Where the pool is on the screen, so it can be put back there.
+    //
+    // Routing is usually several effects in a row, and the chips are
+    // all in the pool: each tap has to leave the next one under your
+    // finger. A new card goes in above the pool, so leaving the scroll
+    // alone pushes the chips down by a card every time - measured at
+    // 390x844, one tap was enough to put the next chip off the bottom.
+    //
+    // This only works because #effects-container turns the browser's
+    // own scroll anchoring off.  Left on, it picks a card of its own,
+    // sees this function move it, and scrolls to follow.
+    //
+    const anchor = effectPool && effectPool.offsetParent
+                 ? effectPool.getBoundingClientRect().top : null;
+
     currentRouting = routeIds.slice();
 
     // What the knob can be pointed at is a function of what is in the
@@ -3347,6 +3364,15 @@ function applyRouting(routeIds) {
     if (effectPool) {
         effectsContainer.appendChild(effectPool);
         renderPool();
+    }
+
+    // getBoundingClientRect() settles the layout first, so this is
+    // the finished position and not a guess at one.
+    if (anchor !== null && effectPool.offsetParent) {
+        const moved = effectPool.getBoundingClientRect().top - anchor;
+
+        if (moved)
+            window.scrollBy(0, moved);
     }
 }
 
