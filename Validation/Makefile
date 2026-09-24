@@ -185,6 +185,17 @@ check-analog:
 	./test-analog.py $(if $(TARGET),--target $(TARGET))
 
 #
+# What the codec's own biquads do to a signal, which nothing on the host
+# can work out: the filters are in the converter and the only way to see
+# them is to put something through one.  Wants a pedal whose output
+# reaches its own input or another pedal's, and a codec that answers on
+# i2c - it says which of those is missing and skips.
+#
+check-hwtone:
+	./test-hwtone.py $(if $(TARGET),--target $(TARGET)) \
+			 $(if $(SOURCE),--source $(SOURCE))
+
+#
 # The web app gets checked too, which needs node.
 #
 # Skipped rather than fatal when node isn't installed: it is the only
@@ -286,5 +297,5 @@ else
 endif
 
 .PHONY: bench check check-analog check-analysis check-bench check-biquad
-.PHONY: check-boot check-effects check-hw check-loop
+.PHONY: check-boot check-effects check-hw check-hwtone check-loop
 .PHONY: check-midi check-reboot check-split

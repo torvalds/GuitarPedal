@@ -1,11 +1,13 @@
 // NAME: Expression Jack [EXPJACK]
 // PRIORITY: 131
 // MIX: NONE		// it isn't an effect, and there is nothing to mix
+// HW: EXPRESSION
 //
 // Kept once rather than per scene: what is plugged into the jack is
 // true of the pedal and not of any one sound.
 //
 // GLOBAL
+// POSITION: BACK
 //
 // Whether the pedal is allowed to answer the next question itself.
 //

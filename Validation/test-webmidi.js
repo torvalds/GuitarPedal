@@ -198,7 +198,7 @@ const WANT = ['handleIdentity', 'populateScenePicker', 'updateSceneLabels',
               'routeEffect', 'unrouteEffect',
               'potToValue', 'valueToPot', 'clampToNeighbours', 'pileAt',
               'uiPref', 'setUiPref',
-              'controlDef', 'actionsFor'];
+              'controlDef', 'actionsFor', 'hwName'];
 
 //
 // The chain is a list held in a variable rather than anything the dom
@@ -210,6 +210,12 @@ const src = fs.readFileSync(effectsJs, 'utf8') + '\n'
           + fs.readFileSync(path.join(WEB, 'app.js'), 'utf8') + '\n'
           + `;globalThis.__app = { ${WANT.join(', ')} };`
           + `;globalThis.__app.routing = () => currentRouting;`
+          //
+          // Which cards exist, from the app's own register rather than
+          // from the id lookup: this dom never forgets an id, so an
+          // element that was replaced is still findable by it.
+          //
+          + `;globalThis.__app.cards = () => [...effectCards.keys()];`
           + `;globalThis.__app.controls = () => CONTROLS;`
           //
           // What a control is wired to, and what it puts on the wire.
@@ -398,21 +404,30 @@ check('the schema declares channel steering once, not per effect',
 //
 // Steering means nothing for an effect that is never handed to
 // do_effect_step(), and those are the ones that anchor the chain: the
-// signal chain, and anything the pedal keeps once rather than per
-// scene.
+// ones that run whatever a scene says.
 //
 // Asked of the schema rather than counted off the ends.  "The first and
 // the last" was true while there was one global effect, and this test
 // went on asserting it after there were two - which made it agree with
-// the bug rather than catch it.
+// the bug rather than catch it.  Being kept once is a different
+// question again, and two pinned effects are not.
 //
-const anchors = schema.filter((e, i) => i === 0 || e.global);
-const routable = schema.filter((e, i) => i !== 0 && !e.global);
+const anchors = schema.filter((e) => e.always);
+const routable = schema.filter((e) => !e.always);
 
 check('there is more than one way to anchor the chain',
       anchors.length >= 2 && anchors.length + routable.length === schema.length);
-check('only the routable effects are steerable',
-      routable.every((e) => e.steerable) && anchors.every((e) => !e.steerable));
+check('an anchor is never steerable',
+      anchors.every((e) => !e.steerable));
+//
+// And a routable one may or may not be. Nothing stops an effect from
+// being switched by the chain and having no wet and no dry of its own,
+// which is what the codec's tone stacks are: routed like anything
+// else, and doing their work somewhere the mix cannot reach.
+//
+check('a routable effect may have a mix or not',
+      routable.some((e) => e.steerable) && routable.some((e) => !e.steerable));
+
 const pool = document.getElementById('effect-pool');
 
 // [label, chip grid], or hidden with nothing in it at all
@@ -469,6 +484,34 @@ check('unrouting one leaves the others alone',
 check('and puts just that one back in the pool',
       chipNames().includes(routable[5].name)
       && !chipNames().includes(routable[1].name));
+
+//
+// What an effect needs is in the schema because it is a fact about the
+// build; what the board has is in the hello reply because only running
+// on it settles that.  An effect whose need went unanswered is drawn -
+// firmware older than this says nothing at all, and saying nothing has
+// to keep meaning what it used to.
+//
+const needy = schema.filter((e) => e.needs);
+
+check('some effects say what hardware they need',
+      needy.length >= 1 && needy.every((e) => typeof e.needs === 'string'));
+check('and they are drawn when the pedal does not say either way',
+      needy.every((e) => app.cards().includes(e.id)));
+
+app.handleIdentity(identity({ have: Object.fromEntries(
+    needy.map((e) => [e.needs, false])) }));
+check('an effect the board cannot run gets no card at all',
+      needy.every((e) => !app.cards().includes(e.id)));
+check('and the board note names what is missing, in words',
+      new RegExp(app.hwName(needy[0].needs)).test(
+          document.getElementById('identity-info').textContent),
+      document.getElementById('identity-info').textContent);
+
+app.handleIdentity(identity({ have: Object.fromEntries(
+    needy.map((e) => [e.needs, true])) }));
+check('and it comes back when a board does have it',
+      needy.every((e) => app.cards().includes(e.id)));
 
 //
 // Telemetry.  The layout is append-only, so the interesting cases are the
@@ -686,11 +729,19 @@ schema.forEach((eff, idx) => {
     check(`${eff.name} hides only the pots the graph draws`,
           hidden.children.length === eff.graph.length * 2,
           `${hidden.children.length} hidden, ${eff.graph.length * 2} banded`);
+    //
+    // Plus the Mix control, where there is one.  'MIX: NONE' says there
+    // is not - an effect can be switched by the chain and still do its
+    // work somewhere the wet and the dry cannot reach - and 'steerable'
+    // is that same declaration as the schema carries it.
+    //
+    const expect = spare + (eff.steerable ? 1 : 0);
+
     check(`${eff.name} puts its ${spare} spare pot(s) where they can be used`,
           footer.children.filter(
               (c) => (c.className || '').includes('pot-control')).length
-          === spare + 1,      // and the Mix control
-          `${footer.children.length} in the footer`);
+          === expect,
+          `${footer.children.length} in the footer, wanted ${expect}`);
 });
 
 //
@@ -894,7 +945,7 @@ if (roleEff) {
 //
 const older = JSON.parse(schemaJson);
 (Array.isArray(older) ? older : older.effects)
-    .forEach((e) => { delete e.global; });
+    .forEach((e) => { delete e.global; delete e.always; delete e.position; });
 app.handleSysex(asSysex(0x02, JSON.stringify(older)));
 
 const oldPool = document.getElementById('effect-pool');

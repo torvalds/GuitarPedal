@@ -33,6 +33,379 @@ static bool __tac5112_array_write(const unsigned char arr[][2], int nr)
 }
 #define tac5112_array_write(arr) __tac5112_array_write(arr, ARRAY_SIZE(arr))
 
+//
+// Everything the codec is told while audio runs, handed to DMA.
+//
+// Taken from sh1106_task(), as it was before it was removed in "Bulk
+// remove stale SH1106 and TAC5112 code": one channel paced by the i2c
+// transmit DREQ, a buffer
+// of 16-bit words where the low byte is the data and bit 9 is the STOP
+// that ends a transaction, and the target address written to the
+// peripheral by hand because nothing goes through the SDK's blocking
+// call any more.  The screen wanted it for the same reason this does.
+//
+// **This works because the codec is alone on i2c0.**  The address is in
+// the peripheral's TAR register and not in the buffer, so every byte
+// DMA hands over goes to the same device.  A second address on this bus
+// means changing TAR between transactions, which means waiting for the
+// FIFO to drain first - serialising exactly what this exists to avoid.
+// Nothing else is programmed over i2c at all right now, so this is a
+// constraint on whatever gets added rather than a description of
+// anything that is here.
+//
+// The size is one pass of hwtone_task() for each stack: six biquads at
+// 21 bytes, four page selects, and a volume write per channel, twice
+// over, which is 288.
+//
+#define TAC_DMA_ENTRIES 320
+
+static int tac_dma_chan = -1;
+static unsigned tac_dma_used;
+static uint16_t tac_dma_buf[TAC_DMA_ENTRIES];
+static int tac_page = -1;
+
+static void tac_dma_setup(void)
+{
+	const struct {
+		i2c_inst_t *i2c;
+		unsigned char addr;
+	} tac = { TAC5112_I2C };
+	i2c_hw_t *hw = i2c_get_hw(tac.i2c);
+	dma_channel_config c;
+
+	tac_dma_chan = dma_claim_unused_channel(true);
+	c = dma_channel_get_default_config(tac_dma_chan);
+	channel_config_set_transfer_data_size(&c, DMA_SIZE_16);
+	channel_config_set_dreq(&c, i2c_get_dreq(tac.i2c, true));
+	dma_channel_configure(tac_dma_chan, &c, &hw->data_cmd, tac_dma_buf,
+			      0, false);	// count is per transfer
+
+	hw->enable = 0;
+	hw->tar = tac.addr;
+	hw->enable = 1;
+}
+
+//
+// Whether a burst can be built right now, which is also the whole of
+// the pacing: nothing new is worked out until the last lot has gone.
+//
+// Both stacks share the bus, so they share one burst - whoever has
+// something to say adds it and it goes out once, at the end.  A channel
+// each would interleave two transactions into one FIFO.
+//
+static bool tac_dma_ready(void)
+{
+	if (tac_dma_chan >= 0 && dma_channel_is_busy(tac_dma_chan))
+		return false;
+	tac_dma_used = 0;
+	return true;
+}
+
+//
+// The channel is claimed the first time there is something to send, so
+// a board whose codec is strapped never takes one.
+//
+static void tac_dma_flush(void)
+{
+	if (!tac_dma_used)
+		return;
+	if (tac_dma_chan < 0)
+		tac_dma_setup();
+	dma_channel_transfer_from_buffer_now(tac_dma_chan, tac_dma_buf,
+					     tac_dma_used);
+}
+
+//
+// One transaction.  The STOP on the last byte is what ends it; the
+// hardware puts a START and the address in front of whatever is written
+// next.
+//
+static void tac_queue(const unsigned char *data, int len)
+{
+	if (tac_dma_used + len > TAC_DMA_ENTRIES)
+		return;
+	for (int i = 0; i < len; i++)
+		tac_dma_buf[tac_dma_used++] = data[i];
+	tac_dma_buf[tac_dma_used - 1] |= I2C_IC_DATA_CMD_STOP_BITS;
+}
+
+static void tac_queue_page(int page)
+{
+	if (page != tac_page) {
+		unsigned char bytes[2] = { 0, page };
+		tac_page = page;
+		tac_queue(bytes, 2);
+	}
+}
+
+static void bq_convert(float f, unsigned char *buf)
+{
+	int val = lrintf(f * (float)0x7fffffff);
+
+	if (f > 0 && val < 0)
+		val = 0x7fffffff;
+
+	buf[0] = val >> 24;
+	buf[1] = val >> 16;
+	buf[2] = val >> 8;
+	buf[3] = val;
+}
+
+static inline void tac_queue_biquad(const struct biquad_coeff *bq, int page, int reg)
+{
+	unsigned char buf[1+5*4];
+
+	buf[0] = reg;
+	bq_convert(bq->b0, buf+1);
+	bq_convert(0.5 * bq->b1, buf+5);
+	bq_convert(bq->b2, buf+9);
+	bq_convert(-0.5 * bq->a1, buf+13);
+	bq_convert(-bq->a2, buf+17);
+
+	tac_queue_page(page);
+	tac_queue(buf, sizeof(buf));
+}
+
+//
+// How far outside 1.31 a section's numerator reaches.
+//
+// A boost always reaches outside it somewhere and a cut never does, but
+// by how much depends on where the band sits rather than on how much
+// boost it is: the same +15dB peak reaches 5.62 at 3kHz and 1.001 at
+// 24Hz, because down there the poles and zeros crowd together near z=1
+// and every coefficient sits near 1 whatever the gain.  The denominator
+// of a stable section always fits once it is halved.
+//
+// This is a bound on storing the coefficients and on nothing else.  It
+// is not the section's gain - scaling to fit does not normalise the
+// response - and it says nothing about what the codec does with a
+// signal between its own sections.
+//
+// Returned as the peak rather than as a scale, because what to do about
+// it is a question about the whole channel and not about one section.
+//
+static float tac_numerator_peak(const struct biquad_coeff *bq)
+{
+	float peak = fabsf(bq->b0);
+
+	if (fabsf(0.5f * bq->b1) > peak)
+		peak = fabsf(0.5f * bq->b1);
+	if (fabsf(bq->b2) > peak)
+		peak = fabsf(bq->b2);
+	return peak;
+}
+
+//
+// A channel's digital volume, in the half-decibel steps the register
+// counts.
+//
+// Two scales, because the two paths do not share one: the ADC's zero is
+// 161 and the DAC's is 201, both in half-decibel steps, and both mute at
+// zero.  The DAC has an A and a B register for each channel and both are
+// written, since on this board the pair is one output.
+//
+// Steps rather than decibels because the caller has already divided the
+// numerators by exactly what this restores, and a float dB here would
+// round a second time and undo that.  Clamping is still possible - three
+// bands at +15 dB ask for more than the DAC's register can count - and
+// then the filter is right and the channel is quiet, which is the way
+// round to be wrong.
+//
+static void tac_queue_dvol(enum hwtone_path path, int ch, int half_db)
+{
+	static const unsigned char adc_reg[2] = { 0x52, 0x57 };
+	static const unsigned char dac_reg[2][2] = {
+		{ 0x67, 0x69 }, { 0x6e, 0x70 }
+	};
+	bool dac = path == HWTONE_PLAYBACK;
+	int v = (dac ? 201 : 161) + half_db;
+	unsigned char buf[2];
+
+	if (v < 1)
+		v = 1;
+	if (v > 255)
+		v = 255;
+	buf[1] = v;
+
+	tac_queue_page(0);
+	if (!dac) {
+		buf[0] = adc_reg[ch];
+		tac_queue(buf, 2);
+		return;
+	}
+	for (int i = 0; i < 2; i++) {
+		buf[0] = dac_reg[ch][i];
+		tac_queue(buf, 2);
+	}
+}
+
+//
+// How much makeup to ask for, in the register's own steps.
+//
+// Rounded away from unity rather than to nearest, so the step is never
+// smaller than what the sections gave away: the numerators are then
+// divided by at least as much as they needed, and dividing a numerator
+// further always still fits.
+//
+static int tac_dvol_steps(float carried)
+{
+	float steps = -40.0f * log10f(carried);
+	int whole = (int)steps;
+
+	if (carried >= 1.0f)
+		return 0;
+	return steps > (float)whole ? whole + 1 : whole;
+}
+
+//
+// Where a channel's three biquads live.  The allocation is round-robin
+// across the device's four channels, so channel 1 gets filters 1, 5 and
+// 9 - see SLAAEH6, and ADC_DSP_BQ_CFG/DAC_DSP_BQ_CFG in tac5112_init()
+// for the three-per-channel setting that puts them there.
+//
+struct tac_biquad_slot { unsigned char page, reg; };
+
+static const struct tac_biquad_slot tac_adc_biquad[2][3] = {
+	{ { 8, 0x08 }, { 8, 0x58 }, { 9, 0x30 } },	// channel 1
+	{ { 8, 0x1c }, { 8, 0x6c }, { 9, 0x44 } },	// channel 2
+};
+static const struct tac_biquad_slot tac_dac_biquad[2][3] = {
+	{ { 15, 0x08 }, { 15, 0x58 }, { 16, 0x30 } },	// channel 1
+	{ { 15, 0x1c }, { 15, 0x6c }, { 16, 0x44 } },	// channel 2
+};
+
+//
+// Core 0, from the main loop.  Does nothing until something moves.
+//
+// Whether there is a codec to write to is the caller's to know: this is
+// included before hardware.h, which is where the probe lives.
+//
+// No barrier anywhere: prepare() wrote want[] on this core too.
+//
+// Only the sections that moved are written.  With one band under a
+// finger that is one section of three, which is what makes a step every
+// couple of milliseconds affordable - and taking small steps is the
+// whole point, because the noise scales with how far the poles jump
+// rather than with how often they are written.
+//
+// 'running' is whether the effect should be doing anything, and it
+// picks the target rather than skipping the write: a filter in the
+// codec keeps filtering, so switching it off is a walk down to 0 dB and
+// takes the same care as any other move.
+//
+static void hwtone_task(struct hwtone *ht, enum hwtone_path path,
+			bool running)
+{
+	const struct tac_biquad_slot (*slot)[3];
+	struct biquad_coeff send[3];
+	bool moved[3];
+	bool any = false;
+	float carried = 1.0f;
+	float scale[3];
+	int half_db;
+	int i, ch;
+
+	if (time_us_64() < ht->next_us)
+		return;
+	ht->next_us = time_us_64() + HWTONE_STEP_US;
+
+	//
+	// The first set goes in whole.  There is nothing to ease away
+	// from at boot, and easing away from silence would be audible in
+	// its own right.
+	//
+	if (!ht->live_valid) {
+		for (i = 0; i < 3; i++) {
+			ht->live[i] = hwtone_target(ht, i, running);
+			any = moved[i] = true;
+		}
+		ht->live_valid = true;
+	} else {
+		for (i = 0; i < 3; i++) {
+			struct hwtone_band want = hwtone_target(ht, i, running);
+
+			any |= moved[i] = hwtone_approach(&ht->live[i], &want);
+		}
+	}
+	if (!any)
+		return;
+
+	//
+	// What each section's numerator is divided by, worked out across
+	// all three before any of them is written.
+	//
+	// Dividing a numerator scales that section's response, so what
+	// decides the channel's level is the product over the three and
+	// not what any one of them does.  Each is divided only as far as
+	// it has to be, and a later section with room to spare is scaled
+	// back up by as much as the earlier ones gave away - so a boost
+	// and a cut that cancel need no makeup at all, where dividing
+	// each section on its own would have taken the boost out and
+	// asked the volume control to put it back.
+	//
+	// 'carried' never rises above 1, so the restoring only ever
+	// happens after the attenuating and no point inside the channel
+	// is hotter than the designed filter would make it.
+	//
+	for (i = 0; i < 3; i++) {
+		float peak;
+
+		scale[i] = 1.0f / carried;
+		hwtone_design(&send[i], i, &ht->live[i]);
+		peak = tac_numerator_peak(&send[i]);
+		if (scale[i] * peak > 1.0f)
+			scale[i] = 1.0f / peak;
+		carried *= scale[i];
+	}
+
+	//
+	// What the volume control will actually give back, which is a
+	// whole number of half-decibel steps and not what the sections
+	// asked for.  Divide by exactly that instead, so the two cancel
+	// rather than nearly cancelling - otherwise the channel sits up to
+	// a quarter of a decibel away from the level it was asked for, and
+	// by a different amount for every setting.
+	//
+	// The difference is one scalar on the whole channel, so it can go
+	// on any one section and the first is as good as any.  It only ever
+	// makes that numerator smaller.
+	//
+	half_db = tac_dvol_steps(carried);
+	scale[0] *= db_to_level(-0.5f * half_db) / carried;
+
+	for (i = 0; i < 3; i++) {
+		send[i].b0 *= scale[i];
+		send[i].b1 *= scale[i];
+		send[i].b2 *= scale[i];
+
+		//
+		// A band that did not move can still need writing, because
+		// what it is divided by depends on what the sections before
+		// it gave away.
+		//
+		if (scale[i] != ht->live_scale[i]) {
+			ht->live_scale[i] = scale[i];
+			moved[i] = true;
+		}
+	}
+
+	slot = path == HWTONE_PLAYBACK ? tac_dac_biquad : tac_adc_biquad;
+	for (ch = 0; ch < 2; ch++) {
+		for (i = 0; i < 3; i++) {
+			if (moved[i])
+				tac_queue_biquad(&send[i], slot[ch][i].page,
+						 slot[ch][i].reg);
+		}
+	}
+
+	//
+	// And what the sections gave away, for the volume control to put
+	// back.  Never an attenuation: the sections only ever divide.
+	//
+	for (ch = 0; ch < 2; ch++)
+		tac_queue_dvol(path, ch, half_db);
+}
+
 // TAC5112 Datasheet 9.2.5:
 // Example Device Register Configuration Script for EVM Setup
 // Stereo differential AC-coupled analog recording and line output playback

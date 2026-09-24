@@ -167,6 +167,30 @@ static struct {
 	bool legacy_screen;	// SH1106, 0x3c - a design that is gone
 } hardware;
 
+//
+// Whether an effect has the board under it that it asked for.
+//
+// The generator wrote the list of who wants what; board.h turned each
+// name into an answer.  Expanded here because this is the first place
+// that has both - the effect headers are compiled by the host bench
+// too, and there is no board under that.
+//
+// An absent effect is still in effects[] and still has its pots: taking
+// it out would renumber every effect above it, and the ids are the
+// wire.  What it loses is its card in the app and its pots in the
+// state dump.
+//
+static bool effect_present(unsigned int id)
+{
+	switch (id) {
+#define HW_NEEDS(id, what)	case id: return !!(HAVE_##what);
+	EFFECT_HW_LIST
+#undef HW_NEEDS
+	default:
+		return true;
+	}
+}
+
 static bool i2c_probe(i2c_inst_t *i2c, uint8_t addr)
 {
 	uint8_t byte;

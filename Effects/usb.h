@@ -6,14 +6,18 @@
 // is true of the pedal and not of any one sound.
 //
 // GLOBAL
+// POSITION: BACK
 //
 // What leaves for the host.
 //
 // POT: "L/R Out" ENUM(None Wet Dry Wet/Dry) = Wet
 // INFO: What the pedal sends back. Wet/Dry puts the processed signal on
-// INFO: the left and the untouched input on the right, both from the
-// INFO: same instant - which is what lets a capture be compared against
-// INFO: its own input with nothing to align.
+// INFO: the left and the converter's own sample on the right, both from
+// INFO: the same instant - which is what lets a capture be compared
+// INFO: against its own input with nothing to align.
+// INFO: Neither side matches what the jacks carry: Dry has already been
+// INFO: through Analog In Tone, and Wet has not yet been through Analog
+// INFO: Out Tone.
 //
 // ...and what arrives from it.
 //
@@ -22,6 +26,9 @@
 // INFO: the jack and Mix adds it to the output; Replace ignores the jack
 // INFO: entirely, which is the one to use when measuring, because
 // INFO: whatever is plugged in is otherwise part of the answer.
+// INFO: Analog In Tone applies to none of them - it is in the converter,
+// INFO: ahead of where this joins. Analog Out Tone applies to all of
+// INFO: them, being on the way out.
 //
 // The host's own volume is not here and cannot be: it arrives over the
 // USB audio class rather than over MIDI, and the host owns it.

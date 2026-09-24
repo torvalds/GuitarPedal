@@ -197,9 +197,17 @@ def capture(seconds, card, during=None, warm=True):
         discard(card)
 
     t0 = time.time()
+    #
+    # Counted in samples rather than in -d's whole seconds.  Rounding a
+    # duration to seconds records 2s for a 1.5s capture, and -d 0 for
+    # anything under half of one - which is arecord's spelling of "until
+    # interrupted", so the shortest captures were the ones that never
+    # returned.
+    #
     proc = subprocess.Popen(
         ["arecord", "-D", f"hw:{card},0", "-f", "S32_LE", "-c", "2",
-         "-r", str(RATE), "-d", str(int(round(seconds))), "-t", "raw", "-q"],
+         "-r", str(RATE), "-s", str(int(round(seconds * RATE))),
+         "-t", "raw", "-q"],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     #

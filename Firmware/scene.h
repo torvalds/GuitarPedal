@@ -197,6 +197,8 @@ static struct effect *scene_find_effect(const struct scene_effect *saved)
 //
 static void scene_load_effect(struct effect *eff, const struct scene_effect *saved)
 {
+	unsigned int seq = eff->seq;
+
 	if (eff->pot_hash != saved->pot_hash)
 		return;
 
@@ -207,15 +209,20 @@ static void scene_load_effect(struct effect *eff, const struct scene_effect *sav
 	if (saved->mix > 120)
 		return;
 
-	memcpy(eff->pot_values[0], saved->pots, 10);
-	memcpy(eff->pot_values[1], saved->pots, 10);
+	//
+	// Through the publish protocol rather than around it.  This used to
+	// write both halves and call init() from core 0 with core 1
+	// running, which is a torn read waiting to happen and a call into
+	// audio-core code from the wrong core.
+	//
+	memcpy(effect_spare_pots(eff, seq), saved->pots, 10);
 	set_mix_pot(eff, POT_TO_FLOAT(saved->mix));
 	eff->channels = saved->channels;
 	eff->merge = POT_TO_FLOAT(saved->merge);
 	eff->target = EFF_ENABLE_STEPS;
 	eff->mix = eff->target;
-	if (eff->init)
-		eff->init(eff->pot_values[0]);
+	effect_prepare(eff, seq);
+	effect_publish(eff, seq);
 }
 
 //

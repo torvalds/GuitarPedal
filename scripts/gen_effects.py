@@ -53,9 +53,11 @@ def short_hash(*parts):
 def effect_id_hash(short_name, copy):
     """Which effect this is, for matching saved state against.
 
-    The copy index is in there because copies share a short name -
+    The copy index is in there because copies may share a short name -
     tone and tone2 are both [TONE] - and two effects that cannot be told
-    apart would load each other's settings.
+    apart would load each other's settings.  It counts only within one
+    short name, so giving a copy a name of its own does not renumber
+    anything and does not invalidate a saved scene.
     """
     return short_hash(short_name, str(copy))
 
@@ -158,42 +160,44 @@ def generate(audio_dir, out_h, out_js, out_md):
         with open(header_path, 'r') as f:
             content = f.read()
 
-        name_match = re.search(r'//\s*NAME:\s*(.*?)\s*\[(.*?)\]', content)
+        #
+        # One NAME: line per effect the file asks for.
+        #
+        # An effect owns one set of state, so routing the same one twice
+        # would run a filter through its own delay line - which is why
+        # there have to be two of a thing you might want twice.  This
+        # used to be a count, 'COPIES: 2', and before that a symlink:
+        # one file under two names, with the duplication invisible from
+        # inside it.  Saying the names is what the rest of this needs
+        # anyway - a display name and a C prefix each.
+        #
+        name_lines = re.findall(
+            r'^//[ \t]*NAME:[ \t]*(.*?)[ \t]*\[(.*?)\][ \t]*(.*?)[ \t]*$',
+            content, re.M)
         priority_match = re.search(r'//\s*PRIORITY:\s*(\d+)', content)
-        if not name_match:
+        if not name_lines:
             continue
 
         # effect_id will be assigned later based on sorted index
         effect_id = 0
 
-        full_name = name_match.group(1).strip()
-        short_name = name_match.group(2).strip()
+        full_name = name_lines[0][0]
+        short_name = name_lines[0][1]
         priority = int(priority_match.group(1)) if priority_match else 100
 
-        #
-        # 'COPIES: 2' asks for two of this effect rather than one.
-        #
-        # An effect owns one set of state, so routing the same one twice
-        # would run a filter through its own delay line - which is why
-        # there have to be two of a thing you might want twice.  This
-        # used to be done with a symlink, one file under two names, and
-        # the duplication was invisible from inside the file: nothing in
-        # tone.h said there were two of it, and the second name existed
-        # only in a directory listing.
+        instances = [{'full_name': disp, 'short_name': short,
+                      'extra': extra}
+                     for disp, short, extra in name_lines]
+
         #
         # The copies differ in exactly one way, which is that each has
         # its own state.  So everything derived from the POT: lines -
         # the constants, the accessors, the Q table - is emitted once and
-        # shared, and only _state, _init and _step are generated per
-        # copy.  That is also the whole remaining job of SELF(): a header
-        # that has copies cannot name those three itself.
+        # shared under the first name's prefix, and only _state, _init
+        # and _step are generated per copy.  That is also the whole
+        # remaining job of SELF(): a header with more than one NAME:
+        # cannot write those three names itself.
         #
-        copies_match = re.search(r'//[ \t]*COPIES:[ \t]*(\d+)', content)
-        copies = int(copies_match.group(1)) if copies_match else 1
-        if copies < 1:
-            raise SystemExit(f"{header_path}: COPIES: {copies} - an effect "
-                             f"that exists no times is a file you can delete")
-
         #
         # Where an effect's pots are kept.  Per scene unless it says
         # otherwise, and saying otherwise also takes it out of the
@@ -203,7 +207,90 @@ def generate(audio_dir, out_h, out_js, out_md):
         # Declared rather than positional.  It used to be "the last
         # effect", which was true of the only one there was.
         #
-        is_global = re.search(r'//[ \t]*GLOBAL[ \t]*$', content, re.M) is not None
+        is_global = re.search(r'//[ \t]*GLOBAL[ \t]*(//.*)?$',
+                              content, re.M) is not None
+
+        #
+        # Where the effect sits, when it is not free to be moved.
+        #
+        # A pinned effect is never in effect_chain[] and takes no place
+        # in the routing order: FRONT runs ahead of the chain, BACK
+        # after it.  Free is the default and is what an ordinary effect
+        # wants.
+        #
+        # Independent of GLOBAL, which says where the pots are kept.
+        # The two were one declaration for as long as every effect that
+        # was pinned was also stored once, and 'the signal chain is
+        # effect 0' covered the rest.
+        #
+        def read_position(text, where):
+            found = None
+            m = re.search(r'POSITION:[ \t]*([A-Z \t]*)', text)
+            for word in m.group(1).split() if m else []:
+                if word in ('FRONT', 'BACK'):
+                    found = word
+                else:
+                    sys.exit(f"gen_effects: {filename}: unknown POSITION: "
+                             f"'{word}' in {where} (want FRONT or BACK)")
+            return found
+
+        #
+        # Anchored at the start of a line, so that a POSITION: written on
+        # a NAME: line belongs to that name and does not leak to the file.
+        #
+        position = read_position(
+            "\n".join(re.findall(r'^//[ \t]*POSITION:.*$', content, re.M)),
+            "the file")
+
+        #
+        # Where an effect sits is so far the one thing two copies of one
+        # definition have needed to disagree about, so a NAME: line may
+        # answer it for itself and otherwise takes the file's answer.
+        #
+        for inst in instances:
+            inst['position'] = read_position(
+                inst.pop('extra'), f"'{inst['full_name']}'") or position
+
+        #
+        # Pots kept once cannot be part of an arrangement kept per
+        # scene, so a global has to say which end it sits at.
+        #
+        if is_global and not position:
+            sys.exit(f"gen_effects: {filename}: GLOBAL needs a POSITION: "
+                     f"as well - something stored once cannot be routed")
+
+        #
+        # Whether a scene gets to switch the effect off.
+        #
+        # The third axis, after where the pots are kept and where the
+        # effect sits.  Most effects are switched by being in the chain
+        # or out of it; a pinned one has no place in the chain to be
+        # in, so it needs somewhere else to say - and one or two of them
+        # have nothing to say, because they are not audio.
+        #
+        # GLOBAL implies it: pots kept once for the whole pedal have no
+        # per-scene presence to vary.  [CHAIN] is the one that has to
+        # declare it, being the trim, the gate and the master volume.
+        #
+        always = is_global or re.search(r'//[ \t]*ALWAYS[ \t]*(//.*)?$',
+                                        content, re.M) is not None
+
+        #
+        # What the board has to have for the effect to mean anything.
+        #
+        # A name, not a test: the effect cannot know whether the answer
+        # is a pin that either exists or does not, or a chip that has to
+        # be asked.  board.h turns the name into HAVE_<name>, which is a
+        # constant on some boards and a probe on others, and the effect
+        # is none the wiser either way.
+        #
+        # Nothing here gates a *pot* - that is 'NEEDS:', which is about
+        # one pot's value and not about the board.
+        #
+        needs_hw = None
+        hw_match = re.search(r'//[ \t]*HW:[ \t]*([A-Z0-9_]+)', content)
+        if hw_match:
+            needs_hw = hw_match.group(1)
 
         def_mix_match = re.search(r'//\s*DEFAULT_MIX:\s*(\S+)', content)
         def_mix = float(def_mix_match.group(1)) if def_mix_match else 1.0
@@ -487,11 +574,23 @@ def generate(audio_dir, out_h, out_js, out_md):
             # CHAIN.
             #
             'prefix': c_ident(header_path, 'short name', short_name).lower(),
-            'copies': copies,
+            'instances': instances,
             'graph': graph,
             'roles': roles,
             'is_global': is_global,
+            'position': position,
+            'always': always,
+            'needs_hw': needs_hw,
             'full_name': full_name,
+            #
+            # 'INIT: core0' asks for prepare() instead of init(): the
+            # effect is set up on core 0, in the call that moves the
+            # pots, rather than on the audio core at the next block
+            # boundary.  An effect that has to reach a bus has no
+            # choice, because init() is audio-core code and may not.
+            #
+            'init_core0': bool(re.search(r'//[ \t]*INIT:[ \t]*core0\b',
+                                         content)),
             'short_name': short_name,
             'priority': priority,
             'def_mix': def_mix,
@@ -513,39 +612,45 @@ def generate(audio_dir, out_h, out_js, out_md):
     sources.sort(key=lambda x: (x['priority'], x['base']))
 
     #
+    # One file becomes one effect, or several.  They land next to each
+    # other because they share every part of the sort key, so the ids
+    # come out in the order the file wrote the names in.
+    #
+    # A name of its own gives a copy a C prefix of its own.  Two lines
+    # that share a short name fall back to numbering from two - 'tone'
+    # and 'tone2', which is what the symlink produced back when the
+    # second copy was a second filename.  Keeping that spelling is not
+    # nostalgia: those names are in the ELF, in every map file, and in
+    # whatever anybody has been reading while debugging.
+    #
+    for src in sources:
+        seen_short = Counter()
+        for inst in src['instances']:
+            e = dict(src)
+            e.update(inst)
+            copy = seen_short[inst['short_name']]
+            seen_short[inst['short_name']] += 1
+            base = c_ident(src['header_path'], 'short name',
+                           inst['short_name']).lower()
+            e['copy'] = copy
+            e['self_name'] = base if not copy else f"{base}{copy + 1}"
+            effects_data.append(e)
+
+    #
     # Every generated name hangs off the prefix, and they all land in one
     # translation unit, so two effects sharing one is a pile of
     # redefinitions rather than a style problem.  Filenames cannot
     # collide - a directory sees to that - but short names are written by
     # hand and nothing else checks them.
     #
-    by_prefix = {}
-    for src in sources:
-        first = by_prefix.setdefault(src['prefix'], src)
-        if first is not src:
-            raise SystemExit(f"{src['header_path']}: short name "
-                             f"'{src['short_name']}' gives the prefix "
-                             f"'{src['prefix']}', which "
+    by_name = {}
+    for e in effects_data:
+        first = by_name.setdefault(e['self_name'], e)
+        if first is not e:
+            raise SystemExit(f"{e['header_path']}: short name "
+                             f"'{e['short_name']}' gives the prefix "
+                             f"'{e['self_name']}', which "
                              f"{first['header_path']} already uses")
-
-    #
-    # One file becomes one effect, or several.  The copies land next to
-    # each other because they share every part of the sort key, so the
-    # ids come out in the order the file asked for them and the first
-    # copy keeps the id the single effect had.
-    #
-    # The first copy is named for the effect and the rest are numbered
-    # from two - 'tone' and 'tone2', which is what the symlink produced
-    # back when the second copy was a second filename.  Keeping that
-    # spelling is not nostalgia: those names are in the ELF, in every map
-    # file, and in whatever anybody has been reading while debugging.
-    #
-    for src in sources:
-        for copy in range(src['copies']):
-            e = dict(src)
-            e['copy'] = copy
-            e['self_name'] = src['prefix'] if not copy else f"{src['prefix']}{copy + 1}"
-            effects_data.append(e)
 
     #
     # A file included twice brings its display name twice with it, and
@@ -618,6 +723,24 @@ def generate(audio_dir, out_h, out_js, out_md):
             # such effect there was.
             #
             "global": e_data['is_global'],
+            #
+            # Absent when the effect is free to be moved, which is most
+            # of them - the schema is big enough already (issue 78).
+            #
+            **({"position": e_data['position'].lower()}
+               if e_data['position'] else {}),
+            #
+            # Absent unless it is true, which is rare: an effect a
+            # scene cannot switch off has no control to draw for it.
+            #
+            **({"always": True} if e_data['always'] else {}),
+            #
+            # What this effect needs the board to have, for the app to
+            # match against what the pedal says it found.  A build-time
+            # fact, which is why it is here and not in the hello reply.
+            #
+            **({"needs": e_data['needs_hw'].lower()}
+               if e_data['needs_hw'] else {}),
             "roles": e_data['roles'],
             "graph": [{"type": b['type'], "q": b['q']} if 'q' in b
                       else {"type": b['type'], "qPot": b['q_pot']}
@@ -761,7 +884,10 @@ def generate(audio_dir, out_h, out_js, out_md):
             # don't have to know about any of this.
             channels = e_data['channels']
 
-            f.write(f"static void __audio_func({self_name}_init)(unsigned char[10]);\n")
+            if e_data['init_core0']:
+                f.write(f"static void {self_name}_prepare(const unsigned char[10]);\n")
+            else:
+                f.write(f"static void __audio_func({self_name}_init)(unsigned char[10]);\n")
             if channels in ('STEREO', 'NONE'):
                 f.write(f"static sample_t __audio_func({self_name}_step)(sample_t);\n")
             else:
@@ -820,7 +946,10 @@ def generate(audio_dir, out_h, out_js, out_md):
             f.write(f"\t.mix_law = MIX_{e_data['mix_law']},\n")
             if e_data['channels'] == 'STEREO':
                 f.write("\t.stereo = 1,\n")
-            f.write(f"\t.init = {self_name}_init,\n")
+            if e_data['init_core0']:
+                f.write(f"\t.prepare = {self_name}_prepare,\n")
+            else:
+                f.write(f"\t.init = {self_name}_init,\n")
             if step:
                 f.write(f"\t.step = {step},\n")
             else:
@@ -860,6 +989,43 @@ def generate(audio_dir, out_h, out_js, out_md):
         mask = sum(1 << i for i, e in enumerate(effects_data) if e['is_global'])
         f.write(f"#define GLOBAL_EFFECTS 0x{mask:x}u\n")
         f.write(f"#define GLOBAL_EFFECT_COUNT {bin(mask).count('1')}\n\n")
+
+        #
+        # And which of them run whatever a scene says.  Everything else
+        # is switched by being in the chain or not.
+        #
+        # Where an effect is *drawn* is a separate question and does not
+        # appear here at all: 'POSITION:' goes out in the schema, for
+        # the app, and the pedal has no use for it.
+        #
+        mask = sum(1 << i for i, e in enumerate(effects_data) if e['always'])
+        f.write(f"#define ALWAYS_EFFECTS 0x{mask:x}u\n\n")
+
+        #
+        # Which effects want something of the board, as an X-macro
+        # rather than as code.
+        #
+        # Expanding it needs HAVE_<name>, and the only place that knows
+        # those is the firmware: the host bench compiles these headers
+        # too and has no board under it.  A list nobody expands costs it
+        # nothing, so hardware.h expands this and the bench does not.
+        #
+        f.write("#define EFFECT_HW_LIST \\\n")
+        for i, e in enumerate(effects_data):
+            if e['needs_hw']:
+                f.write(f"\tHW_NEEDS({i}, {e['needs_hw']}) \\\n")
+        f.write("\t/* end */\n\n")
+
+        #
+        # And the capability names themselves, once each, so the pedal
+        # can report what it found without the app having to infer the
+        # list from the effects that wanted them.
+        #
+        seen = sorted({e['needs_hw'] for e in effects_data if e['needs_hw']})
+        f.write("#define EFFECT_HW_NAMES \\\n")
+        for name in seen:
+            f.write(f"\tHW_NAME(\"{name.lower()}\", {name}) \\\n")
+        f.write("\t/* end */\n\n")
 
     # Generate midi_schema.h next to effect_map.h
     schema_path = os.path.join(os.path.dirname(out_h), "midi_schema.h")

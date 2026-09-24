@@ -38,6 +38,7 @@
 #include "Audio/biquad.h"
 #include "Audio/fft.h"
 #include "Audio/analyze.h"
+#include "hwtone.h"
 #include "tac5112.h"
 
 //
@@ -128,9 +129,18 @@ static void init_effects(void)
 	//
 	load_scene(0);
 
+	//
+	// By hand, both of them, because core 1 is not running yet:
+	// nothing will reach init() on its own until the audio loop
+	// starts.
+	//
 	for (int i = 0; i < ARRAY_SIZE(effects); i++) {
 		struct effect *effect = effects[i];
-		effect->init(effect->pot_values[0]);
+
+		if (effect->prepare)
+			effect->prepare(effect_pots(effect));
+		if (effect->init)
+			effect->init(effect_pots(effect));
 	}
 }
 
@@ -228,7 +238,7 @@ int main()
 #ifdef EXP_TIP_GPIO
 	exp_init();
 #endif
-	init_i2c_bus(i2c0, 400, I2C0_SDA, I2C0_SCL);
+	init_i2c_bus(i2c0, 1000, I2C0_SDA, I2C0_SCL);
 #ifdef I2C1_SDA
 	init_i2c_bus(i2c1, 400, I2C1_SDA, I2C1_SCL);
 #endif
@@ -303,6 +313,30 @@ int main()
 		exp_detect_task();
 		exp_tell_accessory();
 #endif
+		//
+		// Bypass and the scene both have to reach these by hand.
+		// The crossfade in single_sample() is upstream of the
+		// playback sections and downstream of the record ones, so
+		// it cannot take either of them out, and do_effect_step()
+		// hands a 'MIX: NONE' effect straight back - so being in
+		// effect_chain[] does not move a coefficient either.
+		//
+		// Asked of effect_present() rather than of the codec
+		// probe directly, so that what the effect declared and
+		// what runs here cannot come apart.
+		//
+		// Both stacks into one burst, which goes out once here.
+		if (tac_dma_ready()) {
+			if (effect_present(INTONE_EFFECT_ID))
+				hwtone_task(&intone_state, HWTONE_RECORD,
+					    !disable_all &&
+					    effect_is_routed(&intone_effect));
+			if (effect_present(OUTTONE_EFFECT_ID))
+				hwtone_task(&outtone_state, HWTONE_PLAYBACK,
+					    !disable_all &&
+					    effect_is_routed(&outtone_effect));
+			tac_dma_flush();
+		}
 		sysex_send_schema();
 		sysex_send_state_dump();
 		sysex_send_status();

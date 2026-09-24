@@ -1,6 +1,6 @@
-// NAME: Tone [TONE]
+// NAME: Tone 1 [TONE]
+// NAME: Tone 2 [TONE]
 // PRIORITY: 10
-// COPIES: 2
 // GRAPH: LOSHELF:0.707 PEAKING:MID_Q HISHELF:0.707
 // POT: "Bass Freq" EXPONENTIAL(20.0 20480.0) = 200.0 Hz
 // POT: "Bass" LINEAR(-15.0 15.0) = 0.0 dB
@@ -45,11 +45,15 @@
 // number the app draws with and the number the filter is built from
 // cannot be different ones.
 //
-// There are two of these, which is what 'COPIES: 2' above asks for.
-// Two rather than one because an effect owns one set of state, so
+// There are two of these, which is what the two NAME: lines above ask
+// for.  Two rather than one because an effect owns one set of state, so
 // routing the same one twice would run a filter through its own delay
 // line and produce nonsense - and one file rather than two copies
 // because twins that are edited separately stop being twins.
+//
+// They share a short name, so the second one's generated names are
+// numbered: 'tone' and 'tone2'.  A copy that wants a name of its own
+// writes a different one in its own brackets.
 //
 // The copies differ in exactly one thing, which is that each has its
 // own state.  So the generator emits the pot accessors and the Q table

@@ -539,7 +539,15 @@ int main(int argc, char **argv)
 		struct effect *e = effects[i];
 
 		e->last = e->seq;
-		e->init(effect_pots(e));
+		//
+		// Both of the places an effect can be set up from.  There
+		// is one core here, so the split that matters on the pedal
+		// does not, and whichever it has gets called.
+		//
+		if (e->prepare)
+			e->prepare(effect_pots(e));
+		if (e->init)
+			e->init(effect_pots(e));
 	}
 
 	init_meters();

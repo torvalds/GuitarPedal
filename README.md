@@ -124,8 +124,9 @@ every sweep on every page, which is slow.
 Then there are the ones that want hardware: ``make check-hw`` with a
 signal generator, ``make check-analog`` with a patch cable from the
 pedal's output back to its own input, ``make check-bench`` to ask whether
-a real board agrees with the host build, and ``make check-loop`` if you
-have two pedals to patch into each other.
+a real board agrees with the host build, ``make check-hwtone`` to sweep
+the tone stack the codec runs in its own biquads, and ``make check-loop``
+if you have two pedals to patch into each other.
 
 ## Hardware
 
@@ -256,7 +257,7 @@ between scenes with no computer in sight.
 
 ## Audio effects
 
-Seventeen of them, plus four that are always there and can't be
+Nineteen of them, plus four that are always there and can't be
 unrouted: the **Signal Chain** at the front, which is the input trim, the
 noise gate and the master volume
 ([measured](Documentation/effects/signal-chain.md)), and behind them the
@@ -274,6 +275,15 @@ from anything I typed here.
  - **Tone** - bass, mid and treble, with the corner frequencies
    adjustable and the mid's Q as well.  There are two of them, so one
    can go in front of a distortion and one behind it.
+ - **Analog In Tone** and **Analog Out Tone** - the same three bands
+   again, running in the codec's own biquads rather than in the chain.
+   They cost the audio core nothing, and they keep the two channels
+   apart where Tone folds them together.  Routed like anything
+   else, but drawn at the ends of the chain because that is where they
+   are: analog is the operative word, and they sit outside everything
+   USB audio can reach, so a Dry capture has already been through the
+   input one and a Wet capture has not yet been through the output one.
+   They need a board whose codec answers on i2c.
  - **Preamp** - a two-stage 12AX7 model, class-A biased with the
    asymmetry left in, and a JFET stage after it.
  - **Compressor** - level, ratio, attack, release, and a boost, so it

@@ -36,16 +36,16 @@ from pathlib import Path
 def effects_in(effects_dir):
     """Every effect the firmware has, by display name.
 
-    The name here is the one before the generator makes copies of it -
-    tone.h is 'Tone', and the pedal ends up with 'Tone 1' and 'Tone 2' -
-    because the README describes the effect and not each instance.
+    A file may ask for more than one, a NAME: line each.  Copies that
+    are numbered - 'Tone 1' and 'Tone 2' - count as the effect they are
+    copies of, because the README describes the effect and not each
+    instance.  A copy with a name of its own counts as itself.
     """
     names = set()
     for path in sorted(Path(effects_dir).glob("*.h")):
-        m = re.search(r"^// NAME:\s*(.+?)\s*\[(\w+)\]\s*$",
-                      path.read_text(), re.M)
-        if m:
-            names.add(m.group(1))
+        for name in re.findall(r"^// NAME:\s*(.+?)\s*\[(?:\w+)\].*$",
+                               path.read_text(), re.M):
+            names.add(re.sub(r"\s+\d+$", "", name))
     return names
 
 
@@ -103,13 +103,13 @@ def main():
 
     if not missing and not extra:
         #
-        # "headers" rather than "effects" because the two counts differ
-        # and both are right: tone.h is one header and two effects.  The
-        # README says seventeen, meaning routable ones.  Saying "effects"
-        # here would look like one of them was wrong.
+        # Names, because the three counts all differ and all are right:
+        # tone.h is one header and two effects sharing a name,
+        # analog_tone.h is one header and two effects that do not, and
+        # the README's own count leaves out the four that always run.
         #
-        print(f"check-readme: {len(have)} effect headers, "
-              f"all named in the README")
+        print(f"check-readme: {len(have)} effect names, "
+              f"all in the README")
         return 0
 
     print("check-readme: WARNING - the README's effect list has drifted")

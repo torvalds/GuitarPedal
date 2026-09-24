@@ -831,6 +831,37 @@ function handleSysex(data) {
                 if (PEDAL_EFFECTS.length && !PEDAL_EFFECTS.some((e) => 'global' in e))
                     PEDAL_EFFECTS[PEDAL_EFFECTS.length - 1].global = true;
 
+                //
+                // Which effects a scene cannot switch off. Absent from
+                // firmware that had no word for it, where the answer
+                // was the same as "not routable": effect 0 and
+                // anything kept once.
+                //
+                if (PEDAL_EFFECTS.length &&
+                    !PEDAL_EFFECTS.some((e) => 'always' in e)) {
+                    PEDAL_EFFECTS.forEach((e, idx) => {
+                        if (idx === 0 || e.global)
+                            e.always = true;
+                    });
+                }
+
+                //
+                // And where the pinned ones sit, which is absent on
+                // every effect that is free to be moved - so the test
+                // is whether any of them carries it at all.  Older
+                // firmware pinned effect 0 to the front and anything
+                // kept once to the back.
+                //
+                if (PEDAL_EFFECTS.length &&
+                    !PEDAL_EFFECTS.some((e) => 'position' in e)) {
+                    PEDAL_EFFECTS.forEach((e, idx) => {
+                        if (idx === 0)
+                            e.position = 'front';
+                        else if (e.global)
+                            e.position = 'back';
+                    });
+                }
+
                 effectIdMap.clear();
                 PEDAL_EFFECTS.forEach((e, idx) => effectIdMap.set(e.id, idx));
                 renderUI();
@@ -1927,25 +1958,94 @@ let effectPool = null;
 // label is what is running.
 //
 //
-// Effects that are not part of the chain and cannot be moved into it:
-// the signal chain, which always runs first and outside it, and
-// anything the pedal keeps once rather than per scene.
+// Effects that are not part of the chain and cannot be moved into it,
+// because the pedal pins them to one end of it.
 //
-// The pedal says which are global.  It used to be "the last one", which
-// was true while there was only one.
+// The pedal says which, and at which end.  It used to be effect 0 at
+// the front and anything kept once at the back - two spellings of
+// pinning, neither of which was the word, and the second of which was
+// really about where the pots are stored.
 //
 function isAnchorEffect(idx) {
     const e = PEDAL_EFFECTS[idx];
 
-    return idx === 0 || (e && e.global);
+    return !!(e && e.always);
+}
+
+//
+// Where an effect is drawn when it *is* in the chain.
+//
+// A pinned effect is routed like any other - the pedal switches it by
+// whether it is in the chain - but it cannot be anywhere in the signal
+// except where it is, so it is drawn at its end and has no drag handle.
+// The codec's tone stacks are in the converter at each end; a card for
+// one in the middle would be a picture of something that cannot happen.
+//
+function pinnedEnd(e) {
+    return e && !e.always ? e.position : undefined;
+}
+
+//
+// The chain in the order it is drawn: pinned to the front, then
+// everything free, then pinned to the back. What order the pedal is
+// told about the pinned ones does not matter, because where they sit
+// in the signal is not ours to set.
+//
+function drawnOrder(ids) {
+    const at = (where) => ids.filter(
+        (id) => pinnedEnd(PEDAL_EFFECTS[effectIdMap.get(id)]) === where);
+
+    return [...at('front'), ...at(undefined), ...at('back')];
+}
+
+//
+// What the pedal said it found, keyed by the names the effects ask
+// under.  Empty until the hello reply lands, and empty is not "nothing
+// is there" - firmware older than this says nothing at all, and an
+// effect that asks for something it cannot hear about is shown, which
+// is what that firmware already does.
+//
+let PEDAL_HAVE = {};
+
+function effectPresent(e) {
+    return !e || !e.needs || PEDAL_HAVE[e.needs] !== false;
+}
+
+//
+// The same names in words.  A capability is named for the effect header
+// that asks for it, so it arrives as an identifier - 'codec_dsp' is not
+// a thing anybody owns.  Anything unlisted falls back to the name with
+// its underscores opened out, which is wrong but readable.
+//
+const HW_NAMES = {
+    expression: 'expression jack',
+    codec_dsp: 'programmable codec',
+};
+
+function hwName(what) {
+    return HW_NAMES[what] || what.replace(/_/g, ' ');
+}
+
+//
+// What is hidden right now, as something two answers can be compared
+// by.  A string because that is enough to tell "the same" from "not",
+// which is the only question asked of it.
+//
+function hiddenEffects() {
+    return PEDAL_EFFECTS.filter((e) => !effectPresent(e))
+                        .map((e) => e.id).join();
 }
 
 //
 // The same question asked for a list rather than for one effect: the
-// anchors that come after the chain, in the order they are drawn.
+// anchors at each end, in the order they are drawn.
 //
+function leadingAnchors() {
+    return PEDAL_EFFECTS.filter((e) => e.always && e.position === 'front');
+}
+
 function trailingAnchors() {
-    return PEDAL_EFFECTS.filter((e, idx) => idx !== 0 && e.global);
+    return PEDAL_EFFECTS.filter((e) => e.always && e.position === 'back');
 }
 
 //
@@ -2213,6 +2313,26 @@ document.addEventListener('visibilitychange', updateTelemetryPolling);
 function handleIdentity(id) {
     pedalIdentity = id;
     CONTROLS = id.controls || [];
+
+    //
+    // What this board turned out to have, against what each effect
+    // said it needed.  Both halves are the pedal's: the schema carries
+    // 'needs' because that is a fact about the build, and this reply
+    // carries 'have' because only running on the board settles it.
+    //
+    // Redrawn rather than filtered once, because the schema can arrive
+    // either side of this reply - and only when the answer changes
+    // something, since a redraw drops the chain until the pedal says it
+    // again.
+    //
+    const was = hiddenEffects();
+
+    PEDAL_HAVE = id.have || {};
+    if (PEDAL_EFFECTS.length && hiddenEffects() !== was) {
+        renderUI();
+        sendSysex([SYSEX_CMD.REQ_STATE]);
+    }
+
     renderBindings();
 
     const found = id.found || {};
@@ -2247,6 +2367,16 @@ function handleIdentity(id) {
     if (found.codec)
         notes.push(`Codec ${found.i2c_codec ? 'set up over i2c' : 'strapped'}` +
                    `: ${found.codec}.`);
+    //
+    // Named, because "some effects are missing" is not something anyone
+    // can act on and "no expression jack on this board" is.
+    //
+    const missing = Object.keys(id.have || {}).filter((k) => !id.have[k]);
+    if (missing.length)
+        notes.push(`No ${missing.map(hwName).join(', ')} on this board: ` +
+                   `the effects that need ${missing.length > 1 ? 'them' : 'it'} ` +
+                   `are not shown.`);
+
     if (found.legacy_screen)
         early.push('An SH1106 screen answered on i2c, from a generation ' +
                    'that had one. Nothing drives it.');
@@ -2364,8 +2494,7 @@ function potTargets() {
         });
     };
 
-    if (PEDAL_EFFECTS.length)
-        add(PEDAL_EFFECTS[0].id);
+    leadingAnchors().forEach((e) => add(e.id));
     currentRouting.forEach(add);
     trailingAnchors().forEach((e) => add(e.id));
 
@@ -2915,11 +3044,10 @@ function applyRouting(routeIds) {
     // The chain bits are by position, so what they mean just changed
     renderAttention();
 
-    // Front anchor, then the chain in order, then the globals
+    // The front anchors, then the chain in order, then the back ones
     const order = [];
-    if (PEDAL_EFFECTS.length)
-        order.push(PEDAL_EFFECTS[0].id);
-    routeIds.forEach(id => order.push(id));
+    leadingAnchors().forEach((e) => order.push(e.id));
+    drawnOrder(routeIds).forEach(id => order.push(id));
     trailingAnchors().forEach((e) => order.push(e.id));
 
     const placed = new Set(order);
@@ -2987,6 +3115,8 @@ function renderPool() {
     PEDAL_EFFECTS.forEach((effect, idx) => {
         if (isAnchorEffect(idx) || currentRouting.includes(effect.id))
             return;
+        if (!effectPresent(effect))
+            return;
 
         const chip = document.createElement('button');
         chip.className = 'effect-chip';
@@ -3045,6 +3175,15 @@ function renderUI() {
     effectPool.id = 'effect-pool';
 
     PEDAL_EFFECTS.forEach((effect, idx) => {
+        //
+        // Nothing at all for an effect this board cannot run.  Not
+        // greyed out: a control that cannot do anything on this pedal
+        // is not a setting, it is a different pedal's setting, and the
+        // hardware note below says which piece is missing.
+        //
+        if (!effectPresent(effect))
+            return;
+
         const card = document.createElement('section');
         card.className = 'glass-panel effect-card';
         card.id = `effect-${idx}`;
@@ -3060,9 +3199,9 @@ function renderUI() {
         title.style.display = 'flex';
         title.style.alignItems = 'center';
 
-        // The anchors are not in the chain, so there is nothing to
-        // reorder them relative to and no handle on them
-        if (!isAnchorEffect(idx)) {
+        // An anchor is not in the chain and a pinned effect cannot be
+        // moved within it, so neither gets a handle or a drag
+        if (!isAnchorEffect(idx) && !pinnedEnd(effect)) {
             title.innerHTML = `<span class="drag-handle">≡</span>
                                <span class="collapse-chevron" style="cursor: pointer; margin-right: 8px; font-size: 0.8em; transition: transform 0.2s;">▼</span>
                                <span>${effect.name}</span>`;
@@ -3813,8 +3952,15 @@ function renderUI() {
             controls.className = 'effect-controls';
         }
 
-        // Generate Mix slider - the anchors have no wet and no dry
-        if (!isAnchorEffect(idx)) {
+        //
+        // Generate Mix slider, for an effect that has one.  'steerable'
+        // is the pedal saying 'MIX: NONE', which is the same fact as
+        // "no wet and no dry" and the same one that decides whether it
+        // gets the steering pots below.  Asking whether this was an
+        // anchor answered it only while every effect without a mix was
+        // one.
+        //
+        if (effect.steerable) {
             const mixPotDef = { name: 'Mix', curve: 'LINEAR', min: 0, max: 100, unit: '%' };
             const mixDiv = document.createElement('div');
             mixDiv.className = 'pot-control mix-pot-control';
