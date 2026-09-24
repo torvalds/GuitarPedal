@@ -785,26 +785,6 @@ body.fullscreen-open {
   display: none !important;
 }
 
-.bottom-panel {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  margin: 0;
-  border-radius: 20px 20px 0 0;
-  border-bottom: none;
-  z-index: 1000;
-  padding: 20px 30px;
-  background: rgba(15, 17, 21, 0.95);
-  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8);
-  transform: translateY(110%);
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.bottom-panel:not(.hidden) {
-  transform: translateY(0);
-}
-
 .panel-header {
   display: flex;
   justify-content: space-between;
@@ -1019,55 +999,6 @@ body.fullscreen-open {
   border-color: var(--danger) !important;
 }
 
-.active-pot-info {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-#active-pot-title {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: var(--text-main);
-}
-
-#active-pot-value {
-  font-size: 1.3rem;
-  color: var(--accent);
-  background: rgba(0, 0, 0, 0.3);
-  padding: 4px 12px;
-  border-radius: 8px;
-}
-
-.active-pot-slider-container {
-  padding-bottom: 20px;
-}
-
-/* The knob shortcut, and what it is about to take the knob away from. */
-.active-pot-knob {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-bottom: 18px;
-}
-
-.active-pot-knob > .menu-hint {
-  margin-top: 0;
-}
-
-#assign-knob-btn {
-  flex: none;
-  width: auto;
-  padding: 6px 12px;
-  font-size: 0.85rem;
-  white-space: nowrap;
-}
-
-#assign-knob-btn:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-
 /* One gesture, and everything it does. */
 .rule-group {
   margin-bottom: 20px;
@@ -1170,23 +1101,6 @@ body.fullscreen-open {
   font-size: 0.8rem;
   color: var(--text-muted);
   white-space: nowrap;
-}
-
-/* Larger slider for fine adjustments */
-input[type=range].large-slider {
-  height: 40px;
-}
-
-input[type=range].large-slider::-webkit-slider-thumb {
-  height: 32px;
-  width: 32px;
-  margin-top: -14px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-}
-
-input[type=range].large-slider::-webkit-slider-runnable-track {
-  height: 8px;
-  border-radius: 4px;
 }
 
 /* Make pot-controls clickable */

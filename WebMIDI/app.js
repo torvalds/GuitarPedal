@@ -143,8 +143,6 @@ const effectsContainer = document.getElementById('effects-container');
 const ccToElementMap = new Map();
 
 let isGlobalEnabled = false;
-let activePotCc = null;
-let activePotDef = null;
 //
 // The pedal filters Control Change and Program Change by
 // settings.midi_channel and lets SysEx through regardless.  Transmit on
@@ -993,12 +991,6 @@ function applyPotValue(effId, potIdx, val) {
         if (el.redrawCurve) {
             el.redrawCurve();
         }
-        if (activePotDef && activePotCc === idKey) { // activePotCc is now acting as string key
-            const activeSlider = document.getElementById('active-pot-slider');
-            if (activeSlider) activeSlider.value = val;
-            const activeValue = document.getElementById('active-pot-value');
-            if (activeValue) activeValue.textContent = formatPotValue(activePotDef, val);
-        }
     }
 }
 
@@ -1182,7 +1174,6 @@ function handleSysex(data) {
                 sendSysex([SYSEX_BINDINGS, RULES_EFFECTIVE]);
 
             renderBindings();
-            renderKnobHint();
             break;
         }
 
@@ -2174,8 +2165,10 @@ window.addEventListener('popstate', () => closeFullScreen(true));
 // A tap is a press that never travelled, which is exactly what tells it
 // apart from the two other gestures this same header carries: a drag
 // reorders and a sideways flick removes, and both move.  So the three
-// cannot be confused, and the test is the same sticky flag the pots use
-// - see openOnTap(), which this is the card-sized version of.
+// cannot be confused.  "Never travelled" has to be remembered as it
+// happens rather than measured at the end: pressing and returning to
+// where you started is very much having moved, and comparing the two
+// ends would call that a tap.
 //
 // Both pointer types wait for the release.  A mouse has no scroll to be
 // confused with, but it does have the drag, and acting on the press
@@ -2224,96 +2217,6 @@ function openCardOnTap(card, header, open) {
         window.addEventListener('pointermove', move);
         window.addEventListener('pointerup', end);
         window.addEventListener('pointercancel', cancel);
-    });
-}
-
-//
-// A tap, as opposed to a touch.
-//
-// These are two different things and the difference is the whole bug:
-// this used to open the panel from 'touchstart', which is the moment a
-// finger lands and before anybody - the browser included - knows what
-// the gesture is going to be.  So scrolling the page with a finger that
-// happened to start on a pot threw a modal up over what you were
-// scrolling towards, every time.
-//
-// A tap is a press that never goes anywhere.  That can only be known at
-// the end, so the decision is made on pointerup, and a gesture the
-// browser takes over for scrolling comes back as pointercancel, which is
-// exactly the answer we want: not a tap.
-//
-// "Never went anywhere" has to be remembered rather than measured at the
-// end.  Comparing where the finger landed against where it left is not
-// the same question, and gets the interesting case backwards: drag a
-// slider up and back down and you release within a few px of where you
-// started, having very much moved.  That is not a hypothetical - it is
-// the ordinary way to use a slider, and it put the panel up on top of
-// the value you had just finished setting.
-//
-// So the flag is sticky, exactly like cardDrag.moved next door: once
-// this gesture has moved, it is not a tap again.
-//
-const TAP_SLOP = 10;    // px of travel a tap is allowed
-
-let potTap = null;
-
-function releasePotTap() {
-    potTap = null;
-    window.removeEventListener('pointermove', movePotTap);
-    window.removeEventListener('pointerup', endPotTap);
-    window.removeEventListener('pointercancel', releasePotTap);
-}
-
-function movePotTap(e) {
-    if (!potTap || e.pointerId !== potTap.id)
-        return;
-
-    if (Math.abs(e.clientX - potTap.x) > TAP_SLOP ||
-        Math.abs(e.clientY - potTap.y) > TAP_SLOP)
-        potTap.moved = true;
-}
-
-function endPotTap(e) {
-    const tap = potTap;
-
-    releasePotTap();
-    if (!tap || e.pointerId !== tap.id)
-        return;
-
-    // It travelled: a scroll, or a drag of the control itself
-    if (tap.moved)
-        return;
-
-    tap.open();
-}
-
-//
-// Open something when this element is tapped, without stealing a scroll
-// that happens to begin on it.
-//
-// 'grab' is the part of it that a mouse can already operate directly -
-// the inline slider - and a mouse press there is a drag of it rather
-// than a request to open anything.  A mouse has no scroll gesture to be
-// confused with, so it does not wait for the release: anywhere else on
-// the control opens immediately, which is how it always behaved.
-//
-function openOnTap(el, grab, open) {
-    el.addEventListener('pointerdown', (e) => {
-        if (!e.isPrimary)
-            return;
-
-        if (e.pointerType === 'mouse') {
-            if (e.target !== grab)
-                open();
-            return;
-        }
-
-        releasePotTap();
-        potTap = { id: e.pointerId, x: e.clientX, y: e.clientY,
-                   moved: false, open };
-        window.addEventListener('pointermove', movePotTap);
-        window.addEventListener('pointerup', endPotTap);
-        window.addEventListener('pointercancel', releasePotTap);
     });
 }
 
@@ -3206,50 +3109,6 @@ function renderBindings() {
     });
 }
 
-//
-// What the knob is on, said next to the pot you are looking at.
-//
-// Without this the shortcut below is a button that silently steals the
-// knob from wherever it was - and with one knob, every assignment is a
-// theft from something.
-//
-function renderKnobHint() {
-    const hintEl = document.getElementById('knob-target-hint');
-    const btn = document.getElementById('assign-knob-btn');
-    if (!hintEl || !btn)
-        return;
-
-    const b = pedalRules.find(r => r.control === 0 && r.action === ACT.POT);
-    const here = activePotTarget();
-
-    if (here && b && b.effect === here.effId && b.pot === here.pot) {
-        hintEl.textContent = 'The knob is on this.';
-        btn.disabled = true;
-    } else {
-        hintEl.textContent = b
-            ? `Knob is on ${potLabel(b.effect, b.pot)}.`
-            : 'The knob drives nothing.';
-        btn.disabled = !here;
-    }
-}
-
-// Which (effect, parameter) the open panel is showing, mix included.
-function activePotTarget() {
-    if (!activePotCc)
-        return null;
-
-    const parts = activePotCc.split('-');
-    const eff = PEDAL_EFFECTS[parseInt(parts[1])];
-    if (!eff)
-        return null;
-
-    if (parts.length >= 4 && parts[2] === 'pot')
-        return { effId: eff.id, pot: parseInt(parts[3]) + 1 };
-    if (parts.length === 3 && parts[2] === 'mix')
-        return { effId: eff.id, pot: 0 };
-    return null;
-}
-
 function handleGlobalStatus(val) {
     const dropped = val & STATUS_DROPPED_MASK;
 
@@ -3441,7 +3300,6 @@ function applyRouting(routeIds) {
     // What the knob can be pointed at is a function of what is in the
     // chain, so it changed just now too.
     renderBindings();
-    renderKnobHint();
 
     // The chain bits are by position, so what they mean just changed
     renderAttention();
@@ -4441,10 +4299,6 @@ function renderUI() {
             mixDiv.appendChild(mixValDisplay);
             mixDiv.appendChild(mixInput);
 
-            openOnTap(mixDiv, mixInput, () =>
-                setActivePot(`eff-${idx}-mix`, mixPotDef,
-                             parseInt(mixInput.value), effect.name));
-
             // The EQ puts it in a row with its own switches
             (eqFooter || controls).appendChild(mixDiv);
         }
@@ -4586,20 +4440,6 @@ function renderUI() {
                 potDiv.appendChild(label);
                 potDiv.appendChild(valDisplay);
                 potDiv.appendChild(input);
-
-                //
-                // Tapping the pot opens the big slider panel - except for
-                // a mouse grab of the inline slider itself, which is
-                // someone dragging it, and having the panel and its
-                // backdrop appear on top mid-drag is no help to anybody.
-                //
-                // A tap with a finger opens it wherever it lands, the
-                // inline slider included: that slider is about 100px wide
-                // for 121 values, which is not something a thumb can
-                // aim at, and the panel is what it has instead.
-                //
-                openOnTap(potDiv, input, () =>
-                    setActivePot(potIdKey, pot, parseInt(input.value), effect.name));
             }
 
             if (!isEq) {
@@ -4824,10 +4664,7 @@ appTitleEl.addEventListener('click', () => {
         if (document.getElementById('panel-backdrop')) document.getElementById('panel-backdrop').classList.add('hidden');
         if (document.getElementById('settings-panel')) document.getElementById('settings-panel').classList.add('hidden');
         if (document.getElementById('bindings-panel')) document.getElementById('bindings-panel').classList.add('hidden');
-        if (document.getElementById('active-pot-panel')) document.getElementById('active-pot-panel').classList.add('hidden');
         closeMenu();
-        activePotCc = null;
-        activePotDef = null;
     }
 
     const backdrop = document.getElementById('panel-backdrop');
@@ -4943,103 +4780,6 @@ appTitleEl.addEventListener('click', () => {
     const closeBindingsBtn = document.getElementById('close-bindings');
     if (closeBindingsBtn)
         closeBindingsBtn.addEventListener('click', closeAllPanels);
-
-    //
-    // Point the knob at whatever pot the panel is showing.  The hint
-    // beside it says what is being taken away, because with one knob
-    // every assignment takes it off something else.
-    //
-    const assignKnobBtn = document.getElementById('assign-knob-btn');
-    if (assignKnobBtn) {
-        assignKnobBtn.addEventListener('click', () => {
-            const t = activePotTarget();
-            if (!t)
-                return;
-            //
-            // Move the knob's first rule rather than adding another,
-            // since "assign" means point it here and a second rule
-            // would mean drive both.
-            //
-            const i = pedalRules.findIndex(r => r.control === 0 &&
-                                                r.action === ACT.POT);
-            const r = { control: 0, action: ACT.POT,
-                        effect: t.effId, pot: t.pot, val: [0, 0] };
-            if (i < 0)
-                sendRules(pedalRules.concat([r]));
-            else
-                putRule(i, r);
-        });
-    }
-
-    const closeActivePotBtn = document.getElementById('close-active-pot');
-    if (closeActivePotBtn) {
-        closeActivePotBtn.addEventListener('click', () => {
-            closeAllPanels();
-        });
-    }
-
-    const activePotSlider = document.getElementById('active-pot-slider');
-    if (activePotSlider) {
-        // the whole panel: its name and readout are part of the pot too
-        enableWheelAdjust(activePotSlider,
-                          document.getElementById('active-pot-panel') || activePotSlider);
-        activePotSlider.addEventListener('input', (e) => {
-            if (activePotCc === null || !activePotDef) return;
-
-            const val = parseInt(e.target.value);
-            const valDisplay = document.getElementById('active-pot-value');
-
-            if (valDisplay)
-                valDisplay.textContent = formatPotValue(activePotDef, val);
-
-            // Update original element
-            const origInput = ccToElementMap.get(activePotCc);
-            if (origInput) {
-                origInput.value = val;
-                const valDisplay = origInput.parentElement.querySelector('.pot-value');
-                if (valDisplay) valDisplay.textContent = formatPotValue(activePotDef, val);
-                if (origInput.redrawCurve) origInput.redrawCurve();
-            }
-
-            // Parse activePotCc to get effectId and potIdx
-            // activePotCc is like "eff-2-pot-0" or "eff-2-mix"
-            const parts = activePotCc.split('-');
-            if (parts.length >= 4 && parts[2] === 'pot') {
-                const idx = parseInt(parts[1]);
-                const pIdx = parseInt(parts[3]);
-                const effId = PEDAL_EFFECTS[idx].id;
-                sendSysex([SYSEX_CMD.PARAM_UPDATE, effId, pIdx + 1, val]);
-            } else if (parts.length === 3 && parts[2] === 'mix') {
-                const idx = parseInt(parts[1]);
-                const effId = PEDAL_EFFECTS[idx].id;
-                sendSysex([SYSEX_CMD.PARAM_UPDATE, effId, 0, val]);
-            }
-        });
-    }
-
-    function setActivePot(cc, potDef, currentVal, effectName) {
-        const panel = document.getElementById('active-pot-panel');
-        const name = document.getElementById('active-pot-title');
-        const valDisplay = document.getElementById('active-pot-value');
-
-        // No panel, nothing to make active - and in particular don't set
-        // activePotCc, which everything else takes as "the panel is up".
-        if (!panel)
-            return;
-
-        closeAllPanels();
-        activePotCc = cc;
-        activePotDef = potDef;
-
-        if (name) name.textContent = `${effectName} - ${potDef.name}`;
-        if (valDisplay) valDisplay.textContent = formatPotValue(potDef, currentVal);
-        if (activePotSlider) activePotSlider.value = currentVal;
-
-        renderKnobHint();
-
-        panel.classList.remove('hidden');
-        if (backdrop) backdrop.classList.remove('hidden');
-    }
 
     const globalUnrouteBtn = document.getElementById('global-unroute-btn');
     if (globalUnrouteBtn) {
