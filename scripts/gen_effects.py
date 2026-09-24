@@ -1102,6 +1102,17 @@ def generate(audio_dir, out_h, out_js, out_md):
         f.write(f"// CC numbers and status bits taken from {os.path.basename(midi_h)}\n")
         for js_name, c_name in js_consts:
             f.write(f"const {js_name} = {midi_const(c_name)};\n")
+        #
+        # And the schema, which the app does *not* draw anything from: a
+        # real pedal is asked and answers for itself, because the board
+        # in front of you is the authority on what it is running and
+        # this file is only the authority on what it was built beside.
+        #
+        # It is here for the demo pedal, which has no board to ask.  The
+        # same JSON as midi_schema.h above, so what the demo pedal
+        # offers is what firmware of this commit would have sent.
+        #
+        f.write(f"\nconst BUILT_IN_SCHEMA = {json_str};\n")
 
     with open(out_md, 'w') as f:
         f.write("# MIDI Implementation\n\n")
