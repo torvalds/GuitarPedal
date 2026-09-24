@@ -486,8 +486,13 @@ def _cc(p, number, value, channel=1):
         os.unlink(tmp.name)
 
 
-def set_bypass(p, on, channel=1):
+def set_chain_enabled(p, enabled, channel=1):
     """CC 20: 127 enables the chain, 0 bypasses it.
+
+    Named for what the argument means and not for the switch on the
+    pedal, because the two are opposites: this takes True to mean the
+    chain runs, which is bypass *off*.  A call that reads as English
+    meaning the reverse of what it does is worth not having.
 
     Worth sending explicitly at the top of any measurement rather than
     assuming.  A bypassed pedal crossfades the whole chain away, so a
@@ -505,7 +510,7 @@ def set_bypass(p, on, channel=1):
     aplaymidi rather than the raw device, because the raw device is
     taken whenever the web app is open and this has to work anyway.
     """
-    _cc(p, 20, 127 if on else 0, channel)
+    _cc(p, 20, 127 if enabled else 0, channel)
     time.sleep(0.2)
 
 
