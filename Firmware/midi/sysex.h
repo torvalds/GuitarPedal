@@ -162,6 +162,9 @@ static void sysex_send_identity(void)
 	// build constant now, because every board has the same 2MB of
 	// flash on the die.
 	//
+#ifdef PEDAL_BRANCH
+	sysex_write_str(",\"branch\":\"" PEDAL_BRANCH "\"");
+#endif
 	sysex_write_str(",\"scenes\":");
 	sysex_write_num(MAX_SCENES);
 	sysex_write_str(",\"populated\":");

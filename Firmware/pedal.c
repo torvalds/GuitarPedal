@@ -14,6 +14,7 @@
 #include "hardware/timer.h"
 
 #include "board.h"
+#include "branch.h"
 
 #include "status.h"
 #include "debounce.pio.h"

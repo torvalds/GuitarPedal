@@ -278,6 +278,23 @@ enum {
 
 #define EPNUM_AUDIO_OUT 0x01
 #define EPNUM_AUDIO_IN 0x81
+//
+// The manufacturer, plus the branch when there is one - scripts/branch.py
+// says why.
+//
+// It goes here rather than in the product string because the product
+// string is load-bearing: Validation/pedal.py joins a sound card to its
+// MIDI port by finding the product inside the ALSA client name, and
+// that name is a fixed-size field.  Growing it risks a truncation that
+// silently stops every tool finding the board.
+//
+#include "branch.h"
+#ifdef PEDAL_BRANCH
+#define USB_MANUFACTURER	"Linus (" PEDAL_BRANCH ")"
+#else
+#define USB_MANUFACTURER	"Linus"
+#endif
+
 #define EPNUM_MIDI_OUT 0x02
 #define EPNUM_MIDI_IN 0x82
 #define EPNUM_DAP_OUT 0x03
@@ -423,7 +440,7 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 	case STRID_LANGID:
 		return langid_desc;
 	case STRID_MANUFACTURER:
-		return utf16_desc("Linus");
+		return utf16_desc(USB_MANUFACTURER);
 	case STRID_PRODUCT:
 		return utf16_desc(usb_product);
 	case STRID_SERIAL:
