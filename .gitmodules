@@ -4,3 +4,6 @@
 [submodule "Firmware/tinyusb"]
 	path = Firmware/tinyusb
 	url = https://github.com/hathach/tinyusb
+[submodule "nRF54/sdk-nrf"]
+	path = nRF54/nrf
+	url = https://github.com/nrfconnect/sdk-nrf

@@ -1,0 +1,11 @@
+# The west workspace.  Only sdk-nrf is ours, and it is a submodule.
+/.venv/
+/.west/
+/.stamp-*
+/build/
+/bootloader/
+/modules/
+/nrfxlib/
+/tools/
+/zephyr/
+/test/
