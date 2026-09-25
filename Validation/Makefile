@@ -117,6 +117,7 @@ bench: bench/bench bench/coeff
 #
 check-effects: bench/bench
 	./test-effects.py
+	./test-pitch.py
 
 #
 # Where every biquad in the pedal actually lands, swept across the range
