@@ -1,3 +1,6 @@
+#ifndef BOARD_H
+#define BOARD_H
+
 //
 // Board GPIO pin definitions
 //
@@ -112,3 +115,5 @@
 #ifdef I2C1_SDA
 #define SH1106_I2C		i2c1, 0x3c
 #endif
+
+#endif /* BOARD_H */
