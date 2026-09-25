@@ -24,8 +24,16 @@ enum switch_id {
 #ifdef EXP_TIP_GPIO
 	EXP_TIP_SWITCH = NR_ONBOARD_SWITCHES,	// an accessory's, on the tip
 	EXP_RING_SWITCH,			// and on the ring
-#endif
 	NR_SWITCHES,
+#else
+	//
+	// Not a bare enumerator: NR_ONBOARD_SWITCHES is one itself, so
+	// letting the count run on from it would leave a switch id that
+	// no pin answers to, and switch_irq() walks a state machine per
+	// id.
+	//
+	NR_SWITCHES = NR_ONBOARD_SWITCHES,
+#endif
 };
 
 static const unsigned char switch_gpio[NR_SWITCHES] = {
