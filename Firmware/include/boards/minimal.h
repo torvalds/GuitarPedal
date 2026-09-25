@@ -15,9 +15,14 @@
 //
 
 //
-// No hardware MIDI - USB is the only way in or out.  No rotary encoder
-// and no expression jack, so ROTARY_*_GPIO and EXP_*_GPIO are absent
-// rather than zero: the code keys off whether they exist.
+// No hardware MIDI - USB is the only way in or out.  No rotary encoder,
+// no expression jack and no footswitch, so ROTARY_*_GPIO, EXP_*_GPIO
+// and STOMP_GPIO are absent rather than zero: the code keys off whether
+// they exist.
+//
+// GPIO10 is the radio's on this board.  The earlier revisions put a
+// footswitch there, and no enclosure was ever built with a switch in
+// it - at this size there is nowhere sensible to put one.
 //
 // No plain LED either.  D101 is on VBUS through a resistor, a power
 // indicator the firmware cannot reach, so LED_GPIO is absent and the
@@ -75,23 +80,55 @@
 #define CODEC_DC_COUPLED	1
 
 //
-// The footswitch is a magnet on a spring rather than a contact.  Pressing
-// it carries the magnet *through* the board past U101, which latches the
-// sensor on; the spring carries it back through the other way, which
-// latches it off.  So the pin is the state of the switch, its two edges
-// are press and release, and it behaves as the momentary switch it
-// replaces.
+// The nRF54L10, and the eleven wires to it.
 //
-// Which makes it a switch like any other, so it goes through the same
-// debounce program - and that is also where a press is timed: a stable low for a
-// second is a hold and a release before that is a tap.  It needs no
-// debouncing, and being debounced anyway costs nothing but the state
-// machine every other switch already spends - and it keeps this board
-// identical to the ones with a real contact on them.  Issue 380 holds
-// the simpler thing to do instead, if every board ever goes magnetic.
+// Nothing on the board names a role: the schematic labels these nets by
+// their nRF54 pin names and the PCB nets come out as /RP2354/GPIOn.  So
+// what each wire carries is decided here and nowhere else, and the nRF
+// pin it lands on is in the comment because two of the choices are
+// forced by it.
 //
-// Pressed reads low, the same as a contact to ground.
-#define STOMP_GPIO		10
+#define NRF54_SWDCLK		2
+#define NRF54_SWDIO		3
+#define NRF54_RESET		12	// active low
+
+//
+// The command link, which carries MIDI and nothing else.
+//
+// UART1 on this side, free because this board has no MIDI jacks, and
+// function select 2 is what makes these four pins that UART.  UARTE30
+// on the nRF, because all four are in its low-power domain and a
+// peripheral there cannot reach across ports.
+//
+// Which pin is which is ours to pick on both sides - the nRF chooses
+// each signal's pin in a register - so P0.01 is its receive against our
+// transmit.
+//
+#define NRF54_UART		uart1
+#define NRF54_TX		4	// nRF P0.01, its RXD
+#define NRF54_RX		5	// nRF P0.00, its TXD
+#define NRF54_CTS		6	// nRF P0.02, its RTS
+#define NRF54_RTS		7	// nRF P0.03, its CTS
+#define NRF54_UART_FUNCSEL	2
+
+//
+// The audio link, which nothing drives yet.
+//
+// Two constraints meet on these four pins and one arrangement satisfies
+// both.  The nRF needs its i2s clock on one of the pins that can carry
+// a clock, and of the four only P1.03 and P1.04 can; the PIO drives
+// BCLK and FSYNC from one two-bit field, so they must be adjacent and
+// in the I2S_FSYNC_BELOW_BCLK order above.  Taking P1.04 for BCLK also
+// keeps the clock off P1.02 and P1.03, which are the NFC antenna pins
+// and are GPIOs only once the radio's firmware says so.
+//
+// DIN and DOUT are named from the far end, the way the codec's are, so
+// DIN is an MCU output.
+//
+#define NRF54_I2S_FSYNC		8	// nRF P1.05
+#define NRF54_I2S_BCLK		9	// nRF P1.04, a clock pin
+#define NRF54_I2S_DIN		10	// nRF P1.03
+#define NRF54_I2S_DOUT		11	// nRF P1.02
 
 //
 // Two WS2812B-4020s off one pin, side-emitting.  Driven straight from
