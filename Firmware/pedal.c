@@ -72,6 +72,7 @@ uint8_t routed_effect_count = 0;
 #include "effect-state.h"
 
 #include "scene.h"
+#include "nrf54/swd.h"
 #include "hardware.h"
 #include "exp.h"
 #include "midi/sysex.h"
@@ -227,6 +228,15 @@ int main()
 	watchdog_enable(BOOT_WATCHDOG_MS, false);
 
 	enable_ftz();
+
+#ifdef NRF54_SWDIO
+	//
+	// Early, and before anything slow: the radio's reset pin is
+	// undefined until it is driven, so hold it down until there is
+	// something to say to it.  probe_hardware() lets it go.
+	//
+	swd_init();
+#endif
 
 	init_i2s();
 	init_ws2812();

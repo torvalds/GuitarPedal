@@ -165,6 +165,9 @@ static void switch_irq(void)
 static struct {
 	bool i2c_codec;		// a codec answered, so it is not strapped
 	bool legacy_screen;	// SH1106, 0x3c - a design that is gone
+#ifdef NRF54_SWDIO
+	uint32_t radio;		// the nRF54's debug port id, or zero
+#endif
 } hardware;
 
 //
@@ -237,6 +240,20 @@ static void probe_hardware(void)
 		      : "Codec strapped: " CODEC_STRAPPED_DESC);
 	if (hardware.legacy_screen)
 		report_status("A screen answered on i2c");
+
+#ifdef NRF54_SWDIO
+	//
+	// After the i2c probes because it takes a millisecond of reset,
+	// and this is the last thing before USB.
+	//
+	// It says the chip is there, not that it is running anything -
+	// the debug port answers on a part that has never been
+	// programmed, and that is most of what makes it worth asking.
+	//
+	hardware.radio = nrf54_probe();
+	report_status(hardware.radio ? "The radio answered on SWD"
+				    : "No radio on SWD");
+#endif
 }
 static uint debounce_offset;
 
