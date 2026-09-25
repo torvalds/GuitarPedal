@@ -97,8 +97,10 @@ static const struct control_desc controls[NR_CONTROLS] = {
 	[CTRL_ROTARY_TAP]	= { "Knob \\u2014 press",		CTRL_CLICKS },
 	[CTRL_ROTARY_HOLD]	= { "Knob \\u2014 hold",		CTRL_CLICKS },
 #endif
+#ifdef STOMP_GPIO
 	[CTRL_STOMP_TAP]	= { "Footswitch \\u2014 press",	CTRL_CLICKS },
 	[CTRL_STOMP_HOLD]	= { "Footswitch \\u2014 hold",	CTRL_CLICKS },
+#endif
 #ifdef EXP_TIP_GPIO
 	[CTRL_EXP_TIP_TAP]	= { "Remote 1 \\u2014 press",	CTRL_CLICKS },
 	[CTRL_EXP_TIP_HOLD]	= { "Remote 1 \\u2014 hold",	CTRL_CLICKS },
@@ -199,7 +201,7 @@ struct rule {
 // exists precisely to be the way back when you cannot see what you are
 // doing, so it is the last thing that should be fussy about timing.
 //
-// The footswitch keeps what it always did.
+// The footswitch keeps what it always did, on a board that has one.
 //
 static const struct rule default_rules[] = {
 #ifdef ROTARY_A_GPIO
@@ -209,8 +211,10 @@ static const struct rule default_rules[] = {
 	{ CTRL_ROTARY_TAP,  ACT_RESET_POT, BIND_FOLLOW },
 	{ CTRL_ROTARY_HOLD, ACT_RESET_POT, BIND_FOLLOW },
 #endif
+#ifdef STOMP_GPIO
 	{ CTRL_STOMP_TAP,   ACT_BYPASS },
 	{ CTRL_STOMP_HOLD,  ACT_TUNER },
+#endif
 };
 
 //

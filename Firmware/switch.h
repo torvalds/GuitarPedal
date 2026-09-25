@@ -19,7 +19,9 @@ enum switch_id {
 #ifdef ROTARY_SW_GPIO
 	ROTARY_SWITCH,		// the rotary encoder's shaft, pressed down
 #endif
+#ifdef STOMP_GPIO
 	STOMP_SWITCH,		// the footswitch
+#endif
 	NR_ONBOARD_SWITCHES,	// the ones that are soldered down
 #ifdef EXP_TIP_GPIO
 	EXP_TIP_SWITCH = NR_ONBOARD_SWITCHES,	// an accessory's, on the tip
@@ -40,7 +42,9 @@ static const unsigned char switch_gpio[NR_SWITCHES] = {
 #ifdef ROTARY_SW_GPIO
 	[ROTARY_SWITCH]	= ROTARY_SW_GPIO,
 #endif
+#ifdef STOMP_GPIO
 	[STOMP_SWITCH]	= STOMP_GPIO,
+#endif
 #ifdef EXP_TIP_GPIO
 	[EXP_TIP_SWITCH]	= EXP_TIP_GPIO,
 	[EXP_RING_SWITCH]	= EXP_RING_GPIO,
