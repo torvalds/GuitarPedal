@@ -1,0 +1,11 @@
+CONFIG_SERIAL=y
+CONFIG_CONSOLE=y
+CONFIG_UART_CONSOLE=y
+CONFIG_GPIO=y
+CONFIG_ARM_MPU=y
+
+# No 32.768 kHz crystal on this board, so the low-frequency clock is the
+# internal RC, calibrated against the 32 MHz one.  The default is the
+# crystal, which every Nordic board file has and this board does not.
+CONFIG_CLOCK_CONTROL_NRF_K32SRC_RC=y
+CONFIG_CLOCK_CONTROL_NRF_K32SRC_RC_CALIBRATION=y
