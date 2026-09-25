@@ -18,6 +18,9 @@ MANIFEST	:= nrf
 BOARD		:= minimal/nrf54l10/cpuapp
 APP		:= app
 BUILD		:= $(TOPDIR)/build
+BUILD_NOBT	:= $(TOPDIR)/build-nobt
+
+SOURCES		:= $(wildcard $(APP)/src/*.c $(APP)/*.conf boards/pedal/minimal/*)
 
 all: $(BUILD)/app/zephyr/zephyr.hex
 
@@ -76,11 +79,23 @@ $(MANIFEST)/west.yml:
 	$(WEST) sdk install -t arm-zephyr-eabi
 	touch $@
 
-$(BUILD)/app/zephyr/zephyr.hex: .stamp-sdk
+$(BUILD)/app/zephyr/zephyr.hex: .stamp-sdk $(SOURCES)
 	$(WEST) build -b $(BOARD) -d $(BUILD) $(APP) -- -DBOARD_ROOT=$(TOPDIR)
 
+#
+# The same program without the radio stack.  It exists for bring-up:
+# MPSL initialises ahead of the UART, so a board that says nothing has
+# either failed before MPSL or inside it, and this image is what tells
+# those two apart.
+#
+nobt: $(BUILD_NOBT)/app/zephyr/zephyr.hex
+
+$(BUILD_NOBT)/app/zephyr/zephyr.hex: .stamp-sdk $(SOURCES)
+	$(WEST) build -b $(BOARD) -d $(BUILD_NOBT) $(APP) -- \
+		-DBOARD_ROOT=$(TOPDIR) -DEXTRA_CONF_FILE=$(TOPDIR)/$(APP)/nobt.conf
+
 clean:
-	rm -rf $(BUILD)
+	rm -rf $(BUILD) $(BUILD_NOBT)
 
 #
 # Deliberately not 'clean': it throws away the download.
@@ -88,4 +103,4 @@ clean:
 distclean: clean
 	rm -rf $(VENV) .west .stamp-* bootloader modules nrfxlib tools zephyr
 
-.PHONY: all fetch clean distclean
+.PHONY: all nobt fetch clean distclean
