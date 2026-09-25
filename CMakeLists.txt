@@ -432,6 +432,12 @@ target_sources(${tgt} PRIVATE
 	Firmware/tinyusb/src/device/usbd.c
 	Firmware/tinyusb/src/class/audio/audio_device.c
 	Firmware/tinyusb/src/class/midi/midi_device.c
+	#
+	# The bulk pair CMSIS-DAP rides on.  Only the boards with a radio
+	# enable CFG_TUD_VENDOR, and the file compiles to nothing on the
+	# others, so it is listed unconditionally.
+	#
+	Firmware/tinyusb/src/class/vendor/vendor_device.c
 	Firmware/tinyusb/src/portable/raspberrypi/rp2040/dcd_rp2040.c
 	#
 	# Compiled in rather than linked as pico_usb_reset, which would

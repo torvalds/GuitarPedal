@@ -73,6 +73,7 @@ uint8_t routed_effect_count = 0;
 
 #include "scene.h"
 #include "nrf54/swd.h"
+#include "nrf54/dap.h"
 #include "hardware.h"
 #include "exp.h"
 #include "midi/sysex.h"
@@ -300,6 +301,19 @@ int main()
 		tud_task();
 		usb_midi_poll();
 		uart_midi_poll();
+#ifdef NRF54_SWDIO
+		//
+		// One debug command per pass.  It is a host asking for
+		// something rather than anything the pedal needs.
+		//
+		// Nothing below waits on it, but tud_task() above does:
+		// the audio and MIDI endpoints are serviced from this
+		// same loop, so a command that spends milliseconds
+		// bit-banging costs USB audio packets.  That is what
+		// bounds the retry count in DAP_TransferConfigure.
+		//
+		dap_poll();
+#endif
 
 		sysex_send_identity();
 		sysex_send_telemetry();

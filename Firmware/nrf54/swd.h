@@ -24,17 +24,53 @@
 #ifdef NRF54_SWDIO
 
 //
-// Half a clock period.  The probe is a handful of transactions at boot
-// and nothing waits on it, so this is slow on purpose: a bit-banged
-// line that works is worth more than a fast one that is marginal, and
-// the transfers that care about speed will not come through here.
+// Half a clock period, counted in nops.
 //
-#define SWD_HALF_PERIOD_NOPS	48
+// Slow on purpose to start with: a bit-banged line that works is worth
+// more on a board nobody has run yet than a fast one that is marginal,
+// and it can be wound down to a few kilohertz to be looked at with a
+// scope.  PIO is the right way to drive this once it is known to work
+// at all - it is how the speed gets to where a bulk transfer would
+// notice - and swd_transfer() is the seam that change happens behind.
+//
+static uint32_t swd_half_period = 48;
 
 static inline void swd_delay(void)
 {
-	for (int i = 0; i < SWD_HALF_PERIOD_NOPS; i++)
+	for (uint32_t i = 0; i < swd_half_period; i++)
 		__asm__ volatile ("nop");
+}
+
+//
+// What the host asked for in DAP_SWJ_Clock, as near as a nop loop can
+// offer it.
+//
+// A turn of the loop is not one cycle: it is the nop, an increment, a
+// compare and a branch, so roughly four.  Dividing by that is what
+// makes the answer the right order of magnitude rather than four times
+// too slow - and the fixed subtraction on top is the pin writes either
+// side, which happen once per bit however long the loop is.
+//
+// It is an estimate and nothing has checked it against a scope.  The
+// error that matters is being too fast, so where it is uncertain it is
+// biased slow: a line driven harder than it can carry fails in a way
+// that looks like broken hardware.
+//
+#define SWD_LOOP_CYCLES		4
+#define SWD_BIT_OVERHEAD	20
+
+static void swd_set_clock(uint32_t hz)
+{
+	uint32_t cycles;
+
+	if (!hz)
+		return;
+
+	cycles = clock_get_hz(clk_sys) / (2 * hz);
+	cycles = cycles > SWD_BIT_OVERHEAD ? cycles - SWD_BIT_OVERHEAD : 1;
+	cycles /= SWD_LOOP_CYCLES;
+
+	swd_half_period = cycles ? (cycles > 4000 ? 4000 : cycles) : 1;
 }
 
 //
@@ -77,51 +113,94 @@ static uint32_t swd_read_bits(int n)
 //
 // One clock with nobody driving, which is how the line changes hands.
 // The pull-up in swd_init() is what decides what an absent chip looks
-// like: all ones, which is not any of the three acknowledgements, so a
-// board with no radio fails the probe rather than reading as noise.
+// like: all ones, which is none of OK, WAIT or FAULT, so a board with
+// no radio fails the probe rather than reading as noise.
 //
 static void swd_turnaround(void)
 {
 	swd_read_bits(1);
 }
 
+//
+// A request names the register: which of the two ports, which
+// direction, and two address bits.  These are the bit positions
+// CMSIS-DAP uses for the same four things, so a transfer request off
+// the wire is one of these with the match bits masked off.
+//
+#define SWD_AP		(1u << 0)
+#define SWD_RNW		(1u << 1)
+#define SWD_A2		(1u << 2)
+#define SWD_A3		(1u << 3)
+
+//
+// OK, WAIT and FAULT are the target's, on the wire as it sends them.
+// The fourth is ours: the transfer happened and the data came back
+// corrupt, which is not something the target has a code for.
+//
 #define SWD_ACK_OK	1
+#define SWD_ACK_WAIT	2
+#define SWD_ACK_FAULT	4
+#define SWD_ACK_PARITY	8
 
 //
-// The eight-bit request: start, APnDP, RnW, A[2], A[3], parity over
-// those four, stop, park.  'addr' is the register's byte offset, so
-// A[3:2] come out of it.
+// Clocks with the line driven low, after a transfer.  Some targets need
+// them to finish the previous access; the host says how many in
+// DAP_TransferConfigure, and zero is the usual answer.
 //
-static int swd_request(bool ap, bool rnw, uint8_t addr)
+static uint8_t swd_idle_cycles;
+
+static void swd_idle(void)
 {
-	unsigned int sel = ap | (rnw << 1) | (((addr >> 2) & 3) << 2);
-	uint32_t req = 1			// start
-		     | (sel << 1)
-		     | (__builtin_parity(sel) << 5)
-		     | (0u << 6)		// stop
-		     | (1u << 7);		// park
-
-	swd_write_bits(req, 8);
-	swd_turnaround();
-	return swd_read_bits(3);
+	if (swd_idle_cycles)
+		swd_write_bits(0, swd_idle_cycles);
 }
 
-static bool swd_read_reg(bool ap, uint8_t addr, uint32_t *out)
+//
+// One transfer.  The eight bits on the wire are start, APnDP, RnW,
+// A[2], A[3], parity over those four, stop, park.
+//
+// On anything but OK the target does not drive a data phase, but the
+// line still has to change hands, so the turnaround happens either way.
+//
+static int swd_transfer(unsigned int req, uint32_t wdata, uint32_t *rdata)
 {
+	unsigned int sel = req & (SWD_AP | SWD_RNW | SWD_A2 | SWD_A3);
+	uint32_t packet = 1			// start
+			| (sel << 1)
+			| (__builtin_parity(sel) << 5)
+			| (0u << 6)		// stop
+			| (1u << 7);		// park
 	uint32_t data, parity;
+	int ack;
 
-	if (swd_request(ap, true, addr) != SWD_ACK_OK)
-		return false;
-
-	data = swd_read_bits(32);
-	parity = swd_read_bits(1);
+	swd_write_bits(packet, 8);
 	swd_turnaround();
+	ack = swd_read_bits(3);
 
-	if (__builtin_parity(data) != parity)
-		return false;
+	if (ack != SWD_ACK_OK) {
+		swd_turnaround();
+		swd_idle();
+		return ack;
+	}
 
-	*out = data;
-	return true;
+	if (req & SWD_RNW) {
+		data = swd_read_bits(32);
+		parity = swd_read_bits(1);
+		swd_turnaround();
+		if (__builtin_parity(data) != parity) {
+			swd_idle();
+			return SWD_ACK_PARITY;
+		}
+		if (rdata)
+			*rdata = data;
+	} else {
+		swd_turnaround();
+		swd_write_bits(wdata, 32);
+		swd_write_bits(__builtin_parity(wdata), 1);
+	}
+
+	swd_idle();
+	return ack;
 }
 
 //
@@ -204,7 +283,7 @@ static uint32_t nrf54_probe(void)
 
 	swd_connect_sequence();
 
-	if (!swd_read_reg(false, 0x00, &idcode))
+	if (swd_transfer(SWD_RNW, 0, &idcode) != SWD_ACK_OK)
 		return 0;
 
 	return idcode;
