@@ -1108,8 +1108,9 @@ bool handle_midi_packet(const uint8_t packet[4])
 	} else if ((status & 0xF0) == 0xC0) {
 		handled = true;
 		// Program Change -> Load Scene
-		if (data1 < MAX_SCENES) {
+		if (data1 < MAX_SCENES && (populated_scenes() & (1u << data1))) {
 			load_scene(data1);
+			state_dump_tx = true;
 		}
 	}
 
