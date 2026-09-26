@@ -173,9 +173,22 @@ def main():
         tl.generate(d, args.level, freq=d["ids"].topology_freq)
         L, _ = tl.raw_in(dst, 0.5)
         tl.mute(d)
-        if audio.dbfs(audio.rms(L)) > -60.0:
-            src = d
-            break
+        #
+        # The level and the frequency, not the level alone.  A bench
+        # signal generator on this input is on all the time and cannot
+        # be switched off from here, so "is there energy here" says yes
+        # to it and the sweep below then measures the generator.  That
+        # is what tl.TOPOLOGY_FREQ_HZ is for, and taking the frequency
+        # from it while testing only the level inherits the name and
+        # none of the protection.
+        #
+        if audio.dbfs(audio.rms(L)) < -60.0:
+            continue
+        f0 = audio.dominant(L)
+        if abs(f0 - tl.TOPOLOGY_FREQ_HZ) > 0.05 * tl.TOPOLOGY_FREQ_HZ:
+            continue
+        src = d
+        break
     if src is None:
         print("test-hwtone: SKIPPED - nothing is driving %s, so there is "
               "no patch cable into its input" % dst["label"])
