@@ -184,6 +184,16 @@ def main():
     print("test-hwtone: %s carries the stack, %s drives it"
           % (dst["label"], src["label"] if src is not dst else "itself"))
 
+    #
+    # Both boards, because either end left on Replace breaks this: the
+    # driven one would emit the host's silence and the measured one
+    # would ignore its jack.  "USB Audio" is GLOBAL and no scene load
+    # puts it back.
+    #
+    for d in {id(src): src, id(dst): dst}.values():
+        with effectmap.using(d["ids"].schema):
+            pedal.set_named(d["port"], "USB Audio", "L/R In", "Off")
+
     INTONE = effectmap.effect("INTONE")
     pot = lambda label: effectmap.pot("INTONE", label)
 

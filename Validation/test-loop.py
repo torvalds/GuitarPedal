@@ -288,6 +288,18 @@ def main():
         "%s (card %s, midi %s, map %s)"
         % (d["label"], d["card"], d["port"], d["map"]) for d in found))
 
+    #
+    # "USB Audio" is GLOBAL, so its pots are kept once for the whole
+    # pedal and no scene load ever puts them back.  Left on Replace by
+    # an earlier session, every board here measures the host's silence
+    # instead of the cable, and the topology below reports a ring with
+    # no links in it.  usb_mode() writes the output direction already;
+    # this is the one nothing was writing.
+    #
+    for d in found:
+        with effectmap.using(d["ids"].schema):
+            pedal.set_named(d["port"], "USB Audio", "L/R In", "Off")
+
     ring, loops = topology(found, args)
     if not ring:
         return 1
