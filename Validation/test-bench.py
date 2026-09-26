@@ -58,28 +58,24 @@ import pots as P
 # for in main(), so --help works without a build.
 CHAIN = pedal.CHAIN
 BOOST = TESTTONE = USBAUDIO = USB_OUT = None
-CHAIN_GATE = CHAIN_TRIM = CHAIN_VOLUME = None
 TT_LEVEL = TT_FREQ = TT_SHAPE = SHAPE_SINE = None
 BOOST_BOOST = BOOST_LEVEL = BOOST_BASSCUT = BOOST_HIGHCUT = None
-WET = DRY = None
+DRY = None
 
 
 # Pot numbers as the SysEx sees them: 0 is the mix, 1-10 are the effect's.
 def resolve():
-    global BOOST, TESTTONE, USBAUDIO, USB_OUT, WET, DRY, SHAPE_SINE
-    global CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME, TT_LEVEL, TT_FREQ, TT_SHAPE
+    global BOOST, TESTTONE, USBAUDIO, USB_OUT, DRY, SHAPE_SINE
+    global TT_LEVEL, TT_FREQ, TT_SHAPE
     global BOOST_BOOST, BOOST_LEVEL, BOOST_BASSCUT, BOOST_HIGHCUT
     BOOST = effectmap.effect("BOOST")
     TESTTONE = effectmap.effect("TESTTONE")
     USBAUDIO = effectmap.usb()
-    CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME = effectmap.pots(
-        "Signal Chain", "Gate", "Trim", "Volume")
     TT_LEVEL, TT_FREQ, TT_SHAPE = effectmap.pots(
         "Test Tone", "Level", "Freq", "Shape")
     BOOST_BOOST, BOOST_LEVEL, BOOST_BASSCUT, BOOST_HIGHCUT = effectmap.pots(
         "Boost", "Boost", "Level", "Basscut", "Highcut")
     USB_OUT = effectmap.pot("USB Audio", "L/R Out")
-    WET = P.to_pot("USB Audio", "L/R Out", "Wet")
     DRY = P.to_pot("USB Audio", "L/R Out", "Dry")
     SHAPE_SINE = P.to_pot("Test Tone", "Shape", "Sine")
 
@@ -96,12 +92,15 @@ FAILED = []
 
 def configure(p, boost, level):
     """Put the pedal in a known state, from wherever it happened to be."""
-    pedal.set_routing(p, TESTTONE, BOOST)
-    time.sleep(0.2)
+    #
+    # The chain, the gate and both USB directions come from
+    # pedal.configure().  L/R In is written even though the tone runs at
+    # full mix and replaces the jack anyway - a precondition that is
+    # true by luck is one that stops being true when the stimulus
+    # changes.
+    #
+    pedal.configure(p, TESTTONE, BOOST, usb_in="Off", usb_out="Wet")
     for eff, pot, val in (
-            (CHAIN, CHAIN_GATE, 0),         # gate off: it has nothing to do here
-            (CHAIN, CHAIN_TRIM, 60),        # 0 dB
-            (CHAIN, CHAIN_VOLUME, 80),      # 0 dB - it scales the tone, see testtone.h
             (TESTTONE, 0, 120),             # full mix: replace the input rather than add
             (TESTTONE, TT_FREQ, 60),        # pot 60 is 440 Hz exactly
             (TESTTONE, TT_SHAPE, SHAPE_SINE),
@@ -110,8 +109,7 @@ def configure(p, boost, level):
             (BOOST, BOOST_BOOST, boost),
             (BOOST, BOOST_LEVEL, level),
             (BOOST, BOOST_BASSCUT, 120),
-            (BOOST, BOOST_HIGHCUT, 120),
-            (USBAUDIO, USB_OUT, WET)):
+            (BOOST, BOOST_HIGHCUT, 120)):
         pedal.set_pot(p, eff, pot, val)
         time.sleep(0.02)
     #
