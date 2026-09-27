@@ -61,41 +61,37 @@ import pots as P
 TONE_HZ = 440.0
 
 # Asked for in main(), so --help works without a build.
-CHAIN = pedal.CHAIN
 TESTTONE = USBAUDIO = USB_OUT = None
-CHAIN_GATE = CHAIN_TRIM = CHAIN_VOLUME = None
 TT_LEVEL = TT_FREQ = TT_SHAPE = None
-WET_DRY = DRY = SHAPE_SINE = SHAPE_NOISE = None
+DRY = SHAPE_SINE = SHAPE_NOISE = None
 
 
 def resolve():
-    global TESTTONE, USBAUDIO, USB_OUT, WET_DRY, DRY
-    global CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME, TT_LEVEL, TT_FREQ, TT_SHAPE
+    global TESTTONE, USBAUDIO, USB_OUT, DRY
+    global TT_LEVEL, TT_FREQ, TT_SHAPE
     global SHAPE_SINE, SHAPE_NOISE
     TESTTONE = effectmap.effect("TESTTONE")
     USBAUDIO = effectmap.usb()
-    CHAIN_GATE, CHAIN_TRIM, CHAIN_VOLUME = effectmap.pots(
-        "Signal Chain", "Gate", "Trim", "Volume")
     TT_LEVEL, TT_FREQ, TT_SHAPE = effectmap.pots(
         "Test Tone", "Level", "Freq", "Shape")
     USB_OUT = effectmap.pot("USB Audio", "L/R Out")
-    WET_DRY = P.to_pot("USB Audio", "L/R Out", "Wet/Dry")
     DRY = P.to_pot("USB Audio", "L/R Out", "Dry")
     SHAPE_SINE = P.to_pot("Test Tone", "Shape", "Sine")
     SHAPE_NOISE = P.to_pot("Test Tone", "Shape", "Noise")
 
 
 def configure(p, level, shape):
-    pedal.set_routing(p, TESTTONE)
-    time.sleep(0.2)
-    for eff, pot, val in ((CHAIN, CHAIN_GATE, 0),
-                          (CHAIN, CHAIN_TRIM, 60),
-                          (CHAIN, CHAIN_VOLUME, 80),
-                          (TESTTONE, 0, 120),
+    #
+    # The chain, the gate and both USB directions come from
+    # pedal.configure(); what is left here is the tone itself.  L/R In
+    # matters as much as the rest: this measures a cable from the output
+    # jack back to the input, and Replace would ignore that jack.
+    #
+    pedal.configure(p, TESTTONE, usb_in="Off", usb_out="Wet/Dry")
+    for eff, pot, val in ((TESTTONE, 0, 120),
                           (TESTTONE, TT_FREQ, 60),      # 440 Hz exactly
                           (TESTTONE, TT_SHAPE, shape),
-                          (TESTTONE, TT_LEVEL, level),
-                          (USBAUDIO, USB_OUT, WET_DRY)):
+                          (TESTTONE, TT_LEVEL, level)):
         pedal.set_pot(p, eff, pot, val)
         time.sleep(0.02)
     time.sleep(1.0)

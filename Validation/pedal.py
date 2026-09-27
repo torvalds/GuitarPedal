@@ -780,6 +780,49 @@ def set_routing(p, *effect_ids):
     send(p, 0x08, *effect_ids)
 
 
+def configure(p, *effect_ids, usb_in="Off", usb_out="Wet/Dry", settle=0.4):
+    """Put a board into a known state before measuring it.
+
+    Every pot a measurement rests on is written, including the ones whose
+    default is already what is wanted, because a default is not what is
+    on the board - a scene, an interactive session or the previous test
+    is.  The failure this exists for is silent: test-loop.py ends each
+    edge with the tone routed at full mix and its level at zero, and a
+    test that then measures the chain reads digital silence and calls it
+    a scale error.
+
+    "USB Audio" is the sharpest edge of it, because it is GLOBAL: its
+    pots are kept once for the whole pedal, so no scene load ever puts
+    them back.  L/R In left on Replace means the jack is ignored
+    entirely, and a board measuring the host's silence looks exactly like
+    a board with a dead input.
+
+    Effect ids are routed in the order given, or the chain is emptied
+    when none are passed.  The caller sets that effect's own pots
+    afterwards; what is handled here is everything underneath them.
+    """
+    set_routing(p, *effect_ids)
+
+    #
+    # The gate fully down is off, per signal_chain.h.  It is the one
+    # thing here that silences part of what is being measured rather
+    # than scaling it, so it goes off even when the level makes it look
+    # irrelevant.
+    #
+    set_named(p, "Signal Chain", "Gate", -100.0)
+    set_named(p, "Signal Chain", "Trim", 0.0)
+    set_named(p, "Signal Chain", "Volume", 0.0)
+
+    set_named(p, "USB Audio", "L/R In", usb_in)
+    set_named(p, "USB Audio", "L/R Out", usb_out)
+
+    #
+    # Long enough for the enable fade (EFF_ENABLE_STEPS) and the 1/512
+    # slews on trim, volume and the mixes.
+    #
+    time.sleep(settle)
+
+
 def save_scene(p, scene):
     send(p, 0x04, scene)
 

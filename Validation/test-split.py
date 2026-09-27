@@ -112,6 +112,12 @@ def main():
         return 0
 
     pedal.wet_dry(p, effectmap.usb())
+    #
+    # And the other direction, which configure() below cannot reach:
+    # "USB Audio" is GLOBAL, so P.defaults() over the chain and the two
+    # tones never touches it and Replace would ignore the jack.
+    #
+    pedal.set_named(p, "USB Audio", "L/R In", "Off")
 
     #
     # Scenes 0 and 1, in the order the measurements want them.  Saving

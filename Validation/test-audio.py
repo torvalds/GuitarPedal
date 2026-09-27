@@ -94,7 +94,12 @@ def main():
     # same instant, so anything below can subtract one from the other
     # without aligning them first.
     #
-    pedal.wet_dry(p, effectmap.usb())
+    # Through configure() rather than by setting the capture mode alone,
+    # because everything below measures the chain against the jack and
+    # both ends of that are settable: a routed effect, a gate, a trim, or
+    # L/R In on Replace, which ignores the jack outright.
+    #
+    pedal.configure(p, usb_out="Wet/Dry")
 
     d = audio.trim(audio.capture(args.seconds, card))
     wet, dry = d[:, 0], d[:, 1]
@@ -246,9 +251,11 @@ def main():
     # ---- transparency ------------------------------------------------
     #
     # With nothing routed the pedal is trim, gate and volume, all at
-    # unity, so the two channels should be the same signal.
+    # unity, so the two channels should be the same signal.  Written
+    # rather than assumed - that sentence is a precondition, and it was
+    # only ever a hope.
     #
-    pedal.set_routing(p)
+    pedal.configure(p, usb_out="Wet/Dry")
     d = audio.trim(audio.capture(args.seconds, card))
     wet, dry = d[:, 0], d[:, 1]
 
