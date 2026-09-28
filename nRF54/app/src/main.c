@@ -1,6 +1,6 @@
 /*
  * The first thing to run on the radio, and deliberately the smallest:
- * it says what it is and echoes whatever the RP2354 sends it.
+ * it echoes whatever the RP2354 sends it.
  *
  * It also advertises, and that is the whole of what the radio does -
  * see midi.c.  A scanner can see the far side of the link and find the
@@ -19,19 +19,24 @@
 #include <zephyr/drivers/uart.h>
 
 /*
- * Which of the two radio images this is - the one with the Bluetooth
- * stack, or the one without.  Nothing else tells them apart at runtime.
+ * Reading RTT stalls the core long enough to miss Bluetooth connection
+ * events, so a log kept over the debug pins breaks the link it is there
+ * to explain - 6 to 20 disconnects per run against 0 or 1 without it.
+ * prj.conf turns the console off entirely; this is what stops anything
+ * turning that one back on quietly.
  */
+#ifdef CONFIG_USE_SEGGER_RTT
+#error "RTT costs Bluetooth connections - see prj.conf"
+#endif
+
 #ifdef CONFIG_BT
-#define RADIO_STACK "bt"
 void midi_ble_start(void);
 #else
-#define RADIO_STACK "nobt"
 #define midi_ble_start() do { } while (0)
 #endif
 
 static const struct device *const link =
-	DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
+	DEVICE_DT_GET(DT_CHOSEN(pedal_midi_uart));
 
 int main(void)
 {
@@ -39,9 +44,6 @@ int main(void)
 
 	if (!device_is_ready(link))
 		return -ENODEV;
-
-	printk("radio: minimal/nrf54l10 " RADIO_STACK " "
-	       __DATE__ " " __TIME__ "\n");
 
 	midi_ble_start();
 
