@@ -45,11 +45,12 @@
 #include "ws2812_table.h"
 
 //
-// pio0 already runs the two i2s state machines; this is the third, and
-// the assignment lives in pedal.c with the others.
+// pio0 is the two i2s links and has no state machine to spare, so this
+// sits on pio2 beside the rotary encoder.  The assignment lives in
+// pedal.c with the others.
 //
-#define PIXEL_PIO	pio0
-#define PIXEL_SM	PIO0_WS2812_SM
+#define PIXEL_PIO	pio2
+#define PIXEL_SM	PIO2_WS2812_SM
 
 //
 // Four output bits per WS2812B bit, at the datasheet's 800kHz.

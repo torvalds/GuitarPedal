@@ -21,14 +21,21 @@
 #include "rotary.pio.h"
 #include "i2s.pio.h"
 
+// Both i2s links live on pio0 so that they share one copy of the two
+// programs: an instance costs a state machine rather than another 18
+// instructions, and all four run the identical code.  The radio's pair
+// is started only when a radio answers - see init_nrf54_i2s().
 #define PIO0_I2S_TX_SM 0
 #define PIO0_I2S_RX_SM 1
-#define PIO0_WS2812_SM 2
+#define PIO0_NRF54_I2S_TX_SM 2
+#define PIO0_NRF54_I2S_RX_SM 3
 
 // PIO1 runs one debounce state machine per switch, and the state
 // machine index is the switch id - see switch.h.  PIO2 has the one
-// rotary encoder.
+// rotary encoder, and the WS2812s, which were on pio0 until its four
+// state machines went to the two i2s links.
 #define ROTARY_SM 0
+#define PIO2_WS2812_SM 1
 
 #define PWM_WRAP 4096	// Entirely arbitrary
 
@@ -240,7 +247,6 @@ int main()
 	swd_init();
 #endif
 
-	init_i2s();
 	init_ws2812();
 	init_sw_pins();
 	init_pwm_pins();
@@ -262,6 +268,12 @@ int main()
 	// The i2c buses above are all this needs.
 	//
 	probe_hardware();
+
+	//
+	// After probe_hardware(), because the radio's i2s is started only
+	// if a radio answered and every i2s state machine starts together.
+	//
+	init_i2s();
 
 	init_usb();
 	uart_midi_init();

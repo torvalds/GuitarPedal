@@ -20,12 +20,79 @@
 // identity reply reports what probe_hardware() found.
 //
 
+//
+// What gets reported is what was *observed*.  Any inference from it -
+// which board this is, how old - belongs to whoever is reading rather
+// than in the wire format, so that being wrong about it later costs an
+// app change and not a protocol one.
+//
+static struct {
+	bool i2c_codec;		// a codec answered, so it is not strapped
+	bool legacy_screen;	// SH1106, 0x3c - a design that is gone
+#ifdef NRF54_SWDIO
+	uint32_t radio;		// the nRF54's debug port id, or zero
+#endif
+} hardware;
+
+//
+// One i2s state machine's DMA.
+//
+// All four are the same channel with the direction flipped.  Memory is
+// the side that increments and the side the ring wraps, and which of
+// read or write that is depends on which way the samples are going.
+//
+static int i2s_dma_channel(uint sm, bool is_tx, raw_sample_t *buf)
+{
+	int chan = dma_claim_unused_channel(true);
+	dma_channel_config c = dma_channel_get_default_config(chan);
+
+	channel_config_set_transfer_data_size(&c, DMA_SIZE_32);
+	channel_config_set_read_increment(&c, is_tx);
+	channel_config_set_write_increment(&c, !is_tx);
+	channel_config_set_dreq(&c, pio_get_dreq(pio0, sm, is_tx));
+	channel_config_set_ring(&c, !is_tx, 7);	// 128 bytes, the buffer
+
+	pio_sm_clear_fifos(pio0, sm);
+
+	if (is_tx)
+		dma_channel_configure(chan, &c, &pio0->txf[sm], buf,
+				      0xffffffff, false);
+	else
+		dma_channel_configure(chan, &c, buf, &pio0->rxf[sm],
+				      0xffffffff, false);
+
+	return chan;
+}
+
+#ifdef NRF54_SWDIO
+//
+// The radio's audio link, which nothing reads or writes yet: the nRF's
+// i2s is described in its devicetree and driven by nothing, so this
+// carries silence and exists to prove the pins.
+//
+static raw_sample_t __attribute__((aligned(128))) nrf54_i2s_buf[16];
+static int nrf54_dma_tx, nrf54_dma_rx;
+#endif
+
+//
+// Every i2s link on the board, started together.
+//
+// This runs after probe_hardware() because the radio's half depends on
+// what that found.  GPIO10 is the radio's data pin on this revision and
+// was the footswitch on the one before it, and the two share a board
+// file, so driving it on the older board would put a PIO output against
+// a switch.
+//
+// Starting them together is what the one PIO block buys beyond the
+// instruction memory: four state machines off one clock, enabled on the
+// same cycle, so the two links share a starting edge rather than only a
+// rate.
+//
 static void init_i2s(void)
 {
-	uint tx_offset, rx_offset;
-
-	tx_offset = pio_add_program(pio0, &i2s_tx_program);
-	rx_offset = pio_add_program(pio0, &i2s_rx_program);
+	uint tx_offset = pio_add_program(pio0, &i2s_tx_program);
+	uint rx_offset = pio_add_program(pio0, &i2s_rx_program);
+	uint32_t sms, dmas;
 
 	//
 	// BCLK and FSYNC are the side-set, so they and only they have to be
@@ -47,36 +114,52 @@ static void init_i2s(void)
 	i2s_rx_program_init(pio0, PIO0_I2S_RX_SM, rx_offset,
 			    I2S_FSYNC, I2S_DOUT);
 
-	dma_rx = dma_claim_unused_channel(true);
-	dma_channel_config c_rx = dma_channel_get_default_config(dma_rx);
-	channel_config_set_transfer_data_size(&c_rx, DMA_SIZE_32);
-	channel_config_set_read_increment(&c_rx, false);
-	channel_config_set_write_increment(&c_rx, true);
-	channel_config_set_dreq(&c_rx, pio_get_dreq(pio0, PIO0_I2S_RX_SM, false));
-	channel_config_set_ring(&c_rx, true, 7); // write wrap at 128 bytes (32 words)
+	dma_rx = i2s_dma_channel(PIO0_I2S_RX_SM, false, i2s_dma_buf);
+	dma_tx = i2s_dma_channel(PIO0_I2S_TX_SM, true, i2s_dma_buf);
 
-	dma_tx = dma_claim_unused_channel(true);
-	dma_channel_config c_tx = dma_channel_get_default_config(dma_tx);
-	channel_config_set_transfer_data_size(&c_tx, DMA_SIZE_32);
-	channel_config_set_read_increment(&c_tx, true);
-	channel_config_set_write_increment(&c_tx, false);
-	channel_config_set_dreq(&c_tx, pio_get_dreq(pio0, PIO0_I2S_TX_SM, true));
-	channel_config_set_ring(&c_tx, false, 7); // read wrap at 128 bytes (32 words)
+	sms = (1u << PIO0_I2S_TX_SM) | (1u << PIO0_I2S_RX_SM);
+	dmas = (1u << dma_rx) | (1u << dma_tx);
 
-	pio_sm_clear_fifos(pio0, PIO0_I2S_RX_SM);
-	pio_sm_clear_fifos(pio0, PIO0_I2S_TX_SM);
+#ifdef NRF54_SWDIO
+	if (hardware.radio) {
+		_Static_assert(NRF54_I2S_BCLK == NRF54_I2S_FSYNC + 1 ||
+			       NRF54_I2S_FSYNC == NRF54_I2S_BCLK + 1,
+			       "the radio's BCLK and FSYNC must be adjacent too");
+#ifdef I2S_FSYNC_BELOW_BCLK
+		_Static_assert(NRF54_I2S_FSYNC < NRF54_I2S_BCLK,
+			       "the radio's pins disagree with I2S_FSYNC_BELOW_BCLK");
+#else
+		_Static_assert(NRF54_I2S_BCLK < NRF54_I2S_FSYNC,
+			       "the radio's pins disagree with I2S_FSYNC_BELOW_BCLK");
+#endif
+		i2s_tx_program_init(pio0, PIO0_NRF54_I2S_TX_SM, tx_offset,
+				    NRF54_I2S_BCLK, NRF54_I2S_FSYNC,
+				    NRF54_I2S_DIN, NRF54_I2S_DOUT);
+		i2s_rx_program_init(pio0, PIO0_NRF54_I2S_RX_SM, rx_offset,
+				    NRF54_I2S_FSYNC, NRF54_I2S_DOUT);
 
-	// RX and TX start at the same point, together. But TX will
-	// fill up the PIO buffers and move ahead, while RX will be
-	// waiting for the first samples to come in, so it naturally
-	// falls behind.
+		nrf54_dma_rx = i2s_dma_channel(PIO0_NRF54_I2S_RX_SM, false,
+					       nrf54_i2s_buf);
+		nrf54_dma_tx = i2s_dma_channel(PIO0_NRF54_I2S_TX_SM, true,
+					       nrf54_i2s_buf);
+
+		sms |= (1u << PIO0_NRF54_I2S_TX_SM) |
+		       (1u << PIO0_NRF54_I2S_RX_SM);
+		dmas |= (1u << nrf54_dma_rx) | (1u << nrf54_dma_tx);
+	}
+#endif
+
 	//
-	// And "falls behind" is the same as "is ahead" in a circular
-	// buffer.
-	dma_channel_configure(dma_rx, &c_rx, i2s_dma_buf, &pio0->rxf[PIO0_I2S_RX_SM], 0xffffffff, false);
-	dma_channel_configure(dma_tx, &c_tx, &pio0->txf[PIO0_I2S_TX_SM], i2s_dma_buf, 0xffffffff, false);
-
-	dma_start_channel_mask((1u << dma_rx) | (1u << dma_tx));
+	// The DMA first, so the transmit fifos have something in them
+	// before the state machines start reading them.
+	//
+	// RX and TX start at the same point, together.  But TX will fill up
+	// the PIO buffers and move ahead, while RX will be waiting for the
+	// first samples to come in, so it naturally falls behind - and in a
+	// circular buffer that is the same as being ahead.
+	//
+	dma_start_channel_mask(dmas);
+	pio_enable_sm_mask_in_sync(pio0, sms);
 }
 
 static void init_ws2812(void)
@@ -156,19 +239,6 @@ static void switch_irq(void)
 // never a good one.  It sat on whichever board happened to carry it
 // across a couple of revisions, so its presence identified nothing, and
 // the reading was not even stable - see the issue list.
-//
-// What gets reported is what was *observed*.  Any inference from it -
-// which board this is, how old - belongs to whoever is reading rather
-// than in the wire format, so that being wrong about it later costs an
-// app change and not a protocol one.
-//
-static struct {
-	bool i2c_codec;		// a codec answered, so it is not strapped
-	bool legacy_screen;	// SH1106, 0x3c - a design that is gone
-#ifdef NRF54_SWDIO
-	uint32_t radio;		// the nRF54's debug port id, or zero
-#endif
-} hardware;
 
 //
 // Whether an effect has the board under it that it asked for.
