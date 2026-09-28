@@ -406,6 +406,44 @@ static void sysex_send_exp(void)
 }
 #endif
 
+#ifdef NRF54_SWDIO
+bool send_radio_tx = false;
+//
+// How the link to the radio is doing.
+//
+// 'packets' is MIDI arriving from the radio, which is what a host
+// connected over Bluetooth produces; 'dropped' is outgoing bytes that
+// found the queue full, which should stay at zero.
+//
+static void sysex_send_radio(void)
+{
+	if (!send_radio_tx)
+		return;
+	if (midi_tx_busy())
+		return;
+	send_radio_tx = false;
+
+	static const uint8_t hdr[] = { 0xF0, 0x7D, 0x0F };
+	static const uint8_t trailer[] = { 0xF7 };
+
+	sysex_tx_start();
+	sysex_stream_write(hdr, sizeof(hdr));
+	sysex_write_str("{\"baud\":");
+	sysex_write_num(NRF54_UART_BAUD);
+	sysex_write_str(",\"tx\":");
+	sysex_write_num(nrf54_uart.tx_bytes);
+	sysex_write_str(",\"rx\":");
+	sysex_write_num(nrf54_uart.rx_bytes);
+	sysex_write_str(",\"packets\":");
+	sysex_write_num(nrf54_uart.packets);
+	sysex_write_str(",\"dropped\":");
+	sysex_write_num(nrf54_uart.dropped);
+	sysex_write_str("}");
+	sysex_stream_write(trailer, sizeof(trailer));
+	midi_tx_commit();
+}
+#endif
+
 bool send_telemetry_tx = false;
 static void sysex_send_telemetry(void)
 {
@@ -976,6 +1014,12 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 	} else if (cmd == 0x0b) { // Telemetry Request
 
 		send_telemetry_tx = true;
+
+#ifdef NRF54_SWDIO
+	} else if (cmd == 0x0f) { // Radio link - bringup only
+
+		send_radio_tx = true;
+#endif
 
 #ifdef EXP_TIP_GPIO
 	} else if (cmd == 0x0e) { // Expression jack probe - bringup only

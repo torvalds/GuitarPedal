@@ -328,6 +328,7 @@ int main()
 		//
 		dap_poll();
 		nrf54_uart_poll();
+		sysex_send_radio();
 #endif
 
 		sysex_send_identity();
