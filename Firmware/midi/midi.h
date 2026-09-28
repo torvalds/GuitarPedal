@@ -123,6 +123,114 @@ static inline uint8_t midi_status_cin(uint8_t status)
 	return status >> 4;
 }
 
+//
+// A MIDI byte stream, taken apart into the 4-byte packets everything
+// else here speaks.
+//
+// A wire carries bytes and USB carries packets, so anything arriving on
+// a UART needs this in between.  Two links do: the TRS jacks on the
+// boards that have them, and the radio.  One parser with its state
+// passed in rather than two copies of it, because they are the same
+// problem and the second copy is the one that stops getting fixed.
+//
+struct midi_parser {
+	uint8_t packet[4];
+	int idx;
+	int expected;
+
+	//
+	// SysEx, which is off unless the caller asks for it.
+	//
+	// The TRS jacks leave it off: at 31250 baud a state dump takes
+	// the better part of a second, and nothing asks for one over
+	// those.  The nRF54 port turns it on, because it runs 32 times
+	// faster and SysEx is what the web app speaks.
+	//
+	bool want_sysex;
+	bool in_sysex;
+	uint8_t sx[3];
+	int sx_len;
+};
+
+//
+// One byte in; true when that byte completed a packet.
+//
+// Running status survives a completed packet: 'idx' goes back to 2 and
+// not to 0, which keeps the status byte in packet[1] for the data bytes
+// that follow.  A stream that carries the status once and then several
+// pairs of data bytes is parsed correctly.
+//
+static inline bool midi_parse_byte(struct midi_parser *p, uint8_t b,
+				   uint8_t packet[4])
+{
+	if (b >= 0xF8)
+		return false;		// real-time, any time, ignored
+
+	//
+	// SysEx becomes the same 4-byte packets USB carries it in, so
+	// that handle_midi_packet() reassembles it without caring which
+	// link it arrived on.  CIN 4 is "starts or continues", and 5, 6
+	// and 7 are "ends with this many bytes".
+	//
+	if (p->in_sysex) {
+		p->sx[p->sx_len++] = b;
+
+		if (b == 0xF7) {
+			packet[0] = 0x04 + p->sx_len;
+			goto emit_sysex;
+		}
+		if (p->sx_len < 3)
+			return false;
+		packet[0] = 0x04;
+emit_sysex:
+		packet[1] = p->sx[0];
+		packet[2] = p->sx_len > 1 ? p->sx[1] : 0;
+		packet[3] = p->sx_len > 2 ? p->sx[2] : 0;
+		p->in_sysex = (b != 0xF7);
+		p->sx_len = 0;
+		return true;
+	}
+
+	if (b == 0xF0 && p->want_sysex) {
+		p->in_sysex = true;
+		p->sx_len = 0;
+		p->sx[p->sx_len++] = b;
+		p->idx = 0;
+		p->expected = 0;
+		return false;
+	}
+
+	if (b >= 0x80) {
+		p->packet[1] = b;
+		p->idx = 2;
+		if ((b & 0xF0) == 0xC0 || (b & 0xF0) == 0xD0)
+			p->expected = 1;
+		else if (b < 0xF0)
+			p->expected = 2;
+		else
+			p->expected = 0;
+		return false;
+	}
+
+	if (p->expected <= 0 || p->idx <= 0)
+		return false;
+
+	p->packet[p->idx++] = b;
+	if (p->idx - 2 != p->expected)
+		return false;
+
+	//
+	// CIN 0 is reserved: a host is entitled to ignore it, and ours
+	// was emitting nothing else on this path.
+	//
+	packet[0] = midi_status_cin(p->packet[1]);
+	packet[1] = p->packet[1];
+	packet[2] = p->packet[2];
+	packet[3] = p->packet[3];
+	p->idx = 2;
+	return true;
+}
+
 bool handle_midi_packet(const uint8_t packet[4]);
 void usb_midi_poll(void);
 bool usb_midi_write(const uint8_t packet[4]);
