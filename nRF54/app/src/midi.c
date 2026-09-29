@@ -34,6 +34,7 @@
 #include <stdio.h>
 
 #include <zephyr/kernel.h>
+#include <zephyr/settings/settings.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gatt.h>
@@ -417,6 +418,27 @@ void scan_done(unsigned int listed)
  * what it measures - a transfer that fails with the link otherwise idle
  * completes when there is 70 bytes of traffic every 500 ms.
  */
+//
+// How many keys the radio is holding.
+//
+// The first-order question about bonding, and the only way to tell a bond
+// that survived a reset from a host quietly pairing again - which looks
+// identical from the host.
+//
+static void count_bond(const struct bt_bond_info *info, void *user)
+{
+	ARG_UNUSED(info);
+	(*(unsigned int *)user)++;
+}
+
+static unsigned int bonds(void)
+{
+	unsigned int n = 0;
+
+	bt_foreach_bond(BT_ID_DEFAULT, count_bond, &n);
+	return n;
+}
+
 static void stats_send(void)
 {
 	uint8_t body[1 + RADIO_SYSEX_BODY];
@@ -431,7 +453,7 @@ static void stats_send(void)
 	 * ns no slot, fl notify refused, e its error, r the pedal's
 	 * backlog here, s whether the pedal is being held off, ccn how
 	 * often a client asked to be sent anything, lo bytes the pedal
-	 * sent that there was no room for.
+	 * sent that there was no room for, bo keys stored.
 	 */
 	body[0] = RADIO_SYSEX_STATS;	/* not ASK: the pedal echoes what we
 					 * send back at us, and an answer that
@@ -440,10 +462,11 @@ static void stats_send(void)
 	n = snprintf((char *)body + 1, RADIO_SYSEX_BODY,
 		     "{\"f\":%u,\"o\":%u,\"p\":%u,\"nc\":%u,\"ns\":%u"
 		     ",\"fl\":%u,\"e\":%d,\"r\":%u,\"s\":%u"
-		     ",\"ccn\":%u,\"lo\":%u}",
+		     ",\"ccn\":%u,\"lo\":%u,\"bo\":%u}",
 		     out.fed, out.notified, out.sent, out.noconn, out.noslot,
 		     out.failed, out.err, midi_uart_backlog(),
-		     midi_uart_halted(), out.ccc_n, midi_uart_lost());
+		     midi_uart_halted(), out.ccc_n, midi_uart_lost(),
+		     bonds());
 
 	if (n > 0)
 		radio_sysex(body, 1 + (size_t)n);
@@ -912,6 +935,13 @@ void midi_ble_start(void)
 		printk("bt: enable failed, %d\n", err);
 		return;
 	}
+
+	//
+	// Bring the stored keys back.  After bt_enable() and not before:
+	// the host registers its own settings handlers during enable, and
+	// a load that runs first finds nothing to give them to.
+	//
+	settings_load();
 
 	adv_start(NULL);
 }
