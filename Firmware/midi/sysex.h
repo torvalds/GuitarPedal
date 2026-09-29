@@ -1132,8 +1132,9 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 	} else if (cmd >= 0x10 && cmd <= 0x1f) {
 		//
 		// Addressed to the radio rather than to the pedal: a
-		// scan, and what a scan found.  The pedal is the wire
-		// between the app and the radio and reads none of it.
+		// scan, what a scan found, and what it is paired with.  The
+		// pedal is the wire between the app and the radio and reads
+		// almost none of it.
 		//
 		// Which way it goes is the only decision here, and it is
 		// the one thing the message itself does not say.

@@ -19,7 +19,11 @@ const SYSEX_CMD = {
     SCAN: 0x10,
     BIND: 0x11,
     SCAN_FOUND: 0x12,
-    SCAN_DONE: 0x13
+    SCAN_DONE: 0x13,
+    FORGET_ONE: 0x19,
+    BONDS: 0x1a,
+    BOND: 0x1b,
+    BONDS_END: 0x1c
 };
 
 //
@@ -1106,6 +1110,9 @@ let PEDAL_EFFECTS = [];
 // Whether the pedal is currently willing to be paired with.
 let pairingOpen = false;
 
+// What the radio says it holds a key for, as it answers.
+let bondRows = [];
+
 //
 // In / Out / Merge, declared once by the pedal rather than per effect.
 // Null against firmware that predates them, which is what every check
@@ -1271,11 +1278,6 @@ function handleSysex(data) {
         }
 
         //
-        // One device the radio saw.  The body is the address type, then
-        // the six address bytes a nibble at a time most significant
-        // first, then whatever name it advertised.
-        //
-        //
         // Whether the pedal is willing to be paired with.  It says so
         // whenever the answer changes, which includes the window closing
         // by itself after a minute and a pairing having used it up, so
@@ -1286,28 +1288,41 @@ function handleSysex(data) {
             renderPairing();
             break;
 
+        //
+        // One key the radio holds.  The address arrives as a scan result's
+        // does, so it decodes the same way and can be handed straight back
+        // as something to forget.
+        //
+        case SYSEX_CMD.BOND: {
+            const dev = decodeAddress(data);
+
+            if (dev)
+                bondRows.push(dev);
+            break;
+        }
+
+        case SYSEX_CMD.BONDS_END:
+            renderPairing();
+            break;
+
+        //
+        // One device the radio saw.  The body is the address type, then
+        // the six address bytes a nibble at a time most significant
+        // first, then whatever name it advertised.
+        //
         case SYSEX_CMD.SCAN_FOUND: {
             if (data.length < 3 + 13 + 1)
                 break;
 
-            const bytes = [];
-            for (let i = 0; i < 6; i++)
-                bytes.push((data[4 + 2 * i] << 4) | data[5 + 2 * i]);
+            const dev = decodeAddress(data);
 
-            let name = '';
+            if (!dev)
+                break;
+
             for (let i = 3 + 13; i < data.length - 1; i++)
-                name += String.fromCharCode(data[i]);
+                dev.name += String.fromCharCode(data[i]);
 
-            scanDevices.push({
-                type: data[3],
-                bytes,
-                // bt_addr_le_t holds the address least significant byte
-                // first, and people read it the other way round.
-                text: bytes.slice().reverse()
-                     .map(b => b.toString(16).padStart(2, '0').toUpperCase())
-                     .join(':'),
-                name
-            });
+            scanDevices.push(dev);
             renderScan();
             break;
         }
@@ -3323,6 +3338,34 @@ function onTheCable() {
     return !!midiOutput && midiOutput !== blePedal && midiOutput !== demoPedal;
 }
 
+//
+// The address out of a message that carries one.
+//
+// A scan result and a stored key are the same thirteen bytes - type, then
+// six address bytes a nibble at a time - so both come through here and
+// either can be handed back as something to bind or forget.
+//
+function decodeAddress(data) {
+    if (data.length < 3 + 13 + 1)
+        return null;
+
+    const bytes = [];
+
+    for (let i = 0; i < 6; i++)
+        bytes.push((data[4 + 2 * i] << 4) | data[5 + 2 * i]);
+
+    return {
+        type: data[3],
+        bytes,
+        // bt_addr_le_t holds the address least significant byte first,
+        // and people read it the other way round.
+        text: bytes.slice().reverse()
+              .map(b => b.toString(16).padStart(2, '0').toUpperCase())
+              .join(':'),
+        name: ''
+    };
+}
+
 function renderPairing() {
     const btn = document.getElementById('pair-btn');
     const hint = document.getElementById('pair-hint');
@@ -3352,8 +3395,52 @@ function renderPairing() {
                 'range can pair without it.';
     }
 
+    const host = document.getElementById('bond-rows');
+
+    if (host) {
+        host.innerHTML = '';
+        bondRows.forEach(dev => {
+            const row = document.createElement('div');
+
+            row.className = 'scan-row';
+
+            const left = document.createElement('div');
+            const what = document.createElement('div');
+
+            //
+            // A key is stored against an address and the radio never knew
+            // what it was called, so the name is only there when this
+            // session's scan happened to see the same address.
+            //
+            const seen = scanDevices.find(d => d.text === dev.text);
+
+            what.className = 'scan-name';
+            what.textContent = (seen && seen.name) || 'Paired device';
+
+            const addr = document.createElement('div');
+
+            addr.className = 'scan-addr';
+            addr.textContent = dev.text;
+
+            left.appendChild(what);
+            left.appendChild(addr);
+            row.appendChild(left);
+
+            const drop = document.createElement('button');
+
+            drop.className = 'action-btn';
+            drop.textContent = '\u2715';
+            drop.title = 'Forget this device';
+            drop.disabled = !onTheCable();
+            drop.addEventListener('click', () => forgetOne(dev));
+            row.appendChild(drop);
+
+            host.appendChild(row);
+        });
+    }
+
     if (forget)
-        forget.disabled = !haveRadio || !onTheCable();
+        forget.disabled = !haveRadio || !onTheCable() || !bondRows.length;
 
     if (forgetHint) {
         if (!pedalIdentity)
@@ -3362,12 +3449,33 @@ function renderPairing() {
             forgetHint.textContent = 'This pedal has no radio.';
         else if (!onTheCable())
             forgetHint.textContent = 'Only over the USB cable. Forgetting ' +
-                'the keys drops the one this page is talking over, and ' +
+                'a key drops the one this page may be talking over, and ' +
                 'without a cable there would be no way back.';
+        else if (!bondRows.length)
+            forgetHint.textContent = 'Nothing is paired with this pedal.';
         else
-            forgetHint.textContent = 'Every paired phone, laptop and ' +
-                'controller is forgotten, and each has to pair again.';
+            forgetHint.textContent = 'Forget one with its \u2715, or all of ' +
+                'them at once. Each has to pair again afterwards.';
     }
+}
+
+function forgetOne(dev) {
+    if (!midiOutput)
+        return;
+    sendSysex([SYSEX_CMD.FORGET_ONE, dev.type,
+               ...dev.bytes.flatMap(b => [(b >> 4) & 0x0f, b & 0x0f])]);
+    askBonds();
+}
+
+//
+// Ask what is paired.  The answer arrives as one message each and an end,
+// so the list is cleared here and drawn when the end comes.
+//
+function askBonds() {
+    if (!midiOutput)
+        return;
+    bondRows = [];
+    sendSysex([SYSEX_CMD.BONDS]);
 }
 
 //
@@ -5358,6 +5466,7 @@ appTitleEl.addEventListener('click', () => {
             // time this panel was open usually is not.
             //
             sendSysex([SYSEX_CMD.PAIRING]);
+            askBonds();
             document.getElementById('wireless-panel').classList.remove('hidden');
             if (backdrop) backdrop.classList.remove('hidden');
         });

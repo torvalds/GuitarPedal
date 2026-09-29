@@ -345,7 +345,10 @@ static void pack_sysex_end(void)
 #define RADIO_SYSEX_LISTENER	0x16	/* out: somebody is subscribed, or is not */
 #define RADIO_SYSEX_PAIRING	0x17	/* in:  the pedal has opened its window */
 #define RADIO_SYSEX_PAIRED	0x18	/* out: somebody bonded */
-#define RADIO_SYSEX_FORGET	0x19	/* in:  drop every key */
+#define RADIO_SYSEX_FORGET	0x19	/* in:  drop one key, or all of them */
+#define RADIO_SYSEX_BONDS	0x1a	/* in:  what are you paired with? */
+#define RADIO_SYSEX_BOND	0x1b	/* out: one of them */
+#define RADIO_SYSEX_BONDS_END	0x1c	/* out: that is all of them */
 #define RADIO_SYSEX_LAST	0x1f
 
 #define RADIO_SYSEX_BODY	96
@@ -444,6 +447,44 @@ static unsigned int bonds(void)
 
 	bt_foreach_bond(BT_ID_DEFAULT, count_bond, &n);
 	return n;
+}
+
+//
+// One key, on its way to whoever asked.
+//
+// The same encoding a scan result uses - address type, then the six bytes
+// a nibble at a time - so the app decodes both with one function and can
+// hand either straight back as something to forget.  No name: a key is
+// stored against an address and the radio never knew what it was called.
+//
+static void list_bond(const struct bt_bond_info *info, void *user)
+{
+	uint8_t body[1 + 1 + 12];
+	size_t n = 0;
+
+	ARG_UNUSED(user);
+
+	body[n++] = RADIO_SYSEX_BOND;
+	body[n++] = info->addr.type & 0x7f;
+	for (int i = 0; i < 6; i++) {
+		body[n++] = (info->addr.a.val[i] >> 4) & 0x0f;
+		body[n++] = info->addr.a.val[i] & 0x0f;
+	}
+	radio_sysex(body, n);
+}
+
+//
+// An address out of the twelve nibbles one arrived as.
+//
+static bool address_from(const uint8_t *arg, uint8_t len, bt_addr_le_t *addr)
+{
+	if (len < 13)
+		return false;
+
+	addr->type = arg[0];
+	for (int i = 0; i < 6; i++)
+		addr->a.val[i] = (arg[1 + 2 * i] << 4) | arg[2 + 2 * i];
+	return true;
 }
 
 static void stats_send(void)
@@ -598,9 +639,33 @@ static void radio_dispatch(uint8_t cmd, const uint8_t *arg, uint8_t len)
 	// It is also the plain thing a player wants when a pedal has been
 	// paired with something they no longer have.
 	//
-	case RADIO_SYSEX_FORGET:
-		bt_unpair(BT_ID_DEFAULT, NULL);
+	//
+	// Forget one key, or every one of them when no address is given.
+	// The address arrives as a scan result's does, so what was listed
+	// can be handed straight back.
+	//
+	case RADIO_SYSEX_FORGET: {
+		bt_addr_le_t addr;
+
+		if (address_from(arg, len, &addr))
+			bt_unpair(BT_ID_DEFAULT, &addr);
+		else
+			bt_unpair(BT_ID_DEFAULT, NULL);
 		break;
+	}
+
+	//
+	// What the radio is paired with: one message each and then an end,
+	// so an empty answer is still an answer.
+	//
+	case RADIO_SYSEX_BONDS: {
+		uint8_t end[2] = { RADIO_SYSEX_BONDS_END, 0 };
+
+		bt_foreach_bond(BT_ID_DEFAULT, list_bond, NULL);
+		end[1] = bonds() & 0x7f;
+		radio_sysex(end, sizeof(end));
+		break;
+	}
 #ifdef CONFIG_BT_OBSERVER
 	//
 	// A bare 0x10, or 0x10 01, looks; 0x10 00 stops looking.  Stopping
