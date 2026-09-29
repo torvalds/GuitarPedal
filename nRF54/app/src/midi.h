@@ -1,6 +1,7 @@
 #ifndef PEDAL_MIDI_H
 #define PEDAL_MIDI_H
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
 
@@ -11,6 +12,17 @@
 
 /* main.c, called by midi.c when a packet arrives over the air */
 void midi_uart_send(const uint8_t *buf, size_t len);
+
+/* main.c: how many bytes from the pedal are waiting to be dealt with */
+uint32_t midi_uart_backlog(void);
+
+/* main.c: true while the pedal is being held off */
+bool midi_uart_halted(void);
+
+/* main.c: bytes the pedal sent that there was no room for */
+uint32_t midi_uart_lost(void);
+
+
 void midi_ble_controller(const uint8_t *buf, uint16_t len);
 
 #ifdef CONFIG_BT

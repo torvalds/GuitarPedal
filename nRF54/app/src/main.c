@@ -184,6 +184,30 @@ void midi_uart_send(const uint8_t *buf, size_t len)
 	tx_kick();
 }
 
+/*
+ * How much the pedal has sent that has not been dealt with yet, and
+ * whether it is being held off.
+ *
+ * Read by the radio's statistics message.  A backlog that is not
+ * draining is what refuses the driver a buffer and deasserts RTS, so
+ * between them the two say whether the pedal has been stopped, is
+ * keeping up, or is simply not sending.
+ */
+uint32_t midi_uart_backlog(void)
+{
+	return ring_buf_size_get(&uart_rx_ring);
+}
+
+bool midi_uart_halted(void)
+{
+	return rx_stopped;
+}
+
+uint32_t midi_uart_lost(void)
+{
+	return rx_lost;
+}
+
 int main(void)
 {
 	if (!device_is_ready(link))

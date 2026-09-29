@@ -923,7 +923,15 @@ static void sysex_send_state_dump(void)
 // parameter of the same name, so sizeof inside it is the size of a
 // pointer.
 //
-#define SYSEX_BUF_MAX	(1 + MAX_RULES * 6)
+//
+// The longest inbound SysEx payload the pedal will assemble.
+//
+// A rule table sized it - one command byte and six per rule - and the
+// radio's diagnostics now arrive this way too, so it has a floor with room
+// for one of those.  A longer message is dropped whole, and silently as
+// far as the sender can tell.
+//
+#define SYSEX_BUF_MAX	((1 + MAX_RULES * 6) > 192 ? (1 + MAX_RULES * 6) : 192)
 
 static uint8_t sysex_buf[SYSEX_BUF_MAX];
 static int sysex_len = 0;

@@ -31,6 +31,8 @@
  * already looks for.
  */
 
+#include <stdio.h>
+
 #include <zephyr/kernel.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
@@ -93,6 +95,28 @@ static struct {
 	uint8_t buf[MIDI_BLE_MAX_PKT];
 	uint16_t len;
 	uint32_t sent, dropped;
+
+	/*
+	 * Why a packet did not go out, counted apart because the three
+	 * have nothing to do with each other and only one of them is a
+	 * Bluetooth problem: nobody was connected, the stack never gave a
+	 * buffer back, or it refused the send.
+	 */
+	uint32_t noconn, noslot, failed;
+	int err;		/* what it refused with, last time */
+
+	uint32_t fed;		/* bytes in from the UART */
+	uint32_t notified;	/* bytes handed to the stack */
+
+	/*
+	 * Whether anybody has asked to be sent anything, and how many
+	 * times.  A client that believes it subscribed while this says it
+	 * did not is the difference between a radio that will not send and
+	 * a host that never asked - and the two look identical from the
+	 * far end, which is why the count is here.
+	 */
+	uint16_t ccc;
+	uint32_t ccc_n;
 } out;
 
 /*
@@ -182,6 +206,7 @@ void midi_ble_flush(void)
 	}
 
 	if (!midi_conn) {
+		out.noconn++;
 		out.len = 0;
 		return;
 	}
@@ -196,6 +221,7 @@ void midi_ble_flush(void)
 	 * deasserts RTS.
 	 */
 	if (k_sem_take(&slot_free, K_NO_WAIT) != 0) {
+		out.noslot++;
 		out.dropped++;
 		out.len = 0;
 		return;
@@ -212,10 +238,13 @@ void midi_ble_flush(void)
 	err = bt_gatt_notify_cb(midi_conn, &slot[slot_next].params);
 	if (err) {
 		k_sem_give(&slot_free);
+		out.failed++;
+		out.err = err;
 		out.dropped++;
 	} else {
 		slot_next = (slot_next + 1) % MIDI_BLE_SLOTS;
 		out.sent++;
+		out.notified += out.len;
 	}
 
 	out.len = 0;
@@ -297,11 +326,15 @@ static void pack_sysex_end(void)
 #define RADIO_SYSEX_BIND	0x11	/* in:  use this one */
 #define RADIO_SYSEX_FOUND	0x12	/* out: one that answered */
 #define RADIO_SYSEX_DONE	0x13	/* out: the pass is over */
+#define RADIO_SYSEX_ASK		0x14	/* in:  how is the notify path? */
+#define RADIO_SYSEX_STATS	0x15	/* out: this is how */
 #define RADIO_SYSEX_LAST	0x1f
+
+#define RADIO_SYSEX_BODY	96
 
 static void radio_sysex(const uint8_t *body, size_t len)
 {
-	uint8_t msg[3 + 12 + 24 + 1];
+	uint8_t msg[3 + RADIO_SYSEX_BODY + 1];
 	size_t n = 0;
 
 	msg[n++] = 0xF0;
@@ -363,6 +396,49 @@ void scan_done(unsigned int listed)
 // that is not ours streams to the packer as it arrives rather than
 // having to be held whole.
 //
+/*
+ * What the notify path did, when asked.
+ *
+ * The radio has no console and this is the only way it can say anything:
+ * F0 7D 14 in is the request, F0 7D 15 out is the answer, and the pedal
+ * forwards both without reading either.
+ *
+ * Asked rather than offered, because sending this on a timer changes
+ * what it measures - a transfer that fails with the link otherwise idle
+ * completes when there is 70 bytes of traffic every 500 ms.
+ */
+static void stats_send(void)
+{
+	uint8_t body[1 + RADIO_SYSEX_BODY];
+	int n;
+
+	/*
+	 * Short keys because the pedal's inbound SysEx buffer is
+	 * SYSEX_BUF_MAX - 192 bytes - and a message past it is dropped
+	 * whole, silently from this end.
+	 *
+	 * f bytes in, o bytes notified, p packets, nc no connection,
+	 * ns no slot, fl notify refused, e its error, r the pedal's
+	 * backlog here, s whether the pedal is being held off, ccn how
+	 * often a client asked to be sent anything, lo bytes the pedal
+	 * sent that there was no room for.
+	 */
+	body[0] = RADIO_SYSEX_STATS;	/* not ASK: the pedal echoes what we
+					 * send back at us, and an answer that
+					 * reads as a request answers itself
+					 * for ever. */
+	n = snprintf((char *)body + 1, RADIO_SYSEX_BODY,
+		     "{\"f\":%u,\"o\":%u,\"p\":%u,\"nc\":%u,\"ns\":%u"
+		     ",\"fl\":%u,\"e\":%d,\"r\":%u,\"s\":%u"
+		     ",\"ccn\":%u,\"lo\":%u}",
+		     out.fed, out.notified, out.sent, out.noconn, out.noslot,
+		     out.failed, out.err, midi_uart_backlog(),
+		     midi_uart_halted(), out.ccc_n, midi_uart_lost());
+
+	if (n > 0)
+		radio_sysex(body, 1 + (size_t)n);
+}
+
 static bool radio_command(uint8_t cmd)
 {
 	return cmd >= RADIO_SYSEX_FIRST && cmd <= RADIO_SYSEX_LAST;
@@ -412,6 +488,9 @@ static void radio_dispatch(uint8_t cmd, const uint8_t *arg, uint8_t len)
 	ARG_UNUSED(len);
 
 	switch (cmd) {
+	case RADIO_SYSEX_ASK:
+		stats_send();
+		break;
 #ifdef CONFIG_BT_OBSERVER
 	case RADIO_SYSEX_SCAN:
 		scan_start();
@@ -444,6 +523,8 @@ static void radio_dispatch(uint8_t cmd, const uint8_t *arg, uint8_t len)
 
 void midi_ble_feed(uint8_t b)
 {
+	out.fed++;
+
 	if (b >= 0xF8) {
 		/*
 		 * Real-time, which is legal anywhere at all - including
@@ -637,8 +718,10 @@ static ssize_t midi_write(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 
 static void midi_ccc_changed(const struct bt_gatt_attr *attr, uint16_t value)
 {
-	printk("midi: notifications %s\n",
-	       value == BT_GATT_CCC_NOTIFY ? "on" : "off");
+	ARG_UNUSED(attr);
+
+	out.ccc = value;
+	out.ccc_n++;
 }
 
 BT_GATT_SERVICE_DEFINE(midi_svc,
