@@ -127,6 +127,10 @@ static struct {
 	 */
 	bool told;
 	bool listening;
+
+	/* The pedal's pairing window, and a bond to report from the loop. */
+	bool pairing;
+	bool bonded_pending;
 } out;
 
 /*
@@ -339,6 +343,8 @@ static void pack_sysex_end(void)
 #define RADIO_SYSEX_ASK		0x14	/* in:  how is the notify path? */
 #define RADIO_SYSEX_STATS	0x15	/* out: this is how */
 #define RADIO_SYSEX_LISTENER	0x16	/* out: somebody is subscribed, or is not */
+#define RADIO_SYSEX_PAIRING	0x17	/* in:  the pedal has opened its window */
+#define RADIO_SYSEX_PAIRED	0x18	/* out: somebody bonded */
 #define RADIO_SYSEX_LAST	0x1f
 
 #define RADIO_SYSEX_BODY	96
@@ -489,6 +495,17 @@ void midi_ble_notices(void)
 	uint8_t body[2];
 	bool on = (out.ccc == BT_GATT_CCC_NOTIFY) && midi_conn;
 
+	//
+	// A bond completed.  Sent from here rather than from the callback
+	// that learnt it, because the transmit ring has one writer.
+	//
+	if (out.bonded_pending) {
+		uint8_t done[1] = { RADIO_SYSEX_PAIRED };
+
+		out.bonded_pending = false;
+		radio_sysex(done, sizeof(done));
+	}
+
 	if (out.told && on == out.listening)
 		return;
 
@@ -552,6 +569,17 @@ static void radio_dispatch(uint8_t cmd, const uint8_t *arg, uint8_t len)
 	case RADIO_SYSEX_ASK:
 		stats_send();
 		break;
+
+	//
+	// The pedal says whether it is offering to be paired with.  Recorded
+	// and reported; nothing is refused on the strength of it yet, so a
+	// host that pairs outside the window still pairs.  Closing that is
+	// the next change and is deliberately not this one.
+	//
+	case RADIO_SYSEX_PAIRING:
+		out.pairing = len >= 1 && arg[0];
+		break;
+
 #ifdef CONFIG_BT_OBSERVER
 	case RADIO_SYSEX_SCAN:
 		scan_start();
@@ -919,6 +947,22 @@ static void security_changed(struct bt_conn *conn, bt_security_t level,
 }
 #endif
 
+//
+// Somebody bonded.  Only the fact is wanted here - which peer it was is the
+// radio's own business and the pedal has no use for it.
+//
+static void bonded(struct bt_conn *conn, bool bonded)
+{
+	ARG_UNUSED(conn);
+
+	if (bonded)
+		out.bonded_pending = true;
+}
+
+static struct bt_conn_auth_info_cb midi_auth_info = {
+	.pairing_complete = bonded,
+};
+
 BT_CONN_CB_DEFINE(midi_conn_cb) = {
 	.connected = connected,
 	.disconnected = disconnected,
@@ -942,6 +986,7 @@ void midi_ble_start(void)
 	// a load that runs first finds nothing to give them to.
 	//
 	settings_load();
+	bt_conn_auth_info_cb_register(&midi_auth_info);
 
 	adv_start(NULL);
 }

@@ -659,9 +659,41 @@ static void set_led(unsigned int ms, bool on, uint8_t global, unsigned int chain
 		float f = 2*u32_to_fraction(phase);
 		if (f > 1.0)
 			f = 2 - f;
-		LEDS[i].b = f * settings.led_pwm;
+
+		//
+		// Yellow while the pairing window is open, and the same
+		// breath either way.
+		//
+		// The breath is not decoration: it is the one thing that
+		// says the main loop is still going round, and a pedal
+		// that has hung stops breathing where nothing else would
+		// show it.  So pairing changes the colour and never the
+		// motion - the colour is free to mean something and the
+		// movement is already spoken for.
+		//
+#ifdef NRF54_SWDIO
+		if (nrf54_pairing) {
+			LEDS[i].r = f * settings.led_pwm;
+			LEDS[i].g = f * settings.led_pwm;
+		} else
+#endif
+			LEDS[i].b = f * settings.led_pwm;
 		phase += 0xffffffff / 5;
 	}
+
+#ifdef NRF54_SWDIO
+	//
+	// While the window is open the LED is saying that and nothing else.
+	//
+	// The status colours are green - LED 0 for being in circuit, LED 1
+	// for a closed gate or an effect wanting attention - and green laid
+	// over yellow is just green, so they hid the thing they were sharing
+	// the LED with.  Sixty seconds of not reporting a closed gate is
+	// nothing; a pairing window nobody can see is useless.
+	//
+	if (nrf54_pairing)
+		on = false;
+#endif
 
 	if (global & STATUS_CLIPPED)
 		LEDS[0].r = settings.led_intense;
@@ -787,6 +819,18 @@ static void show_status(unsigned int ms)
 		if (effects[effect_chain[i]]->intense)
 			attn |= 1u << i;
 	}
+
+#ifdef NRF54_SWDIO
+	//
+	// A window nobody used closes itself, and says so.  Checked here
+	// because this is what runs every pass and already has the clock.
+	//
+	if (nrf54_pairing && (int32_t)(ms - nrf54_pairing_until) >= 0) {
+		nrf54_pairing = false;
+		nrf54_pairing_tell(false);
+		sysex_send_pairing = true;
+	}
+#endif
 
 	set_led(ms, !disable_all, global, attn);
 #ifdef EXP_TIP_GPIO

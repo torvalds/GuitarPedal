@@ -407,6 +407,29 @@ static void sysex_send_exp(void)
 #endif
 
 #ifdef NRF54_SWDIO
+//
+// Whether the pairing window is open, said whenever it changes.
+//
+// Not an acknowledgement: it is what the pedal is actually doing, so a
+// window that timed out says so without being asked.
+//
+bool sysex_send_pairing = false;
+
+static void sysex_send_pairing_state(void)
+{
+	if (!sysex_send_pairing)
+		return;
+	if (midi_tx_busy())
+		return;
+	sysex_send_pairing = false;
+
+	const uint8_t msg[] = { 0xF0, 0x7D, 0x06, nrf54_pairing, 0xF7 };
+
+	sysex_tx_start();
+	sysex_stream_write(msg, sizeof(msg));
+	midi_tx_commit();
+}
+
 bool send_radio_tx = false;
 //
 // How the link to the radio is doing.
@@ -1035,6 +1058,36 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 	} else if (cmd == 0x0f) { // Radio link - bringup only
 
 		send_radio_tx = true;
+
+	} else if (cmd == 0x06) {
+		//
+		// The pairing window: 01 opens it, 00 closes it, and the
+		// command on its own asks without changing anything.
+		//
+		// No duration is taken.  How long it stays open is the
+		// pedal's business, because the pedal is the thing that has
+		// to show it and time it.
+		//
+		if (sysex_len >= 2) {
+			bool want = sysex_buf[1] != 0;
+
+			nrf54_pairing = want;
+			nrf54_pairing_until =
+				to_ms_since_boot(get_absolute_time()) +
+				NRF54_PAIRING_MS;
+			nrf54_pairing_tell(want);
+		}
+		sysex_send_pairing = true;
+
+	} else if (cmd == 0x18 && sysex_from_radio) {
+		//
+		// The radio bonded with somebody.  The window has done what
+		// it was opened for, so close it rather than leave it open
+		// for whoever is next.
+		//
+		nrf54_pairing = false;
+		nrf54_pairing_tell(false);
+		sysex_send_pairing = true;
 
 	} else if (cmd == 0x16 && sysex_from_radio && sysex_len >= 2) {
 		//

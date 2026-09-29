@@ -189,6 +189,33 @@ static void nrf54_uart_push(void)
 }
 
 //
+// The pairing window.
+//
+// A bond is only accepted while the pedal says so, and the pedal is the
+// only thing that can say it.  What opens it is a request over the cable,
+// or one over the air from a device that is already bonded; being in
+// range is not enough for either.
+//
+// Sixty seconds is long enough to find the menu on a phone and short
+// enough that a pedal left on a stand is not offering itself to the room.
+//
+#define NRF54_PAIRING_MS	60000
+
+static bool nrf54_pairing;
+static uint32_t nrf54_pairing_until;
+
+//
+// Tell the radio which it is.  F0 7D 17, one byte, and the radio answers
+// F0 7D 18 when a bond completes.
+//
+static void nrf54_pairing_tell(bool on)
+{
+	const uint8_t msg[] = { 0xF0, 0x7D, 0x17, on, 0xF7 };
+
+	nrf54_uart_write(msg, sizeof(msg));
+}
+
+//
 // Is the SysEx being handled right now one that arrived from the radio?
 //
 // handle_sysex_payload() is reached from both transports and the
