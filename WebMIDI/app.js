@@ -1322,6 +1322,7 @@ function handleSysex(data) {
             for (let i = 3 + 13; i < data.length - 1; i++)
                 dev.name += String.fromCharCode(data[i]);
 
+            rememberName(dev.text, dev.name);
             scanDevices.push(dev);
             renderScan();
             break;
@@ -3339,6 +3340,39 @@ function onTheCable() {
 }
 
 //
+// The name a device was last seen advertising, kept by address.
+//
+// The radio cannot help here.  It stores a key against an address and
+// never knew what the peer was called - and for a phone or a laptop there
+// is no name to know, because a host that pairs with the pedal does not
+// introduce itself.  A name exists only for something the radio scanned,
+// which means a controller, and the scan is in front of this app when it
+// happens.
+//
+// So it is remembered here, and it is a label rather than a fact: another
+// browser has its own, and a controller paired from a phone shows as an
+// address on a laptop.  Worth it anyway - 'FootCtrlPlus' is what somebody
+// is looking for and 9E:36:5E:45:BE:B1 is not.
+//
+function rememberName(addr, name) {
+    if (!addr || !name)
+        return;
+    try {
+        localStorage.setItem('ble.name.' + addr, name);
+    } catch (err) {
+        /* then names last as long as the page does, which will do */
+    }
+}
+
+function rememberedName(addr) {
+    try {
+        return localStorage.getItem('ble.name.' + addr) || '';
+    } catch (err) {
+        return '';
+    }
+}
+
+//
 // The address out of a message that carries one.
 //
 // A scan result and a stored key are the same thirteen bytes - type, then
@@ -3408,14 +3442,15 @@ function renderPairing() {
             const what = document.createElement('div');
 
             //
-            // A key is stored against an address and the radio never knew
-            // what it was called, so the name is only there when this
-            // session's scan happened to see the same address.
+            // Whatever it was last seen advertising as, from this scan or
+            // a remembered one.  A host that paired with the pedal never
+            // had a name to remember, so those stay as an address.
             //
             const seen = scanDevices.find(d => d.text === dev.text);
+            const name = (seen && seen.name) || rememberedName(dev.text);
 
             what.className = 'scan-name';
-            what.textContent = (seen && seen.name) || 'Paired device';
+            what.textContent = name || 'Paired device';
 
             const addr = document.createElement('div');
 
