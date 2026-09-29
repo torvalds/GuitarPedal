@@ -882,6 +882,24 @@ function updateMidiState() {
                 midiInput.onmidimessage = null;
             midiInput = foundInput;
             midiInput.onmidimessage = handleMidiMessage;
+
+            //
+            // A different port is a different pedal until it says
+            // otherwise, so the last one's schema goes.
+            //
+            // Keeping it puts controls on screen that belong to
+            // something else, and every one of them writes to a pot by
+            // index - so a slider would reach whatever happens to be at
+            // that index on the pedal now.  Worse, a port that never
+            // answers leaves them there, and the app looks like it is
+            // working: the way to tell a schema that arrived from one
+            // that was already on screen is that there is no way to
+            // tell, which makes a Bluetooth pedal look fine because it
+            // was plugged in over USB a minute ago.
+            //
+            PEDAL_EFFECTS = [];
+            effectIdMap.clear();
+            renderUI();
         }
         midiOutput = foundOutput;
 
