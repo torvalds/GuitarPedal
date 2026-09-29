@@ -728,6 +728,35 @@ function populateMidiSelects() {
     }
 
     //
+    // Bluetooth, on the browsers that have it.
+    //
+    // Also both ends, and also not a Web MIDI port: on Android a
+    // Bluetooth MIDI device is never listed by requestMIDIAccess() at
+    // all, so this is the only way a page reaches the pedal without a
+    // cable.  ble-midi.js says why at length.
+    //
+    // An insecure origin removes navigator.bluetooth rather than
+    // failing the call, the same way it removes Web MIDI, so say which
+    // of the two it is instead of quietly offering one entry fewer.
+    for (const sel of [inSelect, outSelect]) {
+        const opt = document.createElement('option');
+
+        opt.value = BLE_PEDAL_ID;
+        if (blePedal.supported) {
+            opt.textContent = blePedal.name;
+            if ((sel === inSelect ? selectedInputId : selectedOutputId)
+                === BLE_PEDAL_ID)
+                opt.selected = true;
+        } else {
+            opt.disabled = true;
+            opt.textContent = window.isSecureContext
+                ? 'Bluetooth \u2014 this browser has none'
+                : 'Bluetooth \u2014 needs https or localhost';
+        }
+        sel.appendChild(opt);
+    }
+
+    //
     // Real ports only if there are any.  Web MIDI can be missing
     // outright - an insecure origin removes the API rather than failing
     // the call - and the menu still has to open, because the entry
@@ -783,6 +812,10 @@ function updateMidiState() {
         selectedOutputId === DEMO_PEDAL_ID) {
         selectedInputId = selectedOutputId = DEMO_PEDAL_ID;
         foundInput = foundOutput = demoPedal;
+    } else if (selectedInputId === BLE_PEDAL_ID ||
+               selectedOutputId === BLE_PEDAL_ID) {
+        selectedInputId = selectedOutputId = BLE_PEDAL_ID;
+        foundInput = foundOutput = blePedal;
     } else if (!midiAccess) {
         /* nothing to look through */
     } else if (selectedInputId && midiAccess.inputs.has(selectedInputId)) {
@@ -4698,19 +4731,90 @@ appTitleEl.addEventListener('click', () => {
 });
 
 // Event Listeners
+    //
+    // Choosing Bluetooth has to open the browser's device chooser, and
+    // that is only allowed from a user gesture - which this change event
+    // is.  Connecting from updateMidiState() instead would be refused,
+    // because by then the gesture is over.
+    //
+    async function portChosen(which, value) {
+        const wasInput = selectedInputId;
+        const wasOutput = selectedOutputId;
+
+        if (which === 'in')
+            selectedInputId = value;
+        else
+            selectedOutputId = value;
+
+        if (value === BLE_PEDAL_ID && !blePedal.connected) {
+            //
+            // Set before connecting: the device can go away during the
+            // handshake, and the handler is what puts the menu back.
+            //
+            // Clearing the selection is what makes this work at all.
+            // Left alone, updateMidiState() still finds blePedal for
+            // both ends and reports a pedal that is gone as connected -
+            // and because the select still reads the same value,
+            // picking Bluetooth again fires no change event and there
+            // is no way back from the menu.
+            //
+            blePedal.ondisconnect = () => {
+                if (selectedInputId === BLE_PEDAL_ID)
+                    selectedInputId = null;
+                if (selectedOutputId === BLE_PEDAL_ID)
+                    selectedOutputId = null;
+                populateMidiSelects();
+                updateMidiState();
+            };
+
+            try {
+                await blePedal.connect();
+                populateMidiSelects();
+            } catch (err) {
+                //
+                // Put back whatever was selected before, rather than
+                // clearing it: failing to reach Bluetooth is no reason
+                // to drop a pedal that is working over the cable.
+                //
+                selectedInputId = wasInput;
+                selectedOutputId = wasOutput;
+                populateMidiSelects();
+
+                // Cancelling the chooser is the ordinary case and is
+                // not a failure to report.
+                if (err && err.name === 'NotFoundError') {
+                    updateMidiState();
+                    return;
+                }
+
+                updateMidiState();
+
+                //
+                // On screen, not only in the console.  Web Bluetooth on
+                // Linux is unsupported and fails in several different
+                // ways, and which one it was is the whole of what a
+                // person needs - so say it where they are looking.
+                //
+                console.error('[BLE MIDI] connect failed', err);
+                noMidi('Bluetooth did not connect: '
+                       + ((err && err.message) || (err && err.name)
+                          || 'no reason given') + '.');
+                return;
+            }
+        }
+
+        updateMidiState();
+    }
+
     const inSelect = document.getElementById('midi-input-select');
     if (inSelect) {
-        inSelect.addEventListener('change', (e) => {
-            selectedInputId = e.target.value;
-            updateMidiState();
-        });
+        inSelect.addEventListener('change',
+                                  (e) => portChosen('in', e.target.value));
     }
     const outSelect = document.getElementById('midi-output-select');
     if (outSelect) {
-        outSelect.addEventListener('change', (e) => {
-            selectedOutputId = e.target.value;
-            updateMidiState();
-        });
+        outSelect.addEventListener('change',
+                                   (e) => portChosen('out', e.target.value));
     }
 
     globalEnableEl.addEventListener('change', (e) => {

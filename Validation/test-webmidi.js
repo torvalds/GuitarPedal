@@ -201,12 +201,24 @@ const WANT = ['handleIdentity', 'populateScenePicker', 'updateSceneLabels',
               'controlDef', 'actionsFor', 'hwName'];
 
 //
+// ble-midi.js is evaluated in the same scope, so its codec comes out
+// through the same accessor everything else here uses.
+//
+WANT.push('bleCodec');
+
+//
 // The chain is a list held in a variable rather than anything the dom
 // can be asked about, so reading it takes an accessor evaluated in the
 // app's own scope.  A snapshot would not do: currentRouting is replaced
 // on every routing change, not mutated.
 //
+//
+// ble-midi.js as well, in the order index.html loads them: app.js offers
+// the Bluetooth port from it, so evaluating app.js alone throws before
+// the first menu is built.
+//
 const src = fs.readFileSync(effectsJs, 'utf8') + '\n'
+          + fs.readFileSync(path.join(WEB, 'ble-midi.js'), 'utf8') + '\n'
           + fs.readFileSync(path.join(WEB, 'app.js'), 'utf8') + '\n'
           + `;globalThis.__app = { ${WANT.join(', ')} };`
           + `;globalThis.__app.routing = () => currentRouting;`
@@ -971,8 +983,92 @@ check('a schema with no flag still keeps its last effect out of the chain',
       && !lastCard.classes.has('parked'),
       oldChips.join());
 
+//
+// The BLE MIDI codec, which is arithmetic and needs no browser.
+//
+// Encode a byte stream, decode the packets back, and see the same bytes.
+// The cases are the ones that are easy to get wrong rather than the ones
+// that are common: the specification's rules are about SysEx spanning
+// packets, real-time interrupting one, and running status, and none of
+// those appear in the traffic this pedal happens to send today.
+//
+const codec = app.bleCodec;
+
+for (const [what, stream] of [
+    ['a schema request', [0xF0, 0x7D, 0x01, 0xF7]],
+    ['a controller change', [0xB0, 0x07, 0x40]],
+    ['two messages in one packet', [0xB0, 0x07, 0x40, 0xB0, 0x08, 0x20]],
+    ['running status', [0xB0, 0x07, 0x40, 0x08, 0x20, 0x09, 0x10]],
+    ['real-time interrupting a SysEx', [0xF0, 0x7D, 0x01, 0xF8, 0x02, 0xF7]],
+    ['a SysEx across packets',
+     [0xF0, 0x7D, 0x0c, ...Array.from({ length: 350 }, (_, i) => i % 128), 0xF7]],
+]) {
+    const packets = codec.encode(stream);
+    const out = [];
+    const decoder = new codec.Decoder((m) => out.push(...m));
+
+    packets.forEach((p) => decoder.packet(p));
+
+    //
+    // Running status is expanded on the way out, so what comes back is
+    // the same messages with every status byte present.
+    //
+    const want = what === 'running status'
+        ? [0xB0, 0x07, 0x40, 0xB0, 0x08, 0x20, 0xB0, 0x09, 0x10]
+        : what === 'real-time interrupting a SysEx'
+        ? [0xF8, 0xF0, 0x7D, 0x01, 0x02, 0xF7]
+        : stream;
+
+    check(`BLE MIDI round trip: ${what}`,
+          JSON.stringify(out) === JSON.stringify(want),
+          `got ${out.map((b) => b.toString(16)).join(' ')}`);
+
+    check(`BLE MIDI packets are well formed: ${what}`,
+          packets.every((p) => p.length >= 2 && (p[0] & 0xc0) === 0x80
+                               && p.length <= 20),
+          packets.map((p) => p.length).join());
+}
+
+//
+// Nothing to send is not an error, and must not produce a packet that is
+// a header byte and nothing else.
+//
+check('BLE MIDI: an empty stream sends nothing',
+      codec.encode([]).length === 0);
+check('BLE MIDI: a data byte with no status sends nothing',
+      codec.encode([0x40, 0x50]).length === 0);
+
+//
+// Malformed input must cost only itself.  A SysEx with no F7 sent as
+// far as it goes leaves the far end assembling for ever, and a message
+// cut short by the next status byte used to swallow that message too.
+//
+check('BLE MIDI: an unterminated SysEx sends nothing',
+      codec.encode([0xF0, 0x7D, 0x01]).length === 0);
+
+{
+    const out = [];
+    const decoder = new codec.Decoder((m) => out.push(...m));
+
+    codec.encode([0x90, 0x40, 0xB0, 0x14, 0x7E])
+         .forEach((p) => decoder.packet(p));
+
+    check('BLE MIDI: a short message does not swallow the next one',
+          JSON.stringify(out) === JSON.stringify([0xB0, 0x14, 0x7E]),
+          out.map((b) => b.toString(16)).join(' '));
+}
+
+check('BLE MIDI: a packet whose header has bit 6 set is refused',
+      (() => {
+          const out = [];
+          const decoder = new codec.Decoder((m) => out.push(...m));
+          decoder.packet(Uint8Array.of(0xc0, 0x80, 0xb0, 0x07, 0x40));
+          return out.length === 0;
+      })());
+
 if (failures) {
     say(`test-webmidi: ${failures} failure(s)`);
     process.exit(1);
 }
-say('test-webmidi: app loads; identity, scenes and telemetry behave');
+say('test-webmidi: app loads, identity/scenes/telemetry behave, '
+    + 'BLE MIDI round-trips');

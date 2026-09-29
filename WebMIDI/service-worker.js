@@ -1,9 +1,10 @@
-const CACHE_NAME = 'rp2350-pedal-cache-v8';
+const CACHE_NAME = 'rp2350-pedal-cache-v9';
 const urlsToCache = [
   './',
   './index.html',
   './style.css',
   './app.js',
+  './ble-midi.js',
   './effects.js',
   './manifest.json',
   './icon-192.png',
