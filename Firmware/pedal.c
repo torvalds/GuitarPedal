@@ -65,6 +65,7 @@
 #include "midi/midi.h"
 #include "midi/uart.h"
 #include "tusb.h"
+#include "debug.h"
 #include "usb-audio.h"
 #include "usb-volume.h"
 #include "switch.h"
@@ -330,6 +331,12 @@ int main()
 		nrf54_uart_poll();
 		sysex_send_radio();
 #endif
+
+		//
+		// Hand the debug port whatever was written to it.  It
+		// waits for nothing and nothing waits for it.
+		//
+		dbg_task();
 
 		sysex_send_identity();
 		sysex_send_telemetry();

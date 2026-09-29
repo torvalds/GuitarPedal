@@ -56,6 +56,13 @@ enum {
 #if CFG_TUD_VENDOR
 	ITF_NUM_DAP,
 #endif
+	//
+	// After the probe, and it has to stay after it: probe-rs selects
+	// the CMSIS-DAP interface by number - ffff:0003-6:<serial> - so
+	// anything inserted ahead of it stops the radio being programmed.
+	//
+	ITF_NUM_CDC,
+	ITF_NUM_CDC_DATA,
 	ITF_NUM_TOTAL
 };
 
@@ -274,7 +281,7 @@ enum {
 		/*_lockdelay*/ 0x0000)
 
 #define IAD_DESC_LEN 8
-#define CONFIG_TOTAL_LEN (TUD_CONFIG_DESC_LEN + CFG_TUD_AUDIO * TUD_AUDIO20_HEADSET_STEREO_DESC_LEN + TUD_MIDI_DESC_LEN + IAD_DESC_LEN + TUD_RPI_RESET_DESC_LEN + CFG_TUD_VENDOR * TUD_VENDOR_DESC_LEN)
+#define CONFIG_TOTAL_LEN (TUD_CONFIG_DESC_LEN + CFG_TUD_AUDIO * TUD_AUDIO20_HEADSET_STEREO_DESC_LEN + TUD_MIDI_DESC_LEN + IAD_DESC_LEN + TUD_RPI_RESET_DESC_LEN + CFG_TUD_VENDOR * TUD_VENDOR_DESC_LEN + TUD_CDC_DESC_LEN)
 
 #define EPNUM_AUDIO_OUT 0x01
 #define EPNUM_AUDIO_IN 0x81
@@ -300,6 +307,14 @@ enum {
 #define EPNUM_DAP_OUT 0x03
 #define EPNUM_DAP_IN 0x83
 
+//
+// Fixed whether or not the probe above is built, so the numbering does
+// not differ between boards for no reason.
+//
+#define EPNUM_CDC_NOTIF 0x84
+#define EPNUM_CDC_OUT 0x05
+#define EPNUM_CDC_IN 0x85
+
 enum {
 	STRID_LANGID = 0,
 	STRID_MANUFACTURER,
@@ -308,7 +323,8 @@ enum {
 	STRID_AUDIO_INTERFACE,
 	STRID_MIDI_INTERFACE,
 	STRID_RESET_INTERFACE,
-	STRID_DAP_INTERFACE
+	STRID_DAP_INTERFACE,
+	STRID_CDC_INTERFACE
 };
 
 uint8_t const desc_configuration[] =
@@ -342,8 +358,18 @@ uint8_t const desc_configuration[] =
 	// does not renumber the interfaces that were here before.
 	//
 	TUD_VENDOR_DESCRIPTOR(ITF_NUM_DAP, STRID_DAP_INTERFACE,
-			      EPNUM_DAP_OUT, EPNUM_DAP_IN, 64)
+			      EPNUM_DAP_OUT, EPNUM_DAP_IN, 64),
 #endif
+
+	//
+	// The debug channel.  Two interfaces and three endpoints, one of
+	// which - the notification pair a modem would use for carrier and
+	// ring - carries nothing here and exists because the class says
+	// so.
+	//
+	TUD_CDC_DESCRIPTOR(ITF_NUM_CDC, STRID_CDC_INTERFACE,
+			   EPNUM_CDC_NOTIF, 8,
+			   EPNUM_CDC_OUT, EPNUM_CDC_IN, 64)
 };
 
 //
@@ -460,6 +486,8 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 	case STRID_DAP_INTERFACE:
 		return utf16_desc("CMSIS-DAP nRF54");
 #endif
+	case STRID_CDC_INTERFACE:
+		return utf16_desc("Pedal debug");
 	}
 	return NULL;
 }
