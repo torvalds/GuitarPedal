@@ -64,6 +64,25 @@ static uint8_t *rx_take(void)
 }
 
 /*
+ * Packets that arrived over Bluetooth, waiting for the loop.
+ *
+ * A GATT callback runs in the Bluetooth stack's own thread, so it copies
+ * the packet in here and returns rather than decoding it and writing to
+ * the UART.  The RP2354 side follows the same rule, for the same reason:
+ * see "Handle incoming MIDI from the main loop, not from a callback".
+ *
+ * One byte of length then the packet, so a reader knows where each ends.
+ * A packet is at most the ATT MTU less three, which is under 256.
+ *
+ * It does not need to be big.  The controller can only hold
+ * BT_MAX_CONN + BT_BUF_ACL_RX_COUNT_EXTRA buffers before the host stops
+ * it, the largest message the pedal is ever sent is a full rule table at
+ * 96 bytes, and there is no bulk inbound direction at all.
+ */
+RING_BUF_DECLARE(ble_in_ring, 1024);
+static uint32_t ble_in_dropped;
+
+/*
  * A ring each way: the driver fills one and empties the other, and the
  * loop below does the opposite.
  *
@@ -173,10 +192,48 @@ static void uart_cb(const struct device *dev, struct uart_event *evt,
 }
 
 /*
+ * One packet from over the air, held for the loop to deal with.
+ *
+ * Called from the Bluetooth stack's thread, and does nothing but copy.
+ * Whole packet or none: a partial one would be read back as a length and
+ * then somebody else's bytes.
+ */
+void midi_ble_queue(const uint8_t *buf, uint16_t len)
+{
+	uint8_t hdr = (uint8_t)len;
+
+	if (!len || len > 255 ||
+	    ring_buf_space_get(&ble_in_ring) < 1u + len) {
+		ble_in_dropped++;
+		return;
+	}
+	ring_buf_put(&ble_in_ring, &hdr, 1);
+	ring_buf_put(&ble_in_ring, buf, len);
+}
+
+/*
+ * Hand the next waiting packet to the decoder, and say whether there was
+ * one.  Called from the loop, so this is the only place that decodes.
+ */
+static bool ble_in_drain(void)
+{
+	uint8_t pkt[256];
+	uint8_t len;
+
+	if (ring_buf_get(&ble_in_ring, &len, 1) != 1)
+		return false;
+	if (ring_buf_get(&ble_in_ring, pkt, len) != len)
+		return false;		/* cannot happen: written together */
+
+	midi_ble_packet(pkt, len);
+	return true;
+}
+
+/*
  * MIDI bytes for the RP2354, from whatever arrived over Bluetooth.
  *
- * Called from the Bluetooth stack's context, so it queues rather than
- * writes: the driver does the writing.
+ * Reached only from the loop now, by way of ble_in_drain(), so it is the
+ * one writer of this ring and tx_kick() has one caller.
  */
 void midi_uart_send(const uint8_t *buf, size_t len)
 {
@@ -223,6 +280,11 @@ int main(void)
 	for (;;) {
 		uint8_t *buf;
 		uint32_t n, took = 0;
+
+		/* What arrived over the air, decoded here rather than in
+		 * the callback that received it. */
+		while (ble_in_drain())
+			;
 
 		/*
 		 * Bytes from the pedal, and only as many as the radio can

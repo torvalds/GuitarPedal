@@ -650,6 +650,21 @@ void midi_ble_feed(uint8_t b)
 
 static uint8_t dec_status;
 
+static void midi_ble_decode(const uint8_t *buf, uint16_t len);
+
+/*
+ * One packet from over the air, from the main loop.
+ *
+ * Not from the callback that received it: that runs in the Bluetooth
+ * stack's own thread, at a cooperative priority it cannot be preempted
+ * back into, so anything done there that waits stalls the receive path.
+ * midi_ble_queue() copies the packet and this deals with it later.
+ */
+void midi_ble_packet(const uint8_t *buf, uint16_t len)
+{
+	midi_ble_decode(buf, len);
+}
+
 static void midi_ble_decode(const uint8_t *buf, uint16_t len)
 {
 	uint16_t i = 1;		/* [0] is the header byte */
@@ -712,7 +727,7 @@ static ssize_t midi_write(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 			  const void *buf, uint16_t len, uint16_t offset,
 			  uint8_t flags)
 {
-	midi_ble_decode(buf, len);
+	midi_ble_queue(buf, len);
 	return len;
 }
 
@@ -868,6 +883,6 @@ void midi_ble_start(void)
 //
 void midi_ble_controller(const uint8_t *buf, uint16_t len)
 {
-	midi_ble_decode(buf, len);
+	midi_ble_queue(buf, len);
 }
 #endif
