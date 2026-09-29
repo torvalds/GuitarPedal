@@ -919,7 +919,13 @@ static void sysex_send_state_dump(void)
 // Big enough for the largest thing that arrives, which is the rule
 // table: six bytes each and a command byte in front.
 //
-static uint8_t sysex_buf[1 + MAX_RULES * 6];
+// Named rather than taken with sizeof: handle_sysex_payload() has a
+// parameter of the same name, so sizeof inside it is the size of a
+// pointer.
+//
+#define SYSEX_BUF_MAX	(1 + MAX_RULES * 6)
+
+static uint8_t sysex_buf[SYSEX_BUF_MAX];
 static int sysex_len = 0;
 static bool in_sysex = false;
 static bool sysex_over = false;
@@ -1019,6 +1025,37 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 	} else if (cmd == 0x0f) { // Radio link - bringup only
 
 		send_radio_tx = true;
+
+	} else if (cmd >= 0x10 && cmd <= 0x1f) {
+		//
+		// Addressed to the radio rather than to the pedal: a
+		// scan, and what a scan found.  The pedal is the wire
+		// between the app and the radio and reads none of it.
+		//
+		// Which way it goes is the only decision here, and it is
+		// the one thing the message itself does not say.
+		//
+		uint8_t msg[3 + SYSEX_BUF_MAX];
+		size_t n = 0;
+
+		msg[n++] = 0xF0;
+		msg[n++] = 0x7D;
+		for (size_t i = 0; i < sysex_len && n < sizeof(msg) - 1; i++)
+			msg[n++] = sysex_buf[i];
+		msg[n++] = 0xF7;
+
+		if (sysex_from_radio) {
+			//
+			// midi_tx_bytes() only adds to a pending payload;
+			// it takes a transaction around it to become a
+			// message anyone will send.
+			//
+			sysex_tx_start();
+			sysex_stream_write(msg, n);
+			midi_tx_commit();
+		} else {
+			nrf54_uart_write(msg, n);
+		}
 #endif
 
 #ifdef EXP_TIP_GPIO
@@ -1116,7 +1153,7 @@ bool handle_midi_packet(const uint8_t packet[4])
 			} else if (in_sysex) {
 				if (sysex_len == 0 && b == 0x7D) {
 					// Consume header 7D
-				} else if (sysex_len < sizeof(sysex_buf)) {
+				} else if (sysex_len < SYSEX_BUF_MAX) {
 					sysex_buf[sysex_len++] = b;
 				} else {
 					sysex_over = true;

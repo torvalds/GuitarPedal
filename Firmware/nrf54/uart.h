@@ -92,6 +92,9 @@ static bool nrf54_uart_ready(void)
 	return used < NRF54_TX_RING / 2;
 }
 
+// Defined below, and declared here because the senders above it call it.
+static void nrf54_uart_write(const uint8_t *buf, size_t len);
+
 //
 // One outgoing MIDI byte, on its way to the radio.
 //
@@ -136,6 +139,18 @@ static void nrf54_uart_thru(uint8_t byte)
 // so nrf54_uart_ready() sees them and the back-pressure above still
 // measures the real backlog.
 //
+//
+// A whole message to the radio, from something that is not the send queue.
+//
+// Used for the commands the radio answers itself, which arrive over USB
+// and have to reach it without being treated as MIDI on the way.
+//
+static void nrf54_uart_write(const uint8_t *buf, size_t len)
+{
+	for (size_t i = 0; i < len; i++)
+		nrf54_uart_thru(buf[i]);
+}
+
 static void nrf54_uart_push(void)
 {
 	uint16_t head, span;
@@ -160,6 +175,18 @@ static void nrf54_uart_push(void)
 				  &nrf54_uart.tx[nrf54_uart.tx_tail], false);
 	dma_channel_set_trans_count(nrf54_uart.dma_tx, span, true);
 }
+
+//
+// Is the SysEx being handled right now one that arrived from the radio?
+//
+// handle_sysex_payload() is reached from both transports and the
+// message looks the same either way, so the commands that are *about*
+// the radio - a scan, its results - would otherwise be sent back where
+// they came from.  Set around the call rather than passed through it,
+// because every other caller would have to carry an argument it does
+// not use.
+//
+static bool sysex_from_radio;
 
 //
 // Drain whatever the radio has sent, and treat it as MIDI.
@@ -192,8 +219,11 @@ static void nrf54_uart_poll(void)
 			continue;
 
 		nrf54_uart.packets++;
+
+		sysex_from_radio = true;
 		if (!handle_midi_packet(packet))
 			usb_midi_write(packet);
+		sysex_from_radio = false;
 	}
 }
 
