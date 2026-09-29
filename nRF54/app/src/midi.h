@@ -11,6 +11,7 @@
 
 /* main.c, called by midi.c when a packet arrives over the air */
 void midi_uart_send(const uint8_t *buf, size_t len);
+void midi_ble_controller(const uint8_t *buf, uint16_t len);
 
 #ifdef CONFIG_BT
 

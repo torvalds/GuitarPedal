@@ -39,6 +39,7 @@
 
 #include "midi.h"
 #include "scan.h"
+#include "bind.h"
 
 #define BT_UUID_MIDI_SERVICE_VAL \
 	BT_UUID_128_ENCODE(0x03b80e5a, 0xede8, 0x4b33, 0xa751, 0x6ce34ec4c700)
@@ -293,6 +294,7 @@ static void pack_sysex_end(void)
  */
 #define RADIO_SYSEX_FIRST	0x10
 #define RADIO_SYSEX_SCAN	0x10	/* in:  look for controllers */
+#define RADIO_SYSEX_BIND	0x11	/* in:  use this one */
 #define RADIO_SYSEX_FOUND	0x12	/* out: one that answered */
 #define RADIO_SYSEX_DONE	0x13	/* out: the pass is over */
 #define RADIO_SYSEX_LAST	0x1f
@@ -414,6 +416,26 @@ static void radio_dispatch(uint8_t cmd, const uint8_t *arg, uint8_t len)
 	case RADIO_SYSEX_SCAN:
 		scan_start();
 		break;
+#endif
+#ifdef CONFIG_BT_CENTRAL
+	//
+	// The address type, then the six bytes a nibble at a time, in
+	// the order bt_addr_le_t holds them - the same shape a result
+	// went out in.
+	//
+	case RADIO_SYSEX_BIND: {
+		bt_addr_le_t addr;
+
+		if (len < 13)
+			break;
+
+		addr.type = arg[0];
+		for (int i = 0; i < 6; i++)
+			addr.a.val[i] = (arg[1 + 2 * i] << 4) | arg[2 + 2 * i];
+
+		bind_to(&addr);
+		break;
+	}
 #endif
 	default:
 		break;
@@ -674,8 +696,19 @@ static void adv_start(struct k_work *work)
 }
 static K_WORK_DEFINE(adv_work, adv_start);
 
+//
+// Both roles arrive here.  A connection this end opened belongs to the
+// controller, and is nothing to do with the web app - treating one as
+// the other would point the MIDI notifications at a footswitch and lose
+// the app.
+//
 static void connected(struct bt_conn *conn, uint8_t err)
 {
+	if (bind_owns(conn)) {
+		bind_connected(conn, err);
+		return;
+	}
+
 	if (err) {
 		printk("bt: connect failed, %u\n", err);
 		return;
@@ -687,6 +720,11 @@ static void connected(struct bt_conn *conn, uint8_t err)
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
+	if (bind_owns(conn)) {
+		bind_disconnected(conn, reason);
+		return;
+	}
+
 	printk("bt: disconnected, %u\n", reason);
 
 	if (midi_conn) {
@@ -710,9 +748,21 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	k_work_submit(&adv_work);
 }
 
+#ifdef CONFIG_BT_CENTRAL
+static void security_changed(struct bt_conn *conn, bt_security_t level,
+			     enum bt_security_err err)
+{
+	if (bind_owns(conn))
+		bind_encrypted(conn, level, err);
+}
+#endif
+
 BT_CONN_CB_DEFINE(midi_conn_cb) = {
 	.connected = connected,
 	.disconnected = disconnected,
+#ifdef CONFIG_BT_CENTRAL
+	.security_changed = security_changed,
+#endif
 };
 
 void midi_ble_start(void)
@@ -726,3 +776,15 @@ void midi_ble_start(void)
 
 	adv_start(NULL);
 }
+
+#ifdef CONFIG_BT_CENTRAL
+//
+// What a bound controller sent.  The same decoder a write from the web
+// app goes through, so both end at midi_uart_send() and the pedal never
+// learns which it was.
+//
+void midi_ble_controller(const uint8_t *buf, uint16_t len)
+{
+	midi_ble_decode(buf, len);
+}
+#endif
