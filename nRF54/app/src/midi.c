@@ -38,6 +38,7 @@
 #include <zephyr/bluetooth/uuid.h>
 
 #include "midi.h"
+#include "scan.h"
 
 #define BT_UUID_MIDI_SERVICE_VAL \
 	BT_UUID_128_ENCODE(0x03b80e5a, 0xede8, 0x4b33, 0xa751, 0x6ce34ec4c700)
@@ -280,6 +281,92 @@ static void pack_sysex_end(void)
 }
 
 /* ------------------------------------------------------------------ */
+/* The radio's own SysEx, which does not go on the air                 */
+/* ------------------------------------------------------------------ */
+
+/*
+ * F0 7D 1x is the radio talking to the RP2354 rather than MIDI passing
+ * through it.  The commands ride the same stream because there is only
+ * one wire, and are taken out of it here so they never reach Bluetooth.
+ *
+ * Data bytes are seven bits, so an address goes out as twelve nibbles.
+ */
+#define RADIO_SYSEX_FIRST	0x10
+#define RADIO_SYSEX_SCAN	0x10	/* in:  look for controllers */
+#define RADIO_SYSEX_FOUND	0x12	/* out: one that answered */
+#define RADIO_SYSEX_DONE	0x13	/* out: the pass is over */
+#define RADIO_SYSEX_LAST	0x1f
+
+static void radio_sysex(const uint8_t *body, size_t len)
+{
+	uint8_t msg[3 + 12 + 24 + 1];
+	size_t n = 0;
+
+	msg[n++] = 0xF0;
+	msg[n++] = 0x7D;
+	for (size_t i = 0; i < len && n < sizeof(msg) - 1; i++)
+		msg[n++] = body[i] & 0x7f;
+	msg[n++] = 0xF7;
+
+	midi_uart_send(msg, n);
+}
+
+#ifdef CONFIG_BT_OBSERVER
+void scan_found(const bt_addr_le_t *addr, const char *name)
+{
+	uint8_t body[1 + 1 + 12 + SCAN_NAME_MAX];
+	size_t n = 0;
+
+	body[n++] = RADIO_SYSEX_FOUND;
+
+	//
+	// Public or random, and it is not decoration: a connection is
+	// made to the pair, and the same six bytes with the other type
+	// reaches nothing.
+	//
+	body[n++] = addr->type & 0x7f;
+
+	//
+	// Most significant nibble first, and the bytes in the order
+	// bt_addr_le_t holds them, so that what comes back out the other
+	// end can be handed straight to bt_addr_le_t again.
+	//
+	for (int i = 0; i < 6; i++) {
+		body[n++] = (addr->a.val[i] >> 4) & 0x0f;
+		body[n++] = addr->a.val[i] & 0x0f;
+	}
+
+	for (const char *c = name; *c && n < sizeof(body); c++)
+		if (*c >= 0x20 && *c < 0x7f)
+			body[n++] = *c;
+
+	radio_sysex(body, n);
+}
+
+void scan_done(unsigned int listed)
+{
+	uint8_t body[2] = {
+		RADIO_SYSEX_DONE,
+		listed & 0x7f,
+	};
+
+	radio_sysex(body, sizeof(body));
+}
+#endif
+
+//
+// One of ours, or MIDI passing through?
+//
+// Answered from the first two bytes after F0, so the rest of a message
+// that is not ours streams to the packer as it arrives rather than
+// having to be held whole.
+//
+static bool radio_command(uint8_t cmd)
+{
+	return cmd >= RADIO_SYSEX_FIRST && cmd <= RADIO_SYSEX_LAST;
+}
+
+/* ------------------------------------------------------------------ */
 /* Parsing: the UART's byte stream, into messages                      */
 /* ------------------------------------------------------------------ */
 
@@ -289,7 +376,49 @@ static struct {
 	int want;		/* how many the status byte asks for */
 	uint8_t status;		/* running status */
 	bool sysex;
+
+	/*
+	 * The start of a SysEx, held back while it is decided whether it
+	 * belongs to the radio.  'hold' is F0 and the two bytes after it.
+	 */
+	uint8_t hold[3];
+	uint8_t held;
+	bool mine;
+	uint8_t cmd;
+	uint8_t arg[16];
+	uint8_t nr_arg;
 } in;
+
+//
+// Not ours after all: put the start of the message back into the
+// packet before the rest of it streams through.
+//
+static void release_held(void)
+{
+	if (!in.held)
+		return;
+
+	pack_sysex_start();
+	for (uint8_t i = 1; i < in.held; i++)
+		pack_sysex_data(in.hold[i]);
+	in.held = 0;
+}
+
+static void radio_dispatch(uint8_t cmd, const uint8_t *arg, uint8_t len)
+{
+	ARG_UNUSED(arg);
+	ARG_UNUSED(len);
+
+	switch (cmd) {
+#ifdef CONFIG_BT_OBSERVER
+	case RADIO_SYSEX_SCAN:
+		scan_start();
+		break;
+#endif
+	default:
+		break;
+	}
+}
 
 void midi_ble_feed(uint8_t b)
 {
@@ -305,8 +434,14 @@ void midi_ble_feed(uint8_t b)
 	}
 
 	if (b == 0xF0) {
-		pack_sysex_start();
+		//
+		// Held rather than packed, until the two bytes after F0
+		// say whether this is MIDI passing through or a command
+		// for the radio.  Two bytes is the whole lookahead.
+		//
 		in.sysex = true;
+		in.held = 1;
+		in.mine = false;
 		in.want = 0;
 		in.len = 0;
 		in.status = 0;
@@ -314,10 +449,15 @@ void midi_ble_feed(uint8_t b)
 	}
 
 	if (b == 0xF7) {
-		if (in.sysex) {
+		if (in.mine) {
+			radio_dispatch(in.cmd, in.arg, in.nr_arg);
+		} else if (in.sysex) {
+			release_held();
 			pack_sysex_end();
-			in.sysex = false;
 		}
+		in.sysex = false;
+		in.mine = false;
+		in.held = 0;
 		return;
 	}
 
@@ -349,7 +489,31 @@ void midi_ble_feed(uint8_t b)
 	}
 
 	/* A data byte. */
+	if (in.mine) {
+		if (in.nr_arg < sizeof(in.arg))
+			in.arg[in.nr_arg++] = b;
+		return;
+	}
+
 	if (in.sysex) {
+		if (in.held) {
+			in.hold[in.held++] = b;
+
+			//
+			// F0 7D <cmd>: enough to know whose it is.
+			//
+			if (in.held == 3) {
+				if (in.hold[1] == 0x7D && radio_command(b)) {
+					in.mine = true;
+					in.cmd = b;
+					in.nr_arg = 0;
+					in.held = 0;
+					return;
+				}
+				release_held();
+			}
+			return;
+		}
 		pack_sysex_data(b);
 		return;
 	}
