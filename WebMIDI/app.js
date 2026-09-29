@@ -951,6 +951,32 @@ if (updateAppBtn) {
                 await caches.delete(key);
             }
         }
+
+        //
+        // The browser's own cache is the one that matters, and neither
+        // step above touches it.  GitHub Pages serves these with
+        // max-age=600, so for ten minutes after a deploy a reload is
+        // answered from disk without asking the server - which looks
+        // exactly like the update not having been published.
+        //
+        // location.reload() cannot bypass it: the argument that used to
+        // force that was dropped from the specification and is ignored.
+        // Re-fetching with cache: 'reload' does, and it replaces what is
+        // stored, so the reload that follows gets the new files.
+        //
+        // Read off the page rather than listed here, so that a script
+        // added later is refreshed without anyone remembering to.
+        //
+        const assets = [location.href];
+
+        for (const el of document.querySelectorAll('script[src]'))
+            assets.push(el.src);
+        for (const el of document.querySelectorAll('link[rel="stylesheet"]'))
+            assets.push(el.href);
+
+        await Promise.all(assets.map(
+            (url) => fetch(url, { cache: 'reload' }).catch(() => {})));
+
         window.location.reload();
     });
 }
