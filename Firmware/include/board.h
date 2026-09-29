@@ -1,3 +1,6 @@
+#ifndef BOARD_H
+#define BOARD_H
+
 //
 // Board GPIO pin definitions
 //
@@ -94,6 +97,16 @@
 #define HAVE_CODEC_DSP		(hardware.i2c_codec)
 
 //
+// A runtime answer, not a build one: the pins exist on this board, and
+// whether a chip answers on them is what the probe is for.
+//
+#ifdef NRF54_SWDIO
+#define HAVE_RADIO		(hardware.radio != 0)
+#else
+#define HAVE_RADIO		0
+#endif
+
+//
 // The i2c devices that are not the codec.  Both are on i2c1, which only
 // the boards with a screen header ever wired, so both are conditional on
 // its pins existing.  The codec's own address is a board fact and lives
@@ -102,3 +115,5 @@
 #ifdef I2C1_SDA
 #define SH1106_I2C		i2c1, 0x3c
 #endif
+
+#endif /* BOARD_H */

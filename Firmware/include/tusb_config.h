@@ -1,5 +1,11 @@
 #include "pico.h"
 
+//
+// For NRF54_SWDIO, which decides whether this device has a debug probe
+// on it.  Nothing else here is a board question.
+//
+#include "board.h"
+
 #define CFG_TUSB_RHPORT0_MODE		OPT_MODE_DEVICE
 #define CFG_TUD_ENABLED			1
 #define CFG_TUD_AUDIO			1
@@ -8,6 +14,27 @@
 #define CFG_TUD_MIDI_RX_BUFSIZE		64
 #define CFG_TUD_MIDI_TX_BUFSIZE		8192
 #define CFG_TUD_MIDI_EP_BUFSIZE		64
+
+//
+// The CMSIS-DAP probe, on the boards that have a radio to program.
+//
+// A vendor interface with a bulk pair, which is what CMSIS-DAP v2 is,
+// so the host end is probe-rs rather than anything of ours.
+//
+// The receive fifo is one packet and that is deliberate.  Bulk carries
+// no message boundaries, so two commands sitting in the fifo at once
+// would be read as one and the second would never be answered.  A fifo
+// that cannot hold two makes that structural rather than a promise the
+// host has to keep - DAP_Info says one packet in flight, but
+// DAP_TransferAbort is sent without waiting by design.
+//
+#ifdef NRF54_SWDIO
+#define CFG_TUD_VENDOR			1
+#define CFG_TUD_VENDOR_RX_BUFSIZE	64
+#define CFG_TUD_VENDOR_TX_BUFSIZE	64
+#else
+#define CFG_TUD_VENDOR			0
+#endif
 
 //
 // One sample more than nominal, and the extra one is the whole point.

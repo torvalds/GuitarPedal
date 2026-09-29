@@ -185,6 +185,37 @@ add_custom_command(
 )
 list(APPEND PEDAL_GENERATED "${POW2_HEADER}")
 
+#
+# Which branch this was built on, for the USB manufacturer string.
+#
+# .git/HEAD is what changes when you switch branches, so depending on it
+# rebuilds this at exactly the right moment and never leaves it stale.
+# 'git rev-parse --git-path' finds it in a linked worktree too, and a
+# tree with no git at all simply has no dependency and no branch.
+#
+execute_process(
+	COMMAND git -C "${CMAKE_CURRENT_SOURCE_DIR}" rev-parse --git-path HEAD
+	OUTPUT_VARIABLE GIT_HEAD_PATH
+	OUTPUT_STRIP_TRAILING_WHITESPACE
+	ERROR_QUIET)
+if (GIT_HEAD_PATH)
+	get_filename_component(GIT_HEAD_PATH "${GIT_HEAD_PATH}"
+		ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+endif()
+if (NOT EXISTS "${GIT_HEAD_PATH}")
+	set(GIT_HEAD_PATH "")
+endif()
+
+set(BRANCH_HEADER "${CMAKE_CURRENT_BINARY_DIR}/branch.h")
+add_custom_command(
+	OUTPUT "${BRANCH_HEADER}"
+	COMMAND "${SCRIPT_DIR}/branch.py"
+		"${BRANCH_HEADER}"
+		"${CMAKE_CURRENT_SOURCE_DIR}"
+	DEPENDS "${SCRIPT_DIR}/branch.py" ${GIT_HEAD_PATH}
+)
+list(APPEND PEDAL_GENERATED "${BRANCH_HEADER}")
+
 set(LOG2_STEP_SHIFT 8)
 set(LOG2_HEADER "${CMAKE_CURRENT_BINARY_DIR}/log2.h")
 add_custom_command(
@@ -432,6 +463,12 @@ target_sources(${tgt} PRIVATE
 	Firmware/tinyusb/src/device/usbd.c
 	Firmware/tinyusb/src/class/audio/audio_device.c
 	Firmware/tinyusb/src/class/midi/midi_device.c
+	#
+	# The bulk pair CMSIS-DAP rides on.  Only the boards with a radio
+	# enable CFG_TUD_VENDOR, and the file compiles to nothing on the
+	# others, so it is listed unconditionally.
+	#
+	Firmware/tinyusb/src/class/vendor/vendor_device.c
 	Firmware/tinyusb/src/portable/raspberrypi/rp2040/dcd_rp2040.c
 	#
 	# Compiled in rather than linked as pico_usb_reset, which would

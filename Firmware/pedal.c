@@ -14,6 +14,7 @@
 #include "hardware/timer.h"
 
 #include "board.h"
+#include "branch.h"
 
 #include "status.h"
 #include "debounce.pio.h"
@@ -72,6 +73,8 @@ uint8_t routed_effect_count = 0;
 #include "effect-state.h"
 
 #include "scene.h"
+#include "nrf54/swd.h"
+#include "nrf54/dap.h"
 #include "hardware.h"
 #include "exp.h"
 #include "midi/sysex.h"
@@ -228,6 +231,15 @@ int main()
 
 	enable_ftz();
 
+#ifdef NRF54_SWDIO
+	//
+	// Early, and before anything slow: the radio's reset pin is
+	// undefined until it is driven, so hold it down until there is
+	// something to say to it.  probe_hardware() lets it go.
+	//
+	swd_init();
+#endif
+
 	init_i2s();
 	init_ws2812();
 	init_sw_pins();
@@ -290,6 +302,19 @@ int main()
 		tud_task();
 		usb_midi_poll();
 		uart_midi_poll();
+#ifdef NRF54_SWDIO
+		//
+		// One debug command per pass.  It is a host asking for
+		// something rather than anything the pedal needs.
+		//
+		// Nothing below waits on it, but tud_task() above does:
+		// the audio and MIDI endpoints are serviced from this
+		// same loop, so a command that spends milliseconds
+		// bit-banging costs USB audio packets.  That is what
+		// bounds the retry count in DAP_TransferConfigure.
+		//
+		dap_poll();
+#endif
 
 		sysex_send_identity();
 		sysex_send_telemetry();

@@ -1,0 +1,6 @@
+board:
+  name: minimal
+  full_name: Guitar pedal, minimal board
+  vendor: pedal
+  socs:
+    - name: nrf54l10

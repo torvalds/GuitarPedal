@@ -162,6 +162,9 @@ static void sysex_send_identity(void)
 	// build constant now, because every board has the same 2MB of
 	// flash on the die.
 	//
+#ifdef PEDAL_BRANCH
+	sysex_write_str(",\"branch\":\"" PEDAL_BRANCH "\"");
+#endif
 	sysex_write_str(",\"scenes\":");
 	sysex_write_num(MAX_SCENES);
 	sysex_write_str(",\"populated\":");
@@ -181,6 +184,15 @@ static void sysex_send_identity(void)
 	sysex_write_str("\"");
 	sysex_write_str(",\"legacy_screen\":");
 	sysex_write_str(hardware.legacy_screen ? "true" : "false");
+#ifdef NRF54_SWDIO
+	//
+	// The debug port's id rather than a bit, because it is what was
+	// read and the reader can decide what it means.  Absent on a board
+	// with nowhere for a radio to be, which is not the same as zero.
+	//
+	sysex_write_str(",\"radio_idcode\":");
+	sysex_write_num(hardware.radio);
+#endif
 	sysex_write_str("}");
 
 	//

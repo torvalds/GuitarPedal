@@ -53,6 +53,9 @@ enum {
 	ITF_NUM_MIDI,
 	ITF_NUM_MIDI_STREAMING,
 	ITF_NUM_RESET,
+#if CFG_TUD_VENDOR
+	ITF_NUM_DAP,
+#endif
 	ITF_NUM_TOTAL
 };
 
@@ -271,12 +274,31 @@ enum {
 		/*_lockdelay*/ 0x0000)
 
 #define IAD_DESC_LEN 8
-#define CONFIG_TOTAL_LEN (TUD_CONFIG_DESC_LEN + CFG_TUD_AUDIO * TUD_AUDIO20_HEADSET_STEREO_DESC_LEN + TUD_MIDI_DESC_LEN + IAD_DESC_LEN + TUD_RPI_RESET_DESC_LEN)
+#define CONFIG_TOTAL_LEN (TUD_CONFIG_DESC_LEN + CFG_TUD_AUDIO * TUD_AUDIO20_HEADSET_STEREO_DESC_LEN + TUD_MIDI_DESC_LEN + IAD_DESC_LEN + TUD_RPI_RESET_DESC_LEN + CFG_TUD_VENDOR * TUD_VENDOR_DESC_LEN)
 
 #define EPNUM_AUDIO_OUT 0x01
 #define EPNUM_AUDIO_IN 0x81
+//
+// The manufacturer, plus the branch when there is one - scripts/branch.py
+// says why.
+//
+// It goes here rather than in the product string because the product
+// string is load-bearing: Validation/pedal.py joins a sound card to its
+// MIDI port by finding the product inside the ALSA client name, and
+// that name is a fixed-size field.  Growing it risks a truncation that
+// silently stops every tool finding the board.
+//
+#include "branch.h"
+#ifdef PEDAL_BRANCH
+#define USB_MANUFACTURER	"Linus (" PEDAL_BRANCH ")"
+#else
+#define USB_MANUFACTURER	"Linus"
+#endif
+
 #define EPNUM_MIDI_OUT 0x02
 #define EPNUM_MIDI_IN 0x82
+#define EPNUM_DAP_OUT 0x03
+#define EPNUM_DAP_IN 0x83
 
 enum {
 	STRID_LANGID = 0,
@@ -285,7 +307,8 @@ enum {
 	STRID_SERIAL,
 	STRID_AUDIO_INTERFACE,
 	STRID_MIDI_INTERFACE,
-	STRID_RESET_INTERFACE
+	STRID_RESET_INTERFACE,
+	STRID_DAP_INTERFACE
 };
 
 uint8_t const desc_configuration[] =
@@ -310,7 +333,17 @@ uint8_t const desc_configuration[] =
 	// only to be recognised.  picotool finds it by class, subclass
 	// and protocol and sends one control request to it.  No
 	// endpoint, so it cannot compete with the isochronous audio.
-	TUD_RPI_RESET_DESCRIPTOR(ITF_NUM_RESET, STRID_RESET_INTERFACE)
+	TUD_RPI_RESET_DESCRIPTOR(ITF_NUM_RESET, STRID_RESET_INTERFACE),
+
+#if CFG_TUD_VENDOR
+	//
+	// A bulk pair and a name, which between them are the whole of
+	// CMSIS-DAP v2 as a host recognises it.  Last, so that adding it
+	// does not renumber the interfaces that were here before.
+	//
+	TUD_VENDOR_DESCRIPTOR(ITF_NUM_DAP, STRID_DAP_INTERFACE,
+			      EPNUM_DAP_OUT, EPNUM_DAP_IN, 64)
+#endif
 };
 
 //
@@ -407,7 +440,7 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 	case STRID_LANGID:
 		return langid_desc;
 	case STRID_MANUFACTURER:
-		return utf16_desc("Linus");
+		return utf16_desc(USB_MANUFACTURER);
 	case STRID_PRODUCT:
 		return utf16_desc(usb_product);
 	case STRID_SERIAL:
@@ -418,6 +451,15 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 		return utf16_desc("MIDI");
 	case STRID_RESET_INTERFACE:
 		return utf16_desc("Reset");
+#if CFG_TUD_VENDOR
+	//
+	// The name is the protocol.  A host decides an interface is a
+	// CMSIS-DAP v2 probe by finding a bulk pair behind a string that
+	// starts with these nine characters, so this is not a label.
+	//
+	case STRID_DAP_INTERFACE:
+		return utf16_desc("CMSIS-DAP nRF54");
+#endif
 	}
 	return NULL;
 }

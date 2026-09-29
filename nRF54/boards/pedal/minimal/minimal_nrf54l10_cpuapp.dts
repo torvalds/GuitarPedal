@@ -1,0 +1,124 @@
+/dts-v1/;
+
+#include <nordic/nrf54l10_cpuapp.dtsi>
+#include <zephyr/dt-bindings/regulator/nrf5x.h>
+#include "minimal-pinctrl.dtsi"
+
+/ {
+	compatible = "pedal,minimal-nrf54l10-cpuapp";
+	model = "Guitar pedal, minimal board, nRF54L10";
+
+	chosen {
+		zephyr,console = &uart30;
+		zephyr,shell-uart = &uart30;
+		zephyr,flash-controller = &rram_controller;
+		zephyr,flash = &cpuapp_rram;
+		zephyr,sram = &cpuapp_sram;
+		zephyr,code-partition = &slot0_partition;
+	};
+};
+
+&cpuapp_sram {
+	status = "okay";
+};
+
+/*
+ * There is no 32.768 kHz crystal on this board: Y501 is the 32 MHz part
+ * and XL1/XL2 go nowhere, so the low-frequency clock is the internal RC
+ * and lfxo is left alone.  The defconfig is where that is selected.
+ */
+/*
+ * Y501 is 32MHz/8pF/20ppm in a 2016 package and the board carries no
+ * external load capacitors, so the trim target is the crystal's own
+ * 8 pF.  15000 is the nRF54L15 DK's number for a different crystal, and
+ * it would pull this one about 67 ppm low - outside the 40 ppm Bluetooth
+ * allows, which would read as an antenna problem rather than a number.
+ */
+&hfxo {
+	load-capacitors = "internal";
+	load-capacitance-femtofarad = <8000>;
+};
+
+/*
+ * The clock controller has to be enabled for the low-frequency source
+ * to be selectable at all: without it CLOCK_CONTROL_NRF is off, the
+ * whole K32SRC choice disappears, and a Bluetooth build stops at
+ * MPSL's "Clock source is not supported or not defined".
+ */
+&clock {
+	status = "okay";
+};
+
+&temp {
+	status = "okay";
+};
+
+&regulators {
+	status = "okay";
+};
+
+/* L501, 4.7uH from DCC to DECD, is what makes this mode available. */
+&vregmain {
+	status = "okay";
+	regulator-initial-mode = <NRF5X_REG_MODE_DCDC>;
+};
+
+&grtc {
+	owned-channels = <0 1 2 3 4 5 6 7 8 9 10 11>;
+	child-owned-channels = <3 4 7 8 9 10 11>;
+	status = "okay";
+};
+
+&gpio0 {
+	status = "okay";
+};
+
+&gpio1 {
+	status = "okay";
+};
+
+&gpio2 {
+	status = "okay";
+};
+
+&gpiote20 {
+	status = "okay";
+};
+
+&gpiote30 {
+	status = "okay";
+};
+
+/*
+ * P1.02 and P1.03 are NFC1 and NFC2 and come up as an NFC antenna after
+ * every reset.  Freeing them is app/src/pins.c, not the devicetree
+ * property that looks like it would do it - see the comment there.
+ */
+
+/*
+ * The only way in or out.  1 Mbit with the RTS/CTS pair the board
+ * wires, which is far more than the MIDI it will carry needs - the
+ * point of the speed is that a bulk transfer does not hold up a note.
+ */
+&uart30 {
+	status = "okay";
+	current-speed = <1000000>;
+	hw-flow-control;
+	pinctrl-0 = <&uart30_default>;
+	pinctrl-1 = <&uart30_sleep>;
+	pinctrl-names = "default", "sleep";
+};
+
+/* Wired, described, and driven by nothing yet. */
+&i2s20 {
+	status = "okay";
+	pinctrl-0 = <&i2s20_default>;
+	pinctrl-1 = <&i2s20_sleep>;
+	pinctrl-names = "default", "sleep";
+};
+
+&radio {
+	status = "okay";
+};
+
+#include <vendor/nordic/nrf54l10_cpuapp_partition.dtsi>

@@ -19,20 +19,32 @@ enum switch_id {
 #ifdef ROTARY_SW_GPIO
 	ROTARY_SWITCH,		// the rotary encoder's shaft, pressed down
 #endif
+#ifdef STOMP_GPIO
 	STOMP_SWITCH,		// the footswitch
+#endif
 	NR_ONBOARD_SWITCHES,	// the ones that are soldered down
 #ifdef EXP_TIP_GPIO
 	EXP_TIP_SWITCH = NR_ONBOARD_SWITCHES,	// an accessory's, on the tip
 	EXP_RING_SWITCH,			// and on the ring
-#endif
 	NR_SWITCHES,
+#else
+	//
+	// Not a bare enumerator: NR_ONBOARD_SWITCHES is one itself, so
+	// letting the count run on from it would leave a switch id that
+	// no pin answers to, and switch_irq() walks a state machine per
+	// id.
+	//
+	NR_SWITCHES = NR_ONBOARD_SWITCHES,
+#endif
 };
 
 static const unsigned char switch_gpio[NR_SWITCHES] = {
 #ifdef ROTARY_SW_GPIO
 	[ROTARY_SWITCH]	= ROTARY_SW_GPIO,
 #endif
+#ifdef STOMP_GPIO
 	[STOMP_SWITCH]	= STOMP_GPIO,
+#endif
 #ifdef EXP_TIP_GPIO
 	[EXP_TIP_SWITCH]	= EXP_TIP_GPIO,
 	[EXP_RING_SWITCH]	= EXP_RING_GPIO,
