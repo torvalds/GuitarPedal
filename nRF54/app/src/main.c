@@ -321,6 +321,9 @@ int main(void)
 		if (midi_ble_ready())
 			midi_ble_flush();
 
+		/* And say so when somebody starts or stops listening. */
+		midi_ble_notices();
+
 		/*
 		 * And if the ring filled far enough to stop the far end,
 		 * it has now drained: start listening again.

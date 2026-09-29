@@ -117,6 +117,15 @@ static struct {
 	 */
 	uint16_t ccc;
 	uint32_t ccc_n;
+
+	/*
+	 * Whether the pedal has been told what the line above says, and
+	 * what it was told.  The change is noticed in a Bluetooth callback
+	 * and sent from the main loop, because the transmit ring has one
+	 * writer and that is the loop.
+	 */
+	bool told;
+	bool listening;
 } out;
 
 /*
@@ -328,6 +337,7 @@ static void pack_sysex_end(void)
 #define RADIO_SYSEX_DONE	0x13	/* out: the pass is over */
 #define RADIO_SYSEX_ASK		0x14	/* in:  how is the notify path? */
 #define RADIO_SYSEX_STATS	0x15	/* out: this is how */
+#define RADIO_SYSEX_LISTENER	0x16	/* out: somebody is subscribed, or is not */
 #define RADIO_SYSEX_LAST	0x1f
 
 #define RADIO_SYSEX_BODY	96
@@ -437,6 +447,34 @@ static void stats_send(void)
 
 	if (n > 0)
 		radio_sysex(body, 1 + (size_t)n);
+}
+
+/*
+ * Tell the pedal whether anything is listening, when that changes.
+ *
+ * Without it the pedal hands over a 36 kB schema that has nowhere to go
+ * and is refused a packet at a time, which costs the link the whole
+ * transfer and destroys it silently.  With it the pedal throws the reply
+ * away at its own end instead - the same bargain midi_tx_push() already
+ * makes with a USB host that is not mounted.
+ *
+ * From the main loop, because the transmit ring has one writer.  The
+ * Bluetooth callback that notices the change only clears a flag.
+ */
+void midi_ble_notices(void)
+{
+	uint8_t body[2];
+	bool on = (out.ccc == BT_GATT_CCC_NOTIFY) && midi_conn;
+
+	if (out.told && on == out.listening)
+		return;
+
+	body[0] = RADIO_SYSEX_LISTENER;
+	body[1] = on;
+	radio_sysex(body, sizeof(body));
+
+	out.listening = on;
+	out.told = true;
 }
 
 static bool radio_command(uint8_t cmd)
@@ -737,6 +775,7 @@ static void midi_ccc_changed(const struct bt_gatt_attr *attr, uint16_t value)
 
 	out.ccc = value;
 	out.ccc_n++;
+	out.told = false;
 }
 
 BT_GATT_SERVICE_DEFINE(midi_svc,
@@ -824,6 +863,8 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	}
 
 	printk("bt: disconnected, %u\n", reason);
+	out.ccc = 0;
+	out.told = false;
 
 	if (midi_conn) {
 		bt_conn_unref(midi_conn);

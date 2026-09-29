@@ -51,6 +51,18 @@ static struct {
 	uint32_t tx_bytes, rx_bytes;
 	uint32_t packets, dropped;
 	bool up;
+
+	//
+	// Whether anything on the far side of the radio has asked to be
+	// sent MIDI.
+	//
+	// False until the radio says otherwise, which it does whenever the
+	// answer changes.  A Bluetooth client that has connected without
+	// subscribing is the ordinary case rather than a rare one, and
+	// sending a 36 kB schema to one costs the link the whole transfer
+	// and then loses it a packet at a time at the far end.
+	//
+	bool listening;
 } nrf54_uart;
 
 //

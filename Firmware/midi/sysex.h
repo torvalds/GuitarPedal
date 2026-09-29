@@ -438,6 +438,8 @@ static void sysex_send_radio(void)
 	sysex_write_num(nrf54_uart.packets);
 	sysex_write_str(",\"dropped\":");
 	sysex_write_num(nrf54_uart.dropped);
+	sysex_write_str(",\"listening\":");
+	sysex_write_num(nrf54_uart.listening);
 	sysex_write_str("}");
 	sysex_stream_write(trailer, sizeof(trailer));
 	midi_tx_commit();
@@ -1033,6 +1035,16 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 	} else if (cmd == 0x0f) { // Radio link - bringup only
 
 		send_radio_tx = true;
+
+	} else if (cmd == 0x16 && sysex_from_radio && sysex_len >= 2) {
+		//
+		// The one thing in the radio's range that is addressed to
+		// the pedal: whether anything past the radio has asked to
+		// be sent MIDI.  Consumed rather than forwarded - the app
+		// is the subscriber and does not need telling what it just
+		// did.
+		//
+		nrf54_uart.listening = sysex_buf[1] != 0;
 
 	} else if (cmd >= 0x10 && cmd <= 0x1f) {
 		//

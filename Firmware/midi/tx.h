@@ -431,6 +431,24 @@ static void midi_tx_to_radio(void)
 			continue;
 		}
 
+		//
+		// Nothing on the far side has asked to be sent anything,
+		// so throw it away here rather than spend the link on it.
+		// The radio says when that changes; until it has said so
+		// the answer is no.
+		//
+		// Thrown away rather than waited for, because waiting
+		// holds the descriptor, and a descriptor held long enough
+		// stops midi_tx_commit() taking new replies - which would
+		// make a Bluetooth client that never subscribes stop the
+		// USB one too.  The same reason midi_tx_push() discards
+		// for a host that is not mounted.
+		//
+		if (!nrf54_uart.listening) {
+			s->sent = m->len;
+			continue;
+		}
+
 		if (!nrf54_uart_ready())
 			return;
 

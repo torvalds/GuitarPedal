@@ -34,6 +34,7 @@ void midi_ble_feed(uint8_t byte);
 void midi_ble_flush(void);
 void midi_ble_packet(const uint8_t *buf, uint16_t len);
 bool midi_ble_ready(void);
+void midi_ble_notices(void);
 
 #else
 
@@ -47,6 +48,7 @@ static inline void midi_ble_flush(void) { }
 static inline void midi_ble_packet(const uint8_t *b, uint16_t l)
 					{ (void)b; (void)l; }
 static inline bool midi_ble_ready(void) { return true; }
+static inline void midi_ble_notices(void) { }
 
 #endif /* CONFIG_BT */
 
