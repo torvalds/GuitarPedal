@@ -43,6 +43,7 @@
             <hr>
             <button id="update-app-btn" role="menuitem">⬇️&nbsp;&nbsp;Update App</button>
             <button id="open-bindings-btn" role="menuitem">🎛️&nbsp;&nbsp;Physical Controls…</button>
+            <button id="open-wireless-btn" role="menuitem">📡&nbsp;&nbsp;Wireless Controller…</button>
             <button id="open-settings-btn" role="menuitem">🔌&nbsp;&nbsp;MIDI Connection…</button>
             <hr>
             <button id="global-program-btn" class="danger-item" role="menuitem">⚠️&nbsp;&nbsp;Reboot to Programming Mode</button>
@@ -160,6 +161,23 @@
         <div class="menu-section">
           <div id="bindings-rows"></div>
           <p class="menu-hint" id="bindings-hint">Not connected.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- The radio scans and a person picks their footswitch out of the
+         list by name.  Most of what is listed belongs to somebody else:
+         an advertisement does not say whether a device speaks MIDI. -->
+    <div id="wireless-panel" class="glass-panel dialog-panel hidden" role="dialog" aria-modal="true">
+      <div class="panel-header">
+        <h2>Wireless Controller</h2>
+        <button id="close-wireless" class="action-btn" title="Close">✕</button>
+      </div>
+      <div class="dialog-body">
+        <div class="menu-section">
+          <button id="scan-btn" class="action-btn wide-btn">Scan</button>
+          <div id="scan-rows"></div>
+          <p class="menu-hint" id="wireless-hint">Not connected.</p>
         </div>
       </div>
     </div>

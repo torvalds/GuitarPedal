@@ -8,7 +8,16 @@ const SYSEX_CMD = {
     DIAGNOSTIC: 0x09,
     IDENTITY: 0x0a,
     TELEMETRY: 0x0b,
-    EXP_PROBE: 0x0e
+    EXP_PROBE: 0x0e,
+
+    //
+    // 0x10-0x1f are the radio's, not the pedal's.  The pedal forwards
+    // them between USB and the radio without reading any of it.
+    //
+    SCAN: 0x10,
+    BIND: 0x11,
+    SCAN_FOUND: 0x12,
+    SCAN_DONE: 0x13
 };
 
 //
@@ -23,6 +32,15 @@ const EXP_READINGS = 7;
 // from the pedal - which ones exist depends on the board and on what is
 // in its expression jack, so it is not ours to know.
 //
+//
+// What the last scan listed, and which of them we asked the radio to
+// connect to.  Cleared when a scan starts so the list on screen is
+// always one pass rather than everything ever seen.
+//
+let scanDevices = [];
+let scanRunning = false;
+let boundAddr = null;
+
 const SYSEX_SET_BINDING = 0x0c;
 const SYSEX_BINDINGS = 0x0d;
 
@@ -1170,6 +1188,43 @@ function handleSysex(data) {
             const at = 3 + 1 + 2 * EXP_READINGS;
             if (expProbeSaw && data.length > at + 1)
                 expProbeSaw(data[at], data[at + 1]);
+            break;
+        }
+
+        //
+        // One device the radio saw.  The body is the address type, then
+        // the six address bytes a nibble at a time most significant
+        // first, then whatever name it advertised.
+        //
+        case SYSEX_CMD.SCAN_FOUND: {
+            if (data.length < 3 + 13 + 1)
+                break;
+
+            const bytes = [];
+            for (let i = 0; i < 6; i++)
+                bytes.push((data[4 + 2 * i] << 4) | data[5 + 2 * i]);
+
+            let name = '';
+            for (let i = 3 + 13; i < data.length - 1; i++)
+                name += String.fromCharCode(data[i]);
+
+            scanDevices.push({
+                type: data[3],
+                bytes,
+                // bt_addr_le_t holds the address least significant byte
+                // first, and people read it the other way round.
+                text: bytes.slice().reverse()
+                     .map(b => b.toString(16).padStart(2, '0').toUpperCase())
+                     .join(':'),
+                name
+            });
+            renderScan();
+            break;
+        }
+
+        case SYSEX_CMD.SCAN_DONE: {
+            scanRunning = false;
+            renderScan();
             break;
         }
 
@@ -3090,6 +3145,98 @@ function renderRule(r, i) {
     return row;
 }
 
+//
+// The scan list.
+//
+// The radio reports what advertised, and the player picks their
+// footswitch out of it by name.  Nothing knows what a listed device is,
+// because an advertisement does not say whether a device speaks MIDI.
+//
+function renderScan() {
+    const host = document.getElementById('scan-rows');
+    const hint = document.getElementById('wireless-hint');
+    const btn = document.getElementById('scan-btn');
+    const haveRadio = !!(pedalIdentity && pedalIdentity.found &&
+                         pedalIdentity.found.radio_idcode);
+
+    if (btn) {
+        btn.disabled = !haveRadio || scanRunning;
+        btn.textContent = scanRunning ? 'Scanning\u2026' : 'Scan';
+    }
+
+    if (hint) {
+        if (!pedalIdentity)
+            hint.textContent = 'Not connected.';
+        else if (!haveRadio)
+            hint.textContent = 'This pedal has no radio.';
+        else if (scanRunning)
+            hint.textContent = 'Looking for about six seconds.';
+        else if (!scanDevices.length)
+            hint.textContent = 'Switch the controller on and scan. It has ' +
+                'to be advertising, which on most of them means not ' +
+                'already connected to a phone.';
+        else
+            hint.textContent = 'Pick your controller by name. Anything ' +
+                'advertising nearby is listed, so most of these are not ' +
+                'yours.';
+    }
+
+    if (!host)
+        return;
+    host.innerHTML = '';
+
+    scanDevices.forEach(dev => {
+        const row = document.createElement('button');
+
+        row.className = 'scan-row';
+        if (boundAddr === dev.text)
+            row.classList.add('bound');
+
+        const left = document.createElement('div');
+        const name = document.createElement('div');
+
+        name.className = 'scan-name';
+        name.textContent = dev.name || '(no name)';
+
+        const addr = document.createElement('div');
+
+        addr.className = 'scan-addr';
+        addr.textContent = dev.text;
+
+        left.appendChild(name);
+        left.appendChild(addr);
+        row.appendChild(left);
+
+        if (boundAddr === dev.text) {
+            const mark = document.createElement('span');
+
+            mark.textContent = '\u2713';
+            row.appendChild(mark);
+        }
+
+        row.addEventListener('click', () => bindTo(dev));
+        host.appendChild(row);
+    });
+}
+
+function startScan() {
+    if (!midiOutput || scanRunning)
+        return;
+    scanDevices = [];
+    scanRunning = true;
+    renderScan();
+    sendSysex([SYSEX_CMD.SCAN]);
+}
+
+function bindTo(dev) {
+    if (!midiOutput)
+        return;
+    boundAddr = dev.text;
+    renderScan();
+    sendSysex([SYSEX_CMD.BIND, dev.type,
+               ...dev.bytes.flatMap(b => [(b >> 4) & 0x0f, b & 0x0f])]);
+}
+
 function renderBindings() {
     const host = document.getElementById('bindings-rows');
     const hint = document.getElementById('bindings-hint');
@@ -4899,6 +5046,7 @@ appTitleEl.addEventListener('click', () => {
         if (document.getElementById('panel-backdrop')) document.getElementById('panel-backdrop').classList.add('hidden');
         if (document.getElementById('settings-panel')) document.getElementById('settings-panel').classList.add('hidden');
         if (document.getElementById('bindings-panel')) document.getElementById('bindings-panel').classList.add('hidden');
+        if (document.getElementById('wireless-panel')) document.getElementById('wireless-panel').classList.add('hidden');
         closeMenu();
     }
 
@@ -5015,6 +5163,24 @@ appTitleEl.addEventListener('click', () => {
     const closeBindingsBtn = document.getElementById('close-bindings');
     if (closeBindingsBtn)
         closeBindingsBtn.addEventListener('click', closeAllPanels);
+
+    const openWirelessBtn = document.getElementById('open-wireless-btn');
+    if (openWirelessBtn) {
+        openWirelessBtn.addEventListener('click', () => {
+            closeAllPanels();
+            renderScan();
+            document.getElementById('wireless-panel').classList.remove('hidden');
+            if (backdrop) backdrop.classList.remove('hidden');
+        });
+    }
+
+    const closeWirelessBtn = document.getElementById('close-wireless');
+    if (closeWirelessBtn)
+        closeWirelessBtn.addEventListener('click', closeAllPanels);
+
+    const scanBtn = document.getElementById('scan-btn');
+    if (scanBtn)
+        scanBtn.addEventListener('click', startScan);
 
     const globalUnrouteBtn = document.getElementById('global-unroute-btn');
     if (globalUnrouteBtn) {
