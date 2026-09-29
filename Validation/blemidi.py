@@ -21,10 +21,10 @@
 # that if something else is holding the port.
 #
 # WHAT IT NEEDS.  BlueZ, over D-Bus - python3-dbus and PyGObject, both of
-# which are packaged.  No pairing: the pedal's characteristic asks for no
-# encryption, and the capture of a working session has no pairing traffic
-# in it at all.  If a run reports nothing arriving, see WHAT BITES below
-# before suspecting the radio.
+# which are packaged.  And a bond: the pedal's characteristic requires LE
+# Secure Connections, so pair while the pedal's pairing window is open -
+# nothing can be read or subscribed to without one.  If a run reports
+# nothing arriving, see WHAT BITES below before suspecting the radio.
 #
 # WHAT BITES
 #

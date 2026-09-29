@@ -1068,6 +1068,13 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 		// pedal's business, because the pedal is the thing that has
 		// to show it and time it.
 		//
+		// Either transport may change it, and over the air that is
+		// not the hole it looks like: the characteristic requires a
+		// bond made with Secure Connections, so anything that can
+		// send this was let in through a window somebody already had
+		// to open.  A device trusted enough to edit every parameter
+		// is trusted enough to introduce the next one.
+		//
 		if (sysex_len >= 2) {
 			bool want = sysex_buf[1] != 0;
 

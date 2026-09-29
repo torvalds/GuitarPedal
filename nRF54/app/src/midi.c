@@ -850,16 +850,36 @@ static void midi_ccc_changed(const struct bt_gatt_attr *attr, uint16_t value)
 	out.told = false;
 }
 
+//
+// Nothing here is reachable without a bond made with LE Secure Connections.
+//
+// BT_GATT_PERM_*_LESC is per attribute, which is what lets one image ask
+// this of a host while a footswitch still pairs the only way it can - the
+// radio is the client on that connection and never touches this
+// characteristic.  CONFIG_BT_SMP_SC_PAIR_ONLY would have been the blunt
+// way to ask and would have taken the footswitch with it.
+//
+// The requirement is a stored key with the Secure Connections flag, so an
+// encrypted session with no bond behind it does not qualify - which is
+// exactly the case a closed pairing window produces.
+//
+// The configuration descriptor carries it too, so a host that cannot be
+// sent anything is told when it subscribes rather than subscribing
+// happily and then waiting for a notification that will never come.  That
+// silence was the worst failure this link had: a connection that looked
+// established and did nothing.
+//
 BT_GATT_SERVICE_DEFINE(midi_svc,
 	BT_GATT_PRIMARY_SERVICE(&midi_service_uuid),
 	BT_GATT_CHARACTERISTIC(&midi_io_uuid.uuid,
 			       BT_GATT_CHRC_READ |
 			       BT_GATT_CHRC_WRITE_WITHOUT_RESP |
 			       BT_GATT_CHRC_NOTIFY,
-			       BT_GATT_PERM_READ | BT_GATT_PERM_WRITE,
+			       BT_GATT_PERM_READ_LESC |
+			       BT_GATT_PERM_WRITE_LESC,
 			       midi_read, midi_write, NULL),
 	BT_GATT_CCC(midi_ccc_changed,
-		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+		    BT_GATT_PERM_READ_LESC | BT_GATT_PERM_WRITE_LESC),
 );
 
 static const struct bt_gatt_attr *midi_value_attr(void)
