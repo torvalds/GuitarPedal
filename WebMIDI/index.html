@@ -165,19 +165,36 @@
       </div>
     </div>
 
-    <!-- The radio scans and a person picks their footswitch out of the
-         list by name.  Most of what is listed belongs to somebody else:
-         an advertisement does not say whether a device speaks MIDI. -->
+    <!-- Everything Bluetooth: who may pair with this pedal, who already
+         has, and picking a footswitch out of what is advertising.  One
+         panel because they are one subject - binding a controller is a
+         pairing, and it needs the window open like anything else. -->
     <div id="wireless-panel" class="glass-panel dialog-panel hidden" role="dialog" aria-modal="true">
       <div class="panel-header">
-        <h2>Wireless Controller</h2>
+        <h2>Bluetooth</h2>
         <button id="close-wireless" class="action-btn" title="Close">✕</button>
       </div>
       <div class="dialog-body">
         <div class="menu-section">
+          <h3>Pairing</h3>
+          <button id="pair-btn" class="action-btn wide-btn">Allow a new device</button>
+          <p class="menu-hint" id="pair-hint">Not connected.</p>
+        </div>
+
+        <div class="menu-section">
+          <h3>Wireless controller</h3>
           <button id="scan-btn" class="action-btn wide-btn">Scan</button>
           <div id="scan-rows"></div>
           <p class="menu-hint" id="wireless-hint">Not connected.</p>
+        </div>
+
+        <!-- Last, and behind a confirmation.  It drops every key the
+             pedal holds, which includes the one this page may be talking
+             over. -->
+        <div class="menu-section">
+          <h3>Paired devices</h3>
+          <button id="forget-btn" class="action-btn wide-btn danger">Forget all paired devices</button>
+          <p class="menu-hint" id="forget-hint">Not connected.</p>
         </div>
       </div>
     </div>

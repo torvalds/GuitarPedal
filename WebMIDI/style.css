@@ -1628,6 +1628,20 @@ body.fullscreen-open {
   margin-bottom: 10px;
 }
 
+/*
+ * A wide button that throws something away.  The colour is the whole of
+ * the warning that is always on screen; the confirmation is the rest of
+ * it and only appears when it is pressed.
+ */
+.wide-btn.danger {
+  color: var(--danger);
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+.wide-btn.danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.12);
+}
+
 .scan-row {
   display: flex;
   align-items: center;

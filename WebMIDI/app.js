@@ -3,6 +3,8 @@ const SYSEX_CMD = {
     RES_SCHEMA: 0x02,
     PARAM_UPDATE: 0x03,
     SAVE_SCENE: 0x04,
+    PAIRING: 0x06,
+    FORGET: 0x07,
     REQ_STATE: 0x05,
     ROUTING_ORDER: 0x08,
     DIAGNOSTIC: 0x09,
@@ -1101,6 +1103,9 @@ function sendSysex(data) {
 
 let PEDAL_EFFECTS = [];
 
+// Whether the pedal is currently willing to be paired with.
+let pairingOpen = false;
+
 //
 // In / Out / Merge, declared once by the pedal rather than per effect.
 // Null against firmware that predates them, which is what every check
@@ -1270,6 +1275,17 @@ function handleSysex(data) {
         // the six address bytes a nibble at a time most significant
         // first, then whatever name it advertised.
         //
+        //
+        // Whether the pedal is willing to be paired with.  It says so
+        // whenever the answer changes, which includes the window closing
+        // by itself after a minute and a pairing having used it up, so
+        // nothing here has to poll or guess.
+        //
+        case SYSEX_CMD.PAIRING:
+            pairingOpen = data.length > 3 && data[3] !== 0;
+            renderPairing();
+            break;
+
         case SYSEX_CMD.SCAN_FOUND: {
             if (data.length < 3 + 13 + 1)
                 break;
@@ -3293,6 +3309,65 @@ function renderScan() {
     });
 }
 
+//
+// Is the pedal reachable over the cable rather than over the air?
+//
+// Forgetting keys is refused by the pedal itself unless it arrives over
+// USB, because it drops the key of the link carrying the request - so
+// asking over Bluetooth is asking to be cut off with no way back.  This
+// is the same rule said in the interface, where it can be explained.
+//
+function onTheCable() {
+    return !!midiOutput && midiOutput !== blePedal && midiOutput !== demoPedal;
+}
+
+function renderPairing() {
+    const btn = document.getElementById('pair-btn');
+    const hint = document.getElementById('pair-hint');
+    const forget = document.getElementById('forget-btn');
+    const forgetHint = document.getElementById('forget-hint');
+    const haveRadio = !!(pedalIdentity && pedalIdentity.found &&
+                         pedalIdentity.found.radio_idcode);
+
+    if (btn) {
+        btn.disabled = !haveRadio;
+        btn.textContent = pairingOpen ? 'Stop allowing new devices'
+                                      : 'Allow a new device';
+    }
+
+    if (hint) {
+        if (!pedalIdentity)
+            hint.textContent = 'Not connected.';
+        else if (!haveRadio)
+            hint.textContent = 'This pedal has no radio.';
+        else if (pairingOpen)
+            hint.textContent = 'The pedal is breathing yellow and will ' +
+                'accept one new device. It stops on its own after a ' +
+                'minute, or as soon as something pairs.';
+        else
+            hint.textContent = 'A phone or laptop can only pair while this ' +
+                'is open, and so can a wireless controller. Nothing in ' +
+                'range can pair without it.';
+    }
+
+    if (forget)
+        forget.disabled = !haveRadio || !onTheCable();
+
+    if (forgetHint) {
+        if (!pedalIdentity)
+            forgetHint.textContent = 'Not connected.';
+        else if (!haveRadio)
+            forgetHint.textContent = 'This pedal has no radio.';
+        else if (!onTheCable())
+            forgetHint.textContent = 'Only over the USB cable. Forgetting ' +
+                'the keys drops the one this page is talking over, and ' +
+                'without a cable there would be no way back.';
+        else
+            forgetHint.textContent = 'Every paired phone, laptop and ' +
+                'controller is forgotten, and each has to pair again.';
+    }
+}
+
 function startScan() {
     if (!midiOutput || scanRunning)
         return;
@@ -3305,6 +3380,17 @@ function startScan() {
 function bindTo(dev) {
     if (!midiOutput)
         return;
+
+    //
+    // Binding a controller is a pairing, so it needs the window open the
+    // same as anything else.  Opened here rather than asked for, because
+    // picking a controller out of a list is already saying yes to it -
+    // being made to press a second button first would be a puzzle, not a
+    // safeguard.
+    //
+    if (!pairingOpen)
+        sendSysex([SYSEX_CMD.PAIRING, 1]);
+
     boundAddr = dev.text;
     renderScan();
     sendSysex([SYSEX_CMD.BIND, dev.type,
@@ -5250,6 +5336,13 @@ appTitleEl.addEventListener('click', () => {
         openWirelessBtn.addEventListener('click', () => {
             closeAllPanels();
             renderScan();
+            renderPairing();
+            //
+            // Ask rather than assume.  The window closes on its own after
+            // a minute and when something pairs, so what was true last
+            // time this panel was open usually is not.
+            //
+            sendSysex([SYSEX_CMD.PAIRING]);
             document.getElementById('wireless-panel').classList.remove('hidden');
             if (backdrop) backdrop.classList.remove('hidden');
         });
@@ -5262,6 +5355,43 @@ appTitleEl.addEventListener('click', () => {
     const scanBtn = document.getElementById('scan-btn');
     if (scanBtn)
         scanBtn.addEventListener('click', startScan);
+
+    const pairBtn = document.getElementById('pair-btn');
+    if (pairBtn) {
+        pairBtn.addEventListener('click', () => {
+            if (!midiOutput) {
+                showButtonError(pairBtn, 'Not Connected');
+                return;
+            }
+            //
+            // Asked for, not assumed: the pedal says what it did and this
+            // waits to be told rather than drawing the answer it wanted.
+            // A window that failed to open would otherwise look open.
+            //
+            sendSysex([SYSEX_CMD.PAIRING, pairingOpen ? 0 : 1]);
+        });
+    }
+
+    const forgetBtn = document.getElementById('forget-btn');
+    if (forgetBtn) {
+        forgetBtn.addEventListener('click', () => {
+            if (!midiOutput) {
+                showButtonError(forgetBtn, 'Not Connected');
+                return;
+            }
+            //
+            // A confirmation, because nothing here can be undone and
+            // every paired device has to be walked through pairing again
+            // afterwards - which for a footswitch means finding it in a
+            // scan for a second time.
+            //
+            if (!window.confirm('Forget every device this pedal is paired ' +
+                                'with?\n\nPhones, laptops and wireless ' +
+                                'controllers will all have to pair again.'))
+                return;
+            sendSysex([SYSEX_CMD.FORGET]);
+        });
+    }
 
     const globalUnrouteBtn = document.getElementById('global-unroute-btn');
     if (globalUnrouteBtn) {
