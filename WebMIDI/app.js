@@ -901,9 +901,10 @@ function updateMidiState() {
         // Who is this, then what does it have
         sendSysex([SYSEX_CMD.IDENTITY]);
         updateTelemetryPolling();
-        sendSysex([SYSEX_CMD.REQ_SCHEMA]);
+        askForSchema();
         sendSysex([SYSEX_CMD.DIAGNOSTIC]); // Request diagnostic status
     } else {
+        schemaDone();
         midiInput = null;
         midiOutput = null;
         appTitleEl.className = "title-disconnected";
@@ -1001,6 +1002,60 @@ if (updateAppBtn) {
 
 
 let diagnosticTimeout = null;
+//
+// Ask for the schema until it arrives.
+//
+// A single lost reply leaves the app connected and useless: everything a
+// person can touch is built from the schema, so without it there is a
+// title bar saying "Connected" and nothing else, and no way out but
+// picking another port and coming back.
+//
+// It is asked for at the worst moment on purpose - the instant a port is
+// selected - because there is nothing to show until it arrives.  Over
+// Bluetooth that is a connection seconds old, with its subscription just
+// written and its connection parameters not yet negotiated, carrying the
+// largest message the pedal ever sends.
+//
+// Bounded, because a pedal that cannot answer 0x01 at all is a real thing
+// to be - firmware older than the schema - and asking one for ever would
+// be noise with nobody to read it.
+//
+const SCHEMA_TRIES = 6;
+const SCHEMA_RETRY_MS = 1500;
+let schemaWanted = false;
+let schemaTries = 0;
+let schemaTimer = null;
+
+function askForSchema(again) {
+    if (!again) {
+        schemaWanted = true;
+        schemaTries = 0;
+    }
+    if (schemaTimer) clearTimeout(schemaTimer);
+    schemaTimer = null;
+
+    if (!schemaWanted || !midiOutput) return;
+    if (schemaTries >= SCHEMA_TRIES) {
+        console.error('[WebMIDI] no schema after ' + SCHEMA_TRIES
+                      + ' requests; the pedal is connected but has told us'
+                      + ' nothing about itself');
+        return;
+    }
+
+    schemaTries++;
+    sendSysex([SYSEX_CMD.REQ_SCHEMA]);
+    schemaTimer = setTimeout(() => askForSchema(true), SCHEMA_RETRY_MS);
+}
+
+//
+// It arrived, or there is nobody to ask any more.  Either way stop.
+//
+function schemaDone() {
+    schemaWanted = false;
+    if (schemaTimer) clearTimeout(schemaTimer);
+    schemaTimer = null;
+}
+
 function scheduleDiagnostic() {
     if (diagnosticTimeout) clearTimeout(diagnosticTimeout);
     diagnosticTimeout = setTimeout(() => {
@@ -1146,6 +1201,7 @@ function handleSysex(data) {
                     });
                 }
 
+                schemaDone();
                 effectIdMap.clear();
                 PEDAL_EFFECTS.forEach((e, idx) => effectIdMap.set(e.id, idx));
                 renderUI();
