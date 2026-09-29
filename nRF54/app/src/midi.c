@@ -572,13 +572,18 @@ static void radio_dispatch(uint8_t cmd, const uint8_t *arg, uint8_t len)
 		break;
 
 	//
-	// The pedal says whether it is offering to be paired with.  Recorded
-	// and reported; nothing is refused on the strength of it yet, so a
-	// host that pairs outside the window still pairs.  Closing that is
-	// the next change and is deliberately not this one.
+	// The pedal says whether it is offering to be paired with.
 	//
 	case RADIO_SYSEX_PAIRING:
 		out.pairing = len >= 1 && arg[0];
+		//
+		// One rule and no second piece of state: a bond is
+		// accepted while the pedal's window is open and at no
+		// other time.  Which means binding a footswitch needs the
+		// window open too - the app's own dialog for picking one
+		// has to open it.
+		//
+		bt_set_bondable(out.pairing);
 		break;
 
 	//
@@ -1003,6 +1008,13 @@ void midi_ble_start(void)
 	//
 	settings_load();
 	bt_conn_auth_info_cb_register(&midi_auth_info);
+
+	//
+	// Closed until the pedal says otherwise.  Being in the room is not
+	// an argument for being allowed to bond with somebody's pedal, and
+	// the only thing that can open the window is a cable.
+	//
+	bt_set_bondable(false);
 
 	adv_start(NULL);
 }
