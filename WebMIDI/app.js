@@ -4975,7 +4975,14 @@ appTitleEl.addEventListener('click', () => {
         else
             selectedOutputId = value;
 
-        if (value === BLE_PEDAL_ID && !blePedal.connected) {
+        //
+        // Connect when there is nothing connected, and again when what is
+        // connected has never delivered anything: 'rx' counts
+        // notifications, and zero of them after a connection means the
+        // browser subscribed to nothing.  Picking Bluetooth a second time
+        // is then the only way to ask again.
+        //
+        if (value === BLE_PEDAL_ID && (!blePedal.connected || !blePedal.rx)) {
             //
             // Set before connecting: the device can go away during the
             // handshake, and the handler is what puts the menu back.

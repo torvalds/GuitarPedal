@@ -338,6 +338,19 @@ const blePedal = {
     decoder: null,
 
     //
+    // What has crossed, both ways.
+    //
+    // A transport that connects and then silently delivers nothing looks
+    // exactly like a pedal that will not answer, and the browser reports
+    // neither: startNotifications() resolves whether or not it
+    // subscribed.  So count.  'rx' at zero with 'tx' climbing is the
+    // shape of a subscription that was never made - ask the pedal for its
+    // side of the same story, where 'ccn' says whether it was ever asked.
+    //
+    rx: 0,
+    tx: 0,
+
+    //
     // Writes go out one at a time.  A second writeValueWithoutResponse()
     // while the first is outstanding fails with "GATT operation already
     // in progress", and send() is called from drawing code that cannot
@@ -374,17 +387,71 @@ const blePedal = {
         }
     },
 
+    //
+    // Everything after the chooser, retried.
+    //
+    // A GATT connect resolves and then the link is gone before services
+    // can be asked for - "GATT Server is disconnected.  Cannot retrieve
+    // services." - often enough to matter: about one attempt in five
+    // against this pedal, from two different Bluetooth stacks.  One
+    // attempt and a message on screen is a pedal that looks broken.
+    //
+    // requestDevice() is not part of this and cannot be: it needs a user
+    // gesture, and by here the gesture is spent.  So the chooser is asked
+    // once and only the connecting is repeated.
+    //
+    // Disconnect between attempts.  A half-open link is what the next
+    // gatt.connect() would otherwise be handed back, and it fails the
+    // same way again.
+    //
+    async reach(device, tries = 3) {
+        let last;
+
+        for (let n = 1; n <= tries; n++) {
+            try {
+                const server = await this.step('connect',
+                                               device.gatt.connect(), 10);
+                const service = await this.step(
+                    'find the MIDI service',
+                    server.getPrimaryService(BLE_MIDI_SERVICE), 10);
+                return await this.step(
+                    'find the MIDI characteristic',
+                    service.getCharacteristic(BLE_MIDI_CHARACTERISTIC), 10);
+            } catch (err) {
+                last = err;
+                console.debug('[BLE MIDI] attempt ' + n + ' of ' + tries
+                              + ': ' + ((err && err.message) || err));
+                try {
+                    device.gatt.disconnect();
+                } catch (e) {
+                    /* nothing was open */
+                }
+                await new Promise((settle) => setTimeout(settle, 400));
+            }
+        }
+        throw last;
+    },
+
     async connect() {
         const device = await navigator.bluetooth.requestDevice({
             filters: [{ services: [BLE_MIDI_SERVICE] }],
         });
 
-        const server = await this.step('connect', device.gatt.connect());
-        const service = await this.step(
-            'find the MIDI service', server.getPrimaryService(BLE_MIDI_SERVICE));
-        const ch = await this.step(
-            'find the MIDI characteristic',
-            service.getCharacteristic(BLE_MIDI_CHARACTERISTIC));
+        //
+        // Drop a link that is already up before asking for another.
+        //
+        // reach() below calls gatt.connect(), which on a live connection
+        // resolves at once and hands the same useless link back - so a
+        // connection that subscribed to nothing could never be escaped
+        // except by reloading the page.  There is no disconnect anywhere
+        // in the app, and connect() is only reached by somebody picking
+        // Bluetooth on purpose, so dropping it here is what they asked
+        // for.
+        //
+        if (device.gatt.connected)
+            device.gatt.disconnect();
+
+        const ch = await this.reach(device);
 
         this.decoder = new BleMidiDecoder((msg) => {
             if (this.onmidimessage)
@@ -402,10 +469,35 @@ const blePedal = {
                                    this.onValue);
         this.onValue = (ev) => {
             const v = ev.target.value;
+            this.rx++;
             this.decoder.packet(
                 new Uint8Array(v.buffer, v.byteOffset, v.byteLength));
         };
         ch.addEventListener('characteristicvaluechanged', this.onValue);
+
+        //
+        // Stop before starting.  A startNotifications() the browser
+        // believes is already in force writes no Client Characteristic
+        // Configuration descriptor at all - and reconnecting to a device
+        // it has handed out before, which is every reconnection here, is
+        // exactly when it believes that.  The pedal is then never asked
+        // to send: it answers every request into a void, and the app sits
+        // connected with a title bar and no controls.
+        //
+        // There is nothing to check afterwards, because
+        // startNotifications() resolves either way - which is why this
+        // failure is invisible from up here and was found by counting the
+        // descriptor writes on the pedal instead.
+        //
+        // Bounded and ignored: stopping something that was not started is
+        // the ordinary case and is not a failure.
+        //
+        try {
+            await this.step('unsubscribe', ch.stopNotifications(), 5);
+        } catch (err) {
+            console.debug('[BLE MIDI] stopNotifications:',
+                          (err && err.name) || err);
+        }
 
         await this.step('subscribe', ch.startNotifications());
 
@@ -416,6 +508,24 @@ const blePedal = {
             if (this.ondisconnect)
                 this.ondisconnect();
         }, { once: true });
+
+        //
+        // Say what happened, once, five seconds after connecting.  Long
+        // enough for a schema to have arrived and short enough that
+        // whoever is looking has not given up.
+        //
+        this.rx = this.tx = 0;
+        setTimeout(() => {
+            if (!this.characteristic) return;
+            if (this.rx)
+                console.debug('[BLE MIDI] ' + this.rx + ' notifications in, '
+                              + this.tx + ' packets out');
+            else
+                console.error('[BLE MIDI] nothing has arrived after '
+                              + this.tx + ' packets sent.  The browser'
+                              + ' subscribed as far as it knows; the pedal'
+                              + ' can say whether it was ever asked.');
+        }, 5000);
 
         this.device = device;
         this.characteristic = ch;
@@ -428,6 +538,7 @@ const blePedal = {
             return;
 
         for (const packet of bleMidiEncode(Array.from(bytes))) {
+            this.tx++;
             this.writes = this.writes
                 .then(() => this.characteristic.writeValueWithoutResponse(packet))
                 .catch((err) => {
