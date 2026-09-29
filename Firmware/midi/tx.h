@@ -75,8 +75,22 @@ struct midi_msg {
 	const uint8_t *flash;	// non-NULL: the bytes are in flash
 	uint32_t off;		// otherwise: where in the payload ring
 	uint16_t len;
-	uint16_t sent;
 	bool more;
+};
+
+//
+// Where one consumer has got to.
+//
+// The cursor is here rather than in the descriptor because there is more
+// than one consumer and they do not keep up with each other: USB waits on
+// a host reading an endpoint, and the radio waits on a Bluetooth client.
+// One cursor in the descriptor would mean neither could fall behind
+// without stopping the other, so a USB endpoint nobody reads would stop
+// Bluetooth.
+//
+struct midi_sink {
+	uint32_t tail;		// the message it is working on
+	uint16_t sent;		// bytes of that message already handed over
 };
 
 //
@@ -95,6 +109,17 @@ struct midi_msg {
 //  - 'pend', the bytes copied so far that have not become a descriptor
 //  - 'txn', where to rewind to if the reply being built does not fit
 //
+#ifdef NRF54_SWDIO
+//
+// Defined in nrf54/uart.h, which comes later in the one translation
+// unit because it runs only once the radio probe has answered.
+// Declared here rather than in midi.h because that file reaches
+// usb-device.c as well, where there is no definition to find.
+//
+static void nrf54_uart_thru(uint8_t byte);
+static bool nrf54_uart_ready(void);
+#endif
+
 static struct {
 	struct midi_msg ring[MIDI_TX_MSGS];
 	uint8_t payload[MIDI_TX_PAYLOAD];
@@ -103,8 +128,20 @@ static struct {
 	// Free-running counters, masked only where they index.  head -
 	// tail is how much is in flight and stays right across the wrap.
 	//
-	uint32_t head, tail;
+	uint32_t head;
 	uint32_t pay_head, pay_tail;
+
+	//
+	// 'tail' is the oldest message any consumer still needs, so it is
+	// what says when a descriptor and its payload can be reused.
+	// midi_tx_reclaim() moves it.
+	//
+	uint32_t tail;
+
+	struct midi_sink usb;
+#ifdef NRF54_SWDIO
+	struct midi_sink radio;
+#endif
 
 	//
 	// The transaction being built.  Nothing here is visible to the
@@ -118,8 +155,9 @@ static struct {
 	bool txn_failed;
 
 	//
-	// The packetiser's carry.  See midi_tx_drain() for why a packet
-	// has to be able to outlive the call that built it.
+	// The packetiser's carry, which belongs to the USB sink - the
+	// radio takes the bytes as they are.  See midi_tx_to_usb() for
+	// why a packet has to outlive the call that built it.
 	//
 	uint8_t pack[3];
 	unsigned int pack_len;
@@ -173,7 +211,6 @@ static void midi_tx_flush_pending(void)
 	m->flash = NULL;
 	m->off = midi_tx.pend_off;
 	m->len = midi_tx.pend_len;
-	m->sent = 0;
 	m->more = true;
 	midi_tx.head++;
 
@@ -225,7 +262,6 @@ static void midi_tx_static(const uint8_t *buf, size_t len)
 	m->flash = buf;
 	m->off = 0;
 	m->len = len;
-	m->sent = 0;
 	m->more = true;
 	midi_tx.head++;
 }
@@ -278,8 +314,21 @@ static bool midi_tx_push(void)
 {
 	if (!midi_tx.pkt_ready)
 		return true;
-	if (!usb_midi_write_nb(midi_tx.pkt))
-		return false;
+
+	if (!usb_midi_write_nb(midi_tx.pkt)) {
+		//
+		// Busy is worth waiting for; unmounted is not.
+		//
+		// With no USB host there is nothing on that endpoint to
+		// ever wait for, so the packet is thrown away and this
+		// sink keeps moving.  Waiting for it would hold the
+		// descriptor and stop the queue being reused, which on a
+		// pedal running from a charger is for ever.
+		//
+		if (tud_midi_mounted())
+			return false;
+	}
+
 	midi_tx.pkt_ready = false;
 	return true;
 }
@@ -304,19 +353,20 @@ static bool midi_tx_push(void)
 #define MIDI_TX_PER_PASS 16
 
 //
-// Hand over a frame's worth, and no more.
+// Hand USB a frame's worth, and no more.
 //
-// Called from the main loop, next to everything else that has to happen
-// there.  It returns on the packet budget or on a full endpoint,
-// whichever comes first, which is what keeps usb_audio_task() running on
-// time no matter how long the reply is.
+// It returns on the packet budget or on a full endpoint, whichever comes
+// first, which is what keeps usb_audio_task() running on time no matter
+// how long the reply is.  Returning early leaves this sink where it is
+// and costs no other consumer anything.
 //
-static void midi_tx_drain(void)
+static void midi_tx_to_usb(void)
 {
+	struct midi_sink *s = &midi_tx.usb;
 	unsigned int pushed = 0;
 
-	while (midi_tx.tail != midi_tx.head) {
-		struct midi_msg *m = &midi_tx.ring[midi_tx.tail & (MIDI_TX_MSGS - 1)];
+	while (s->tail != midi_tx.head) {
+		struct midi_msg *m = &midi_tx.ring[s->tail & (MIDI_TX_MSGS - 1)];
 
 		if (midi_tx.pkt_ready) {
 			if (pushed >= MIDI_TX_PER_PASS)
@@ -326,14 +376,13 @@ static void midi_tx_drain(void)
 			pushed++;
 		}
 
-		if (m->sent >= m->len) {
-			if (!m->flash)
-				midi_tx.pay_tail += m->len;
-			midi_tx.tail++;
+		if (s->sent >= m->len) {
+			s->tail++;
+			s->sent = 0;
 			continue;
 		}
 
-		uint8_t b = midi_tx_byte(m, m->sent++);
+		uint8_t b = midi_tx_byte(m, s->sent++);
 
 		if (b == 0xF0)
 			midi_tx.pack_len = 0;
@@ -358,6 +407,74 @@ static void midi_tx_drain(void)
 
 	if (pushed < MIDI_TX_PER_PASS)
 		midi_tx_push();
+}
+
+#ifdef NRF54_SWDIO
+//
+// The same bytes to the radio, unpacketised.
+//
+// It stops when the link's queue is half full, which bounds a pass to
+// about 512 bytes without needing a budget of its own, and leaves the
+// rest for the next one.  A board with no radio answers ready and
+// discards, so this sink still moves and the queue is still reclaimed.
+//
+static void midi_tx_to_radio(void)
+{
+	struct midi_sink *s = &midi_tx.radio;
+
+	while (s->tail != midi_tx.head) {
+		struct midi_msg *m = &midi_tx.ring[s->tail & (MIDI_TX_MSGS - 1)];
+
+		if (s->sent >= m->len) {
+			s->tail++;
+			s->sent = 0;
+			continue;
+		}
+
+		if (!nrf54_uart_ready())
+			return;
+
+		nrf54_uart_thru(midi_tx_byte(m, s->sent++));
+	}
+}
+#endif
+
+//
+// Release what every consumer has finished with.
+//
+// A descriptor and the payload behind it belong to the slowest sink, so
+// nothing is reused until all of them are past it.  That is what makes a
+// stalled consumer cost queue space rather than costing the other
+// consumers their progress: midi_tx_commit() starts refusing new replies,
+// which is backpressure, and it says so by returning false.
+//
+static void midi_tx_reclaim(void)
+{
+	while (midi_tx.tail != midi_tx.head) {
+		struct midi_msg *m = &midi_tx.ring[midi_tx.tail & (MIDI_TX_MSGS - 1)];
+
+		if (midi_tx.usb.tail == midi_tx.tail)
+			return;
+#ifdef NRF54_SWDIO
+		if (midi_tx.radio.tail == midi_tx.tail)
+			return;
+#endif
+		if (!m->flash)
+			midi_tx.pay_tail += m->len;
+		midi_tx.tail++;
+	}
+}
+
+//
+// One pass of everything that is waiting to go out.
+//
+static void midi_tx_drain(void)
+{
+	midi_tx_to_usb();
+#ifdef NRF54_SWDIO
+	midi_tx_to_radio();
+#endif
+	midi_tx_reclaim();
 }
 
 //

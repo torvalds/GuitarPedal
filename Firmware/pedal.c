@@ -82,6 +82,7 @@ uint8_t routed_effect_count = 0;
 #include "scene.h"
 #include "nrf54/swd.h"
 #include "nrf54/dap.h"
+#include "nrf54/uart.h"
 #include "hardware.h"
 #include "exp.h"
 #include "midi/sysex.h"
@@ -326,6 +327,7 @@ int main()
 		// bounds the retry count in DAP_TransferConfigure.
 		//
 		dap_poll();
+		nrf54_uart_poll();
 #endif
 
 		sysex_send_identity();

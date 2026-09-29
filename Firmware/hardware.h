@@ -323,6 +323,14 @@ static void probe_hardware(void)
 	hardware.radio = nrf54_probe();
 	report_status(hardware.radio ? "The radio answered on SWD"
 				    : "No radio on SWD");
+
+	//
+	// The MIDI port to the radio, which only exists when a radio
+	// answered.  Its i2s waits for the same answer and is started by
+	// init_i2s(), with the codec's.
+	//
+	if (hardware.radio)
+		nrf54_uart_init();
 #endif
 }
 static uint debounce_offset;
