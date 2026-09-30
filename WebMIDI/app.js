@@ -1921,14 +1921,36 @@ function formatFreqShort(freq) {
     return (k >= 10 ? k.toFixed(0) : k.toFixed(1)) + 'kHz';
 }
 
+//
+// A pot's value, rounded to what one step of the pot can change.
+//
+// A pot has 121 positions, so the digits worth showing are the ones
+// that tell a position from its neighbour, and no more: a frequency pot
+// at 250Hz steps by about 15Hz, and "249.47 Hz" is a reading of the
+// curve rather than a setting anyone chose. The value is rounded to the
+// largest power of ten no bigger than the step. The bottom of a cubic
+// curve steps by thousandths, so three significant figures is the limit
+// whatever the step says.
+//
+function potDisplayStep(pot, val, y) {
+    const next = potToValue(pot, val < 120 ? val + 1 : val - 1);
+    const step = Math.abs(next - y);
+    let mag = step > 0 ? Math.pow(10, Math.floor(Math.log10(step))) : 1;
+
+    if (y !== 0)
+        mag = Math.max(mag, Math.pow(10, Math.floor(Math.log10(Math.abs(y))) - 2));
+    return mag;
+}
+
 function formatPotValue(pot, val) {
     const y = potToValue(pot, val);
     let displayStr = "";
     if (pot.curve === 'RAW' || pot.enum) {
         displayStr = Math.round(y).toString();
     } else {
-        // Drop trailing zeros, max 2 decimals
-        displayStr = parseFloat(y.toFixed(2)).toString();
+        const mag = potDisplayStep(pot, val, y);
+        const places = Math.max(0, -Math.round(Math.log10(mag)));
+        displayStr = parseFloat((Math.round(y / mag) * mag).toFixed(places)).toString();
     }
 
     if (pot.unit && pot.unit !== 'none') {
