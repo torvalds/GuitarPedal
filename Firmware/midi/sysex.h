@@ -406,6 +406,69 @@ static void sysex_send_exp(void)
 }
 #endif
 
+#ifdef NRF54_SWDIO
+//
+// Whether the pairing window is open, said whenever it changes.
+//
+// Not an acknowledgement: it is what the pedal is actually doing, so a
+// window that timed out says so without being asked.
+//
+bool sysex_send_pairing = false;
+
+static void sysex_send_pairing_state(void)
+{
+	if (!sysex_send_pairing)
+		return;
+	if (midi_tx_busy())
+		return;
+	sysex_send_pairing = false;
+
+	const uint8_t msg[] = { 0xF0, 0x7D, 0x06, nrf54_pairing, 0xF7 };
+
+	sysex_tx_start();
+	sysex_stream_write(msg, sizeof(msg));
+	midi_tx_commit();
+}
+
+bool send_radio_tx = false;
+//
+// How the link to the radio is doing.
+//
+// 'packets' is MIDI arriving from the radio, which is what a host
+// connected over Bluetooth produces; 'dropped' is outgoing bytes that
+// found the queue full, which should stay at zero.
+//
+static void sysex_send_radio(void)
+{
+	if (!send_radio_tx)
+		return;
+	if (midi_tx_busy())
+		return;
+	send_radio_tx = false;
+
+	static const uint8_t hdr[] = { 0xF0, 0x7D, 0x0F };
+	static const uint8_t trailer[] = { 0xF7 };
+
+	sysex_tx_start();
+	sysex_stream_write(hdr, sizeof(hdr));
+	sysex_write_str("{\"baud\":");
+	sysex_write_num(NRF54_UART_BAUD);
+	sysex_write_str(",\"tx\":");
+	sysex_write_num(nrf54_uart.tx_bytes);
+	sysex_write_str(",\"rx\":");
+	sysex_write_num(nrf54_uart.rx_bytes);
+	sysex_write_str(",\"packets\":");
+	sysex_write_num(nrf54_uart.packets);
+	sysex_write_str(",\"dropped\":");
+	sysex_write_num(nrf54_uart.dropped);
+	sysex_write_str(",\"listening\":");
+	sysex_write_num(nrf54_uart.listening);
+	sysex_write_str("}");
+	sysex_stream_write(trailer, sizeof(trailer));
+	midi_tx_commit();
+}
+#endif
+
 bool send_telemetry_tx = false;
 static void sysex_send_telemetry(void)
 {
@@ -881,7 +944,21 @@ static void sysex_send_state_dump(void)
 // Big enough for the largest thing that arrives, which is the rule
 // table: six bytes each and a command byte in front.
 //
-static uint8_t sysex_buf[1 + MAX_RULES * 6];
+// Named rather than taken with sizeof: handle_sysex_payload() has a
+// parameter of the same name, so sizeof inside it is the size of a
+// pointer.
+//
+//
+// The longest inbound SysEx payload the pedal will assemble.
+//
+// A rule table sized it - one command byte and six per rule - and the
+// radio's diagnostics now arrive this way too, so it has a floor with room
+// for one of those.  A longer message is dropped whole, and silently as
+// far as the sender can tell.
+//
+#define SYSEX_BUF_MAX	((1 + MAX_RULES * 6) > 192 ? (1 + MAX_RULES * 6) : 192)
+
+static uint8_t sysex_buf[SYSEX_BUF_MAX];
 static int sysex_len = 0;
 static bool in_sysex = false;
 static bool sysex_over = false;
@@ -976,6 +1053,114 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 	} else if (cmd == 0x0b) { // Telemetry Request
 
 		send_telemetry_tx = true;
+
+#ifdef NRF54_SWDIO
+	} else if (cmd == 0x0f) { // Radio link - bringup only
+
+		send_radio_tx = true;
+
+	} else if (cmd == 0x06) {
+		//
+		// The pairing window: 01 opens it, 00 closes it, and the
+		// command on its own asks without changing anything.
+		//
+		// No duration is taken.  How long it stays open is the
+		// pedal's business, because the pedal is the thing that has
+		// to show it and time it.
+		//
+		// Either transport may change it, and over the air that is
+		// not the hole it looks like: the characteristic requires a
+		// bond made with Secure Connections, so anything that can
+		// send this was let in through a window somebody already had
+		// to open.  A device trusted enough to edit every parameter
+		// is trusted enough to introduce the next one.
+		//
+		if (sysex_len >= 2) {
+			bool want = sysex_buf[1] != 0;
+
+			nrf54_pairing = want;
+			nrf54_pairing_until =
+				to_ms_since_boot(get_absolute_time()) +
+				NRF54_PAIRING_MS;
+			nrf54_pairing_tell(want);
+		}
+		sysex_send_pairing = true;
+
+	} else if (cmd == 0x07 && !sysex_from_radio) {
+		//
+		// Forget every paired device.  The radio holds the keys, so
+		// this only passes the word along; the radio's own reply
+		// carries the count afterwards.
+		//
+		// Over the cable only, and for two reasons that happen to
+		// agree.  It is destructive over the air in the plainest
+		// way - it drops the key of the link carrying the request,
+		// and without a cable there is no way back - and a stranger
+		// should not be able to wipe what a pedal is paired to.
+		//
+		nrf54_forget_bonds();
+
+	} else if (cmd == 0x18 && sysex_from_radio) {
+		//
+		// The radio bonded with somebody.  The window has done what
+		// it was opened for, so close it rather than leave it open
+		// for whoever is next.
+		//
+		nrf54_pairing = false;
+		nrf54_pairing_tell(false);
+		sysex_send_pairing = true;
+
+	} else if (cmd == 0x16 && sysex_from_radio && sysex_len >= 2) {
+		//
+		// The one thing in the radio's range that is addressed to
+		// the pedal: whether anything past the radio has asked to
+		// be sent MIDI.  Consumed rather than forwarded - the app
+		// is the subscriber and does not need telling what it just
+		// did.
+		//
+		nrf54_uart.listening = sysex_buf[1] != 0;
+
+	} else if (cmd == 0x19 && sysex_from_radio) {
+		//
+		// Forgetting a key is the radio's own command, and this is
+		// the one of those the pedal will not pass on from over the
+		// air - the same rule 0x07 above follows, which would
+		// otherwise be sidestepped by addressing the radio
+		// directly.
+		//
+
+	} else if (cmd >= 0x10 && cmd <= 0x1f) {
+		//
+		// Addressed to the radio rather than to the pedal: a
+		// scan, what a scan found, and what it is paired with.  The
+		// pedal is the wire between the app and the radio and reads
+		// almost none of it.
+		//
+		// Which way it goes is the only decision here, and it is
+		// the one thing the message itself does not say.
+		//
+		uint8_t msg[3 + SYSEX_BUF_MAX];
+		size_t n = 0;
+
+		msg[n++] = 0xF0;
+		msg[n++] = 0x7D;
+		for (size_t i = 0; i < sysex_len && n < sizeof(msg) - 1; i++)
+			msg[n++] = sysex_buf[i];
+		msg[n++] = 0xF7;
+
+		if (sysex_from_radio) {
+			//
+			// midi_tx_bytes() only adds to a pending payload;
+			// it takes a transaction around it to become a
+			// message anyone will send.
+			//
+			sysex_tx_start();
+			sysex_stream_write(msg, n);
+			midi_tx_commit();
+		} else {
+			nrf54_uart_write(msg, n);
+		}
+#endif
 
 #ifdef EXP_TIP_GPIO
 	} else if (cmd == 0x0e) { // Expression jack probe - bringup only
@@ -1072,7 +1257,7 @@ bool handle_midi_packet(const uint8_t packet[4])
 			} else if (in_sysex) {
 				if (sysex_len == 0 && b == 0x7D) {
 					// Consume header 7D
-				} else if (sysex_len < sizeof(sysex_buf)) {
+				} else if (sysex_len < SYSEX_BUF_MAX) {
 					sysex_buf[sysex_len++] = b;
 				} else {
 					sysex_over = true;

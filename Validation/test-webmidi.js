@@ -234,12 +234,14 @@ const src = fs.readFileSync(effectsJs, 'utf8') + '\n'
           // sendSysex() drops everything while nothing is connected, so
           // watching what the app sends means giving it somewhere to
           // send to - and taking it away again, because a send arms a
-          // one-second diagnostic timer that would hold node open.
+          // one-second diagnostic timer, and asking for the schema
+          // arms a retry - either would hold node open.
           //
           + `;globalThis.__app.el = (key) => ccToElementMap.get(key);`
           + `;globalThis.__app.tap = (fn) => {`
           + `   midiOutput = fn ? { send: fn } : null;`
           + `   if (!fn && diagnosticTimeout) clearTimeout(diagnosticTimeout);`
+          + `   if (!fn) schemaDone();`
           + ` };`;
 
 //

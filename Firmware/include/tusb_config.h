@@ -37,6 +37,24 @@
 #endif
 
 //
+// The debug channel: a serial port on the host and nothing else.
+//
+// It carries what cannot go over MIDI - the radio's diagnostics, and a
+// trace of the link to it.  MIDI is the wrong place for both: it has to
+// stay valid MIDI, it queues behind a 36 kB schema, and the pedal's
+// inbound SysEx buffer caps a message at 192 bytes.
+//
+// Nothing is read from it, so the receive fifo is the smallest tinyusb
+// will take.  The transmit fifo is what absorbs a burst between passes of
+// the main loop; when it fills the bytes are dropped and counted, because
+// a debug channel that can hold anything up is worse than no channel.
+//
+#define CFG_TUD_CDC			1
+#define CFG_TUD_CDC_RX_BUFSIZE		64
+#define CFG_TUD_CDC_TX_BUFSIZE		2048
+#define CFG_TUD_CDC_EP_BUFSIZE		64
+
+//
 // One sample more than nominal, and the extra one is the whole point.
 //
 // This is an asynchronous capture endpoint: the pedal samples on its own

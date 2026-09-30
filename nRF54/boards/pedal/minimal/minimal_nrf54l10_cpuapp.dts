@@ -9,8 +9,12 @@
 	model = "Guitar pedal, minimal board, nRF54L10";
 
 	chosen {
-		zephyr,console = &uart30;
-		zephyr,shell-uart = &uart30;
+		/*
+		 * uart30 carries MIDI and has no console on it, so it is
+		 * named here rather than as zephyr,console.  There is no
+		 * console anywhere - prj.conf says why.
+		 */
+		pedal,midi-uart = &uart30;
 		zephyr,flash-controller = &rram_controller;
 		zephyr,flash = &cpuapp_rram;
 		zephyr,sram = &cpuapp_sram;

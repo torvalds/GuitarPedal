@@ -43,6 +43,7 @@
             <hr>
             <button id="update-app-btn" role="menuitem">⬇️&nbsp;&nbsp;Update App</button>
             <button id="open-bindings-btn" role="menuitem">🎛️&nbsp;&nbsp;Physical Controls…</button>
+            <button id="open-wireless-btn" role="menuitem">📡&nbsp;&nbsp;Wireless Controller…</button>
             <button id="open-settings-btn" role="menuitem">🔌&nbsp;&nbsp;MIDI Connection…</button>
             <hr>
             <button id="global-program-btn" class="danger-item" role="menuitem">⚠️&nbsp;&nbsp;Reboot to Programming Mode</button>
@@ -160,6 +161,41 @@
         <div class="menu-section">
           <div id="bindings-rows"></div>
           <p class="menu-hint" id="bindings-hint">Not connected.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Everything Bluetooth: who may pair with this pedal, who already
+         has, and picking a footswitch out of what is advertising.  One
+         panel because they are one subject - binding a controller is a
+         pairing, and it needs the window open like anything else. -->
+    <div id="wireless-panel" class="glass-panel dialog-panel hidden" role="dialog" aria-modal="true">
+      <div class="panel-header">
+        <h2>Bluetooth</h2>
+        <button id="close-wireless" class="action-btn" title="Close">✕</button>
+      </div>
+      <div class="dialog-body">
+        <div class="menu-section">
+          <h3>Pairing</h3>
+          <button id="pair-btn" class="action-btn wide-btn">Allow a new device</button>
+          <p class="menu-hint" id="pair-hint">Not connected.</p>
+        </div>
+
+        <div class="menu-section">
+          <h3>Wireless controller</h3>
+          <button id="scan-btn" class="action-btn wide-btn">Scan</button>
+          <div id="scan-rows"></div>
+          <p class="menu-hint" id="wireless-hint">Not connected.</p>
+        </div>
+
+        <!-- Last, and behind a confirmation.  It drops every key the
+             pedal holds, which includes the one this page may be talking
+             over. -->
+        <div class="menu-section">
+          <h3>Paired devices</h3>
+          <div id="bond-rows"></div>
+          <button id="forget-btn" class="action-btn wide-btn danger">Forget all paired devices</button>
+          <p class="menu-hint" id="forget-hint">Not connected.</p>
         </div>
       </div>
     </div>

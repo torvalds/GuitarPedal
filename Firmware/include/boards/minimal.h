@@ -112,6 +112,18 @@
 #define NRF54_UART_FUNCSEL	2
 
 //
+// 1 Mbit, 8N1, both directions flow-controlled.
+//
+// The same number is set on the nRF54 side, in 'current-speed' in
+// nRF54/boards/pedal/minimal/*.dts, and nothing checks that the two
+// agree.  Change one, change the other.
+//
+// This is the top of UARTE30's range rather than a comfortable setting,
+// so it is the first thing to lower if the link turns out to be flaky.
+//
+#define NRF54_UART_BAUD		1000000
+
+//
 // The audio link, which nothing drives yet.
 //
 // Two constraints meet on these four pins and one arrangement satisfies

@@ -3,12 +3,27 @@ const SYSEX_CMD = {
     RES_SCHEMA: 0x02,
     PARAM_UPDATE: 0x03,
     SAVE_SCENE: 0x04,
+    PAIRING: 0x06,
+    FORGET: 0x07,
     REQ_STATE: 0x05,
     ROUTING_ORDER: 0x08,
     DIAGNOSTIC: 0x09,
     IDENTITY: 0x0a,
     TELEMETRY: 0x0b,
-    EXP_PROBE: 0x0e
+    EXP_PROBE: 0x0e,
+
+    //
+    // 0x10-0x1f are the radio's, not the pedal's.  The pedal forwards
+    // them between USB and the radio without reading any of it.
+    //
+    SCAN: 0x10,
+    BIND: 0x11,
+    SCAN_FOUND: 0x12,
+    SCAN_DONE: 0x13,
+    FORGET_ONE: 0x19,
+    BONDS: 0x1a,
+    BOND: 0x1b,
+    BONDS_END: 0x1c
 };
 
 //
@@ -23,6 +38,15 @@ const EXP_READINGS = 7;
 // from the pedal - which ones exist depends on the board and on what is
 // in its expression jack, so it is not ours to know.
 //
+//
+// What the last scan listed, and which of them we asked the radio to
+// connect to.  Cleared when a scan starts so the list on screen is
+// always one pass rather than everything ever seen.
+//
+let scanDevices = [];
+let scanRunning = false;
+let boundAddr = null;
+
 const SYSEX_SET_BINDING = 0x0c;
 const SYSEX_BINDINGS = 0x0d;
 
@@ -864,6 +888,24 @@ function updateMidiState() {
                 midiInput.onmidimessage = null;
             midiInput = foundInput;
             midiInput.onmidimessage = handleMidiMessage;
+
+            //
+            // A different port is a different pedal until it says
+            // otherwise, so the last one's schema goes.
+            //
+            // Keeping it puts controls on screen that belong to
+            // something else, and every one of them writes to a pot by
+            // index - so a slider would reach whatever happens to be at
+            // that index on the pedal now.  Worse, a port that never
+            // answers leaves them there, and the app looks like it is
+            // working: the way to tell a schema that arrived from one
+            // that was already on screen is that there is no way to
+            // tell, which makes a Bluetooth pedal look fine because it
+            // was plugged in over USB a minute ago.
+            //
+            PEDAL_EFFECTS = [];
+            effectIdMap.clear();
+            renderUI();
         }
         midiOutput = foundOutput;
 
@@ -883,9 +925,10 @@ function updateMidiState() {
         // Who is this, then what does it have
         sendSysex([SYSEX_CMD.IDENTITY]);
         updateTelemetryPolling();
-        sendSysex([SYSEX_CMD.REQ_SCHEMA]);
+        askForSchema();
         sendSysex([SYSEX_CMD.DIAGNOSTIC]); // Request diagnostic status
     } else {
+        schemaDone();
         midiInput = null;
         midiOutput = null;
         appTitleEl.className = "title-disconnected";
@@ -983,6 +1026,60 @@ if (updateAppBtn) {
 
 
 let diagnosticTimeout = null;
+//
+// Ask for the schema until it arrives.
+//
+// A single lost reply leaves the app connected and useless: everything a
+// person can touch is built from the schema, so without it there is a
+// title bar saying "Connected" and nothing else, and no way out but
+// picking another port and coming back.
+//
+// It is asked for at the worst moment on purpose - the instant a port is
+// selected - because there is nothing to show until it arrives.  Over
+// Bluetooth that is a connection seconds old, with its subscription just
+// written and its connection parameters not yet negotiated, carrying the
+// largest message the pedal ever sends.
+//
+// Bounded, because a pedal that cannot answer 0x01 at all is a real thing
+// to be - firmware older than the schema - and asking one for ever would
+// be noise with nobody to read it.
+//
+const SCHEMA_TRIES = 6;
+const SCHEMA_RETRY_MS = 1500;
+let schemaWanted = false;
+let schemaTries = 0;
+let schemaTimer = null;
+
+function askForSchema(again) {
+    if (!again) {
+        schemaWanted = true;
+        schemaTries = 0;
+    }
+    if (schemaTimer) clearTimeout(schemaTimer);
+    schemaTimer = null;
+
+    if (!schemaWanted || !midiOutput) return;
+    if (schemaTries >= SCHEMA_TRIES) {
+        console.error('[WebMIDI] no schema after ' + SCHEMA_TRIES
+                      + ' requests; the pedal is connected but has told us'
+                      + ' nothing about itself');
+        return;
+    }
+
+    schemaTries++;
+    sendSysex([SYSEX_CMD.REQ_SCHEMA]);
+    schemaTimer = setTimeout(() => askForSchema(true), SCHEMA_RETRY_MS);
+}
+
+//
+// It arrived, or there is nobody to ask any more.  Either way stop.
+//
+function schemaDone() {
+    schemaWanted = false;
+    if (schemaTimer) clearTimeout(schemaTimer);
+    schemaTimer = null;
+}
+
 function scheduleDiagnostic() {
     if (diagnosticTimeout) clearTimeout(diagnosticTimeout);
     diagnosticTimeout = setTimeout(() => {
@@ -1009,6 +1106,12 @@ function sendSysex(data) {
 }
 
 let PEDAL_EFFECTS = [];
+
+// Whether the pedal is currently willing to be paired with.
+let pairingOpen = false;
+
+// What the radio says it holds a key for, as it answers.
+let bondRows = [];
 
 //
 // In / Out / Merge, declared once by the pedal rather than per effect.
@@ -1128,6 +1231,7 @@ function handleSysex(data) {
                     });
                 }
 
+                schemaDone();
                 effectIdMap.clear();
                 PEDAL_EFFECTS.forEach((e, idx) => effectIdMap.set(e.id, idx));
                 renderUI();
@@ -1170,6 +1274,63 @@ function handleSysex(data) {
             const at = 3 + 1 + 2 * EXP_READINGS;
             if (expProbeSaw && data.length > at + 1)
                 expProbeSaw(data[at], data[at + 1]);
+            break;
+        }
+
+        //
+        // Whether the pedal is willing to be paired with.  It says so
+        // whenever the answer changes, which includes the window closing
+        // by itself after a minute and a pairing having used it up, so
+        // nothing here has to poll or guess.
+        //
+        case SYSEX_CMD.PAIRING:
+            pairingOpen = data.length > 3 && data[3] !== 0;
+            renderPairing();
+            break;
+
+        //
+        // One key the radio holds.  The address arrives as a scan result's
+        // does, so it decodes the same way and can be handed straight back
+        // as something to forget.
+        //
+        case SYSEX_CMD.BOND: {
+            const dev = decodeAddress(data);
+
+            if (dev)
+                bondRows.push(dev);
+            break;
+        }
+
+        case SYSEX_CMD.BONDS_END:
+            renderPairing();
+            break;
+
+        //
+        // One device the radio saw.  The body is the address type, then
+        // the six address bytes a nibble at a time most significant
+        // first, then whatever name it advertised.
+        //
+        case SYSEX_CMD.SCAN_FOUND: {
+            if (data.length < 3 + 13 + 1)
+                break;
+
+            const dev = decodeAddress(data);
+
+            if (!dev)
+                break;
+
+            for (let i = 3 + 13; i < data.length - 1; i++)
+                dev.name += String.fromCharCode(data[i]);
+
+            rememberName(dev.text, dev.name);
+            scanDevices.push(dev);
+            renderScan();
+            break;
+        }
+
+        case SYSEX_CMD.SCAN_DONE: {
+            scanRunning = false;
+            renderScan();
             break;
         }
 
@@ -3090,6 +3251,310 @@ function renderRule(r, i) {
     return row;
 }
 
+//
+// The scan list.
+//
+// The radio reports what advertised, and the player picks their
+// footswitch out of it by name.  Nothing knows what a listed device is,
+// because an advertisement does not say whether a device speaks MIDI.
+//
+function renderScan() {
+    const host = document.getElementById('scan-rows');
+    const hint = document.getElementById('wireless-hint');
+    const btn = document.getElementById('scan-btn');
+    const haveRadio = !!(pedalIdentity && pedalIdentity.found &&
+                         pedalIdentity.found.radio_idcode);
+
+    if (btn) {
+        btn.disabled = !haveRadio;
+        btn.textContent = scanRunning ? 'Stop scanning' : 'Scan';
+    }
+
+    if (hint) {
+        if (!pedalIdentity)
+            hint.textContent = 'Not connected.';
+        else if (!haveRadio)
+            hint.textContent = 'This pedal has no radio.';
+        else if (scanRunning)
+            hint.textContent = 'Looking for up to thirty seconds. Some ' +
+                'controllers advertise slowly. Stop as soon as yours ' +
+                'appears.';
+        else if (!scanDevices.length)
+            hint.textContent = 'Switch the controller on and scan. It has ' +
+                'to be advertising, which on most of them means not ' +
+                'already connected to a phone.';
+        else
+            hint.textContent = 'Pick your controller by name. Anything ' +
+                'advertising nearby is listed, so most of these are not ' +
+                'yours.';
+    }
+
+    if (!host)
+        return;
+    host.innerHTML = '';
+
+    scanDevices.forEach(dev => {
+        const row = document.createElement('button');
+
+        row.className = 'scan-row';
+        if (boundAddr === dev.text)
+            row.classList.add('bound');
+
+        const left = document.createElement('div');
+        const name = document.createElement('div');
+
+        name.className = 'scan-name';
+        name.textContent = dev.name || '(no name)';
+
+        const addr = document.createElement('div');
+
+        addr.className = 'scan-addr';
+        addr.textContent = dev.text;
+
+        left.appendChild(name);
+        left.appendChild(addr);
+        row.appendChild(left);
+
+        if (boundAddr === dev.text) {
+            const mark = document.createElement('span');
+
+            mark.textContent = '\u2713';
+            row.appendChild(mark);
+        }
+
+        row.addEventListener('click', () => bindTo(dev));
+        host.appendChild(row);
+    });
+}
+
+//
+// Is the pedal reachable over the cable rather than over the air?
+//
+// Forgetting keys is refused by the pedal itself unless it arrives over
+// USB, because it drops the key of the link carrying the request - so
+// asking over Bluetooth is asking to be cut off with no way back.  This
+// is the same rule said in the interface, where it can be explained.
+//
+function onTheCable() {
+    return !!midiOutput && midiOutput !== blePedal && midiOutput !== demoPedal;
+}
+
+//
+// The name a device was last seen advertising, kept by address.
+//
+// The radio cannot help here.  It stores a key against an address and
+// never knew what the peer was called - and for a phone or a laptop there
+// is no name to know, because a host that pairs with the pedal does not
+// introduce itself.  A name exists only for something the radio scanned,
+// which means a controller, and the scan is in front of this app when it
+// happens.
+//
+// So it is remembered here, and it is a label rather than a fact: another
+// browser has its own, and a controller paired from a phone shows as an
+// address on a laptop.  Worth it anyway - 'FootCtrlPlus' is what somebody
+// is looking for and 9E:36:5E:45:BE:B1 is not.
+//
+function rememberName(addr, name) {
+    if (!addr || !name)
+        return;
+    try {
+        localStorage.setItem('ble.name.' + addr, name);
+    } catch (err) {
+        /* then names last as long as the page does, which will do */
+    }
+}
+
+function rememberedName(addr) {
+    try {
+        return localStorage.getItem('ble.name.' + addr) || '';
+    } catch (err) {
+        return '';
+    }
+}
+
+//
+// The address out of a message that carries one.
+//
+// A scan result and a stored key are the same thirteen bytes - type, then
+// six address bytes a nibble at a time - so both come through here and
+// either can be handed back as something to bind or forget.
+//
+function decodeAddress(data) {
+    if (data.length < 3 + 13 + 1)
+        return null;
+
+    const bytes = [];
+
+    for (let i = 0; i < 6; i++)
+        bytes.push((data[4 + 2 * i] << 4) | data[5 + 2 * i]);
+
+    return {
+        type: data[3],
+        bytes,
+        // bt_addr_le_t holds the address least significant byte first,
+        // and people read it the other way round.
+        text: bytes.slice().reverse()
+              .map(b => b.toString(16).padStart(2, '0').toUpperCase())
+              .join(':'),
+        name: ''
+    };
+}
+
+function renderPairing() {
+    const btn = document.getElementById('pair-btn');
+    const hint = document.getElementById('pair-hint');
+    const forget = document.getElementById('forget-btn');
+    const forgetHint = document.getElementById('forget-hint');
+    const haveRadio = !!(pedalIdentity && pedalIdentity.found &&
+                         pedalIdentity.found.radio_idcode);
+
+    if (btn) {
+        btn.disabled = !haveRadio;
+        btn.textContent = pairingOpen ? 'Stop allowing new devices'
+                                      : 'Allow a new device';
+    }
+
+    if (hint) {
+        if (!pedalIdentity)
+            hint.textContent = 'Not connected.';
+        else if (!haveRadio)
+            hint.textContent = 'This pedal has no radio.';
+        else if (pairingOpen)
+            hint.textContent = 'The pedal is breathing yellow and will ' +
+                'accept one new device. It stops on its own after a ' +
+                'minute, or as soon as something pairs.';
+        else
+            hint.textContent = 'A phone or laptop can only pair while this ' +
+                'is open, and so can a wireless controller. Nothing in ' +
+                'range can pair without it.';
+    }
+
+    const host = document.getElementById('bond-rows');
+
+    if (host) {
+        host.innerHTML = '';
+        bondRows.forEach(dev => {
+            const row = document.createElement('div');
+
+            row.className = 'scan-row';
+
+            const left = document.createElement('div');
+            const what = document.createElement('div');
+
+            //
+            // Whatever it was last seen advertising as, from this scan or
+            // a remembered one.  A host that paired with the pedal never
+            // had a name to remember, so those stay as an address.
+            //
+            const seen = scanDevices.find(d => d.text === dev.text);
+            const name = (seen && seen.name) || rememberedName(dev.text);
+
+            what.className = 'scan-name';
+            what.textContent = name || 'Paired device';
+
+            const addr = document.createElement('div');
+
+            addr.className = 'scan-addr';
+            addr.textContent = dev.text;
+
+            left.appendChild(what);
+            left.appendChild(addr);
+            row.appendChild(left);
+
+            const drop = document.createElement('button');
+
+            drop.className = 'action-btn';
+            drop.textContent = '\u2715';
+            drop.title = 'Forget this device';
+            drop.disabled = !onTheCable();
+            drop.addEventListener('click', () => forgetOne(dev));
+            row.appendChild(drop);
+
+            host.appendChild(row);
+        });
+    }
+
+    if (forget)
+        forget.disabled = !haveRadio || !onTheCable() || !bondRows.length;
+
+    if (forgetHint) {
+        if (!pedalIdentity)
+            forgetHint.textContent = 'Not connected.';
+        else if (!haveRadio)
+            forgetHint.textContent = 'This pedal has no radio.';
+        else if (!onTheCable())
+            forgetHint.textContent = 'Only over the USB cable. Forgetting ' +
+                'a key drops the one this page may be talking over, and ' +
+                'without a cable there would be no way back.';
+        else if (!bondRows.length)
+            forgetHint.textContent = 'Nothing is paired with this pedal.';
+        else
+            forgetHint.textContent = 'Forget one with its \u2715, or all of ' +
+                'them at once. Each has to pair again afterwards.';
+    }
+}
+
+function forgetOne(dev) {
+    if (!midiOutput)
+        return;
+    sendSysex([SYSEX_CMD.FORGET_ONE, dev.type,
+               ...dev.bytes.flatMap(b => [(b >> 4) & 0x0f, b & 0x0f])]);
+    askBonds();
+}
+
+//
+// Ask what is paired.  The answer arrives as one message each and an end,
+// so the list is cleared here and drawn when the end comes.
+//
+function askBonds() {
+    if (!midiOutput)
+        return;
+    bondRows = [];
+    sendSysex([SYSEX_CMD.BONDS]);
+}
+
+//
+// Look, or stop looking.
+//
+// Stopping reports what has been seen rather than throwing it away, so
+// pressing it the moment a controller appears is the ordinary way to use
+// it.  Thirty seconds is the limit for when nobody does.
+//
+function toggleScan() {
+    if (!midiOutput)
+        return;
+
+    if (scanRunning) {
+        sendSysex([SYSEX_CMD.SCAN, 0]);
+        return;
+    }
+
+    scanDevices = [];
+    scanRunning = true;
+    renderScan();
+    sendSysex([SYSEX_CMD.SCAN, 1]);
+}
+
+function bindTo(dev) {
+    if (!midiOutput)
+        return;
+
+    //
+    // Binding a controller is a pairing, so it needs the window open the
+    // same as anything else.  Opened here rather than asked for, because
+    // picking a controller out of a list is already saying yes to it -
+    // being made to press a second button first would be a puzzle, not a
+    // safeguard.
+    //
+    if (!pairingOpen)
+        sendSysex([SYSEX_CMD.PAIRING, 1]);
+
+    boundAddr = dev.text;
+    renderScan();
+    sendSysex([SYSEX_CMD.BIND, dev.type,
+               ...dev.bytes.flatMap(b => [(b >> 4) & 0x0f, b & 0x0f])]);
+}
+
 function renderBindings() {
     const host = document.getElementById('bindings-rows');
     const hint = document.getElementById('bindings-hint');
@@ -4772,7 +5237,14 @@ appTitleEl.addEventListener('click', () => {
         else
             selectedOutputId = value;
 
-        if (value === BLE_PEDAL_ID && !blePedal.connected) {
+        //
+        // Connect when there is nothing connected, and again when what is
+        // connected has never delivered anything: 'rx' counts
+        // notifications, and zero of them after a connection means the
+        // browser subscribed to nothing.  Picking Bluetooth a second time
+        // is then the only way to ask again.
+        //
+        if (value === BLE_PEDAL_ID && (!blePedal.connected || !blePedal.rx)) {
             //
             // Set before connecting: the device can go away during the
             // handshake, and the handler is what puts the menu back.
@@ -4899,6 +5371,7 @@ appTitleEl.addEventListener('click', () => {
         if (document.getElementById('panel-backdrop')) document.getElementById('panel-backdrop').classList.add('hidden');
         if (document.getElementById('settings-panel')) document.getElementById('settings-panel').classList.add('hidden');
         if (document.getElementById('bindings-panel')) document.getElementById('bindings-panel').classList.add('hidden');
+        if (document.getElementById('wireless-panel')) document.getElementById('wireless-panel').classList.add('hidden');
         closeMenu();
     }
 
@@ -5015,6 +5488,69 @@ appTitleEl.addEventListener('click', () => {
     const closeBindingsBtn = document.getElementById('close-bindings');
     if (closeBindingsBtn)
         closeBindingsBtn.addEventListener('click', closeAllPanels);
+
+    const openWirelessBtn = document.getElementById('open-wireless-btn');
+    if (openWirelessBtn) {
+        openWirelessBtn.addEventListener('click', () => {
+            closeAllPanels();
+            renderScan();
+            renderPairing();
+            //
+            // Ask rather than assume.  The window closes on its own after
+            // a minute and when something pairs, so what was true last
+            // time this panel was open usually is not.
+            //
+            sendSysex([SYSEX_CMD.PAIRING]);
+            askBonds();
+            document.getElementById('wireless-panel').classList.remove('hidden');
+            if (backdrop) backdrop.classList.remove('hidden');
+        });
+    }
+
+    const closeWirelessBtn = document.getElementById('close-wireless');
+    if (closeWirelessBtn)
+        closeWirelessBtn.addEventListener('click', closeAllPanels);
+
+    const scanBtn = document.getElementById('scan-btn');
+    if (scanBtn)
+        scanBtn.addEventListener('click', toggleScan);
+
+    const pairBtn = document.getElementById('pair-btn');
+    if (pairBtn) {
+        pairBtn.addEventListener('click', () => {
+            if (!midiOutput) {
+                showButtonError(pairBtn, 'Not Connected');
+                return;
+            }
+            //
+            // Asked for, not assumed: the pedal says what it did and this
+            // waits to be told rather than drawing the answer it wanted.
+            // A window that failed to open would otherwise look open.
+            //
+            sendSysex([SYSEX_CMD.PAIRING, pairingOpen ? 0 : 1]);
+        });
+    }
+
+    const forgetBtn = document.getElementById('forget-btn');
+    if (forgetBtn) {
+        forgetBtn.addEventListener('click', () => {
+            if (!midiOutput) {
+                showButtonError(forgetBtn, 'Not Connected');
+                return;
+            }
+            //
+            // A confirmation, because nothing here can be undone and
+            // every paired device has to be walked through pairing again
+            // afterwards - which for a footswitch means finding it in a
+            // scan for a second time.
+            //
+            if (!window.confirm('Forget every device this pedal is paired ' +
+                                'with?\n\nPhones, laptops and wireless ' +
+                                'controllers will all have to pair again.'))
+                return;
+            sendSysex([SYSEX_CMD.FORGET]);
+        });
+    }
 
     const globalUnrouteBtn = document.getElementById('global-unroute-btn');
     if (globalUnrouteBtn) {

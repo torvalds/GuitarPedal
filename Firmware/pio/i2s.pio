@@ -98,9 +98,10 @@ static inline void i2s_tx_program_init(PIO pio, uint sm, uint offset,
 	// Auto-pull, shift left (MSB first), 32 bits
 	sm_config_set_out_shift(&c, false, true, 32);
 
-	// Load and run the program
+	// Loaded but not started: the caller enables every i2s state
+	// machine at once, so that two links driven from this one PIO
+	// share a starting edge and not merely a rate.
 	pio_sm_init(pio, sm, offset + i2s_tx_offset_start_tx, &c);
-	pio_sm_set_enabled(pio, sm, true);
 }
 %}
 
@@ -142,8 +143,7 @@ static inline void i2s_rx_program_init(PIO pio, uint sm, uint offset,
 	// Auto-push, shift left (MSB first), 32 bits
 	sm_config_set_in_shift(&c, false, true, 32);
 
-	// Load and run the program
+	// Loaded but not started; see i2s_tx_program_init() above.
 	pio_sm_init(pio, sm, offset + i2s_rx_offset_start_rx, &c);
-	pio_sm_set_enabled(pio, sm, true);
 }
 %}

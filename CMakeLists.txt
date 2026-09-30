@@ -469,6 +469,10 @@ target_sources(${tgt} PRIVATE
 	# others, so it is listed unconditionally.
 	#
 	Firmware/tinyusb/src/class/vendor/vendor_device.c
+	#
+	# The debug serial port, which every board has.
+	#
+	Firmware/tinyusb/src/class/cdc/cdc_device.c
 	Firmware/tinyusb/src/portable/raspberrypi/rp2040/dcd_rp2040.c
 	#
 	# Compiled in rather than linked as pico_usb_reset, which would

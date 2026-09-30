@@ -1603,3 +1603,76 @@ body.fullscreen-open {
 .rule-row.inherited {
   opacity: 0.55;
 }
+
+/*
+ * The scan list.  One row per device the radio saw, and the name is
+ * what a person picks by - the address is underneath it because two
+ * cheap pedals can ship with the same name and only one of them is on
+ * the floor in front of you.
+ */
+/*
+ * A button that spans the panel.
+ *
+ * .action-btn is a 32px circle, which is right for the one that closes a
+ * panel and wrong for everything else: widening it to 100% and leaving
+ * border-radius at 50% would make a stretched ellipse.  So this sets the
+ * shape as well as the width.
+ */
+.wide-btn {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+/*
+ * A wide button that throws something away.  The colour is the whole of
+ * the warning that is always on screen; the confirmation is the rest of
+ * it and only appears when it is pressed.
+ */
+.wide-btn.danger {
+  color: var(--danger);
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+.wide-btn.danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.scan-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  background: #1a1d23;
+  color: var(--text-main);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 9px 10px;
+  margin-bottom: 6px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.scan-row:hover {
+  border-color: var(--accent, #6ea8fe);
+}
+
+.scan-row.bound {
+  border-color: var(--accent, #6ea8fe);
+}
+
+.scan-name {
+  font-size: 0.95rem;
+}
+
+.scan-addr {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: ui-monospace, monospace;
+}
