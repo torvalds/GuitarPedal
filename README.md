@@ -290,6 +290,11 @@ from anything I typed here.
    can also just be a clean boost when that's what you want.  The
    threshold reaches low enough to work on a quiet pickup with nothing
    in front of it.  [Measured](Documentation/effects/compressor.md).
+ - **Auto-Wah** - an envelope filter that sweeps a resonant filter with
+   the guitar's pick dynamics, by Jacky Mpoka.  Lowpass mode preserves low-end body while
+   sweeping harmonics (Mu-Tron III style); Bandpass mode isolates the
+   resonant peak for classic vocal wah (Crybaby style).  Sweeps up for
+   funk quack or down for synth sweeps.
  - **Boost**, with distortion.  I like this one.  Others may not.  Set
    the boost stupidly high and the level low, and instead of clipping at
    the level the signal *folds* back down, which gives you harmonics
