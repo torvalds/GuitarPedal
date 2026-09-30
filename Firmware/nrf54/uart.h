@@ -216,6 +216,20 @@ static void nrf54_pairing_tell(bool on)
 }
 
 //
+// Forget every Bluetooth key the radio holds.
+//
+// A peer cannot replace its own bond by asking - that would be an
+// address anybody can copy - so a host that has forgotten its side needs
+// the radio told, and the only thing that can tell it is a cable.
+//
+static void nrf54_forget_bonds(void)
+{
+	const uint8_t msg[] = { 0xF0, 0x7D, 0x19, 0xF7 };
+
+	nrf54_uart_write(msg, sizeof(msg));
+}
+
+//
 // Is the SysEx being handled right now one that arrived from the radio?
 //
 // handle_sysex_payload() is reached from both transports and the

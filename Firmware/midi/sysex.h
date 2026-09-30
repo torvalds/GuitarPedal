@@ -1079,6 +1079,20 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 		}
 		sysex_send_pairing = true;
 
+	} else if (cmd == 0x07 && !sysex_from_radio) {
+		//
+		// Forget every paired device.  The radio holds the keys, so
+		// this only passes the word along; the radio's own reply
+		// carries the count afterwards.
+		//
+		// Over the cable only, and for two reasons that happen to
+		// agree.  It is destructive over the air in the plainest
+		// way - it drops the key of the link carrying the request,
+		// and without a cable there is no way back - and a stranger
+		// should not be able to wipe what a pedal is paired to.
+		//
+		nrf54_forget_bonds();
+
 	} else if (cmd == 0x18 && sysex_from_radio) {
 		//
 		// The radio bonded with somebody.  The window has done what
@@ -1098,6 +1112,15 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 		// did.
 		//
 		nrf54_uart.listening = sysex_buf[1] != 0;
+
+	} else if (cmd == 0x19 && sysex_from_radio) {
+		//
+		// Forgetting a key is the radio's own command, and this is
+		// the one of those the pedal will not pass on from over the
+		// air - the same rule 0x07 above follows, which would
+		// otherwise be sidestepped by addressing the radio
+		// directly.
+		//
 
 	} else if (cmd >= 0x10 && cmd <= 0x1f) {
 		//

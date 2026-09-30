@@ -345,6 +345,7 @@ static void pack_sysex_end(void)
 #define RADIO_SYSEX_LISTENER	0x16	/* out: somebody is subscribed, or is not */
 #define RADIO_SYSEX_PAIRING	0x17	/* in:  the pedal has opened its window */
 #define RADIO_SYSEX_PAIRED	0x18	/* out: somebody bonded */
+#define RADIO_SYSEX_FORGET	0x19	/* in:  drop every key */
 #define RADIO_SYSEX_LAST	0x1f
 
 #define RADIO_SYSEX_BODY	96
@@ -580,6 +581,21 @@ static void radio_dispatch(uint8_t cmd, const uint8_t *arg, uint8_t len)
 		out.pairing = len >= 1 && arg[0];
 		break;
 
+	//
+	// Forget every key.
+	//
+	// Needed because a bond cannot be replaced by a peer that asks:
+	// BT_SMP_ALLOW_UNAUTH_OVERWRITE would allow that, and it is exactly
+	// what an attacker who copied the address would use, so the old key
+	// has to be deleted deliberately instead.  Deliberately means over
+	// USB, which is the only thing that can reach here.
+	//
+	// It is also the plain thing a player wants when a pedal has been
+	// paired with something they no longer have.
+	//
+	case RADIO_SYSEX_FORGET:
+		bt_unpair(BT_ID_DEFAULT, NULL);
+		break;
 #ifdef CONFIG_BT_OBSERVER
 	case RADIO_SYSEX_SCAN:
 		scan_start();
