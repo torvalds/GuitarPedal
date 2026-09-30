@@ -3250,8 +3250,8 @@ function renderScan() {
                          pedalIdentity.found.radio_idcode);
 
     if (btn) {
-        btn.disabled = !haveRadio || scanRunning;
-        btn.textContent = scanRunning ? 'Scanning\u2026' : 'Scan';
+        btn.disabled = !haveRadio;
+        btn.textContent = scanRunning ? 'Stop scanning' : 'Scan';
     }
 
     if (hint) {
@@ -3260,7 +3260,9 @@ function renderScan() {
         else if (!haveRadio)
             hint.textContent = 'This pedal has no radio.';
         else if (scanRunning)
-            hint.textContent = 'Looking for about six seconds.';
+            hint.textContent = 'Looking for up to thirty seconds. Some ' +
+                'controllers advertise slowly. Stop as soon as yours ' +
+                'appears.';
         else if (!scanDevices.length)
             hint.textContent = 'Switch the controller on and scan. It has ' +
                 'to be advertising, which on most of them means not ' +
@@ -3368,13 +3370,26 @@ function renderPairing() {
     }
 }
 
-function startScan() {
-    if (!midiOutput || scanRunning)
+//
+// Look, or stop looking.
+//
+// Stopping reports what has been seen rather than throwing it away, so
+// pressing it the moment a controller appears is the ordinary way to use
+// it.  Thirty seconds is the limit for when nobody does.
+//
+function toggleScan() {
+    if (!midiOutput)
         return;
+
+    if (scanRunning) {
+        sendSysex([SYSEX_CMD.SCAN, 0]);
+        return;
+    }
+
     scanDevices = [];
     scanRunning = true;
     renderScan();
-    sendSysex([SYSEX_CMD.SCAN]);
+    sendSysex([SYSEX_CMD.SCAN, 1]);
 }
 
 function bindTo(dev) {
@@ -5354,7 +5369,7 @@ appTitleEl.addEventListener('click', () => {
 
     const scanBtn = document.getElementById('scan-btn');
     if (scanBtn)
-        scanBtn.addEventListener('click', startScan);
+        scanBtn.addEventListener('click', toggleScan);
 
     const pairBtn = document.getElementById('pair-btn');
     if (pairBtn) {

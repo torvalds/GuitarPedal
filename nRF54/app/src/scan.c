@@ -17,7 +17,16 @@
 
 #ifdef CONFIG_BT_OBSERVER
 
-#define SCAN_SECONDS		6
+//
+// Long enough for the slow ones.
+//
+// Six seconds found a controller that was advertising briskly and missed
+// devices that were not: an advertising interval is the peer's business
+// and some of them are seconds apart.  Thirty is long enough to be worth
+// pressing once, and it can be stopped as soon as what you wanted shows
+// up - which is why the button says stop while it runs.
+//
+#define SCAN_SECONDS		30
 #define SCAN_MAX_SEEN		16
 
 /*
@@ -123,6 +132,23 @@ static void looking_done(struct k_work *work)
 	scan_done(nr_seen);
 }
 static K_WORK_DELAYABLE_DEFINE(look_work, looking_done);
+
+//
+// Stop now and report what has been seen so far.
+//
+// The same ending as running out of time, because there is only one:
+// whoever asked has what they wanted or has given up, and either way the
+// list is what it is.  Reusing looking_done() rather than repeating it is
+// what keeps the two from drifting.
+//
+void scan_stop(void)
+{
+	if (!running)
+		return;
+
+	k_work_cancel_delayable(&look_work);
+	looking_done(NULL);
+}
 
 void scan_start(void)
 {

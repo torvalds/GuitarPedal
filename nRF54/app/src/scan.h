@@ -20,6 +20,7 @@
 
 /* Start one pass.  Results arrive through the two below. */
 void scan_start(void);
+void scan_stop(void);
 
 /* Defined in midi.c: one device, once the pass is over. */
 void scan_found(const bt_addr_le_t *addr, const char *name);
@@ -30,6 +31,7 @@ void scan_done(unsigned int listed);
 #else
 
 static inline void scan_start(void) { }
+static inline void scan_stop(void) { }
 
 #endif /* CONFIG_BT_OBSERVER */
 

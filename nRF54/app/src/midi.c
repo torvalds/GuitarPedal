@@ -602,8 +602,16 @@ static void radio_dispatch(uint8_t cmd, const uint8_t *arg, uint8_t len)
 		bt_unpair(BT_ID_DEFAULT, NULL);
 		break;
 #ifdef CONFIG_BT_OBSERVER
+	//
+	// A bare 0x10, or 0x10 01, looks; 0x10 00 stops looking.  Stopping
+	// reports what was seen rather than throwing it away, so pressing it
+	// the moment a controller appears is the ordinary way to use it.
+	//
 	case RADIO_SYSEX_SCAN:
-		scan_start();
+		if (len >= 1 && !arg[0])
+			scan_stop();
+		else
+			scan_start();
 		break;
 #endif
 #ifdef CONFIG_BT_CENTRAL
