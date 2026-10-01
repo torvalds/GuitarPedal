@@ -38,7 +38,9 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gatt.h>
+#include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/uuid.h>
+#include <zephyr/sys/byteorder.h>
 
 #include "midi.h"
 #include "scan.h"
@@ -412,7 +414,7 @@ static void pack_sysex_end(void)
 #define RADIO_SYSEX_BONDS_END	0x1c	/* out: that is all of them */
 #define RADIO_SYSEX_LAST	0x1f
 
-#define RADIO_SYSEX_BODY	96
+#define RADIO_SYSEX_BODY	184
 
 static void radio_sysex(const uint8_t *body, size_t len)
 {
@@ -548,6 +550,36 @@ static bool address_from(const uint8_t *arg, uint8_t len, bt_addr_le_t *addr)
 	return true;
 }
 
+/*
+ * The signal strength of the connection MIDI goes to, in dBm, as this
+ * end's controller measures it.  0 when there is none.
+ */
+static int midi_rssi(void)
+{
+	struct bt_conn *conn = midi_get();
+	struct bt_hci_cp_read_rssi *cp;
+	struct net_buf *buf, *rsp = NULL;
+	uint16_t handle;
+	int rssi = 0;
+
+	if (!conn)
+		return 0;
+
+	buf = bt_hci_get_conn_handle(conn, &handle) ? NULL :
+	      bt_hci_cmd_alloc(K_MSEC(50));
+	if (buf) {
+		cp = net_buf_add(buf, sizeof(*cp));
+		cp->handle = sys_cpu_to_le16(handle);
+		if (!bt_hci_cmd_send_sync(BT_HCI_OP_READ_RSSI, buf, &rsp)) {
+			rssi = ((struct bt_hci_rp_read_rssi *)rsp->data)->rssi;
+			net_buf_unref(rsp);
+		}
+	}
+
+	bt_conn_unref(conn);
+	return rssi;
+}
+
 static void stats_send(void)
 {
 	uint8_t body[1 + RADIO_SYSEX_BODY];
@@ -562,7 +594,8 @@ static void stats_send(void)
 	 * ns no slot, fl notify refused, e its error, r the pedal's
 	 * backlog here, s whether the pedal is being held off, ccn how
 	 * often a client asked to be sent anything, lo bytes the pedal
-	 * sent that there was no room for, bo keys stored.
+	 * sent that there was no room for, bo keys stored, rs how strongly
+	 * the host MIDI goes to is heard, in dBm.
 	 */
 	body[0] = RADIO_SYSEX_STATS;	/* not ASK: the pedal echoes what we
 					 * send back at us, and an answer that
@@ -571,12 +604,16 @@ static void stats_send(void)
 	n = snprintf((char *)body + 1, RADIO_SYSEX_BODY,
 		     "{\"f\":%u,\"o\":%u,\"p\":%u,\"nc\":%u,\"ns\":%u"
 		     ",\"fl\":%u,\"e\":%d,\"r\":%u,\"s\":%u"
-		     ",\"ccn\":%u,\"lo\":%u,\"bo\":%u}",
+		     ",\"ccn\":%u,\"lo\":%u,\"bo\":%u,\"rs\":%d}",
 		     out.fed, out.notified, out.sent, out.noconn, out.noslot,
 		     out.failed, out.err, midi_uart_backlog(),
 		     midi_uart_halted(), out.ccc_n, midi_uart_lost(),
-		     bonds());
+		     bonds(), midi_rssi());
 
+	/* Cut short, it would not parse; say so instead */
+	if (n >= RADIO_SYSEX_BODY)
+		n = snprintf((char *)body + 1, RADIO_SYSEX_BODY,
+			     "{\"truncated\":true}");
 	if (n > 0)
 		radio_sysex(body, 1 + (size_t)n);
 }
