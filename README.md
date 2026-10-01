@@ -101,6 +101,7 @@ builds a cut-down version without it), you can skip all that and just do
 ### Testing
 
 `Validation` has the test suite, and it's split by what it needs.
+Run the following commands from the `Validation` directory.
 
 ``make check`` runs the part that needs no hardware at all: the MIDI
 packetiser, whether the web app still loads and still draws the right
