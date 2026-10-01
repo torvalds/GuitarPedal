@@ -149,8 +149,8 @@ check-analysis: bench/bench
 #
 # It is the level under all of this - ngspice on a netlist, the only
 # thing here that is not our own arithmetic checking our own arithmetic -
-# but it reports rather than passes: the answer is six numbers between
-# 0.9 and 1.5 dB, and what those mean is a judgement about how much a
+# but it reports rather than passes: the answer is seven numbers between
+# 3.0 and 6.4 dB, and what those mean is a judgement about how much a
 # simplification gave up.  A check- target that cannot fail is worse than
 # no target, because it gets read as a green light.  Run it by hand:
 #

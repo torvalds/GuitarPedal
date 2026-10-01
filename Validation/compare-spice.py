@@ -66,7 +66,12 @@ REP = 6
 F0 = 220.0
 
 LADDER = (-66, -54, -42, -30, -24, -18, -12, -6, 0)
-LIN_HZ = (40, 80, 160, 320, 640, 1250, 2500, 5000)
+# To 20480, which is where the rest of the tree puts the top of the
+# band - the EQ's frequency pots, and the octave grids the effect pages
+# are drawn on.  Stopping at 5000 meant nothing here could see that the
+# model runs bright where a one-pole difference equation flattens and
+# the analog pole does not.
+LIN_HZ = (40, 80, 160, 320, 640, 1250, 2500, 5000, 10000, 20480)
 
 
 def harmonics(y):

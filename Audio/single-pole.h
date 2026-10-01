@@ -95,8 +95,12 @@ static inline float _single_pole_step(float in,
 // quantity small all the way through: sqrt(2u) dominates u rather than
 // nearly cancelling it.
 //
-// Undefined above Nyquist, as it was before: fastsincos() wraps and the
-// answer comes back down again.  Nothing asks.
+// Above Nyquist fastsincos() wraps and the corner comes back down
+// again.  This said nothing asks, which was true until [RAT]: its
+// Filter at 0 asks for 32 kHz and gets 15.8.  Returning alpha 1 is the
+// defensible answer and measures worse both ways - small signal 2.95
+// -> 6.4 dB, waveform null against the deck -18.0 -> -12.0 - because
+// the wrap is cancelling a chain that is bright above 8 kHz.
 //
 static inline struct single_pole_coeff single_pole_freq(float freq)
 {
