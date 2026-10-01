@@ -4356,16 +4356,12 @@ function renderUI() {
                 // linear gain, which is what the cookbook formulas above
                 // want and what they are handed here.
                 //
-                // The firmware's _biquad_peaking() takes the *gain* in
-                // that argument and square-roots it itself, so it is
-                // handed db_to_level(), which is 10^(dB/20).  Same name,
-                // same shape, fourth argument in different units - the
-                // two agree, and they agree by arriving from opposite
-                // directions.  Making them "consistent" without checking
-                // which one is which would double or halve every dB in
-                // the picture.
+                // The firmware's constructors take A too, from db_to_A()
+                // in Audio/util.h, and this is named after it.  Handing
+                // these db_to_level()'s 10^(dB/20) instead would double
+                // every dB in the picture.
                 //
-                function peq_pot_A(db) { return Math.pow(10, db / 40.0); }
+                function db_to_A(db) { return Math.pow(10, db / 40.0); }
 
                 //
                 // Q comes from the band, not from here.  It used to be
@@ -4383,7 +4379,7 @@ function renderUI() {
 
                 const coeff = bands.map((band) =>
                       shape[band.type](fastsincos(getFloat(band.freqPot) / fs),
-                                       bandQ(band), peq_pot_A(getFloat(band.gainPot))));
+                                       bandQ(band), db_to_A(getFloat(band.gainPot))));
 
                 //
                 // The phase, behind everything, if anybody wants it.
