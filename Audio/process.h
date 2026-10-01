@@ -124,9 +124,20 @@ static inline sample_t process_input(raw_sample_t sample)
 	if (settings.analog_in == ANALOG_IN_MONO)
 		val.right = val.left;
 
+	// Hum comes in on the jack, so the cuts are for the jack alone
+	sample_t uncut = val;
+	val = hum_step(val);
+
+	//
+	// A hum learn hears the input ahead of the cuts, to measure what
+	// they take away; the tuner hears what they leave.  Only the tuner
+	// mutes: a learn stays audible, so a string touched by mistake is
+	// heard.
+	//
 	if (analyzer_mode) {
-		analyze_process_sample(val);
-		val.left = val.right = 0.0;
+		analyze_process_sample(analyzer_mode == ANALYZE_HUM ? uncut : val);
+		if (analyzer_mode == ANALYZE_TUNER)
+			val.left = val.right = 0.0;
 	}
 	return val;
 }

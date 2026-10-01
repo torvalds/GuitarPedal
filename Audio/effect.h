@@ -15,9 +15,10 @@
 //                         single_sample().
 //
 //   Audio/analyze.h       included before this.  process.h feeds the
-//                         analyzer and mutes the whole signal while
-//                         analyzer_mode is set, so it has to exist by
-//                         the time process.h is pulled in below.
+//                         analyzer while analyzer_mode is set, and
+//                         mutes the whole signal for the tuner, so it
+//                         has to exist by the time process.h is pulled
+//                         in below.
 //
 //   effect_chain[]        declared extern here, defined by the
 //   routed_effect_count   includer, because the routing is the
@@ -292,6 +293,7 @@ static int max_pot_val(struct effect *effect, int pot)
 // Effects and MIDI mapping auto-generated from scripts/gen_effects.py
 extern uint8_t effect_chain[MAX_ROUTED_EFFECTS];
 extern uint8_t routed_effect_count;
+#include "hum.h"
 #include "effect_map.h"
 
 

@@ -1,15 +1,18 @@
 //
 // The analyzer: a copy of the left input, low-passed and decimated to
-// 6 kHz, for core 0 to take FFTs of.  The output is muted while it is in
-// use, and the mode says what is using it.
+// 6 kHz, for core 0 to take FFTs of.  The tuner and the Hum Filter's
+// learn both use it, one at a time, and the tuner mutes the output
+// while it does.
 //
-// 4096 points at 6 kHz is 1.46 Hz bins in a 0.68 s window.  The tuner
-// interpolates between bins, so what the size sets for it is the
+// 4096 points at 6 kHz is 1.46 Hz bins in a 0.68 s window.  The hum
+// learn needs bins that fine to see the noise between mains lines.  The
+// tuner interpolates between bins, so what the size sets for it is the
 // window, which is how quickly a reading follows a tuning peg.
 //
 enum analyzer_mode {
 	ANALYZE_OFF,
 	ANALYZE_TUNER,
+	ANALYZE_HUM,
 };
 
 // Written by core 0 only

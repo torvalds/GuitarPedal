@@ -272,6 +272,13 @@ and not documentation - the app is the reference, because it gets the
 ranges, the units and the hover text from the pedal itself rather than
 from anything I typed here.
 
+ - **Hum Filter** - removes the hum single coils and noisy power put on
+   the guitar, cutting only the hum's own frequencies, so a clean supply
+   gets no cuts at all.  Switching it on the first time, or moving the
+   target, listens for a few seconds with the sound left on, so you hear
+   the hum go: keep the strings quiet while it does.  It runs ahead of
+   the noise gate.  It does not reach the high buzz some USB chargers
+   add, and a power bank is quieter there anyway.
  - **Tone** - bass, mid and treble, with the corner frequencies
    adjustable and the mid's Q as well.  There are two of them, so one
    can go in front of a distortion and one behind it.

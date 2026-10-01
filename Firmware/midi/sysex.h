@@ -965,6 +965,10 @@ static bool in_sysex = false;
 static bool sysex_over = false;
 
 
+// Set by the dispatch below, taken by hum_task()
+static unsigned int hum_learn_request;	// -dBFS, or 128 for a clear (00 sent)
+static bool hum_report_request;
+
 static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 {
 	uint8_t cmd = sysex_buf[0];
@@ -1168,6 +1172,15 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 
 		send_exp_tx = true;
 #endif
+
+	} else if (cmd == 0x21) { // Learn the hum cuts, or clear them
+
+		hum_learn_request = sysex_len < 2 ? 95 :
+				    sysex_buf[1] ? sysex_buf[1] : 128;
+
+	} else if (cmd == 0x22) { // Report the hum cuts
+
+		hum_report_request = true;
 
 	} else if (cmd == 0x05) { // State Dump Request
 

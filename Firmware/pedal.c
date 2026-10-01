@@ -86,6 +86,7 @@ uint8_t routed_effect_count = 0;
 #include "hardware.h"
 #include "exp.h"
 #include "midi/sysex.h"
+#include "hum-learn.h"
 
 #include "ui.h"
 
@@ -341,6 +342,8 @@ int main()
 
 		sysex_send_identity();
 		sysex_send_telemetry();
+		hum_task();
+		sysex_send_hum();
 #ifdef EXP_TIP_GPIO
 		//
 		// A different accessory is a different set of controls,
