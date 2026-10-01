@@ -62,7 +62,25 @@ static struct bt_uuid_128 midi_io_uuid =
 #define MIDI_BLE_MAX_PKT	(CONFIG_BT_L2CAP_TX_MTU - 3)
 #define MIDI_BLE_MIN_PKT	20	/* the default MTU of 23, less three */
 
+/*
+ * The connection MIDI goes out on: the one that subscribed last.  Another
+ * may be connected beside it and never ask for anything.
+ *
+ * Changed from the Bluetooth stack's thread and read from the loop, so it
+ * is swapped and taken under a lock, and the loop holds a reference for as
+ * long as it uses it.
+ */
 static struct bt_conn *midi_conn;
+static struct k_spinlock midi_lock;
+
+static struct bt_conn *midi_get(void)
+{
+	k_spinlock_key_t key = k_spin_lock(&midi_lock);
+	struct bt_conn *conn = midi_conn ? bt_conn_ref(midi_conn) : NULL;
+
+	k_spin_unlock(&midi_lock, key);
+	return conn;
+}
 
 /* ------------------------------------------------------------------ */
 /* How long a MIDI message is, from its status byte                    */
@@ -110,13 +128,10 @@ static struct {
 	uint32_t notified;	/* bytes handed to the stack */
 
 	/*
-	 * Whether anybody has asked to be sent anything, and how many
-	 * times.  A client that believes it subscribed while this says it
-	 * did not is the difference between a radio that will not send and
-	 * a host that never asked - and the two look identical from the
-	 * far end, which is why the count is here.
+	 * How many times a client has written its subscription.  A client
+	 * that never asked and a radio that will not send look the same
+	 * from the client's side; this tells them apart.
 	 */
-	uint16_t ccc;
 	uint32_t ccc_n;
 
 	/*
@@ -155,17 +170,45 @@ static struct {
 static struct {
 	uint8_t buf[MIDI_BLE_MAX_PKT];
 	struct bt_gatt_notify_params params;
+	struct bt_conn *conn;		/* compared, never dereferenced */
 } slot[MIDI_BLE_SLOTS];
 
-static uint8_t slot_next;
+static ATOMIC_DEFINE(slot_busy, MIDI_BLE_SLOTS);
 static K_SEM_DEFINE(slot_free, MIDI_BLE_SLOTS, MIDI_BLE_SLOTS);
+
+//
+// A slot is given back once whichever comes first: its completion, or its
+// connection going.  The ATT layer drops the completion of a notification
+// whose bearer has gone, so a disconnect has to give back what that
+// connection held - and only that, since another connection's packets may
+// still be in flight.
+//
+static void slot_give(unsigned int i)
+{
+	if (atomic_test_and_clear_bit(slot_busy, i))
+		k_sem_give(&slot_free);
+}
 
 static void notify_done(struct bt_conn *conn, void *user_data)
 {
 	ARG_UNUSED(conn);
-	ARG_UNUSED(user_data);
 
-	k_sem_give(&slot_free);
+	slot_give(POINTER_TO_UINT(user_data));
+}
+
+static void slot_release(struct bt_conn *conn)
+{
+	for (unsigned int i = 0; i < MIDI_BLE_SLOTS; i++)
+		if (slot[i].conn == conn)
+			slot_give(i);
+}
+
+static int slot_take(void)
+{
+	for (unsigned int i = 0; i < MIDI_BLE_SLOTS; i++)
+		if (!atomic_test_and_set_bit(slot_busy, i))
+			return i;
+	return -1;
 }
 
 static uint16_t midi_ble_now(void)
@@ -175,12 +218,14 @@ static uint16_t midi_ble_now(void)
 
 static uint16_t midi_ble_limit(void)
 {
+	struct bt_conn *conn = midi_get();
 	uint16_t mtu;
 
-	if (!midi_conn)
+	if (!conn)
 		return MIDI_BLE_MIN_PKT;
 
-	mtu = bt_gatt_get_mtu(midi_conn);
+	mtu = bt_gatt_get_mtu(conn);
+	bt_conn_unref(conn);
 	if (mtu < 23)
 		return MIDI_BLE_MIN_PKT;
 	if (mtu - 3 > MIDI_BLE_MAX_PKT)
@@ -208,7 +253,8 @@ bool midi_ble_ready(void)
 
 void midi_ble_flush(void)
 {
-	int err;
+	struct bt_conn *conn;
+	int err, i;
 
 	/*
 	 * A header byte on its own carries nothing.  This is the ordinary
@@ -219,7 +265,8 @@ void midi_ble_flush(void)
 		return;
 	}
 
-	if (!midi_conn) {
+	conn = midi_get();
+	if (!conn) {
 		out.noconn++;
 		out.len = 0;
 		return;
@@ -238,30 +285,44 @@ void midi_ble_flush(void)
 		out.noslot++;
 		out.dropped++;
 		out.len = 0;
+		bt_conn_unref(conn);
 		return;
 	}
 
-	memcpy(slot[slot_next].buf, out.buf, out.len);
-	slot[slot_next].params = (struct bt_gatt_notify_params){
+	/* The count says one is free, so this finds it */
+	i = slot_take();
+	if (i < 0) {
+		k_sem_give(&slot_free);
+		out.noslot++;
+		out.dropped++;
+		out.len = 0;
+		bt_conn_unref(conn);
+		return;
+	}
+
+	memcpy(slot[i].buf, out.buf, out.len);
+	slot[i].conn = conn;
+	slot[i].params = (struct bt_gatt_notify_params){
 		.attr = midi_value_attr(),
-		.data = slot[slot_next].buf,
+		.data = slot[i].buf,
 		.len  = out.len,
 		.func = notify_done,
+		.user_data = UINT_TO_POINTER(i),
 	};
 
-	err = bt_gatt_notify_cb(midi_conn, &slot[slot_next].params);
+	err = bt_gatt_notify_cb(conn, &slot[i].params);
 	if (err) {
-		k_sem_give(&slot_free);
+		slot_give(i);
 		out.failed++;
 		out.err = err;
 		out.dropped++;
 	} else {
-		slot_next = (slot_next + 1) % MIDI_BLE_SLOTS;
 		out.sent++;
 		out.notified += out.len;
 	}
 
 	out.len = 0;
+	bt_conn_unref(conn);
 }
 
 static void pkt_header(void)
@@ -535,7 +596,7 @@ static void stats_send(void)
 void midi_ble_notices(void)
 {
 	uint8_t body[2];
-	bool on = (out.ccc == BT_GATT_CCC_NOTIFY) && midi_conn;
+	bool on = midi_conn != NULL;
 
 	//
 	// A bond completed.  Sent from here rather than from the callback
@@ -914,13 +975,81 @@ static ssize_t midi_write(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 	return len;
 }
 
+static void midi_set(struct bt_conn *conn)
+{
+	struct bt_conn *old;
+	k_spinlock_key_t key;
+
+	if (conn == midi_conn)
+		return;
+
+	key = k_spin_lock(&midi_lock);
+	old = midi_conn;
+	midi_conn = conn ? bt_conn_ref(conn) : NULL;
+	k_spin_unlock(&midi_lock, key);
+
+	if (old)
+		bt_conn_unref(old);
+	out.told = false;
+}
+
+struct midi_pick {
+	struct bt_conn *except, *found;
+};
+
+static void midi_pick_one(struct bt_conn *conn, void *data)
+{
+	struct midi_pick *pick = data;
+	struct bt_conn_info info;
+
+	if (pick->found || conn == pick->except || bind_owns(conn))
+		return;
+	if (bt_conn_get_info(conn, &info) ||
+	    info.state != BT_CONN_STATE_CONNECTED)
+		return;
+	if (bt_gatt_is_subscribed(conn, midi_value_attr(), BT_GATT_CCC_NOTIFY))
+		pick->found = conn;
+}
+
+// Another subscribed connection, for when this one stops being the one
+static struct bt_conn *midi_pick(struct bt_conn *except)
+{
+	struct midi_pick pick = { .except = except };
+
+	bt_conn_foreach(BT_CONN_TYPE_LE, midi_pick_one, &pick);
+	return pick.found;
+}
+
+//
+// A client subscribing or unsubscribing, which is the only place that
+// says which connection it was.
+//
+static ssize_t midi_ccc_write(struct bt_conn *conn,
+			      const struct bt_gatt_attr *attr, uint16_t value)
+{
+	ARG_UNUSED(attr);
+
+	out.ccc_n++;
+	if (value & BT_GATT_CCC_NOTIFY)
+		midi_set(conn);
+	else if (conn == midi_conn)
+		midi_set(midi_pick(conn));
+	return sizeof(value);
+}
+
+//
+// Whether anybody at all is subscribed.  A bonded client's subscription
+// is restored when it reconnects without anything being written, and this
+// is the only sign of it.  It never clears the connection: a disconnect
+// can arrive here before disconnected() does, which has to know which
+// connection was the one MIDI went to.
+//
 static void midi_ccc_changed(const struct bt_gatt_attr *attr, uint16_t value)
 {
 	ARG_UNUSED(attr);
 
-	out.ccc = value;
-	out.ccc_n++;
-	out.told = false;
+	if (value && !midi_conn)
+		midi_set(midi_pick(NULL));
 }
 
 //
@@ -951,8 +1080,9 @@ BT_GATT_SERVICE_DEFINE(midi_svc,
 			       BT_GATT_PERM_READ_LESC |
 			       BT_GATT_PERM_WRITE_LESC,
 			       midi_read, midi_write, NULL),
-	BT_GATT_CCC(midi_ccc_changed,
-		    BT_GATT_PERM_READ_LESC | BT_GATT_PERM_WRITE_LESC),
+	BT_GATT_CCC_WITH_WRITE_CB(midi_ccc_changed, midi_ccc_write,
+				  BT_GATT_PERM_READ_LESC |
+				  BT_GATT_PERM_WRITE_LESC),
 );
 
 static const struct bt_gatt_attr *midi_value_attr(void)
@@ -977,26 +1107,45 @@ static const struct bt_data ad[] = {
 };
 
 /*
- * Advertising is restarted from a work item rather than from the
- * disconnected callback it follows.
- *
- * That callback runs in the Bluetooth stack's own thread, where
- * bt_le_adv_start() can refuse with -EAGAIN because the stack is still
- * unwinding the connection it has just reported.  A refusal that is not
- * retried leaves the radio not advertising, and then nothing can find
- * it - so the error is printed rather than discarded.
+ * Hosts connected to us, as against controllers we connected to.
  */
+static atomic_t peers;
+
+/*
+ * Advertise whenever another host could connect.
+ *
+ * Advertising stops when a host connects, so it is started again after
+ * every connection that leaves a slot free as well as after every
+ * disconnect.  It is never started from the connection callbacks
+ * themselves: they run in the stack's own thread, which may still be
+ * unwinding the connection, and Zephyr names the 'recycled' callback as
+ * the point where a connectable advertiser can start.
+ *
+ * And it is retried until it starts: a radio that is not advertising
+ * cannot be found.
+ */
+static void adv_start(struct k_work *work);
+static K_WORK_DELAYABLE_DEFINE(adv_work, adv_start);
+
 static void adv_start(struct k_work *work)
 {
-	int err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad),
-				  NULL, 0);
+	int err;
 
-	if (err)
+	if (atomic_get(&peers) >= CONFIG_BT_CTLR_SDC_PERIPHERAL_COUNT)
+		return;
+
+	err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad),
+			      NULL, 0);
+	if (err && err != -EALREADY) {
 		printk("bt: advertising failed, %d\n", err);
-	else
-		printk("bt: advertising as \"%s\"\n", CONFIG_BT_DEVICE_NAME);
+		k_work_reschedule(&adv_work, K_MSEC(250));
+	}
 }
-static K_WORK_DEFINE(adv_work, adv_start);
+
+static void adv_again(void)
+{
+	k_work_reschedule(&adv_work, K_NO_WAIT);
+}
 
 //
 // Both roles arrive here.  A connection this end opened belongs to the
@@ -1013,11 +1162,13 @@ static void connected(struct bt_conn *conn, uint8_t err)
 
 	if (err) {
 		printk("bt: connect failed, %u\n", err);
+		adv_again();
 		return;
 	}
 
-	midi_conn = bt_conn_ref(conn);
+	atomic_inc(&peers);
 	printk("bt: connected\n");
+	adv_again();
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
@@ -1028,28 +1179,30 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	}
 
 	printk("bt: disconnected, %u\n", reason);
-	out.ccc = 0;
-	out.told = false;
-
-	if (midi_conn) {
-		bt_conn_unref(midi_conn);
-		midi_conn = NULL;
-	}
-
-	/* A part-built packet has nowhere to go now. */
-	out.len = 0;
+	atomic_dec(&peers);
 
 	/*
 	 * Outstanding notifications go with the connection, and their
-	 * callbacks may never run, so the slots are counted back by hand.
+	 * callbacks may never run, so its slots are given back by hand.
 	 */
-	k_sem_init(&slot_free, MIDI_BLE_SLOTS, MIDI_BLE_SLOTS);
-	slot_next = 0;
-	in.sysex = false;
-	in.len = in.want = 0;
-	in.status = dec_status = 0;
+	slot_release(conn);
 
-	k_work_submit(&adv_work);
+	if (conn == midi_conn) {
+		midi_set(midi_pick(conn));
+
+		/* A part-built packet has nowhere to go now. */
+		out.len = 0;
+		in.sysex = false;
+		in.len = in.want = 0;
+		in.status = dec_status = 0;
+	}
+
+	adv_again();
+}
+
+static void recycled(void)
+{
+	adv_again();
 }
 
 #ifdef CONFIG_BT_CENTRAL
@@ -1080,6 +1233,7 @@ static struct bt_conn_auth_info_cb midi_auth_info = {
 BT_CONN_CB_DEFINE(midi_conn_cb) = {
 	.connected = connected,
 	.disconnected = disconnected,
+	.recycled = recycled,
 #ifdef CONFIG_BT_CENTRAL
 	.security_changed = security_changed,
 #endif
@@ -1109,7 +1263,7 @@ void midi_ble_start(void)
 	//
 	bt_set_bondable(false);
 
-	adv_start(NULL);
+	adv_again();
 }
 
 #ifdef CONFIG_BT_CENTRAL
