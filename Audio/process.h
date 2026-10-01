@@ -124,7 +124,7 @@ static inline sample_t process_input(raw_sample_t sample)
 	if (settings.analog_in == ANALOG_IN_MONO)
 		val.right = val.left;
 
-	if (tuner_mode) {
+	if (analyzer_mode) {
 		analyze_process_sample(val);
 		val.left = val.right = 0.0;
 	}

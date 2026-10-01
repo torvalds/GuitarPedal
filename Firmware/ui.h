@@ -338,8 +338,13 @@ static void do_rule(const struct rule *b)
 		break;
 
 	case ACT_TUNER:
-		tuner_mode = !tuner_mode;
-		send_global_enable(tuner_mode ? 68 : 69);
+		if (analyzer_mode == ANALYZE_TUNER) {
+			analyzer_set_mode(ANALYZE_OFF);
+			send_global_enable(69);
+		} else {
+			analyzer_set_mode(ANALYZE_TUNER);
+			send_global_enable(68);
+		}
 		break;
 
 	case ACT_SCENE:

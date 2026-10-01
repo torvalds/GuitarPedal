@@ -14,6 +14,11 @@
  */
 #define MAX_STRINGS 8
 
+// A Hann-windowed sine of amplitude A peaks at A * FFT_SIZE / 4.  This
+// brings it to 8192 A, the scale the thresholds in get_peak() and the
+// pressure in send_tuner_midi() assume.
+#define TUNER_MAG_SCALE (8192.0f / (FFT_SIZE / 4))
+
 struct tune_target {
 	const char *name;
 	float base_freq;
@@ -25,14 +30,8 @@ struct tuning {
 	const struct tune_target strings[MAX_STRINGS];
 };
 
-// The magnitude array re-uses the fft array to not be
-// quite so piggy in memory use. But we might still have
-// to shrink the FFT size at some point.
+// The magnitudes are analyzer.magnitudes, on top of the FFT
 struct {
-	union {
-		complex_t fft[FFT_SIZE];
-		float magnitudes[FFT_SIZE / 2];
-	};
 	float max_mag, avg_mag;
 
 	// Chromatic tuning data
@@ -76,7 +75,7 @@ static inline bool get_peak(int i, struct peak_info *peak, float min_peak)
 	if (i < 2 || i > FFT_SIZE/2 - 3)
 		return false;
 
-	center = tuner_state.magnitudes + i;
+	center = analyzer.magnitudes + i;
 	mag = *center;
 
 	//
@@ -140,7 +139,7 @@ static inline bool get_peak(int i, struct peak_info *peak, float min_peak)
 	}
 
 	peak->bin = i + p;
-	peak->freq = peak->bin * (12000.0f / FFT_SIZE);
+	peak->freq = peak->bin * ANALYZE_BIN_HZ;
 
 	// A simple parabolic estimate is still fine for the magnitude, as we
 	// mainly use it for relative peak comparisons and thresholding.
@@ -177,10 +176,10 @@ static inline void suppress_harmonics(void)
 				}
 
 				float suppression = peak.mag * w;
-				if (tuner_state.magnitudes[j] > suppression)
-					tuner_state.magnitudes[j] -= suppression;
+				if (analyzer.magnitudes[j] > suppression)
+					analyzer.magnitudes[j] -= suppression;
 				else
-					tuner_state.magnitudes[j] = 0.0f;
+					analyzer.magnitudes[j] = 0.0f;
 			}
 		}
 	}
@@ -193,8 +192,8 @@ static inline void tuner_magnitudes(void)
 	float dominant_mag = 0.0f;
 
 	// Search frequencies between ~15Hz and ~1.5kHz (E6 is 1318.5Hz)
-	int min_bin = (int)(15.0f * FFT_SIZE / 12000.0f);
-	int max_bin = (int)(1500.0f * FFT_SIZE / 12000.0f);
+	int min_bin = (int)(15.0f / ANALYZE_BIN_HZ);
+	int max_bin = (int)(1500.0f / ANALYZE_BIN_HZ);
 
 	for (int i = min_bin; i < max_bin; i++) {
 		struct peak_info peak;
@@ -284,7 +283,7 @@ static const struct tuning *const __not_in_flash("audio") tunings[4] = {
 static inline void find_string_peak(const struct tuning *current_tuning, int s)
 {
 	float target_freq = current_tuning->strings[s].base_freq;
-	float target_bin = target_freq * ((float)FFT_SIZE / 12000.0f);
+	float target_bin = target_freq / ANALYZE_BIN_HZ;
 
 	// We restrict the search window to +/- 2.5% (about 43 cents).
 	// This ensures that any peak we find is guaranteed to be closer to this
@@ -303,8 +302,8 @@ static inline void find_string_peak(const struct tuning *current_tuning, int s)
 	float max_mag = 0.0f;
 	int peak_b = 0;
 	for (int i = min_b; i <= max_b; i++) {
-		if (tuner_state.magnitudes[i] > max_mag) {
-			max_mag = tuner_state.magnitudes[i];
+		if (analyzer.magnitudes[i] > max_mag) {
+			max_mag = analyzer.magnitudes[i];
 			peak_b = i;
 		}
 	}
@@ -432,38 +431,27 @@ static void tuner_mode_ui(void)
 		tuning_idx = 0;
 	const struct tuning *current_tuning = tunings[tuning_idx];
 
-	unsigned int write_idx = smp_load_acquire(&analyzer.write_index);
-
-	// Catch up if CPU0 falls too far behind CPU1
-	if (write_idx - analyzer.read_index > ANALYZE_RING_SIZE - FFT_SIZE) {
-		analyzer.read_index = write_idx - FFT_SIZE;
-	}
-
-	if (write_idx - analyzer.read_index < FFT_SIZE)
+	//
+	// FFT_SIZE / 16 = 256 samples. At 6kHz, this means 23 updates per second.
+	//
+	if (!analyze_next_block(FFT_SIZE / 16))
 		return;
-
-	// Copy data from ring buffer and apply Hann window
-	for (int i = 0; i < FFT_SIZE; i++) {
-		float sample = analyzer.ring_buf[(analyzer.read_index + i) & ANALYZE_RING_MASK];
-		tuner_state.fft[i] = sample * hanning(i);
-	}
-
-	// Run FFT
-	fft(tuner_state.fft, FFT_SHIFT);
 
 	// Compute the magnitude of the bins
 	//
 	// NOTE! The fft[] and magnitudes[] arrays are a
-	// union in the tuner_state structure. This only works
+	// union in the analyzer structure. This only works
 	// because we just walk the (bigger) fft 'complex_t'
 	// forward and then store the resulting magnitude
 	// result on top of old fft values.
 	//
+	// Scaled by TUNER_MAG_SCALE, above.
+	//
 	float sum_mag = 0.0f;
 	float max_mag = 0.0f;
 	for (int i = 0; i < FFT_SIZE / 2; i++) {
-		float mag = __builtin_cabsf(tuner_state.fft[i]);
-		tuner_state.magnitudes[i] = mag;
+		float mag = __builtin_cabsf(analyzer.fft[i]) * TUNER_MAG_SCALE;
+		analyzer.magnitudes[i] = mag;
 		sum_mag += mag;
 		if (mag > max_mag)
 			max_mag = mag;
@@ -482,8 +470,4 @@ static void tuner_mode_ui(void)
 	compute_tuner_results(current_tuning, &results);
 
 	send_tuner_midi(&results);
-
-	// Overlap by advancing read_idx by a fraction of FFT_SIZE
-	// FFT_SIZE / 16 = 512 samples. At 12kHz, this means 23 updates per second.
-	analyzer.read_index += FFT_SIZE / 16;
 }

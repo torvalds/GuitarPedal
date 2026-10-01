@@ -1285,9 +1285,10 @@ bool handle_midi_packet(const uint8_t packet[4])
 		handled = true;
 		if (data1 == 20) { // Global Bypass
 			if (data2 == 68) {
-				tuner_mode = 1;
+				analyzer_set_mode(ANALYZE_TUNER);
 			} else if (data2 == 69) {
-				tuner_mode = 0;
+				if (analyzer_mode == ANALYZE_TUNER)
+					analyzer_set_mode(ANALYZE_OFF);
 			} else if (data2 == 126) {
 				reset_usb_boot(0, 0);
 			} else {
