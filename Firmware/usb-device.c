@@ -827,10 +827,13 @@ bool usb_midi_write(const uint8_t packet[4])
 // above should have been able to do all along, and could not, because
 // there was nowhere to put a packet that would not fit.
 //
+// False means "try again" and nothing else.  With no host mounted there
+// is nothing to wait for, so the packet is taken and thrown away.
+//
 bool usb_midi_write_nb(const uint8_t packet[4])
 {
 	if (!tud_midi_mounted())
-		return false;
+		return true;
 
 	return tud_midi_packet_write(packet);
 }

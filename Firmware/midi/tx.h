@@ -315,19 +315,14 @@ static bool midi_tx_push(void)
 	if (!midi_tx.pkt_ready)
 		return true;
 
-	if (!usb_midi_write_nb(midi_tx.pkt)) {
-		//
-		// Busy is worth waiting for; unmounted is not.
-		//
-		// With no USB host there is nothing on that endpoint to
-		// ever wait for, so the packet is thrown away and this
-		// sink keeps moving.  Waiting for it would hold the
-		// descriptor and stop the queue being reused, which on a
-		// pedal running from a charger is for ever.
-		//
-		if (tud_midi_mounted())
-			return false;
-	}
+	//
+	// An unmounted endpoint takes everything and throws it away, so
+	// this sink keeps moving with no host.  Waiting for one would hold
+	// the descriptor and stop the queue being reused, which on a pedal
+	// running from a charger is for ever.
+	//
+	if (!usb_midi_write_nb(midi_tx.pkt))
+		return false;
 
 	midi_tx.pkt_ready = false;
 	return true;
@@ -409,7 +404,65 @@ static void midi_tx_to_usb(void)
 		midi_tx_push();
 }
 
+//
+// Channel messages for the radio: the CCs, notes and pitch bends that
+// midi.h's senders write straight to USB and to the jacks.
+//
+// USB takes each as a packet of its own, which can go between two of a
+// SysEx reply's.  The radio takes a byte stream, where a status byte in
+// the middle of a SysEx message ends it - so these wait here, and go
+// between replies.  A message that does not fit is dropped, as the
+// jacks' ring drops one.
+//
+#define MIDI_TX_SHORT	256
+
 #ifdef NRF54_SWDIO
+static struct {
+	uint8_t buf[MIDI_TX_SHORT];
+	uint32_t head, tail;
+	bool mid;			// a SysEx reply is part sent
+} midi_short;
+#endif
+
+void radio_midi_write(const uint8_t packet[4])
+{
+#ifdef NRF54_SWDIO
+	int len = midi_cin_length(packet[0] & 0x0F);
+
+	if (MIDI_TX_SHORT - (midi_short.head - midi_short.tail) < (uint32_t)len)
+		return;
+	for (int i = 0; i < len; i++)
+		midi_short.buf[midi_short.head++ & (MIDI_TX_SHORT - 1)] =
+			packet[1 + i];
+#endif
+}
+
+#ifdef NRF54_SWDIO
+//
+// Send the radio the channel messages that are waiting; false if it could
+// not take them all.  A message is never left half sent, because what
+// follows could be a reply.
+//
+static bool midi_tx_short_to_radio(void)
+{
+	while (midi_short.tail != midi_short.head) {
+		uint8_t status = midi_short.buf[midi_short.tail & (MIDI_TX_SHORT - 1)];
+		int len = midi_cin_length(midi_status_cin(status));
+
+		if (!nrf54_uart.listening) {
+			midi_short.tail = midi_short.head;
+			break;
+		}
+		// Ready is under half full, far more room than three bytes
+		if (!nrf54_uart_ready())
+			return false;
+		while (len--)
+			nrf54_uart_thru(midi_short.buf[midi_short.tail++ &
+						       (MIDI_TX_SHORT - 1)]);
+	}
+	return true;
+}
+
 //
 // The same bytes to the radio, unpacketised.
 //
@@ -422,10 +475,16 @@ static void midi_tx_to_radio(void)
 {
 	struct midi_sink *s = &midi_tx.radio;
 
-	while (s->tail != midi_tx.head) {
+	for (;;) {
+		if (!midi_short.mid && !midi_tx_short_to_radio())
+			return;
+		if (s->tail == midi_tx.head)
+			return;
+
 		struct midi_msg *m = &midi_tx.ring[s->tail & (MIDI_TX_MSGS - 1)];
 
 		if (s->sent >= m->len) {
+			midi_short.mid = m->more;
 			s->tail++;
 			s->sent = 0;
 			continue;
@@ -452,6 +511,7 @@ static void midi_tx_to_radio(void)
 		if (!nrf54_uart_ready())
 			return;
 
+		midi_short.mid = true;
 		nrf54_uart_thru(midi_tx_byte(m, s->sent++));
 	}
 }
