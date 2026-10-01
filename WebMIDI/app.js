@@ -2470,17 +2470,6 @@ const effectCards = new Map();
 let effectPool = null;
 
 //
-// The two effects that are not in the routing order at all: the signal
-// chain at the front, and the settings pseudo-effect at the back.
-//
-// Positional, because that is the firmware's own test - ROUTABLE_EFFECTS
-// is the bits *between* the first entry and the last - and because
-// anything else is a string that has to keep agreeing across two
-// languages.  A pedal older than a rename now puts its anchors in the
-// right place and merely shows a stale label, which is honest: a stale
-// label is what is running.
-//
-//
 // Effects that are not part of the chain and cannot be moved into it,
 // because the pedal pins them to one end of it.
 //
