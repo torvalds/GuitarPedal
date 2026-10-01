@@ -281,6 +281,15 @@ int main(void)
 		uint8_t *buf;
 		uint32_t n, took = 0;
 
+		/*
+		 * Subscription changes go to the pedal before anything a
+		 * client asks for.  The pedal throws replies away until it
+		 * knows somebody is subscribed, a client that subscribes
+		 * and asks at once has both arrive together, and the one
+		 * wire keeps them in the order they are written here.
+		 */
+		midi_ble_notices();
+
 		/* What arrived over the air, decoded here rather than in
 		 * the callback that received it. */
 		while (ble_in_drain())
@@ -320,9 +329,6 @@ int main(void)
 		 */
 		if (midi_ble_ready())
 			midi_ble_flush();
-
-		/* And say so when somebody starts or stops listening. */
-		midi_ble_notices();
 
 		/*
 		 * And if the ring filled far enough to stop the far end,
