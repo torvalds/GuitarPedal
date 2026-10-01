@@ -63,6 +63,9 @@
 #define MIDI_TX_PAYLOAD	2048
 #define MIDI_TX_MSGS	16
 
+// How long a full USB fifo is waited on before the host counts as gone
+#define MIDI_TX_STALL_MS 100
+
 //
 // One run of bytes waiting to go out.
 //
@@ -163,6 +166,7 @@ static struct {
 	unsigned int pack_len;
 	uint8_t pkt[4];
 	bool pkt_ready;
+	uint32_t usb_full_since; // when USB began refusing, in ms; 0 if not
 } midi_tx;
 
 static inline uint32_t midi_tx_pay_used(void)
@@ -310,18 +314,39 @@ static uint8_t midi_tx_byte(const struct midi_msg *m, uint16_t i)
 	return midi_tx.payload[(m->off + i) & (MIDI_TX_PAYLOAD - 1)];
 }
 
+//
+// One packet to USB, or given up on.
+//
+// A host that is mounted and not reading - a computer the pedal only
+// draws power from - fills the fifo and never empties it, and nothing
+// says so.  Everything waiting on USB would wait for ever, Bluetooth
+// included, so a fifo that has refused for MIDI_TX_STALL_MS straight
+// counts as a host that has stopped reading and the packet is dropped.
+// A host that reads frees room every millisecond.
+//
+// True when the packet is gone, taken or dropped.
+//
+bool usb_midi_write_or_drop(const uint8_t packet[4])
+{
+	uint32_t now = to_ms_since_boot(get_absolute_time());
+
+	if (usb_midi_write_nb(packet)) {
+		midi_tx.usb_full_since = 0;
+		return true;
+	}
+	if (!midi_tx.usb_full_since) {
+		midi_tx.usb_full_since = now | 1;
+		return false;
+	}
+	return now - midi_tx.usb_full_since >= MIDI_TX_STALL_MS;
+}
+
 static bool midi_tx_push(void)
 {
 	if (!midi_tx.pkt_ready)
 		return true;
 
-	//
-	// An unmounted endpoint takes everything and throws it away, so
-	// this sink keeps moving with no host.  Waiting for one would hold
-	// the descriptor and stop the queue being reused, which on a pedal
-	// running from a charger is for ever.
-	//
-	if (!usb_midi_write_nb(midi_tx.pkt))
+	if (!usb_midi_write_or_drop(midi_tx.pkt))
 		return false;
 
 	midi_tx.pkt_ready = false;

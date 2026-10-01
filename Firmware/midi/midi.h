@@ -237,6 +237,7 @@ bool usb_midi_write(const uint8_t packet[4]);
 bool usb_midi_write_nb(const uint8_t packet[4]);
 void uart_midi_write(const uint8_t packet[4]);
 void radio_midi_write(const uint8_t packet[4]);
+bool usb_midi_write_or_drop(const uint8_t packet[4]);
 
 static inline void send_midi_cc(uint8_t cc, uint8_t val)
 {
@@ -249,22 +250,25 @@ static inline void send_midi_cc(uint8_t cc, uint8_t val)
 //
 // The same, for something nobody is waiting on.
 //
-// Returns whether USB took it, so a caller that repeats itself anyway can
+// Returns whether it went, so a caller that repeats itself anyway can
 // simply not remember having sent it and say it again next time.  A host
 // that is not reading fills the transmit fifo and every blocking write
 // into it costs MIDI_TX_TIMEOUT_MS, which for anything periodic is a
 // stall the pedal inflicts on itself for no reader's benefit.
 //
-// The UART and the radio are written either way and are not part of the
-// answer: each is a ring that drops when full and never waits, so there
-// is nothing to report and nothing to retry.
+// USB first, because it is the one that can be busy; the UART and the
+// radio only once it has gone, so a caller that tries again does not
+// send them the same message twice.
 //
 static inline bool send_midi_cc_nb(uint8_t cc, uint8_t val)
 {
 	uint8_t packet[4] = { 0x0B, 0xB0, cc, val };
+
+	if (!usb_midi_write_or_drop(packet))
+		return false;
 	uart_midi_write(packet);
 	radio_midi_write(packet);
-	return usb_midi_write_nb(packet);
+	return true;
 }
 
 static inline void send_midi_note_on(uint8_t ch, uint8_t note, uint8_t vel)
