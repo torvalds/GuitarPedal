@@ -581,6 +581,19 @@ def generate(audio_dir, out_h, out_js, out_md):
                 raise SystemExit(f"{header_path}: ROLE: '{role}' named twice")
             roles[role] = by_ident[which]
 
+        #
+        # A picture that is not made of pots.  GRAPH: draws bands whose
+        # frequency and gain are pots; 'DRAW: HUMCUTS' draws the hum cuts
+        # the pedal reports, which it measures rather than being told.
+        # Declared rather than recognised for the same reason as GRAPH:,
+        # so the app asks what an effect draws, not which effect it is.
+        #
+        draw_match = re.search(r'//[ \t]*DRAW:[ \t]*([A-Z]+)', content)
+        draw = draw_match.group(1) if draw_match else None
+        if draw and draw not in ('HUMCUTS',):
+            raise SystemExit(f"{header_path}: DRAW: unknown picture '{draw}' "
+                             f"(want HUMCUTS)")
+
         sources.append({
             'id': effect_id,
             'base': base,
@@ -599,6 +612,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             'instances': instances,
             'graph': graph,
             'roles': roles,
+            'draw': draw,
             'is_global': is_global,
             'position': position,
             'always': always,
@@ -766,6 +780,7 @@ def generate(audio_dir, out_h, out_js, out_md):
             **({"needs": e_data['needs_hw'].lower()}
                if e_data['needs_hw'] else {}),
             "roles": e_data['roles'],
+            **({"draw": e_data['draw'].lower()} if e_data['draw'] else {}),
             "graph": [{"type": b['type'], "q": b['q']} if 'q' in b
                       else {"type": b['type'], "qPot": b['q_pot']}
                       for b in e_data['graph']],
