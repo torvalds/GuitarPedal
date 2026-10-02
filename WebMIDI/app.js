@@ -3091,8 +3091,19 @@ function handleIdentity(id) {
 
     renderBindings();
 
+    //
+    // Which pedal this is, by the last four digits of its unique id, in
+    // the title when the port name does not already end in them.
+    //
+    const short = id.serial ? id.serial.slice(-4) : '';
+    if (short && midiInput && midiInput !== demoPedal &&
+        !midiInput.name.includes(short))
+        appTitleEl.textContent = `Connected: ${midiInput.name} ${short}`;
+
     const found = id.found || {};
     const notes = [`Firmware built ${id.build || 'unknown'}.`];
+    if (id.serial)
+        notes.push(`Serial ${id.serial}.`);
     const wrong = [];
     const early = [];
     const scenes = id.scenes || 1;

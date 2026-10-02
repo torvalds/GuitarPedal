@@ -155,6 +155,20 @@ static void sysex_send_identity(void)
 	// blink.c is recompiled, which is exactly when the binary changed.
 	//
 	sysex_write_str("{\"build\":\"" __DATE__ " " __TIME__ "\"");
+
+	//
+	// Which pedal this is: the chip's unique id, the same string as the
+	// USB serial.  A pedal reached over USB and over Bluetooth gives the
+	// same answer to both, and nothing else in either says so.
+	//
+	{
+		char id[2 * PICO_UNIQUE_BOARD_ID_SIZE_BYTES + 1];
+
+		pico_get_unique_board_id_string(id, sizeof(id));
+		sysex_write_str(",\"serial\":\"");
+		sysex_write_str(id);
+		sysex_write_str("\"");
+	}
 	//
 	// How many scenes there are, and which of them have ever been
 	// saved.  The count used to depend on which eeprom was fitted and

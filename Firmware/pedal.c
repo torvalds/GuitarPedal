@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "pico/stdlib.h"
 #include "pico/bootrom.h"
+#include "pico/unique_id.h"
 #include "hardware/watchdog.h"
 #include "pico/multicore.h"
 
