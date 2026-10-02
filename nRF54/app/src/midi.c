@@ -31,6 +31,7 @@
  * already looks for.
  */
 
+#include <stdarg.h>
 #include <stdio.h>
 
 #include <zephyr/kernel.h>
@@ -144,6 +145,14 @@ static struct {
 	 */
 	bool told;
 	bool listening;
+
+	/*
+	 * Hosts that connected, how many of those links ended with no
+	 * packet ever heard (0x3e) or with the supervision timeout (0x08),
+	 * and why the last one ended.
+	 */
+	uint32_t conns, dc3e, dc08;
+	uint8_t last_reason;
 
 	/* The pedal's pairing window, and a bond to report from the loop. */
 	bool pairing;
@@ -412,6 +421,7 @@ static void pack_sysex_end(void)
 #define RADIO_SYSEX_BONDS	0x1a	/* in:  what are you paired with? */
 #define RADIO_SYSEX_BOND	0x1b	/* out: one of them */
 #define RADIO_SYSEX_BONDS_END	0x1c	/* out: that is all of them */
+#define RADIO_SYSEX_LINKS	0x1e	/* out: connections, and how they ended */
 #define RADIO_SYSEX_LAST	0x1f
 
 #define RADIO_SYSEX_BODY	184
@@ -580,42 +590,59 @@ static int midi_rssi(void)
 	return rssi;
 }
 
-static void stats_send(void)
+/*
+ * One reply of JSON to the pedal.  Short keys, because the pedal's
+ * inbound SysEx buffer is SYSEX_BUF_MAX - 192 bytes - and a message past
+ * it is dropped whole, silently from this end.  A reply the buffer here
+ * would cut short is replaced by a marker, since cut short it would not
+ * parse.
+ */
+static void radio_json(uint8_t cmd, const char *fmt, ...)
 {
 	uint8_t body[1 + RADIO_SYSEX_BODY];
+	va_list ap;
 	int n;
 
-	/*
-	 * Short keys because the pedal's inbound SysEx buffer is
-	 * SYSEX_BUF_MAX - 192 bytes - and a message past it is dropped
-	 * whole, silently from this end.
-	 *
-	 * f bytes in, o bytes notified, p packets, nc no connection,
-	 * ns no slot, fl notify refused, e its error, r the pedal's
-	 * backlog here, s whether the pedal is being held off, ccn how
-	 * often a client asked to be sent anything, lo bytes the pedal
-	 * sent that there was no room for, bo keys stored, rs how strongly
-	 * the host MIDI goes to is heard, in dBm.
-	 */
-	body[0] = RADIO_SYSEX_STATS;	/* not ASK: the pedal echoes what we
-					 * send back at us, and an answer that
-					 * reads as a request answers itself
-					 * for ever. */
-	n = snprintf((char *)body + 1, RADIO_SYSEX_BODY,
-		     "{\"f\":%u,\"o\":%u,\"p\":%u,\"nc\":%u,\"ns\":%u"
-		     ",\"fl\":%u,\"e\":%d,\"r\":%u,\"s\":%u"
-		     ",\"ccn\":%u,\"lo\":%u,\"bo\":%u,\"rs\":%d}",
-		     out.fed, out.notified, out.sent, out.noconn, out.noslot,
-		     out.failed, out.err, midi_uart_backlog(),
-		     midi_uart_halted(), out.ccc_n, midi_uart_lost(),
-		     bonds(), midi_rssi());
+	body[0] = cmd;
+	va_start(ap, fmt);
+	n = vsnprintf((char *)body + 1, RADIO_SYSEX_BODY, fmt, ap);
+	va_end(ap);
 
-	/* Cut short, it would not parse; say so instead */
 	if (n >= RADIO_SYSEX_BODY)
 		n = snprintf((char *)body + 1, RADIO_SYSEX_BODY,
 			     "{\"truncated\":true}");
 	if (n > 0)
 		radio_sysex(body, 1 + (size_t)n);
+}
+
+/*
+ * The counters, in two replies so that each stays well inside the
+ * buffer.  Not answered as ASK: the pedal echoes what we send back at
+ * us, and an answer that reads as a request answers itself for ever.
+ *
+ * f bytes in, o bytes notified, p packets, nc no connection, ns no slot,
+ * fl notify refused, e its error, r the pedal's backlog here, s whether
+ * the pedal is being held off, ccn how often a client asked to be sent
+ * anything, lo bytes the pedal sent that there was no room for, bo keys
+ * stored, rs the signal strength of the MIDI connection in dBm.
+ *
+ * Then cn connections accepted, 3e and 08 how many of them ended for
+ * those reasons, and dr why the last one ended.
+ */
+static void stats_send(void)
+{
+	radio_json(RADIO_SYSEX_STATS,
+		   "{\"f\":%u,\"o\":%u,\"p\":%u,\"nc\":%u,\"ns\":%u"
+		   ",\"fl\":%u,\"e\":%d,\"r\":%u,\"s\":%u"
+		   ",\"ccn\":%u,\"lo\":%u,\"bo\":%u,\"rs\":%d}",
+		   out.fed, out.notified, out.sent, out.noconn, out.noslot,
+		   out.failed, out.err, midi_uart_backlog(),
+		   midi_uart_halted(), out.ccc_n, midi_uart_lost(),
+		   bonds(), midi_rssi());
+
+	radio_json(RADIO_SYSEX_LINKS,
+		   "{\"cn\":%u,\"3e\":%u,\"08\":%u,\"dr\":%u}",
+		   out.conns, out.dc3e, out.dc08, out.last_reason);
 }
 
 /*
@@ -1204,6 +1231,7 @@ static void connected(struct bt_conn *conn, uint8_t err)
 	}
 
 	atomic_inc(&peers);
+	out.conns++;
 	printk("bt: connected\n");
 	adv_again();
 }
@@ -1217,6 +1245,11 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 
 	printk("bt: disconnected, %u\n", reason);
 	atomic_dec(&peers);
+	out.last_reason = reason;
+	if (reason == BT_HCI_ERR_CONN_FAIL_TO_ESTAB)
+		out.dc3e++;
+	else if (reason == BT_HCI_ERR_CONN_TIMEOUT)
+		out.dc08++;
 
 	/*
 	 * Outstanding notifications go with the connection, and their
