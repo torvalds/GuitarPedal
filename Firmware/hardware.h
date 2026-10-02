@@ -286,8 +286,7 @@ static void probe_hardware(void)
 	// attached and waiting.
 	//
 	// The board name is compile-time and what the probe means is not,
-	// so this is where the two meet.  Two static strings rather than a
-	// buffer: there is exactly one bit to fold in.
+	// so this is where the two meet.
 	//
 	// **What that bit means is a board fact, so the board says it.**
 	// The probe establishes one thing - a codec answered on i2c rather
@@ -296,6 +295,22 @@ static void probe_hardware(void)
 	// is the TAC5212, which is DC-coupled where the strapped one has a
 	// corner at 10Hz.  Both are worth knowing and neither is the other.
 	//
+	// A board header that defines CODEC_I2C_PRODUCT gives its i2c-codec
+	// build that name, followed by the serial's last four digits.
+	//
+#ifdef CODEC_I2C_PRODUCT
+	if (hardware.i2c_codec) {
+		static char product[sizeof(CODEC_I2C_PRODUCT) + 5];
+		char id[2 * PICO_UNIQUE_BOARD_ID_SIZE_BYTES + 1];
+		size_t len;
+
+		pico_get_unique_board_id_string(id, sizeof(id));
+		len = strlen(id);
+		memcpy(product, CODEC_I2C_PRODUCT " ", sizeof(CODEC_I2C_PRODUCT));
+		memcpy(product + sizeof(CODEC_I2C_PRODUCT), id + len - 4, 5);
+		usb_set_product(product);
+	} else
+#endif
 	usb_set_product(hardware.i2c_codec
 			? PEDAL_BOARD_NAME " " CODEC_I2C_DESC " Pedal"
 			: PEDAL_BOARD_NAME " " CODEC_STRAPPED_DESC " Pedal");

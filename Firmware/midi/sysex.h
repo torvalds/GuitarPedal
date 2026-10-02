@@ -155,6 +155,20 @@ static void sysex_send_identity(void)
 	// blink.c is recompiled, which is exactly when the binary changed.
 	//
 	sysex_write_str("{\"build\":\"" __DATE__ " " __TIME__ "\"");
+
+	//
+	// Which pedal this is: the chip's unique id, the same string as the
+	// USB serial.  A pedal reached over USB and over Bluetooth gives the
+	// same answer to both, and nothing else in either says so.
+	//
+	{
+		char id[2 * PICO_UNIQUE_BOARD_ID_SIZE_BYTES + 1];
+
+		pico_get_unique_board_id_string(id, sizeof(id));
+		sysex_write_str(",\"serial\":\"");
+		sysex_write_str(id);
+		sysex_write_str("\"");
+	}
 	//
 	// How many scenes there are, and which of them have ever been
 	// saved.  The count used to depend on which eeprom was fitted and
@@ -1132,6 +1146,19 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 		// air - the same rule 0x07 above follows, which would
 		// otherwise be sidestepped by addressing the radio
 		// directly.
+		//
+
+	} else if (cmd == 0x1d && sysex_from_radio) {
+		//
+		// MIDI for the device the radio is bound to is the pedal's to
+		// send.  Passed on from over the air, it would let anything
+		// that can reach the radio drive that device.
+		//
+
+	} else if (cmd == 0x1f && sysex_from_radio) {
+		//
+		// The radio's name is the pedal's to give.  Passed on from
+		// over the air, it would let any client rename the radio.
 		//
 
 	} else if (cmd >= 0x10 && cmd <= 0x1f) {

@@ -230,6 +230,38 @@ static void nrf54_forget_bonds(void)
 }
 
 //
+// Tell the radio what to advertise as: "Pedal" and the last four hex
+// digits of the chip's unique id, the current board's USB name, so that
+// pedals in one Bluetooth scan can be told apart.
+//
+// Sent once, as the link comes up.  The radio is held in reset until
+// then, and the bytes wait on CTS until its UART is listening.
+//
+#define NRF54_CMD_NAME	0x1f
+
+static void nrf54_name_tell(void)
+{
+	static const char prefix[] = "Pedal ";
+	char id[2 * PICO_UNIQUE_BOARD_ID_SIZE_BYTES + 1];
+	uint8_t msg[3 + sizeof(prefix) - 1 + 4 + 1];
+	size_t n = 0, len;
+
+	pico_get_unique_board_id_string(id, sizeof(id));
+	len = strlen(id);
+
+	msg[n++] = 0xF0;
+	msg[n++] = 0x7D;
+	msg[n++] = NRF54_CMD_NAME;
+	for (size_t i = 0; i < sizeof(prefix) - 1; i++)
+		msg[n++] = prefix[i];
+	for (size_t i = len - 4; i < len; i++)
+		msg[n++] = id[i];
+	msg[n++] = 0xF7;
+
+	nrf54_uart_write(msg, n);
+}
+
+//
 // Is the SysEx being handled right now one that arrived from the radio?
 //
 // handle_sysex_payload() is reached from both transports and the
@@ -327,7 +359,13 @@ static void nrf54_uart_init(void)
 	// The pull-up holds it at idle instead, so a radio that never
 	// answers delivers nothing rather than an endless break.
 	//
+	// CTS has the same pull-down and the opposite problem: low is
+	// "clear to send", so while the radio boots with its RTS undriven,
+	// whatever is sent goes into a UART that is not listening yet.  The
+	// pull-up holds it at "not clear" until the radio drives it.
+	//
 	gpio_pull_up(NRF54_RX);
+	gpio_pull_up(NRF54_CTS);
 
 	//
 	// SysEx, because the web app's protocol is built on it.  The TRS
@@ -366,6 +404,8 @@ static void nrf54_uart_init(void)
 
 	busy_wait_us_32(1000);
 	gpio_put(NRF54_RESET, 1);
+
+	nrf54_name_tell();
 }
 
 #endif /* NRF54_SWDIO */

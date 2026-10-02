@@ -33,6 +33,7 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <zephyr/kernel.h>
 #include <zephyr/settings/settings.h>
@@ -153,6 +154,9 @@ static struct {
 	 */
 	uint32_t conns, dc3e, dc08;
 	uint8_t last_reason;
+
+	/* MIDI handed to the bound device, and how much of it was refused */
+	uint32_t bound_sent, bound_failed;
 
 	/* The pedal's pairing window, and a bond to report from the loop. */
 	bool pairing;
@@ -421,8 +425,12 @@ static void pack_sysex_end(void)
 #define RADIO_SYSEX_BONDS	0x1a	/* in:  what are you paired with? */
 #define RADIO_SYSEX_BOND	0x1b	/* out: one of them */
 #define RADIO_SYSEX_BONDS_END	0x1c	/* out: that is all of them */
+#define RADIO_SYSEX_SEND	0x1d	/* in:  MIDI for the bound device */
 #define RADIO_SYSEX_LINKS	0x1e	/* out: connections, and how they ended */
+#define RADIO_SYSEX_NAME	0x1f	/* in:  what to advertise as */
 #define RADIO_SYSEX_LAST	0x1f
+
+static void name_set(const uint8_t *arg, uint8_t len);
 
 #define RADIO_SYSEX_BODY	184
 
@@ -627,7 +635,9 @@ static void radio_json(uint8_t cmd, const char *fmt, ...)
  * stored, rs the signal strength of the MIDI connection in dBm.
  *
  * Then cn connections accepted, 3e and 08 how many of them ended for
- * those reasons, and dr why the last one ended.
+ * those reasons, dr why the last one ended, bs and bf MIDI sent to the
+ * bound device and refused, bd how far the bind has got, and be why it
+ * last failed.
  */
 static void stats_send(void)
 {
@@ -641,8 +651,11 @@ static void stats_send(void)
 		   bonds(), midi_rssi());
 
 	radio_json(RADIO_SYSEX_LINKS,
-		   "{\"cn\":%u,\"3e\":%u,\"08\":%u,\"dr\":%u}",
-		   out.conns, out.dc3e, out.dc08, out.last_reason);
+		   "{\"cn\":%u,\"3e\":%u,\"08\":%u,\"dr\":%u"
+		   ",\"bs\":%u,\"bf\":%u,\"bd\":%u,\"be\":%d}",
+		   out.conns, out.dc3e, out.dc08, out.last_reason,
+		   out.bound_sent, out.bound_failed, bind_state(),
+		   bind_last_err());
 }
 
 /*
@@ -708,7 +721,7 @@ static struct {
 	uint8_t held;
 	bool mine;
 	uint8_t cmd;
-	uint8_t arg[16];
+	uint8_t arg[32];
 	uint8_t nr_arg;
 } in;
 
@@ -735,6 +748,10 @@ static void radio_dispatch(uint8_t cmd, const uint8_t *arg, uint8_t len)
 	switch (cmd) {
 	case RADIO_SYSEX_ASK:
 		stats_send();
+		break;
+
+	case RADIO_SYSEX_NAME:
+		name_set(arg, len);
 		break;
 
 	//
@@ -805,6 +822,24 @@ static void radio_dispatch(uint8_t cmd, const uint8_t *arg, uint8_t len)
 		break;
 #endif
 #ifdef CONFIG_BT_CENTRAL
+	//
+	// MIDI for the device bound to, a byte as two nibbles because a
+	// status byte cannot travel inside SysEx.  More than fits is
+	// refused whole rather than sent in part.
+	//
+	case RADIO_SYSEX_SEND: {
+		uint8_t midi[BIND_SEND_MAX];
+		size_t n = len / 2;
+
+		for (size_t i = 0; i < n && i < BIND_SEND_MAX; i++)
+			midi[i] = (arg[2 * i] << 4) | arg[2 * i + 1];
+		if (n && n <= BIND_SEND_MAX && !bind_send(midi, n))
+			out.bound_sent++;
+		else
+			out.bound_failed++;
+		break;
+	}
+
 	//
 	// The address type, then the six bytes a nibble at a time, in
 	// the order bt_addr_le_t holds them - the same shape a result
@@ -1159,15 +1194,27 @@ static const struct bt_gatt_attr *midi_value_attr(void)
 /* ------------------------------------------------------------------ */
 
 /*
- * Flags, the name, and the service UUID: 3 + 7 + 18 bytes of the 31 an
- * advertisement has.  The UUID is in there because that is what makes a
- * scanner call this a MIDI device rather than an unknown one.
+ * Flags, the start of the name, and the service UUID: 3 + 7 + 18 bytes
+ * of the 31 an advertisement has.  The UUID is in there because that is
+ * what makes a scanner call this a MIDI device rather than an unknown
+ * one.
+ *
+ * The whole name is in the scan response, which has room for 29
+ * characters.  A scanner that asks for it shows the whole name, and one
+ * that does not shows "Pedal".
  */
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR),
-	BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME,
+	BT_DATA(BT_DATA_NAME_SHORTENED, CONFIG_BT_DEVICE_NAME,
 		sizeof(CONFIG_BT_DEVICE_NAME) - 1),
 	BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_MIDI_SERVICE_VAL),
+};
+
+static char adv_name[CONFIG_BT_DEVICE_NAME_MAX + 1] = CONFIG_BT_DEVICE_NAME;
+
+static struct bt_data sd[] = {
+	BT_DATA(BT_DATA_NAME_COMPLETE, adv_name,
+		sizeof(CONFIG_BT_DEVICE_NAME) - 1),
 };
 
 /*
@@ -1199,7 +1246,7 @@ static void adv_start(struct k_work *work)
 		return;
 
 	err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad),
-			      NULL, 0);
+			      sd, ARRAY_SIZE(sd));
 	if (err && err != -EALREADY) {
 		printk("bt: advertising failed, %d\n", err);
 		k_work_reschedule(&adv_work, K_MSEC(250));
@@ -1209,6 +1256,52 @@ static void adv_start(struct k_work *work)
 static void adv_again(void)
 {
 	k_work_reschedule(&adv_work, K_NO_WAIT);
+}
+
+/*
+ * The name the pedal asked for, applied on the system work queue.
+ * adv_start() runs there and hands 'sd' to the stack, so changing the
+ * name there too means it is never changed while being read.
+ *
+ * Both the GAP name, which a host reads after connecting, and the scan
+ * response.  Updating the advertisement fails with -EAGAIN when it is not
+ * running, and that is fine: the next adv_start() sends the new one.
+ */
+static char name_next[CONFIG_BT_DEVICE_NAME_MAX + 1];
+static K_MUTEX_DEFINE(name_lock);
+
+static void name_apply(struct k_work *work)
+{
+	ARG_UNUSED(work);
+
+	k_mutex_lock(&name_lock, K_FOREVER);
+	strcpy(adv_name, name_next);
+	k_mutex_unlock(&name_lock);
+
+	sd[0].data_len = strlen(adv_name);
+	bt_set_name(adv_name);
+	bt_le_adv_update_data(ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+}
+
+static K_WORK_DEFINE(name_work, name_apply);
+
+/*
+ * Printable ASCII only; a name with any other byte in it is refused.
+ */
+static void name_set(const uint8_t *arg, uint8_t len)
+{
+	if (!len || len > CONFIG_BT_DEVICE_NAME_MAX)
+		return;
+	for (uint8_t i = 0; i < len; i++)
+		if (arg[i] < 0x20 || arg[i] > 0x7e)
+			return;
+
+	k_mutex_lock(&name_lock, K_FOREVER);
+	memcpy(name_next, arg, len);
+	name_next[len] = '\0';
+	k_mutex_unlock(&name_lock);
+
+	k_work_submit(&name_work);
 }
 
 //
@@ -1325,6 +1418,14 @@ void midi_ble_start(void)
 	//
 	settings_load();
 	bt_conn_auth_info_cb_register(&midi_auth_info);
+
+	//
+	// The name the pedal gave last time, which the load just brought
+	// back, so that a radio reset on its own keeps it.  Nothing is
+	// advertising yet to read 'sd'.
+	//
+	strncpy(adv_name, bt_get_name(), CONFIG_BT_DEVICE_NAME_MAX);
+	sd[0].data_len = strlen(adv_name);
 
 	//
 	// Closed until the pedal says otherwise.  Being in the room is not
