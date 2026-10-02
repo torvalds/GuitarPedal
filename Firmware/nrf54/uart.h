@@ -327,7 +327,13 @@ static void nrf54_uart_init(void)
 	// The pull-up holds it at idle instead, so a radio that never
 	// answers delivers nothing rather than an endless break.
 	//
+	// CTS has the same pull-down and the opposite problem: low is
+	// "clear to send", so while the radio boots with its RTS undriven,
+	// whatever is sent goes into a UART that is not listening yet.  The
+	// pull-up holds it at "not clear" until the radio drives it.
+	//
 	gpio_pull_up(NRF54_RX);
+	gpio_pull_up(NRF54_CTS);
 
 	//
 	// SysEx, because the web app's protocol is built on it.  The TRS
