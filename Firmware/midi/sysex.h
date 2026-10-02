@@ -1134,6 +1134,13 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 		// directly.
 		//
 
+	} else if (cmd == 0x1d && sysex_from_radio) {
+		//
+		// MIDI for the device the radio is bound to is the pedal's to
+		// send.  Passed on from over the air, it would let anything
+		// that can reach the radio drive that device.
+		//
+
 	} else if (cmd >= 0x10 && cmd <= 0x1f) {
 		//
 		// Addressed to the radio rather than to the pedal: a

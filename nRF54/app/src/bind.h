@@ -17,6 +17,17 @@
 
 void bind_to(const bt_addr_le_t *addr);
 
+/* MIDI bytes to the bound device; at most this many in one call */
+#define BIND_SEND_MAX	8
+int bind_send(const uint8_t *midi, size_t len);
+
+#define BIND_CONNECTED	0x01
+#define BIND_ENCRYPTED	0x02
+#define BIND_FOUND	0x04
+#define BIND_SUBSCRIBED	0x08
+uint8_t bind_state(void);
+int bind_last_err(void);
+
 /*
  * Both roles share one set of connection callbacks, so midi.c asks
  * whose a connection is before treating it as the web app's.
@@ -29,6 +40,8 @@ void bind_encrypted(struct bt_conn *conn, bt_security_t level, int err);
 #else
 
 static inline bool bind_owns(struct bt_conn *conn) { return false; }
+static inline uint8_t bind_state(void) { return 0; }
+static inline int bind_last_err(void) { return 0; }
 
 #endif /* CONFIG_BT_CENTRAL */
 

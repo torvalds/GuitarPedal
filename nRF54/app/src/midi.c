@@ -154,6 +154,9 @@ static struct {
 	uint32_t conns, dc3e, dc08;
 	uint8_t last_reason;
 
+	/* MIDI handed to the bound device, and how much of it was refused */
+	uint32_t bound_sent, bound_failed;
+
 	/* The pedal's pairing window, and a bond to report from the loop. */
 	bool pairing;
 	bool bonded_pending;
@@ -421,6 +424,7 @@ static void pack_sysex_end(void)
 #define RADIO_SYSEX_BONDS	0x1a	/* in:  what are you paired with? */
 #define RADIO_SYSEX_BOND	0x1b	/* out: one of them */
 #define RADIO_SYSEX_BONDS_END	0x1c	/* out: that is all of them */
+#define RADIO_SYSEX_SEND	0x1d	/* in:  MIDI for the bound device */
 #define RADIO_SYSEX_LINKS	0x1e	/* out: connections, and how they ended */
 #define RADIO_SYSEX_LAST	0x1f
 
@@ -627,7 +631,9 @@ static void radio_json(uint8_t cmd, const char *fmt, ...)
  * stored, rs the signal strength of the MIDI connection in dBm.
  *
  * Then cn connections accepted, 3e and 08 how many of them ended for
- * those reasons, and dr why the last one ended.
+ * those reasons, dr why the last one ended, bs and bf MIDI sent to the
+ * bound device and refused, bd how far the bind has got, and be why it
+ * last failed.
  */
 static void stats_send(void)
 {
@@ -641,8 +647,11 @@ static void stats_send(void)
 		   bonds(), midi_rssi());
 
 	radio_json(RADIO_SYSEX_LINKS,
-		   "{\"cn\":%u,\"3e\":%u,\"08\":%u,\"dr\":%u}",
-		   out.conns, out.dc3e, out.dc08, out.last_reason);
+		   "{\"cn\":%u,\"3e\":%u,\"08\":%u,\"dr\":%u"
+		   ",\"bs\":%u,\"bf\":%u,\"bd\":%u,\"be\":%d}",
+		   out.conns, out.dc3e, out.dc08, out.last_reason,
+		   out.bound_sent, out.bound_failed, bind_state(),
+		   bind_last_err());
 }
 
 /*
@@ -805,6 +814,24 @@ static void radio_dispatch(uint8_t cmd, const uint8_t *arg, uint8_t len)
 		break;
 #endif
 #ifdef CONFIG_BT_CENTRAL
+	//
+	// MIDI for the device bound to, a byte as two nibbles because a
+	// status byte cannot travel inside SysEx.  More than fits is
+	// refused whole rather than sent in part.
+	//
+	case RADIO_SYSEX_SEND: {
+		uint8_t midi[BIND_SEND_MAX];
+		size_t n = len / 2;
+
+		for (size_t i = 0; i < n && i < BIND_SEND_MAX; i++)
+			midi[i] = (arg[2 * i] << 4) | arg[2 * i + 1];
+		if (n && n <= BIND_SEND_MAX && !bind_send(midi, n))
+			out.bound_sent++;
+		else
+			out.bound_failed++;
+		break;
+	}
+
 	//
 	// The address type, then the six bytes a nibble at a time, in
 	// the order bt_addr_le_t holds them - the same shape a result
