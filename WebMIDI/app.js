@@ -5905,6 +5905,7 @@ appTitleEl.addEventListener('click', () => {
                                 'controllers will all have to pair again.'))
                 return;
             sendSysex([SYSEX_CMD.FORGET]);
+            askBonds();
         });
     }
 
