@@ -716,6 +716,27 @@ textarea {
   flex: 1 1 180px;
 }
 
+/*
+ * The hum cuts' picture is drawn, not dragged, so it keeps the page's
+ * scrolling and the ordinary pointer.  The list of cuts goes after the
+ * Target pot in the row under it, and takes the room that is left.
+ */
+.hum-curve {
+  cursor: default;
+}
+
+.hum-canvas {
+  touch-action: auto;
+}
+
+.hum-status {
+  order: 1;
+  flex: 2 1 280px;
+  font-size: 0.9em;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
 .eq-options {
   margin-left: auto;
   display: flex;

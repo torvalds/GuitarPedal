@@ -70,7 +70,6 @@
 #include "usb-volume.h"
 #include "switch.h"
 
-static int tuner_mode = 0;
 static volatile int user_interaction = 0;
 
 #include "Audio/effect.h"
@@ -87,6 +86,7 @@ uint8_t routed_effect_count = 0;
 #include "hardware.h"
 #include "exp.h"
 #include "midi/sysex.h"
+#include "hum-learn.h"
 
 #include "ui.h"
 
@@ -296,6 +296,7 @@ int main()
 #ifdef EXP_TIP_GPIO
 	init_exp_pins();	// wants expression.accessory, loaded just above
 #endif
+	analyzer_init();
 
 	multicore_launch_core1(audio_processing);
 
@@ -341,6 +342,8 @@ int main()
 
 		sysex_send_identity();
 		sysex_send_telemetry();
+		hum_task();
+		sysex_send_hum();
 #ifdef EXP_TIP_GPIO
 		//
 		// A different accessory is a different set of controls,
@@ -425,7 +428,7 @@ int main()
 			// Are we in tuner mode?
 			//
 			// The transition out is caught here rather than at
-			// the three places that clear tuner_mode, because
+			// the places that switch the tuner off, because
 			// this is the one spot that sees every route out of
 			// it - a footswitch, a CC, or anything added later -
 			// and what is owed on the way out is the same
@@ -433,7 +436,7 @@ int main()
 			//
 			static bool was_tuning = false;
 
-			if (tuner_mode) {
+			if (analyzer_mode == ANALYZE_TUNER) {
 				was_tuning = true;
 				tuner_mode_ui();
 				continue;

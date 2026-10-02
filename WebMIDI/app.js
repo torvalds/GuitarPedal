@@ -13,6 +13,13 @@ const SYSEX_CMD = {
     EXP_PROBE: 0x0e,
 
     //
+    // The hum cuts: 0x21 is what the pedal measured and did, sent whenever
+    // the cuts change and when 0x22 asks.
+    //
+    HUM_CUTS: 0x21,
+    HUM_REPORT: 0x22,
+
+    //
     // 0x10-0x1f are the radio's, not the pedal's.  The pedal forwards
     // them between USB and the radio without reading any of it.
     //
@@ -1270,6 +1277,10 @@ function handleSysex(data) {
             handleTelemetry(data);
             break;
 
+        case SYSEX_CMD.HUM_CUTS:
+            handleHumCuts(data);
+            break;
+
         case SYSEX_CMD.EXP_PROBE: {
             const at = 3 + 1 + 2 * EXP_READINGS;
             if (expProbeSaw && data.length > at + 1)
@@ -1957,6 +1968,206 @@ function formatPotValue(pot, val) {
         displayStr += ' ' + pot.unit;
     }
     return displayStr;
+}
+
+//
+// A biquad's response, and the peaking section's coefficients, at the
+// top level because two drawings use them: the tone curves and the hum
+// cuts.
+// 'w0' and 'w2' are the sin and cos of the frequency and of twice it,
+// and 'A' is the square root of the linear gain, as in the cookbook.
+//
+function biquad_mag_sq(c, w0, w2) {
+    const re_num = c.b0 + c.b1 * w0.cos + c.b2 * w2.cos;
+    const im_num = c.b1 * w0.sin + c.b2 * w2.sin;
+    const num = re_num * re_num + im_num * im_num;
+
+    const re_den = 1.0 + c.a1 * w0.cos + c.a2 * w2.cos;
+    const im_den = c.a1 * w0.sin + c.a2 * w2.sin;
+    const den = re_den * re_den + im_den * im_den;
+
+    if (den < 1e-12) return num * 1e12;
+    return num / den;
+}
+
+function biquad_peaking(w0, Q, A) {
+    const alpha = w0.sin / (2 * Q);
+    const a0_inv = 1 / (1 + alpha / A);
+    return {
+        b0: (1 + alpha * A) * a0_inv,
+        b1: (-2 * w0.cos) * a0_inv,
+        b2: (1 - alpha * A) * a0_inv,
+        a1: (-2 * w0.cos) * a0_inv,
+        a2: (1 - alpha / A) * a0_inv
+    };
+}
+
+//
+// The hum cuts, as the pedal last reported them.
+//
+// Their frequencies, depths and widths are measured by the pedal, not
+// set by pots, so the Hum Filter's card draws them from this report.
+//
+let humCuts = null;
+
+function handleHumCuts(data) {
+    const b = data.slice(3);
+    if (b.length < 7 || b[0] !== 4)
+        return;
+
+    const mains = b[1];
+    humCuts = { mains, updates: b[3], learning: b[4] !== 0,
+                target: -b[5], ignored: b[6] / 10, cuts: [] };
+    for (let i = 0; i < b[2]; i++) {
+        const c = b.slice(7 + 7 * i, 14 + 7 * i);
+        if (c.length < 7)
+            break;
+        humCuts.cuts.push({ freq: c[0] * mains,
+                            depth: ((c[1] << 7) | c[2]) / 4,
+                            width: ((c[3] << 7) | c[4]) / 10,
+                            before: -c[5], after: -c[6] });
+    }
+    humCuts.cuts.sort((a, b) => a.freq - b.freq);
+
+    for (const e of PEDAL_EFFECTS)
+        if (e.redrawCuts)
+            e.redrawCuts();
+}
+
+//
+// Laid out as the tone curves are: the picture the full width of the
+// card, and a row under it for the pots and the list of cuts.  Returns
+// that row, which is where the card's pots go.
+//
+function buildHumCuts(effect, controls) {
+    controls.className = 'effect-controls eq-container';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'eq-curve-wrapper hum-curve';
+    const canvas = document.createElement('canvas');
+    canvas.width = 1000;
+    canvas.height = 300;
+    canvas.className = 'eq-canvas hum-canvas';
+    wrap.appendChild(canvas);
+
+    const footer = document.createElement('div');
+    footer.className = 'eq-footer';
+    const status = document.createElement('div');
+    status.className = 'hum-status';
+    footer.appendChild(status);
+
+    controls.appendChild(wrap);
+    controls.appendChild(footer);
+
+    effect.redrawCuts = () => drawHumCuts(canvas, status);
+    effect.redrawCuts();
+    sendSysex([SYSEX_CMD.HUM_REPORT]);
+    return footer;
+}
+
+//
+// A log axis from 30 Hz to past the highest cut, and no shorter than
+// 1.5 kHz, so that a cut a hertz wide is a few pixels rather than a
+// fraction of one.  The curve is taken at every other pixel and densely
+// across each cut, so a cut narrower than a pixel is still drawn at its
+// full depth.
+//
+// It draws whatever notches the report lists, without knowing what made
+// them, so a different filter on the pedal needs nothing here.
+//
+function drawHumCuts(canvas, status) {
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const top = humCuts && humCuts.cuts.length
+          ? humCuts.cuts[humCuts.cuts.length - 1].freq : 0;
+    const lo = 30, hi = Math.min(Math.max(1500, top * 1.5), 20000);
+    const fs = 48000, floorDb = -45;
+    const fToX = (f) => W * Math.log(f / lo) / Math.log(hi / lo);
+    const dbToY = (db) => 10 + (H - 20) * (db / floorDb);
+    const sc = (f) => ({ sin: Math.sin(2 * Math.PI * f / fs),
+                         cos: Math.cos(2 * Math.PI * f / fs) });
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.beginPath();
+    for (const f of [50, 100, 200, 500, 1000, 2000, 5000, 10000]) {
+        if (f > hi)
+            break;
+        ctx.moveTo(fToX(f), 0);
+        ctx.lineTo(fToX(f), H);
+    }
+    for (let db = 0; db >= -40; db -= 10) {
+        ctx.moveTo(0, dbToY(db));
+        ctx.lineTo(W, dbToY(db));
+    }
+    ctx.stroke();
+
+    if (!humCuts) {
+        status.textContent = 'Waiting for the pedal to say what it measured.';
+        return;
+    }
+
+    const coeff = humCuts.cuts.map((c) =>
+        biquad_peaking(sc(c.freq), c.freq / c.width, Math.pow(10, -c.depth / 40)));
+
+    const freqs = [];
+    for (let x = 0; x <= W; x += 2)
+        freqs.push(lo * Math.pow(hi / lo, x / W));
+    for (const c of humCuts.cuts)
+        for (let k = -24; k <= 24; k++)
+            freqs.push(c.freq + k * c.width / 8);
+    freqs.sort((a, b) => a - b);
+
+    ctx.beginPath();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#4ecca3';
+    let first = true;
+    for (const f of freqs) {
+        if (f < lo || f > hi)
+            continue;
+        let magSq = 1;
+        for (const c of coeff)
+            magSq *= biquad_mag_sq(c, sc(f), sc(2 * f));
+        const db = Math.max(10 * Math.log10(Math.max(magSq, 1e-12)), floorDb);
+        if (first)
+            ctx.moveTo(fToX(f), dbToY(db));
+        else
+            ctx.lineTo(fToX(f), dbToY(db));
+        first = false;
+    }
+    ctx.stroke();
+
+    //
+    // The cuts change several times a second during a measurement, so the
+    // status line lists them throughout, with "Measuring" in front.
+    //
+    let what;
+    if (!humCuts.mains) {
+        what = humCuts.learning ? '' : 'No hum found, so nothing is cut.';
+    } else if (!humCuts.cuts.length) {
+        what = `${humCuts.mains} Hz hum, already below ` +
+            `${humCuts.target} dBFS: nothing cut.`;
+    } else if (humCuts.cuts.length <= 8) {
+        what = `${humCuts.mains} Hz hum, cut to ` +
+            `${humCuts.target} dBFS: ` + humCuts.cuts.map((c) =>
+                `${c.freq} Hz -${c.depth.toFixed(1)} dB ` +
+                `(${c.before} to ${c.after})`).join(', ');
+    } else {
+        const deepest = humCuts.cuts.reduce((a, c) => c.depth > a.depth ? c : a);
+        what = `${humCuts.mains} Hz hum, cut to ` +
+            `${humCuts.target} dBFS: ${humCuts.cuts.length} cuts from ` +
+            `${humCuts.cuts[0].freq} to ${top} Hz, the deepest ` +
+            `-${deepest.depth.toFixed(1)} dB at ${deepest.freq} Hz.`;
+    }
+
+    if (humCuts.learning) {
+        what = 'Measuring - keep the strings quiet.' +
+            (humCuts.ignored ? ` Ignored ${humCuts.ignored.toFixed(1)} s ` +
+                               'of playing.' : '') +
+            (what ? ' ' + what : '');
+    }
+    status.textContent = what;
 }
 
 
@@ -4321,18 +4532,6 @@ function renderUI() {
                     return { sin: Math.sin(rad), cos: Math.cos(rad) };
                 }
                 function pow2(x) { return Math.pow(2, x); }
-                function biquad_mag_sq(c, w0, w2) {
-                    const re_num = c.b0 + c.b1 * w0.cos + c.b2 * w2.cos;
-                    const im_num = c.b1 * w0.sin + c.b2 * w2.sin;
-                    const num = re_num * re_num + im_num * im_num;
-
-                    const re_den = 1.0 + c.a1 * w0.cos + c.a2 * w2.cos;
-                    const im_den = c.a1 * w0.sin + c.a2 * w2.sin;
-                    const den = re_den * re_den + im_den * im_den;
-
-                    if (den < 1e-12) return num * 1e12;
-                    return num / den;
-                }
                 function biquad_loshelf(w0, Q, A) {
                     const alpha = w0.sin / (2 * Q);
                     const ap1 = A + 1, am1 = A - 1;
@@ -4344,17 +4543,6 @@ function renderUI() {
                         b2: A * (ap1 - am1 * w0.cos - sqAmin2) * a0_inv,
                         a1: -2 * (am1 + ap1 * w0.cos) * a0_inv,
                         a2: (ap1 + am1 * w0.cos - sqAmin2) * a0_inv
-                    };
-                }
-                function biquad_peaking(w0, Q, A) {
-                    const alpha = w0.sin / (2 * Q);
-                    const a0_inv = 1 / (1 + alpha / A);
-                    return {
-                        b0: (1 + alpha * A) * a0_inv,
-                        b1: (-2 * w0.cos) * a0_inv,
-                        b2: (1 - alpha * A) * a0_inv,
-                        a1: (-2 * w0.cos) * a0_inv,
-                        a2: (1 - alpha / A) * a0_inv
                     };
                 }
                 function biquad_hishelf(w0, Q, A) {
@@ -4904,6 +5092,10 @@ function renderUI() {
             controls.className = 'effect-controls';
         }
 
+        // A picture drawn from what the pedal reports rather than pots
+        const drawFooter = effect.draw === 'humcuts'
+              ? buildHumCuts(effect, controls) : null;
+
         //
         // Generate Mix slider, for an effect that has one.  'steerable'
         // is the pedal saying 'MIX: NONE', which is the same fact as
@@ -5094,7 +5286,7 @@ function renderUI() {
                 potDiv.appendChild(potInfo);
 
             if (!isEq) {
-                controls.appendChild(potDiv);
+                (drawFooter || controls).appendChild(potDiv);
             } else if (pIdx < bands.length * 2) {
                 //
                 // Part of the picture.  The slider still exists and is

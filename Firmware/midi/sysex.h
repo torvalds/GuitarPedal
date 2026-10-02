@@ -965,6 +965,10 @@ static bool in_sysex = false;
 static bool sysex_over = false;
 
 
+// Set by the dispatch below, taken by hum_task()
+static unsigned int hum_learn_request;	// -dBFS, or 128 for a clear (00 sent)
+static bool hum_report_request;
+
 static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 {
 	uint8_t cmd = sysex_buf[0];
@@ -1169,6 +1173,15 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 		send_exp_tx = true;
 #endif
 
+	} else if (cmd == 0x21) { // Learn the hum cuts, or clear them
+
+		hum_learn_request = sysex_len < 2 ? 95 :
+				    sysex_buf[1] ? sysex_buf[1] : 128;
+
+	} else if (cmd == 0x22) { // Report the hum cuts
+
+		hum_report_request = true;
+
 	} else if (cmd == 0x05) { // State Dump Request
 
 		state_dump_tx = true;
@@ -1285,9 +1298,10 @@ bool handle_midi_packet(const uint8_t packet[4])
 		handled = true;
 		if (data1 == 20) { // Global Bypass
 			if (data2 == 68) {
-				tuner_mode = 1;
+				analyzer_set_mode(ANALYZE_TUNER);
 			} else if (data2 == 69) {
-				tuner_mode = 0;
+				if (analyzer_mode == ANALYZE_TUNER)
+					analyzer_set_mode(ANALYZE_OFF);
 			} else if (data2 == 126) {
 				reset_usb_boot(0, 0);
 			} else {

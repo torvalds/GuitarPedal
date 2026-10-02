@@ -64,15 +64,11 @@ struct bench_timer bench_timer_regs;
 #include "Audio/analyze.h"
 
 //
-// Two of the things audio/effect.h expects to already exist - see the
-// contract at the top of it.  Only tuner_mode is reachable from the
-// audio path, and process_input() diverts the whole signal into the
-// tuner when it is set, so it is held at zero here for the same reason
-// the tuner is not built: a bench measuring an effect is not measuring
-// the tuner.  user_interaction is written by hardware.h and read by
-// nothing on this side.
+// One of the things audio/effect.h expects to already exist - see the
+// contract at the top of it.  Written by hardware.h and read by
+// nothing on this side.  analyzer_mode stays off: a bench measuring an
+// effect is not measuring the tuner.
 //
-static int tuner_mode = 0;
 static volatile int user_interaction = 0;
 
 #include "Audio/effect.h"
