@@ -1155,6 +1155,12 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 		// that can reach the radio drive that device.
 		//
 
+	} else if (cmd == 0x1f && sysex_from_radio) {
+		//
+		// The radio's name is the pedal's to give.  Passed on from
+		// over the air, it would let any client rename the radio.
+		//
+
 	} else if (cmd >= 0x10 && cmd <= 0x1f) {
 		//
 		// Addressed to the radio rather than to the pedal: a

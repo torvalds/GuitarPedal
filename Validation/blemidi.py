@@ -246,8 +246,10 @@ class Link:
     def find(self, seconds=15):
         """The device path, scanning for it if BlueZ has forgotten it.
 
-        By name rather than by address, because the address is per board
-        and the name is CONFIG_BT_DEVICE_NAME.
+        By name rather than by address, because the address is per board.
+        A pedal's radio is called "Pedal" and the last four hex digits of
+        the board's unique id, "Pedal 13A9", so "pedal" finds any of them
+        and the whole name finds that board, in either case.
         """
         prefix = "/org/bluez/%s/" % self.adapter
 
@@ -256,8 +258,10 @@ class Link:
                 dev = ifaces.get("org.bluez.Device1")
                 if not dev or not path.startswith(prefix):
                     continue
-                if self.target in (str(dev.get("Name", "")),
-                                   str(dev.get("Address", ""))):
+                name = str(dev.get("Name", "")).lower()
+                want = self.target.lower()
+                if want in (name, str(dev.get("Address", "")).lower()) \
+                   or name.startswith(want + " "):
                     return path
             return None
 
@@ -451,7 +455,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--adapter", default="hci0", help="controller (hci0)")
     ap.add_argument("--target", default="pedal",
-                    help="advertised name or address (pedal)")
+                    help="advertised name or address; 'pedal' is any"
+                         " pedal, 'Pedal 13A9' is that one (pedal)")
     ap.add_argument("--send", default="0x01",
                     help="SysEx body to send, comma separated"
                          " (0x01 asks for the schema; 0x06,0x01 opens the"
