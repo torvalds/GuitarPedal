@@ -33,14 +33,16 @@
  */
 /*
  * Y501 is 32MHz/8pF/20ppm in a 2016 package and the board carries no
- * external load capacitors, so the trim target is the crystal's own
- * 8 pF.  15000 is the nRF54L15 DK's number for a different crystal, and
- * it would pull this one about 67 ppm low - outside the 40 ppm Bluetooth
- * allows, which would read as an antenna problem rather than a number.
+ * external load capacitors.  The value below, in femtofarads, is CINT,
+ * the capacitor on each pin, which is what the datasheet's INTCAP
+ * equation takes - not the load the crystal sees.  The crystal sees the
+ * two pins in series, about (CINT + Cpcb) / 2, so an 8 pF crystal needs
+ * CINT near 2 x 8 less the board's stray capacitance.  Below about 10 pF
+ * here the radio loses connections: its packets go unheard.
  */
 &hfxo {
 	load-capacitors = "internal";
-	load-capacitance-femtofarad = <8000>;
+	load-capacitance-femtofarad = <15000>;
 };
 
 /*

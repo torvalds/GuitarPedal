@@ -432,7 +432,7 @@ def check_message(m):
     if len(m) < 4 or m[0] != 0xF0 or m[1] != 0x7D:
         return
     body = m[3:-1]
-    if m[2] not in (0x02, 0x0B, 0x0F, 0x15):      # the ones that are JSON
+    if m[2] not in (0x02, 0x0B, 0x0F, 0x15, 0x1E):  # the ones that are JSON
         return
     try:
         json.loads(body.decode("ascii"))
@@ -501,9 +501,10 @@ def main():
         if not d:
             print("radio counters: no pedal on USB (%s)" % why)
         else:
-            body = pedal.sysex_payload(
-                pedal.listen_sysex(d["port"], 0x14, 2.0), 0x15)
-            print("radio:", body.decode() if body else "no answer")
+            blob = pedal.listen_sysex(d["port"], 0x14, 2.0)
+            for opcode in (0x15, 0x1e):
+                body = pedal.sysex_payload(blob, opcode)
+                print("radio:", body.decode() if body else "no answer")
 
     return 0 if link.decoder.messages and not link.decoder.partial else 1
 

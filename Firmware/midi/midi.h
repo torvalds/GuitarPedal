@@ -236,32 +236,39 @@ void usb_midi_poll(void);
 bool usb_midi_write(const uint8_t packet[4]);
 bool usb_midi_write_nb(const uint8_t packet[4]);
 void uart_midi_write(const uint8_t packet[4]);
+void radio_midi_write(const uint8_t packet[4]);
+bool usb_midi_write_or_drop(const uint8_t packet[4]);
 
 static inline void send_midi_cc(uint8_t cc, uint8_t val)
 {
 	uint8_t packet[4] = { 0x0B, 0xB0, cc, val };
 	usb_midi_write(packet);
 	uart_midi_write(packet);
+	radio_midi_write(packet);
 }
 
 //
 // The same, for something nobody is waiting on.
 //
-// Returns whether USB took it, so a caller that repeats itself anyway can
+// Returns whether it went, so a caller that repeats itself anyway can
 // simply not remember having sent it and say it again next time.  A host
 // that is not reading fills the transmit fifo and every blocking write
 // into it costs MIDI_TX_TIMEOUT_MS, which for anything periodic is a
 // stall the pedal inflicts on itself for no reader's benefit.
 //
-// The UART is written either way and is not part of the answer: it is a
-// ring that drops when full and never waits, so there is nothing to
-// report and nothing to retry.
+// USB first, because it is the one that can be busy; the UART and the
+// radio only once it has gone, so a caller that tries again does not
+// send them the same message twice.
 //
 static inline bool send_midi_cc_nb(uint8_t cc, uint8_t val)
 {
 	uint8_t packet[4] = { 0x0B, 0xB0, cc, val };
+
+	if (!usb_midi_write_or_drop(packet))
+		return false;
 	uart_midi_write(packet);
-	return usb_midi_write_nb(packet);
+	radio_midi_write(packet);
+	return true;
 }
 
 static inline void send_midi_note_on(uint8_t ch, uint8_t note, uint8_t vel)
@@ -269,6 +276,7 @@ static inline void send_midi_note_on(uint8_t ch, uint8_t note, uint8_t vel)
 	uint8_t packet[4] = { 0x09, 0x90 | (ch & 0x0F), note, vel };
 	usb_midi_write(packet);
 	uart_midi_write(packet);
+	radio_midi_write(packet);
 }
 
 static inline void send_midi_note_off(uint8_t ch, uint8_t note, uint8_t vel)
@@ -276,6 +284,7 @@ static inline void send_midi_note_off(uint8_t ch, uint8_t note, uint8_t vel)
 	uint8_t packet[4] = { 0x08, 0x80 | (ch & 0x0F), note, vel };
 	usb_midi_write(packet);
 	uart_midi_write(packet);
+	radio_midi_write(packet);
 }
 
 static inline void send_midi_pitch_bend(uint8_t ch, int16_t bend)
@@ -284,6 +293,7 @@ static inline void send_midi_pitch_bend(uint8_t ch, int16_t bend)
 	uint8_t packet[4] = { 0x0E, 0xE0 | (ch & 0x0F), val & 0x7F, (val >> 7) & 0x7F };
 	usb_midi_write(packet);
 	uart_midi_write(packet);
+	radio_midi_write(packet);
 }
 
 static inline void send_midi_channel_pressure(uint8_t ch, uint8_t pressure)
@@ -291,4 +301,5 @@ static inline void send_midi_channel_pressure(uint8_t ch, uint8_t pressure)
 	uint8_t packet[4] = { 0x0D, 0xD0 | (ch & 0x0F), pressure & 0x7F, 0 };
 	usb_midi_write(packet);
 	uart_midi_write(packet);
+	radio_midi_write(packet);
 }

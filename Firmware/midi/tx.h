@@ -63,6 +63,9 @@
 #define MIDI_TX_PAYLOAD	2048
 #define MIDI_TX_MSGS	16
 
+// How long a full USB fifo is waited on before the host counts as gone
+#define MIDI_TX_STALL_MS 100
+
 //
 // One run of bytes waiting to go out.
 //
@@ -163,6 +166,7 @@ static struct {
 	unsigned int pack_len;
 	uint8_t pkt[4];
 	bool pkt_ready;
+	uint32_t usb_full_since; // when USB began refusing, in ms; 0 if not
 } midi_tx;
 
 static inline uint32_t midi_tx_pay_used(void)
@@ -310,24 +314,40 @@ static uint8_t midi_tx_byte(const struct midi_msg *m, uint16_t i)
 	return midi_tx.payload[(m->off + i) & (MIDI_TX_PAYLOAD - 1)];
 }
 
+//
+// One packet to USB, or given up on.
+//
+// A host that is mounted and not reading - a computer the pedal only
+// draws power from - fills the fifo and never empties it, and nothing
+// says so.  Everything waiting on USB would wait for ever, Bluetooth
+// included, so a fifo that has refused for MIDI_TX_STALL_MS straight
+// counts as a host that has stopped reading and the packet is dropped.
+// A host that reads frees room every millisecond.
+//
+// True when the packet is gone, taken or dropped.
+//
+bool usb_midi_write_or_drop(const uint8_t packet[4])
+{
+	uint32_t now = to_ms_since_boot(get_absolute_time());
+
+	if (usb_midi_write_nb(packet)) {
+		midi_tx.usb_full_since = 0;
+		return true;
+	}
+	if (!midi_tx.usb_full_since) {
+		midi_tx.usb_full_since = now | 1;
+		return false;
+	}
+	return now - midi_tx.usb_full_since >= MIDI_TX_STALL_MS;
+}
+
 static bool midi_tx_push(void)
 {
 	if (!midi_tx.pkt_ready)
 		return true;
 
-	if (!usb_midi_write_nb(midi_tx.pkt)) {
-		//
-		// Busy is worth waiting for; unmounted is not.
-		//
-		// With no USB host there is nothing on that endpoint to
-		// ever wait for, so the packet is thrown away and this
-		// sink keeps moving.  Waiting for it would hold the
-		// descriptor and stop the queue being reused, which on a
-		// pedal running from a charger is for ever.
-		//
-		if (tud_midi_mounted())
-			return false;
-	}
+	if (!usb_midi_write_or_drop(midi_tx.pkt))
+		return false;
 
 	midi_tx.pkt_ready = false;
 	return true;
@@ -409,7 +429,65 @@ static void midi_tx_to_usb(void)
 		midi_tx_push();
 }
 
+//
+// Channel messages for the radio: the CCs, notes and pitch bends that
+// midi.h's senders write straight to USB and to the jacks.
+//
+// USB takes each as a packet of its own, which can go between two of a
+// SysEx reply's.  The radio takes a byte stream, where a status byte in
+// the middle of a SysEx message ends it - so these wait here, and go
+// between replies.  A message that does not fit is dropped, as the
+// jacks' ring drops one.
+//
+#define MIDI_TX_SHORT	256
+
 #ifdef NRF54_SWDIO
+static struct {
+	uint8_t buf[MIDI_TX_SHORT];
+	uint32_t head, tail;
+	bool mid;			// a SysEx reply is part sent
+} midi_short;
+#endif
+
+void radio_midi_write(const uint8_t packet[4])
+{
+#ifdef NRF54_SWDIO
+	int len = midi_cin_length(packet[0] & 0x0F);
+
+	if (MIDI_TX_SHORT - (midi_short.head - midi_short.tail) < (uint32_t)len)
+		return;
+	for (int i = 0; i < len; i++)
+		midi_short.buf[midi_short.head++ & (MIDI_TX_SHORT - 1)] =
+			packet[1 + i];
+#endif
+}
+
+#ifdef NRF54_SWDIO
+//
+// Send the radio the channel messages that are waiting; false if it could
+// not take them all.  A message is never left half sent, because what
+// follows could be a reply.
+//
+static bool midi_tx_short_to_radio(void)
+{
+	while (midi_short.tail != midi_short.head) {
+		uint8_t status = midi_short.buf[midi_short.tail & (MIDI_TX_SHORT - 1)];
+		int len = midi_cin_length(midi_status_cin(status));
+
+		if (!nrf54_uart.listening) {
+			midi_short.tail = midi_short.head;
+			break;
+		}
+		// Ready is under half full, far more room than three bytes
+		if (!nrf54_uart_ready())
+			return false;
+		while (len--)
+			nrf54_uart_thru(midi_short.buf[midi_short.tail++ &
+						       (MIDI_TX_SHORT - 1)]);
+	}
+	return true;
+}
+
 //
 // The same bytes to the radio, unpacketised.
 //
@@ -422,10 +500,16 @@ static void midi_tx_to_radio(void)
 {
 	struct midi_sink *s = &midi_tx.radio;
 
-	while (s->tail != midi_tx.head) {
+	for (;;) {
+		if (!midi_short.mid && !midi_tx_short_to_radio())
+			return;
+		if (s->tail == midi_tx.head)
+			return;
+
 		struct midi_msg *m = &midi_tx.ring[s->tail & (MIDI_TX_MSGS - 1)];
 
 		if (s->sent >= m->len) {
+			midi_short.mid = m->more;
 			s->tail++;
 			s->sent = 0;
 			continue;
@@ -452,6 +536,7 @@ static void midi_tx_to_radio(void)
 		if (!nrf54_uart_ready())
 			return;
 
+		midi_short.mid = true;
 		nrf54_uart_thru(midi_tx_byte(m, s->sent++));
 	}
 }

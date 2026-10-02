@@ -850,8 +850,9 @@ static void sysex_send_state_dump(void)
 	//
 	report_info("Sending global-enable state");
 	uint8_t cc_packet[4] = { 0x0B, 0xB0, MIDI_CC_GLOBAL_ENABLE, disable_all ? 0 : 127 };
-	if (!usb_midi_write_nb(cc_packet))
+	if (!usb_midi_write_or_drop(cc_packet))
 		return;
+	radio_midi_write(cc_packet);
 
 	//
 	// One give-up flag for the whole dump rather than one per
