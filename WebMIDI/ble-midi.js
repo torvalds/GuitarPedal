@@ -321,10 +321,9 @@ class BleMidiDecoder {
 // The pedal as a port pair: something with onmidimessage on one side
 // and send() on the other, which is what the rest of the app reads.
 //
-// Connecting needs a user gesture, because requestDevice() opens the
-// browser's own device chooser.  That chooser is the whole of the
-// permission model for now - the characteristic is not encrypted and
-// nothing is bonded, so there is no pairing to do and no key to keep.
+// Picking a device needs a user gesture, because requestDevice() opens
+// the browser's own device chooser.  Connecting to it again does not, so
+// a dropped link is retried without one.
 //
 const BLE_PEDAL_ID = 'ble-pedal';
 
@@ -437,6 +436,18 @@ const blePedal = {
             filters: [{ services: [BLE_MIDI_SERVICE] }],
         });
 
+        this.release();
+        this.wanted = device;
+        return this.attach(device);
+    },
+
+    //
+    // Connect to a device the chooser has already handed out, which needs
+    // no gesture - so this is also what reconnecting does.
+    //
+    async attach(device) {
+        const gen = this.gen;
+
         //
         // Drop a link that is already up before asking for another.
         //
@@ -501,12 +512,21 @@ const blePedal = {
 
         await this.step('subscribe', ch.startNotifications());
 
-        // once: the next connect adds it again
+        //
+        // Once: the next connect adds it again.
+        //
+        // A link that drops while this is still the device picked is
+        // retried, because the usual reason is the pedal being unplugged
+        // or switched off, and it will be back.
+        //
         device.addEventListener('gattserverdisconnected', () => {
             this.characteristic = null;
             this.decoder = null;
+            this.reconnecting = this.wanted === device && this.gen === gen;
             if (this.ondisconnect)
                 this.ondisconnect();
+            if (this.reconnecting)
+                this.retry(device);
         }, { once: true });
 
         //
@@ -527,10 +547,67 @@ const blePedal = {
                               + ' can say whether it was ever asked.');
         }, 5000);
 
+        if (this.wanted !== device || this.gen !== gen) {
+            device.gatt.disconnect();
+            throw new Error('something else was picked meanwhile');
+        }
+
         this.device = device;
         this.characteristic = ch;
         this.name = 'Bluetooth: ' + (device.name || 'pedal');
         return device.name;
+    },
+
+    //
+    // Retry a device until it connects or something else is picked, every
+    // few seconds rather than at once: a pedal that has just been plugged
+    // in takes a second or two to boot and advertise, and one that is
+    // switched off costs a bounded GATT connect per try.
+    //
+    reconnecting: false,
+
+    //
+    // 'gen' moves on whenever something else is picked, so that a link
+    // made or lost under an older pick neither reconnects nor stays.
+    //
+    wanted: null,
+    gen: 0,
+
+    async retry(device) {
+        const gen = this.gen;
+        const still = () => this.wanted === device && this.gen === gen;
+
+        for (let n = 1; still(); n++) {
+            await new Promise((settle) =>
+                setTimeout(settle, Math.min(1000 * n, 5000)));
+            if (!still())
+                break;
+            try {
+                await this.attach(device);
+                break;
+            } catch (err) {
+                console.debug('[BLE MIDI] reconnect: '
+                              + ((err && err.message) || err));
+            }
+        }
+        this.reconnecting = false;
+        if (this.connected && this.onreconnect)
+            this.onreconnect();
+    },
+
+    //
+    // Something else was picked: let go, and stop reconnecting.
+    //
+    release() {
+        const device = this.device;
+
+        this.gen++;
+        this.wanted = null;
+        this.reconnecting = false;
+        this.device = null;
+        this.characteristic = null;
+        if (device && device.gatt.connected)
+            device.gatt.disconnect();
     },
 
     send(bytes) {

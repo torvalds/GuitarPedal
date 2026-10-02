@@ -739,6 +739,31 @@ const demoPedal = {
 };
 
 //
+// What the app does when a Bluetooth pedal's link drops or comes back.
+//
+// A drop clears the selection, because the menu would otherwise still
+// show the pedal and picking it again would fire no change event. Unless
+// the link is being retried: then the selection stays, because the pedal
+// was unplugged or switched off and comes back by itself.
+//
+function watchBlePedal() {
+    blePedal.ondisconnect = () => {
+        if (!blePedal.reconnecting) {
+            if (selectedInputId === BLE_PEDAL_ID)
+                selectedInputId = null;
+            if (selectedOutputId === BLE_PEDAL_ID)
+                selectedOutputId = null;
+        }
+        populateMidiSelects();
+        updateMidiState();
+    };
+    blePedal.onreconnect = () => {
+        populateMidiSelects();
+        updateMidiState();
+    };
+}
+
+//
 // One menu of devices. A pedal is an input and an output, and picking them
 // separately could pair the halves of two devices. A device is listed when
 // it has both under one name, as a pedal's USB port and a USB-MIDI cable to
@@ -836,7 +861,9 @@ function updateMidiState() {
     } else if (selectedInputId === BLE_PEDAL_ID ||
                selectedOutputId === BLE_PEDAL_ID) {
         selectedInputId = selectedOutputId = BLE_PEDAL_ID;
-        foundInput = foundOutput = blePedal;
+        // Picked, but only found while the link is up
+        if (blePedal.connected)
+            foundInput = foundOutput = blePedal;
     } else if (!midiAccess) {
         /* nothing to look through */
     } else if (selectedInputId && midiAccess.inputs.has(selectedInputId)) {
@@ -934,7 +961,9 @@ function updateMidiState() {
         midiInput = null;
         midiOutput = null;
         appTitleEl.className = "title-disconnected";
-        appTitleEl.textContent = "RP2350 Pedal";
+        appTitleEl.textContent = blePedal.reconnecting
+            ? `Reconnecting to ${blePedal.name.replace(/^Bluetooth: /, '')}\u2026`
+            : "RP2350 Pedal";
 
         // Nothing is going to tell us it stopped, so stop saying it
         clearPedalStatus();
@@ -5470,6 +5499,10 @@ appTitleEl.addEventListener('click', () => {
 
         closeDialogOnAnswer = true;
 
+        // Anything else picked lets go of a Bluetooth pedal
+        if (value !== BLE_PEDAL_ID)
+            blePedal.release();
+
         //
         // A port is the input's id, and its output is the one with the
         // same name.
@@ -5494,25 +5527,9 @@ appTitleEl.addEventListener('click', () => {
         // is then the only way to ask again.
         //
         if (value === BLE_PEDAL_ID && (!blePedal.connected || !blePedal.rx)) {
-            //
-            // Set before connecting: the device can go away during the
-            // handshake, and the handler is what puts the menu back.
-            //
-            // Clearing the selection is what makes this work at all.
-            // Left alone, updateMidiState() still finds blePedal for
-            // both ends and reports a pedal that is gone as connected -
-            // and because the select still reads the same value,
-            // picking Bluetooth again fires no change event and there
-            // is no way back from the menu.
-            //
-            blePedal.ondisconnect = () => {
-                if (selectedInputId === BLE_PEDAL_ID)
-                    selectedInputId = null;
-                if (selectedOutputId === BLE_PEDAL_ID)
-                    selectedOutputId = null;
-                populateMidiSelects();
-                updateMidiState();
-            };
+            // Before connecting: the device can go away during the
+            // handshake, and the handlers are what put the menu back.
+            watchBlePedal();
 
             try {
                 await blePedal.connect();
