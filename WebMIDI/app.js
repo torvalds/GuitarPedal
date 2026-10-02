@@ -738,54 +738,48 @@ const demoPedal = {
     },
 };
 
+//
+// One menu of devices. A pedal is an input and an output, and picking them
+// separately could pair the halves of two devices. A device is listed when
+// it has both under one name, as a pedal's USB port and a USB-MIDI cable to
+// its TRS jacks both do; the value is the input's id, and the output is
+// found by name when it is picked.
+//
 function populateMidiSelects() {
-    const inSelect = document.getElementById('midi-input-select');
-    const outSelect = document.getElementById('midi-output-select');
-    if (!inSelect || !outSelect) return;
+    const sel = document.getElementById('midi-pedal-select');
+    if (!sel) return;
 
-    inSelect.innerHTML = '<option value="">-- Auto-detect pedal --</option>';
-    outSelect.innerHTML = '<option value="">-- Auto-detect pedal --</option>';
+    sel.innerHTML = '<option value="">-- Auto-detect pedal --</option>';
 
-    // In both lists, because it is both ends of the conversation
-    for (const sel of [inSelect, outSelect]) {
-        const opt = document.createElement('option');
-
-        opt.value = DEMO_PEDAL_ID;
-        opt.textContent = demoPedal.name;
-        if ((sel === inSelect ? selectedInputId : selectedOutputId)
-            === DEMO_PEDAL_ID)
-            opt.selected = true;
-        sel.appendChild(opt);
-    }
+    const opt = document.createElement('option');
+    opt.value = DEMO_PEDAL_ID;
+    opt.textContent = demoPedal.name;
+    opt.selected = selectedInputId === DEMO_PEDAL_ID;
+    sel.appendChild(opt);
 
     //
     // Bluetooth, on the browsers that have it.
     //
-    // Also both ends, and also not a Web MIDI port: on Android a
-    // Bluetooth MIDI device is never listed by requestMIDIAccess() at
-    // all, so this is the only way a page reaches the pedal without a
-    // cable.  ble-midi.js says why at length.
+    // Not a Web MIDI port: on Android a Bluetooth MIDI device is never
+    // listed by requestMIDIAccess() at all, so this is the only way a page
+    // reaches the pedal without a cable.  ble-midi.js says why at length.
     //
-    // An insecure origin removes navigator.bluetooth rather than
-    // failing the call, the same way it removes Web MIDI, so say which
-    // of the two it is instead of quietly offering one entry fewer.
-    for (const sel of [inSelect, outSelect]) {
-        const opt = document.createElement('option');
-
-        opt.value = BLE_PEDAL_ID;
-        if (blePedal.supported) {
-            opt.textContent = blePedal.name;
-            if ((sel === inSelect ? selectedInputId : selectedOutputId)
-                === BLE_PEDAL_ID)
-                opt.selected = true;
-        } else {
-            opt.disabled = true;
-            opt.textContent = window.isSecureContext
-                ? 'Bluetooth \u2014 this browser has none'
-                : 'Bluetooth \u2014 needs https or localhost';
-        }
-        sel.appendChild(opt);
+    // An insecure origin removes navigator.bluetooth rather than failing
+    // the call, the same way it removes Web MIDI, so say which of the two
+    // it is instead of quietly offering one entry fewer.
+    //
+    const ble = document.createElement('option');
+    ble.value = BLE_PEDAL_ID;
+    if (blePedal.supported) {
+        ble.textContent = blePedal.name;
+        ble.selected = selectedInputId === BLE_PEDAL_ID;
+    } else {
+        ble.disabled = true;
+        ble.textContent = window.isSecureContext
+            ? 'Bluetooth \u2014 this browser has none'
+            : 'Bluetooth \u2014 needs https or localhost';
     }
+    sel.appendChild(ble);
 
     //
     // Real ports only if there are any.  Web MIDI can be missing
@@ -796,20 +790,16 @@ function populateMidiSelects() {
     if (!midiAccess)
         return;
 
-    for (let input of midiAccess.inputs.values()) {
+    const outputs = new Set([...midiAccess.outputs.values()]
+                            .map((o) => o.name));
+    for (const input of midiAccess.inputs.values()) {
+        if (!outputs.has(input.name))
+            continue;
         const opt = document.createElement('option');
         opt.value = input.id;
         opt.textContent = input.name;
-        if (input.id === selectedInputId) opt.selected = true;
-        inSelect.appendChild(opt);
-    }
-
-    for (let output of midiAccess.outputs.values()) {
-        const opt = document.createElement('option');
-        opt.value = output.id;
-        opt.textContent = output.name;
-        if (output.id === selectedOutputId) opt.selected = true;
-        outSelect.appendChild(opt);
+        opt.selected = input.id === selectedInputId;
+        sel.appendChild(opt);
     }
 }
 
@@ -869,9 +859,14 @@ function updateMidiState() {
     } else if (selectedOutputId && midiAccess.outputs.has(selectedOutputId)) {
         foundOutput = midiAccess.outputs.get(selectedOutputId);
     } else {
+        //
+        // The input's other half when there is one, so that several
+        // pedals plugged in cannot pair one's input with another's output.
+        //
         for (let output of midiAccess.outputs.values()) {
             if (!foundOutput) foundOutput = output;
-            if (PEDAL_PORT.test(output.name)) {
+            if (foundInput ? output.name === foundInput.name
+                           : PEDAL_PORT.test(output.name)) {
                 foundOutput = output;
                 break;
             }
@@ -5453,14 +5448,25 @@ appTitleEl.addEventListener('click', () => {
     // is.  Connecting from updateMidiState() instead would be refused,
     // because by then the gesture is over.
     //
-    async function portChosen(which, value) {
+    async function pedalChosen(value) {
         const wasInput = selectedInputId;
         const wasOutput = selectedOutputId;
 
-        if (which === 'in')
-            selectedInputId = value;
-        else
-            selectedOutputId = value;
+        //
+        // A port is the input's id, and its output is the one with the
+        // same name.
+        //
+        selectedInputId = value || null;
+        selectedOutputId = selectedInputId;
+        if (value && value !== BLE_PEDAL_ID && value !== DEMO_PEDAL_ID
+            && midiAccess) {
+            const input = midiAccess.inputs.get(value);
+
+            selectedOutputId = null;
+            for (const output of midiAccess.outputs.values())
+                if (input && output.name === input.name)
+                    selectedOutputId = output.id;
+        }
 
         //
         // Connect when there is nothing connected, and again when what is
@@ -5529,15 +5535,10 @@ appTitleEl.addEventListener('click', () => {
         updateMidiState();
     }
 
-    const inSelect = document.getElementById('midi-input-select');
-    if (inSelect) {
-        inSelect.addEventListener('change',
-                                  (e) => portChosen('in', e.target.value));
-    }
-    const outSelect = document.getElementById('midi-output-select');
-    if (outSelect) {
-        outSelect.addEventListener('change',
-                                   (e) => portChosen('out', e.target.value));
+    const pedalSelect = document.getElementById('midi-pedal-select');
+    if (pedalSelect) {
+        pedalSelect.addEventListener('change',
+                                     (e) => pedalChosen(e.target.value));
     }
 
     globalEnableEl.addEventListener('change', (e) => {
