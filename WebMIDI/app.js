@@ -2814,6 +2814,13 @@ let statusFrontAttn = false;
 let pedalIdentity = null;
 
 //
+// A port picked in the MIDI Connection dialog closes it once the pedal on
+// that port answers. Not on the pick itself: a port that never answers
+// should leave the dialog where the next pick is made.
+//
+let closeDialogOnAnswer = false;
+
+//
 // Faults are shown for as long as the pedal says so - but never for less
 // than this.
 //
@@ -3063,6 +3070,15 @@ document.addEventListener('visibilitychange', updateTelemetryPolling);
 //
 function handleIdentity(id) {
     pedalIdentity = id;
+
+    if (closeDialogOnAnswer) {
+        closeDialogOnAnswer = false;
+        const panel = document.getElementById('settings-panel');
+        if (panel && !panel.classList.contains('hidden')) {
+            panel.classList.add('hidden');
+            document.getElementById('panel-backdrop').classList.add('hidden');
+        }
+    }
     CONTROLS = id.controls || [];
 
     //
@@ -5452,6 +5468,8 @@ appTitleEl.addEventListener('click', () => {
         const wasInput = selectedInputId;
         const wasOutput = selectedOutputId;
 
+        closeDialogOnAnswer = true;
+
         //
         // A port is the input's id, and its output is the one with the
         // same name.
@@ -5507,6 +5525,7 @@ appTitleEl.addEventListener('click', () => {
                 //
                 selectedInputId = wasInput;
                 selectedOutputId = wasOutput;
+                closeDialogOnAnswer = false;
                 populateMidiSelects();
 
                 // Cancelling the chooser is the ordinary case and is
@@ -5588,6 +5607,8 @@ appTitleEl.addEventListener('click', () => {
 
         if (!panel)
             return;
+        // A pick from an earlier visit to the dialog is not waiting
+        closeDialogOnAnswer = false;
         closeAllPanels();
         panel.classList.remove('hidden');
         if (backdrop) backdrop.classList.remove('hidden');
