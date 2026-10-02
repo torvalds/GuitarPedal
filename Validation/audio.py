@@ -85,10 +85,10 @@ def find_cards(match=""):
     product starts with the manufacturer.  So the match is against the
     whole line rather than either field, and the name handed back is the
     bracketed one, which is the full product string - "unified stereo
-    Pedal", "minimal AC-coupled Pedal".
+    Pedal", "Pedal F92A".
 
     'match' narrows that further, and is how a caller says which pedal it
-    means when there is more than one: "unified", or "minimal".
+    means when there is more than one: "unified", or "F92A".
     """
     try:
         out = subprocess.run(["arecord", "-l"], capture_output=True,

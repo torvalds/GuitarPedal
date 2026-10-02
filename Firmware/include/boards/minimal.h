@@ -72,6 +72,13 @@
 #define CODEC_STRAPPED_DESC	"AC-coupled"
 
 //
+// The DC-coupled board is the pedal now rather than one variant of it,
+// so over USB it is called "Pedal" and the last four digits of its
+// serial.  The older boards keep the names they have always had.
+//
+#define CODEC_I2C_PRODUCT	"Pedal"
+
+//
 // ...and what to set it up as, when it is the one that answers.  The
 // input has no capacitors into the codec and the headphone jack shorts
 // OUT1M to OUT2M, so both halves of the analog configuration differ from

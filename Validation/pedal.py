@@ -141,7 +141,14 @@ def discover():
         # which build this is - what the probe said is in the identity
         # reply, and capabilities() is where to ask.
         #
-        board = product.split()[0]
+        # Except on the current board, which is called "Pedal" and the
+        # serial's last four digits.  Only minimal's DC-coupled build is
+        # named that way (CODEC_I2C_PRODUCT in its board header).
+        #
+        if re.fullmatch(r"Pedal [0-9A-F]{4}", product):
+            board = "minimal"
+        else:
+            board = product.split()[0]
 
         found.append({
             "serial": serial,
@@ -187,7 +194,7 @@ def capabilities(d, ident=None):
     ident = pedal_identity(d) if ident is None else ident
     found = (ident or {}).get("found", {})
 
-    # "<board> <desc> Pedal"
+    # "<board> <desc> Pedal", or "Pedal F92A", which says neither
     words = (d.get("product") or "").split()
     desc = " ".join(words[1:-1]) if len(words) > 2 else None
     desc = found.get("codec", desc)
