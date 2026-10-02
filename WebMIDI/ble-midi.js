@@ -321,9 +321,10 @@ class BleMidiDecoder {
 // The pedal as a port pair: something with onmidimessage on one side
 // and send() on the other, which is what the rest of the app reads.
 //
-// Picking a device needs a user gesture, because requestDevice() opens
-// the browser's own device chooser.  Connecting to it again does not, so
-// a dropped link is retried without one.
+// Picking a new device needs a user gesture, because requestDevice()
+// opens the browser's own device chooser.  A device picked before, which
+// getDevices() lists, is connected to without one, and so is a dropped
+// link being retried.
 //
 const BLE_PEDAL_ID = 'ble-pedal';
 
@@ -431,14 +432,50 @@ const blePedal = {
         throw last;
     },
 
-    async connect() {
-        const device = await navigator.bluetooth.requestDevice({
-            filters: [{ services: [BLE_MIDI_SERVICE] }],
-        });
+    //
+    // A device the page already knows needs no chooser; without one, the
+    // chooser is what picks it.
+    //
+    async connect(device) {
+        if (!device)
+            device = await navigator.bluetooth.requestDevice({
+                filters: [{ services: [BLE_MIDI_SERVICE] }],
+            });
 
         this.release();
         this.wanted = device;
+        this.name = 'Bluetooth: ' + (device.name || 'pedal');
         return this.attach(device);
+    },
+
+    //
+    // Devices this page has been allowed before, which can be connected
+    // to without the chooser.  Empty where the browser cannot say.
+    //
+    known: [],
+
+    async refreshKnown() {
+        try {
+            this.known = navigator.bluetooth.getDevices
+                ? await navigator.bluetooth.getDevices() : [];
+        } catch (err) {
+            console.debug('[BLE MIDI] getDevices: '
+                          + ((err && err.message) || err));
+            this.known = [];
+        }
+        return this.known;
+    },
+
+    //
+    // Go back to a device picked on an earlier visit, with the retries a
+    // dropped link gets, because the pedal may not be switched on yet.
+    //
+    resume(device) {
+        this.release();
+        this.wanted = device;
+        this.name = 'Bluetooth: ' + (device.name || 'pedal');
+        this.reconnecting = true;
+        this.retry(device);
     },
 
     //

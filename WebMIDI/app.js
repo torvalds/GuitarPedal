@@ -739,6 +739,33 @@ const demoPedal = {
 };
 
 //
+// Which pedal was picked last, so that starting the app goes back to it.
+// Per browser, which is per person, so local storage: "usb:" and the port's
+// name, or "ble:" and the id the browser gives the device.
+//
+const USB_KNOWN = 'usb:';
+const BLE_KNOWN = 'ble:';
+
+function lastPedal() {
+    try {
+        return localStorage.getItem('pedal.last') || '';
+    } catch (e) {
+        return '';
+    }
+}
+
+function rememberPedal(key) {
+    try {
+        if (key)
+            localStorage.setItem('pedal.last', key);
+        else
+            localStorage.removeItem('pedal.last');
+    } catch (e) {
+        /* nowhere to keep it, and nothing lost but the convenience */
+    }
+}
+
+//
 // What the app does when a Bluetooth pedal's link drops or comes back.
 //
 // A drop clears the selection, because the menu would otherwise still
@@ -761,6 +788,30 @@ function watchBlePedal() {
         populateMidiSelects();
         updateMidiState();
     };
+}
+
+//
+// Starting the app goes back to a Bluetooth pedal picked last time,
+// without the chooser, and keeps trying until it is switched on.
+//
+async function resumeBlePedal() {
+    const last = lastPedal();
+
+    if (!blePedal.supported)
+        return;
+    await blePedal.refreshKnown();
+
+    const device = last.startsWith(BLE_KNOWN) &&
+        blePedal.known.find((d) => BLE_KNOWN + d.id === last);
+    if (device) {
+        watchBlePedal();
+        selectedInputId = selectedOutputId = BLE_PEDAL_ID;
+        blePedal.resume(device);
+    } else if (selectedInputId === BLE_PEDAL_ID) {
+        selectedInputId = selectedOutputId = null;
+    }
+    populateMidiSelects();
+    updateMidiState();
 }
 
 //
@@ -793,11 +844,27 @@ function populateMidiSelects() {
     // the call, the same way it removes Web MIDI, so say which of the two
     // it is instead of quietly offering one entry fewer.
     //
+    // Each pedal this page has been allowed before, by name, and then
+    // the chooser for one it has not.
+    //
+    const picked = selectedInputId === BLE_PEDAL_ID && blePedal.wanted;
+    let shown = false;
+
+    for (const device of blePedal.supported ? blePedal.known : []) {
+        const opt = document.createElement('option');
+        opt.value = BLE_KNOWN + device.id;
+        opt.textContent = (device.name || 'Bluetooth device')
+                          + ' (Bluetooth)';
+        opt.selected = picked && picked.id === device.id;
+        shown = shown || opt.selected;
+        sel.appendChild(opt);
+    }
+
     const ble = document.createElement('option');
     ble.value = BLE_PEDAL_ID;
     if (blePedal.supported) {
-        ble.textContent = blePedal.name;
-        ble.selected = selectedInputId === BLE_PEDAL_ID;
+        ble.textContent = 'Bluetooth: pick a device\u2026';
+        ble.selected = selectedInputId === BLE_PEDAL_ID && !shown;
     } else {
         ble.disabled = true;
         ble.textContent = window.isSecureContext
@@ -869,13 +936,23 @@ function updateMidiState() {
     } else if (selectedInputId && midiAccess.inputs.has(selectedInputId)) {
         foundInput = midiAccess.inputs.get(selectedInputId);
     } else {
+        //
+        // The pedal picked last time if it is here, then any pedal, then
+        // anything at all.
+        //
+        const last = lastPedal();
+        let pedal = null;
+
         for (let input of midiAccess.inputs.values()) {
             if (!foundInput) foundInput = input;
-            if (PEDAL_PORT.test(input.name)) {
-                foundInput = input;
+            if (last === USB_KNOWN + input.name) {
+                pedal = input;
                 break;
             }
+            if (!pedal && PEDAL_PORT.test(input.name))
+                pedal = input;
         }
+        if (pedal) foundInput = pedal;
         if (foundInput && !selectedInputId) selectedInputId = foundInput.id;
     }
 
@@ -5496,8 +5573,15 @@ appTitleEl.addEventListener('click', () => {
     async function pedalChosen(value) {
         const wasInput = selectedInputId;
         const wasOutput = selectedOutputId;
+        let device = null;
 
         closeDialogOnAnswer = true;
+
+        // A Bluetooth pedal named in the menu needs no chooser
+        if (value.startsWith(BLE_KNOWN)) {
+            device = blePedal.known.find((d) => BLE_KNOWN + d.id === value);
+            value = BLE_PEDAL_ID;
+        }
 
         // Anything else picked lets go of a Bluetooth pedal
         if (value !== BLE_PEDAL_ID)
@@ -5517,22 +5601,30 @@ appTitleEl.addEventListener('click', () => {
             for (const output of midiAccess.outputs.values())
                 if (input && output.name === input.name)
                     selectedOutputId = output.id;
+            rememberPedal(input ? USB_KNOWN + input.name : '');
+        } else if (!value) {
+            rememberPedal('');
         }
 
         //
-        // Connect when there is nothing connected, and again when what is
-        // connected has never delivered anything: 'rx' counts
-        // notifications, and zero of them after a connection means the
-        // browser subscribed to nothing.  Picking Bluetooth a second time
-        // is then the only way to ask again.
+        // The chooser whenever it is picked, since that is asking for a
+        // device; a named one when it is not already the one connected.
         //
-        if (value === BLE_PEDAL_ID && (!blePedal.connected || !blePedal.rx)) {
+        // Connecting again also covers a link that has never delivered
+        // anything: 'rx' counts notifications, and zero of them after a
+        // connection means the browser subscribed to nothing.
+        //
+        if (value === BLE_PEDAL_ID &&
+            (!device || device !== blePedal.wanted ||
+             !blePedal.connected || !blePedal.rx)) {
             // Before connecting: the device can go away during the
             // handshake, and the handlers are what put the menu back.
             watchBlePedal();
 
             try {
-                await blePedal.connect();
+                await blePedal.connect(device);
+                rememberPedal(BLE_KNOWN + blePedal.wanted.id);
+                await blePedal.refreshKnown();
                 populateMidiSelects();
             } catch (err) {
                 //
@@ -5901,4 +5993,12 @@ appTitleEl.addEventListener('click', () => {
 
 // Boot
 renderUI();
+//
+// A Bluetooth pedal picked last time is the selection from the start, so
+// that auto-detect does not connect to a USB pedal first; resumeBlePedal()
+// puts it back if the browser no longer knows the device.
+//
+if (lastPedal().startsWith(BLE_KNOWN))
+    selectedInputId = selectedOutputId = BLE_PEDAL_ID;
 initMidi();
+resumeBlePedal();
