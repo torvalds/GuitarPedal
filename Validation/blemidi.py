@@ -502,7 +502,13 @@ def main():
     # 'f' far ahead of 'o' is the radio being given more than it sent.
     #
     if not args.no_counters:
-        d, why = pedal.sole()
+        #
+        # The same board on USB, by the id digits its Bluetooth name
+        # ends in, so that several pedals on USB do not stop this.
+        #
+        name = args.target.split()
+        d, why = pedal.sole(name[1] if len(name) == 2 and
+                            name[0].lower() == "pedal" else None)
         if not d:
             print("radio counters: no pedal on USB (%s)" % why)
         else:
