@@ -234,7 +234,12 @@ static bool test_counts_due;
 #define AIR_Q_SHIFT	11
 #define AIR_Q_SIZE	(1 << AIR_Q_SHIFT)
 #define AIR_Q_MASK	(AIR_Q_SIZE - 1)
-#define CTL_Q_SHIFT	9
+/*
+ * The answer queue holds everything one command can say, because a command
+ * waits until it is empty: the most is a scan stopped with SCAN_MAX_SEEN
+ * devices listed, about 680 bytes.
+ */
+#define CTL_Q_SHIFT	10
 #define CTL_Q_SIZE	(1 << CTL_Q_SHIFT)
 #define CTL_Q_MASK	(CTL_Q_SIZE - 1)
 
@@ -580,18 +585,31 @@ BUILD_ASSERT(HELD_SIZE >= LINK_WINDOW * LINK_STREAMS);
 static struct held {
 	uint8_t buf[LINK_PAYLOAD_MAX];
 	uint16_t len, pos;
-	uint8_t peer, seq;
+	uint8_t peer, seq, flags;
 } in_hand[HELD_SIZE];
 static uint8_t hand_head, hand_tail;
 static bool heard;		/* the pedal has sent something */
+
+/*
+ * Command packets from the pedal, held unacknowledged until the answer
+ * queue is empty, so that what a command says back has room.  The pedal's
+ * window for commands stays shut meanwhile, and it is all there can be.
+ */
+#define CMD_HELD_SHIFT	1
+#define CMD_HELD_SIZE	(1 << CMD_HELD_SHIFT)
+#define CMD_HELD_MASK	(CMD_HELD_SIZE - 1)
+BUILD_ASSERT(CMD_HELD_SIZE >= LINK_WINDOW);
+
+static struct held cmd_held[CMD_HELD_SIZE];
+static uint8_t cmd_head, cmd_tail;
 
 static uint8_t cmd_in[256];
 static uint16_t cmd_len;
 static bool cmd_ok;
 
 /*
- * A packet from the pedal.  A command is dealt with as soon as its last
- * packet is in; MIDI waits in a slot, and is acknowledged once it has gone.
+ * A packet from the pedal.  MIDI and commands wait in slots: MIDI until it
+ * has gone on the air, and a command until there is room for its answer.
  */
 static void link_in(void)
 {
@@ -618,21 +636,22 @@ static void link_in(void)
 		hand_head++;
 		break;
 
-	case LINK_CONTROL:
-		if (h[3] & LINK_FIRST) {
-			cmd_len = 0;
-			cmd_ok = true;
+	case LINK_CONTROL: {
+		struct held *c;
+
+		if ((uint8_t)(cmd_head - cmd_tail) == CMD_HELD_SIZE) {
+			l->refused++;
+			link_consumed(l);
+			break;
 		}
-		if (cmd_len + len > sizeof(cmd_in))
-			cmd_ok = false;
-		else {
-			memcpy(cmd_in + cmd_len, h + LINK_HEADER, len);
-			cmd_len += len;
-		}
-		if ((h[3] & LINK_LAST) && cmd_ok)
-			midi_radio_command(cmd_in, cmd_len);
-		link_consumed(l);
+		c = &cmd_held[cmd_head++ & CMD_HELD_MASK];
+		memcpy(c->buf, h + LINK_HEADER, len);
+		c->len = len;
+		c->peer = h[1];
+		c->seq = h[2];
+		c->flags = h[3];
 		break;
+	}
 
 	case LINK_TEST:
 		if (h[1] == LINK_ALL) {
@@ -683,6 +702,34 @@ static void link_in(void)
 	}
 }
 
+/*
+ * The next command packet, if the answer queue is empty.  A command is
+ * dealt with when its last packet is taken.
+ */
+static bool cmd_take(void)
+{
+	struct held *c;
+
+	if (cmd_tail == cmd_head || ctl_head != ctl_tail)
+		return false;
+	c = &cmd_held[cmd_tail++ & CMD_HELD_MASK];
+
+	if (c->flags & LINK_FIRST) {
+		cmd_len = 0;
+		cmd_ok = true;
+	}
+	if (cmd_len + c->len > sizeof(cmd_in))
+		cmd_ok = false;
+	else {
+		memcpy(cmd_in + cmd_len, c->buf, c->len);
+		cmd_len += c->len;
+	}
+	if ((c->flags & LINK_LAST) && cmd_ok)
+		midi_radio_command(cmd_in, cmd_len);
+	link_done(&radio_link, LINK_CONTROL, c->peer, c->seq);
+	return true;
+}
+
 /* How often acknowledgements are said again (link.h) */
 #define ACK_AGAIN_MS	100
 
@@ -702,7 +749,7 @@ int main(void)
 	midi_ble_start();
 
 	for (;;) {
-		uint32_t took = 0, fed = 0;
+		uint32_t took = 0, fed = 0, cmds = 0;
 
 		link_tick(&radio_link, k_uptime_get_32());
 
@@ -747,6 +794,9 @@ int main(void)
 			}
 		}
 
+		while (cmd_take())
+			cmds++;
+
 		/*
 		 * The MIDI held, onto the air as fast as it will go.  One
 		 * free buffer per byte is enough: a single byte can fill the
@@ -767,7 +817,7 @@ int main(void)
 			hand_tail++;
 		}
 
-		if (took || fed)
+		if (took || fed || cmds)
 			continue;
 
 		/*
