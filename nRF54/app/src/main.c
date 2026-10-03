@@ -9,7 +9,6 @@
 #include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/pinctrl.h>
-#include <zephyr/sys/ring_buffer.h>
 #include <zephyr/sys/printk-hooks.h>
 #include <zephyr/random/random.h>
 #include <hal/nrf_uarte.h>
@@ -163,16 +162,23 @@ static void tx_kick(void)
  * the UART.  The RP2354 side follows the same rule, for the same reason:
  * see "Handle incoming MIDI from the main loop, not from a callback".
  *
- * One byte of length then the packet, so a reader knows where each ends.
- * A packet is at most the ATT MTU less three, which is under 256.
+ * Each is its length, source, peer and flags, then the packet.  A packet
+ * is at most the ATT MTU less three, which is under 256.  The stack's
+ * thread writes and the loop reads, and both hold the lock to do it.
  *
  * It does not need to be big.  The controller can only hold
  * BT_MAX_CONN + BT_BUF_ACL_RX_COUNT_EXTRA buffers before the host stops
  * it, the largest message the pedal is ever sent is a full rule table at
  * 96 bytes, and there is no bulk inbound direction at all.
  */
-RING_BUF_DECLARE(ble_in_ring, 1024);
+#define BLE_IN_SHIFT	10
+#define BLE_IN_SIZE	(1 << BLE_IN_SHIFT)
+#define BLE_IN_MASK	(BLE_IN_SIZE - 1)
+
+static uint8_t ble_in[BLE_IN_SIZE];
+static uint16_t ble_in_head, ble_in_tail;
 static uint32_t ble_in_dropped;
+static struct k_spinlock ble_in_lock;
 
 /*
  * One packet from over the air, held for the loop to deal with.
@@ -185,14 +191,24 @@ void midi_ble_queue(uint8_t src, uint8_t peer, uint8_t flags,
 		    const uint8_t *buf, uint16_t len)
 {
 	uint8_t hdr[4] = { (uint8_t)len, src, peer, flags };
+	k_spinlock_key_t key;
 
-	if (!len || len > 255 ||
-	    ring_buf_space_get(&ble_in_ring) < sizeof(hdr) + len) {
+	if (!len || len > 255) {
 		ble_in_dropped++;
 		return;
 	}
-	ring_buf_put(&ble_in_ring, hdr, sizeof(hdr));
-	ring_buf_put(&ble_in_ring, buf, len);
+
+	key = k_spin_lock(&ble_in_lock);
+	if (BLE_IN_SIZE - (uint16_t)(ble_in_head - ble_in_tail) <
+	    sizeof(hdr) + len) {
+		ble_in_dropped++;
+	} else {
+		for (int i = 0; i < sizeof(hdr); i++)
+			ble_in[ble_in_head++ & BLE_IN_MASK] = hdr[i];
+		for (uint16_t i = 0; i < len; i++)
+			ble_in[ble_in_head++ & BLE_IN_MASK] = buf[i];
+	}
+	k_spin_unlock(&ble_in_lock, key);
 }
 
 static void air_begin(uint8_t peer, uint8_t flags);
@@ -206,11 +222,18 @@ static bool ble_in_drain(void)
 {
 	uint8_t pkt[256];
 	uint8_t hdr[4];
+	k_spinlock_key_t key = k_spin_lock(&ble_in_lock);
+	bool any = ble_in_head != ble_in_tail;
 
-	if (ring_buf_get(&ble_in_ring, hdr, sizeof(hdr)) != sizeof(hdr))
+	if (any) {
+		for (int i = 0; i < sizeof(hdr); i++)
+			hdr[i] = ble_in[ble_in_tail++ & BLE_IN_MASK];
+		for (uint16_t i = 0; i < hdr[0]; i++)
+			pkt[i] = ble_in[ble_in_tail++ & BLE_IN_MASK];
+	}
+	k_spin_unlock(&ble_in_lock, key);
+	if (!any)
 		return false;
-	if (ring_buf_get(&ble_in_ring, pkt, hdr[0]) != hdr[0])
-		return false;		/* cannot happen: written together */
 
 	air_begin(hdr[2], hdr[3]);
 	midi_ble_packet(hdr[1], pkt, hdr[0]);
