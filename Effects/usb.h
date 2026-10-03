@@ -21,7 +21,7 @@
 //
 // ...and what arrives from it.
 //
-// POT: "L/R In" ENUM(Off Pre-FX Mix Replace) = Off
+// POT: "L/R In" ENUM(Off Pre-FX Mix Replace) = Mix
 // INFO: What the host's audio does when it arrives. Pre-FX adds it to
 // INFO: the jack and Mix adds it to the output; Replace ignores the jack
 // INFO: entirely, which is the one to use when measuring, because
