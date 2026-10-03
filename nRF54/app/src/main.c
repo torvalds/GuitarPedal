@@ -18,7 +18,7 @@
 #include "linktest.h"
 #include "uartrx.h"
 #include "audio.h"
-#include "bcast.h"
+#include "sink.h"
 
 /*
  * Reading RTT stalls the core long enough to miss Bluetooth connection
@@ -752,13 +752,13 @@ int main(void)
 	hello();
 
 	midi_ble_start();
-	bcast_start();
+	sink_start();
 
 	for (;;) {
 		uint32_t took = 0, fed = 0, cmds = 0;
 
 		link_tick(&radio_link, k_uptime_get_32());
-		bcast_poll();
+		sink_poll();
 		audio_poll();
 
 		/*

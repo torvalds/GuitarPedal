@@ -15,7 +15,7 @@
 #include <helpers/nrfx_gppi.h>
 
 #include "audio.h"
-#include "bcast.h"
+#include "sink.h"
 #include "i2stest.h"
 
 #define RATE		48000
@@ -151,8 +151,8 @@ static bool clock_ppb(int64_t *ppb, uint32_t *secs)
 }
 
 /*
- * Keep the transmit queue full: a broadcast's audio while there is one,
- * the test pattern otherwise.  False if nothing went.
+ * Keep the transmit queue full: LE Audio while there is some, the test
+ * pattern otherwise.  False if nothing went.
  */
 static bool feed(void)
 {
@@ -160,7 +160,7 @@ static bool feed(void)
 	void *block;
 
 	while (k_mem_slab_alloc(&tx_slab, &block, K_NO_WAIT) == 0) {
-		if (!bcast_pcm(block, BLOCK_FRAMES))
+		if (!sink_pcm(block, BLOCK_FRAMES))
 			memcpy(block, pattern, BLOCK_BYTES);
 		if (i2s_write(i2s, block, BLOCK_BYTES)) {
 			k_mem_slab_free(&tx_slab, block);

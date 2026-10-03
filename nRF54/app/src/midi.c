@@ -42,6 +42,7 @@
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/uuid.h>
+#include <zephyr/bluetooth/audio/audio.h>
 #include <zephyr/sys/byteorder.h>
 
 #include "midi.h"
@@ -1294,9 +1295,9 @@ static const struct bt_gatt_attr *midi_value_attr(void)
  * what makes a scanner call this a MIDI device rather than an unknown
  * one.
  *
- * The whole name is in the scan response, which has room for 29
- * characters.  A scanner that asks for it shows the whole name, and one
- * that does not shows "Pedal".
+ * The whole name is in the scan response, as much of it as fits beside
+ * what else is there: 14 characters.  A scanner that asks for it shows
+ * that, and one that does not shows "Pedal".
  */
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR),
@@ -1307,10 +1308,39 @@ static const struct bt_data ad[] = {
 
 static char adv_name[CONFIG_BT_DEVICE_NAME_MAX + 1] = CONFIG_BT_DEVICE_NAME;
 
+/*
+ * After the name, the two LE Audio announcements a phone looks for before
+ * it offers to play to us, 5 and 10 bytes.  The context bytes are what
+ * the sink is available for - media, as sink.c has it - and then the
+ * source's, which there is none of.
+ */
 static struct bt_data sd[] = {
 	BT_DATA(BT_DATA_NAME_COMPLETE, adv_name,
 		sizeof(CONFIG_BT_DEVICE_NAME) - 1),
+#ifdef CONFIG_BT_BAP_UNICAST_SERVER
+	BT_DATA_BYTES(BT_DATA_SVC_DATA16,
+		      BT_UUID_16_ENCODE(BT_UUID_CAS_VAL),
+		      BT_AUDIO_UNICAST_ANNOUNCEMENT_TARGETED),
+	BT_DATA_BYTES(BT_DATA_SVC_DATA16,
+		      BT_UUID_16_ENCODE(BT_UUID_ASCS_VAL),
+		      BT_AUDIO_UNICAST_ANNOUNCEMENT_TARGETED,
+		      BT_BYTES_LIST_LE16(BT_AUDIO_CONTEXT_TYPE_MEDIA),
+		      BT_BYTES_LIST_LE16(0),
+		      0x00),
+#endif
 };
+
+/* The name in the scan response, cut short to leave room for the rest */
+static void sd_name(void)
+{
+	size_t room = 31 - 2;
+
+	for (size_t i = 1; i < ARRAY_SIZE(sd); i++)
+		room -= 2 + sd[i].data_len;
+	sd[0].data_len = MIN(strlen(adv_name), room);
+	sd[0].type = strlen(adv_name) > room ? BT_DATA_NAME_SHORTENED :
+					       BT_DATA_NAME_COMPLETE;
+}
 
 /*
  * Hosts connected to us, as against controllers we connected to.
@@ -1333,15 +1363,30 @@ static atomic_t peers;
 static void adv_start(struct k_work *work);
 static K_WORK_DELAYABLE_DEFINE(adv_work, adv_start);
 
+/*
+ * Slowly while a phone streams audio: every advertising event takes the
+ * radio from the stream, and at the fast rate a fifth of its packets were
+ * lost.  Once a second still finds the pedal, a little later.
+ */
+static bool quiet, quiet_changed;
+
 static void adv_start(struct k_work *work)
 {
 	int err;
 
+	if (quiet_changed) {
+		quiet_changed = false;
+		bt_le_adv_stop();
+	}
 	if (atomic_get(&peers) >= CONFIG_BT_CTLR_SDC_PERIPHERAL_COUNT)
 		return;
 
-	err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad),
-			      sd, ARRAY_SIZE(sd));
+	err = bt_le_adv_start(quiet ?
+			      BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONN,
+					      BT_GAP_ADV_SLOW_INT_MIN,
+					      BT_GAP_ADV_SLOW_INT_MAX, NULL) :
+			      BT_LE_ADV_CONN_FAST_1,
+			      ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 	if (err && err != -EALREADY) {
 		printk("bt: advertising failed, %d\n", err);
 		k_work_reschedule(&adv_work, K_MSEC(250));
@@ -1351,6 +1396,16 @@ static void adv_start(struct k_work *work)
 static void adv_again(void)
 {
 	k_work_reschedule(&adv_work, K_NO_WAIT);
+}
+
+/* From the Bluetooth stack's thread; adv_start() picks it up */
+void midi_ble_quiet(bool q)
+{
+	if (q == quiet)
+		return;
+	quiet = q;
+	quiet_changed = true;
+	adv_again();
 }
 
 /*
@@ -1373,7 +1428,7 @@ static void name_apply(struct k_work *work)
 	strcpy(adv_name, name_next);
 	k_mutex_unlock(&name_lock);
 
-	sd[0].data_len = strlen(adv_name);
+	sd_name();
 	bt_set_name(adv_name);
 	bt_le_adv_update_data(ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 }
@@ -1546,7 +1601,7 @@ void midi_ble_start(void)
 	// advertising yet to read 'sd'.
 	//
 	strncpy(adv_name, bt_get_name(), CONFIG_BT_DEVICE_NAME_MAX);
-	sd[0].data_len = strlen(adv_name);
+	sd_name();
 
 	//
 	// Closed until the pedal says otherwise.  Being in the room is not
