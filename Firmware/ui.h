@@ -833,7 +833,8 @@ static void show_status(unsigned int ms)
 	if (nrf54_pairing && (int32_t)(ms - nrf54_pairing_until) >= 0) {
 		nrf54_pairing = false;
 		nrf54_pairing_tell(false);
-		midi_dest_add(&sysex_send_pairing, midi_from);
+		midi_dest_add(&sysex_send_pairing, pairing_watchers);
+		pairing_watchers = MIDI_DEST_NONE;
 	}
 #endif
 
