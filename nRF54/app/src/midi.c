@@ -487,8 +487,8 @@ static void pack_sysex_end(void)
 
 /*
  * F0 7D 1x is the radio talking to the RP2354 rather than MIDI passing
- * through it.  The commands ride the same stream because there is only
- * one wire, and are taken out of it here so they never reach Bluetooth.
+ * through it.  Both directions go on the link's control stream, so they
+ * never meet the MIDI on its way to Bluetooth.
  *
  * Data bytes are seven bits, so an address goes out as twelve nibbles.
  */
@@ -572,12 +572,6 @@ void scan_done(unsigned int listed)
 }
 #endif
 
-//
-// One of ours, or MIDI passing through?
-//
-// Answered from the first two bytes after F0, so the rest of a message
-// that is not ours streams to the packer as it arrives rather than
-// having to be held whole.
 //
 /*
  * What the notify path did, when asked.
@@ -810,33 +804,7 @@ static struct {
 	int want;		/* how many the status byte asks for */
 	uint8_t status;		/* running status */
 	bool sysex;
-
-	/*
-	 * The start of a SysEx, held back while it is decided whether it
-	 * belongs to the radio.  'hold' is F0 and the two bytes after it.
-	 */
-	uint8_t hold[3];
-	uint8_t held;
-	bool mine;
-	uint8_t cmd;
-	uint8_t arg[32];
-	uint8_t nr_arg;
 } in;
-
-//
-// Not ours after all: put the start of the message back into the
-// packet before the rest of it streams through.
-//
-static void release_held(void)
-{
-	if (!in.held)
-		return;
-
-	pack_sysex_start();
-	for (uint8_t i = 1; i < in.held; i++)
-		pack_sysex_data(in.hold[i]);
-	in.held = 0;
-}
 
 static void radio_dispatch(uint8_t cmd, const uint8_t *arg, uint8_t len)
 {
@@ -1004,14 +972,10 @@ void midi_ble_feed(uint8_t b)
 	}
 
 	if (b == 0xF0) {
-		//
-		// Held rather than packed, until the two bytes after F0
-		// say whether this is MIDI passing through or a command
-		// for the radio.  Two bytes is the whole lookahead.
-		//
+		if (in.sysex)
+			pack_sysex_end();
+		pack_sysex_start();
 		in.sysex = true;
-		in.held = 1;
-		in.mine = false;
 		in.want = 0;
 		in.len = 0;
 		in.status = 0;
@@ -1019,15 +983,9 @@ void midi_ble_feed(uint8_t b)
 	}
 
 	if (b == 0xF7) {
-		if (in.mine) {
-			radio_dispatch(in.cmd, in.arg, in.nr_arg);
-		} else if (in.sysex) {
-			release_held();
+		if (in.sysex)
 			pack_sysex_end();
-		}
 		in.sysex = false;
-		in.mine = false;
-		in.held = 0;
 		return;
 	}
 
@@ -1059,31 +1017,7 @@ void midi_ble_feed(uint8_t b)
 	}
 
 	/* A data byte. */
-	if (in.mine) {
-		if (in.nr_arg < sizeof(in.arg))
-			in.arg[in.nr_arg++] = b;
-		return;
-	}
-
 	if (in.sysex) {
-		if (in.held) {
-			in.hold[in.held++] = b;
-
-			//
-			// F0 7D <cmd>: enough to know whose it is.
-			//
-			if (in.held == 3) {
-				if (in.hold[1] == 0x7D && radio_command(b)) {
-					in.mine = true;
-					in.cmd = b;
-					in.nr_arg = 0;
-					in.held = 0;
-					return;
-				}
-				release_held();
-			}
-			return;
-		}
 		pack_sysex_data(b);
 		return;
 	}
