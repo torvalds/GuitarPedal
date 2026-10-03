@@ -403,6 +403,125 @@ static void loss(void)
 	ack(&radio, &pedal);
 	chk("a slow receiver keeps its window shut",
 	    link_can_send(&pedal, LINK_MIDI, LINK_ALL), 0);
+	ack(&pedal, &radio);			// asks, too
+	ack(&radio, &pedal);
+	chk("...when asked as well",
+	    link_can_send(&pedal, LINK_MIDI, LINK_ALL), 0);
+}
+
+//
+// A stream whose first window is lost entirely: the receiver has never heard
+// of it, so it has nothing to repeat, and the sender has to ask.
+//
+static void lost_start(void)
+{
+	struct link pedal, radio;
+	uint8_t w[LINK_WIRE_MAX], p[1] = { 0x90 };
+	size_t n;
+
+	link_init(&pedal);
+	link_init(&radio);
+	pedal.up = radio.up = true;
+	deliver(&radio, (const uint8_t[]){ 0 }, 1);
+	deliver(&pedal, (const uint8_t[]){ 0 }, 1);
+
+	while (link_can_send(&pedal, LINK_MIDI, 5))
+		link_pack(&pedal, LINK_MIDI, 5, LINK_FIRST, p, 1, w);
+
+	// No ask before the packets could have arrived
+	link_tick(&pedal, LINK_LOST_MS - 1);
+	link_tick(&radio, LINK_LOST_MS - 1);
+	chk("no ask too soon", link_pack_ack(&pedal, w) > 0, 0);
+
+	link_tick(&pedal, LINK_LOST_MS);
+	link_tick(&radio, LINK_LOST_MS);
+	link_ack_again(&radio);
+	ack(&radio, &pedal);
+	chk("a repeat alone does not open it",
+	    link_can_send(&pedal, LINK_MIDI, 5), 0);
+	ack(&pedal, &radio);
+	ack(&radio, &pedal);
+	chk("the ask opens it", link_can_send(&pedal, LINK_MIDI, 5), 1);
+	chk("the first window written off", pedal.written_off, LINK_WINDOW);
+	chk("asked only once", link_pack_ack(&pedal, w) > 0, 0);
+
+	n = link_pack(&pedal, LINK_MIDI, 5, LINK_FIRST, p, 1, w);
+	chk("next packet delivered", deliver(&radio, w, n), LINK_GOT_DATA);
+	chk("seen as a gap", radio.gaps, 1);
+}
+
+//
+// The sequence numbers wrap with every ack at the wrap lost: the receiver's
+// counts are both 0 again, which link_ack_again() does not repeat.
+//
+static void lost_wrap(void)
+{
+	struct link pedal, radio;
+	uint8_t w[LINK_WIRE_MAX], p[1] = { 0x90 };
+	size_t n;
+	int sent = 0;
+
+	link_init(&pedal);
+	link_init(&radio);
+	pedal.up = radio.up = true;
+	deliver(&radio, (const uint8_t[]){ 0 }, 1);
+	deliver(&pedal, (const uint8_t[]){ 0 }, 1);
+
+	while (sent < 256) {
+		n = link_pack(&pedal, LINK_MIDI, LINK_ALL, LINK_FIRST, p, 1, w);
+		deliver(&radio, w, n);
+		link_consumed(&radio);
+		if (++sent < 256 - LINK_WINDOW + 1)
+			ack(&radio, &pedal);
+		else
+			link_pack_ack(&radio, w);	// lost on the way
+	}
+	chk("window full at the wrap",
+	    link_can_send(&pedal, LINK_MIDI, LINK_ALL), 0);
+	chk("receiver's counts both 0", radio.s[0].rx_next | radio.s[0].rx_done,
+	    0);
+
+	link_tick(&pedal, LINK_LOST_MS);
+	link_tick(&radio, LINK_LOST_MS);
+	link_ack_again(&radio);
+	ack(&radio, &pedal);
+	chk("the repeat opens it, counts at 0 or not",
+	    link_can_send(&pedal, LINK_MIDI, LINK_ALL), 1);
+	chk("nothing written off", pedal.written_off, 0);
+}
+
+//
+// A write-off is counted once, including the one that leaves tx_next at 0.
+//
+static void written_at_wrap(void)
+{
+	struct link pedal, radio;
+	uint8_t w[LINK_WIRE_MAX], p[1] = { 0x90 };
+	size_t n;
+
+	link_init(&pedal);
+	link_init(&radio);
+	pedal.up = radio.up = true;
+	deliver(&radio, (const uint8_t[]){ 0 }, 1);
+	deliver(&pedal, (const uint8_t[]){ 0 }, 1);
+
+	for (int i = 0; i < 254; i++) {
+		n = link_pack(&pedal, LINK_MIDI, LINK_ALL, LINK_FIRST, p, 1, w);
+		deliver(&radio, w, n);
+		link_consumed(&radio);
+		ack(&radio, &pedal);
+	}
+	link_pack(&pedal, LINK_MIDI, LINK_ALL, LINK_FIRST, p, 1, w);	// lost
+	link_pack(&pedal, LINK_MIDI, LINK_ALL, LINK_FIRST, p, 1, w);	// lost
+	chk("two out, the second the last before the wrap",
+	    pedal.s[0].tx_next, 0);
+
+	link_tick(&pedal, pedal.now + LINK_LOST_MS);
+	link_ack_again(&radio);
+	ack(&radio, &pedal);
+	link_ack_again(&radio);
+	ack(&radio, &pedal);
+	chk("both written off, and counted once", pedal.written_off, 2);
 }
 
 //
@@ -442,6 +561,36 @@ static void held_then_lost(void)
 	chk("still written off once", pedal.written_off, 1);
 }
 
+//
+// A new stream takes nothing until a packet that starts a message: its
+// first packet may be the rest of one from before the far side restarted,
+// and numbered 0 it is in order, so only the flag can tell.
+//
+static void new_stream(void)
+{
+	struct link pedal, radio;
+	uint8_t w[LINK_WIRE_MAX], tail[2] = { 0x12, 0x34 }, cc[3] = { 0xB0, 1, 2 };
+	size_t n;
+
+	link_init(&pedal);
+	link_init(&radio);
+	pedal.up = radio.up = true;
+	deliver(&radio, (const uint8_t[]){ 0 }, 1);
+	deliver(&pedal, (const uint8_t[]){ 0 }, 1);
+
+	n = link_pack(&pedal, LINK_MIDI, 3, 0, tail, sizeof(tail), w);
+	chk("new stream: the rest of a message is dropped",
+	    deliver(&radio, w, n), LINK_GOT_NOTHING);
+	chk("new stream: and is not a gap", radio.gaps, 0);
+	n = link_pack(&pedal, LINK_MIDI, 3, LINK_FIRST, cc, sizeof(cc), w);
+	chk("new stream: a message start is taken",
+	    deliver(&radio, w, n), LINK_GOT_DATA);
+	link_consumed(&radio);
+	ack(&radio, &pedal);
+	chk("new stream: both acknowledged",
+	    (uint8_t)(pedal.s[0].tx_next - pedal.s[0].tx_acked), 0);
+}
+
 int main(void)
 {
 	coding();
@@ -450,6 +599,10 @@ int main(void)
 	eviction();
 	loss();
 	held_then_lost();
+	lost_start();
+	lost_wrap();
+	new_stream();
+	written_at_wrap();
 	printf("test-link: %d packets and the flow control, %s\n", PACKETS,
 	       fails ? "FAILED" : "all as expected");
 	return fails != 0;

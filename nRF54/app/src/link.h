@@ -49,6 +49,12 @@
  * be acknowledged.  The receiver sees the next packet as a gap.  A receiver
  * that is merely slow has received everything sent, so its window stays
  * shut until it catches up.
+ *
+ * A receiver that has heard nothing on a stream has nothing to repeat, so a
+ * sender with a packet unacknowledged for LINK_LOST_MS asks for an ack.  The
+ * ask carries how far the sender has been acknowledged, which a receiver
+ * with no record of the stream takes as how far it has got: the packets it
+ * never saw are then written off like any others.
  */
 #ifndef LINK_H
 #define LINK_H
@@ -63,6 +69,7 @@
 #define LINK_DEBUG	2	/* text from the radio, for a person */
 #define LINK_ACK	3	/* seq is how far the receiver has got */
 #define LINK_HELLO	4	/* the radio has just started */
+#define LINK_ASK	5	/* a packet has gone unacknowledged: ack, please */
 
 /* Peers */
 #define LINK_ALL	0
@@ -318,10 +325,13 @@ struct link_stream {
 	uint8_t rx_next;	/* the seq expected next */
 	uint8_t rx_done;	/* one past the last consumed: what an ack says */
 	bool rx_skip;		/* a packet went missing: wait for LINK_FIRST */
+	bool rx_seen;		/* anything has been received on it */
 	bool ack_due;
 	uint32_t touched;	/* when it last carried anything, for eviction */
 	uint32_t sent_at;	/* when the last packet went out */
 	uint8_t written_to;	/* tx_next when a loss was last counted */
+	bool written;		/* and whether one has been */
+	uint32_t asked_at;	/* when an ack was last asked for */
 };
 
 struct link {
@@ -400,9 +410,11 @@ static inline struct link_stream *link_stream(struct link *l, uint8_t kind,
 	idle->tx_next = idle->tx_acked = 0;
 	idle->rx_next = idle->rx_done = 0;
 	idle->rx_skip = true;
-	idle->written_to = 0;
+	idle->rx_seen = false;
+	idle->written = false;
 	idle->ack_due = false;
 	idle->touched = ++l->clock;
+	idle->asked_at = l->now;
 	return idle;
 }
 
@@ -438,6 +450,10 @@ static inline size_t link_pack(struct link *l, uint8_t kind, uint8_t peer,
  * An acknowledgement that is due, if there is one: how far consumed in the
  * seq byte, how far received in the payload.  The acknowledged stream's
  * kind rides in the flags byte, since an ack is not part of a stream itself.
+ *
+ * Failing that, an ask, for a stream with a packet that has gone
+ * unacknowledged for LINK_LOST_MS: the stream's kind in the flags byte
+ * again, and how far it has been acknowledged in the payload.
  */
 static inline size_t link_pack_ack(struct link *l, uint8_t *out)
 {
@@ -448,6 +464,17 @@ static inline size_t link_pack_ack(struct link *l, uint8_t *out)
 			s->ack_due = false;
 			return link_encode(LINK_ACK, s->peer, s->rx_done,
 					   s->kind, &s->rx_next, 1, out);
+		}
+	}
+	for (int i = 0; i < LINK_STREAMS; i++) {
+		struct link_stream *s = &l->s[i];
+
+		if (s->used && s->tx_next != s->tx_acked &&
+		    l->now - s->sent_at >= LINK_LOST_MS &&
+		    l->now - s->asked_at >= LINK_LOST_MS) {
+			s->asked_at = l->now;
+			return link_encode(LINK_ASK, s->peer, 0, s->kind,
+					   &s->tx_acked, 1, out);
 		}
 	}
 	return 0;
@@ -475,7 +502,7 @@ static inline void link_done(struct link *l, uint8_t kind, uint8_t peer,
 static inline void link_ack_again(struct link *l)
 {
 	for (int i = 0; i < LINK_STREAMS; i++)
-		if (l->s[i].used && (l->s[i].rx_done || l->s[i].rx_next))
+		if (l->s[i].used && l->s[i].rx_seen)
 			l->s[i].ack_due = true;
 }
 
@@ -537,14 +564,29 @@ static inline int link_take(struct link *l)
 			    (uint8_t)(upto - s->tx_acked) <=
 			    (uint8_t)(s->tx_next - s->tx_acked) &&
 			    l->now - s->sent_at >= LINK_LOST_MS) {
-				if (s->written_to != s->tx_next) {
+				if (!s->written || s->written_to != s->tx_next) {
 					l->written_off +=
 						(uint8_t)(s->tx_next - got);
 					s->written_to = s->tx_next;
+					s->written = true;
 				}
 				s->tx_acked = upto;
 			}
 		}
+		return LINK_GOT_NOTHING;
+
+	case LINK_ASK:
+		s = link_stream(l, h[3], h[1], false);
+		/* Never heard of: everything up to the ask was lost */
+		if (!s && l->rx.len > LINK_HEADER) {
+			s = link_stream(l, h[3], h[1], true);
+			if (s) {
+				s->rx_next = s->rx_done = h[LINK_HEADER];
+				s->rx_seen = true;
+			}
+		}
+		if (s)
+			s->ack_due = true;
 		return LINK_GOT_NOTHING;
 	}
 
@@ -558,6 +600,7 @@ static inline int link_take(struct link *l)
 		l->gaps++;
 		s->rx_skip = true;
 	}
+	s->rx_seen = true;
 	s->rx_next = (uint8_t)(h[2] + 1);
 
 	if (s->rx_skip && !(h[3] & LINK_FIRST)) {
