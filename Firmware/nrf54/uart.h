@@ -28,20 +28,24 @@
 // instead and the loop reads whatever has appeared, so arriving late
 // costs latency and not data.
 //
-// The receive ring is a power of two and aligned to its own size
-// because the DMA wraps it with an address mask.  The transmit ring is
-// walked in software and needs neither.
+// The receive ring is aligned to its own size because the DMA wraps it
+// with an address mask.
 //
-#define NRF54_TX_RING		1024
-#define NRF54_RX_RING		1024
-#define NRF54_RX_RING_BITS	10
+#define NRF54_TX_RING_SHIFT	10
+#define NRF54_TX_RING_SIZE	(1 << NRF54_TX_RING_SHIFT)
+#define NRF54_TX_RING_MASK	(NRF54_TX_RING_SIZE - 1)
+
+#define NRF54_RX_RING_SHIFT	10
+#define NRF54_RX_RING_SIZE	(1 << NRF54_RX_RING_SHIFT)
+#define NRF54_RX_RING_MASK	(NRF54_RX_RING_SIZE - 1)
 
 static struct {
-	uint8_t tx[NRF54_TX_RING];
+	uint8_t tx[NRF54_TX_RING_SIZE];
 	uint16_t tx_head, tx_tail;
 	uint16_t tx_inflight;		// handed to the DMA, not yet gone
 
-	uint8_t rx[NRF54_RX_RING] __attribute__((aligned(NRF54_RX_RING)));
+	uint8_t rx[NRF54_RX_RING_SIZE]
+		__attribute__((aligned(NRF54_RX_RING_SIZE)));
 	uint16_t rx_tail;
 
 	int dma_tx, dma_rx;
@@ -65,6 +69,12 @@ static struct {
 	bool listening;
 } nrf54_uart;
 
+// Bytes in the transmit ring
+static uint16_t nrf54_tx_used(void)
+{
+	return (nrf54_uart.tx_head - nrf54_uart.tx_tail) & NRF54_TX_RING_MASK;
+}
+
 //
 // Where the receive DMA has got to.
 //
@@ -76,7 +86,7 @@ static inline uint16_t nrf54_rx_head(void)
 {
 	uintptr_t at = dma_hw->ch[nrf54_uart.dma_rx].write_addr;
 
-	return (uint16_t)(at - (uintptr_t)nrf54_uart.rx) % NRF54_RX_RING;
+	return (uint16_t)(at - (uintptr_t)nrf54_uart.rx) & NRF54_RX_RING_MASK;
 }
 
 //
@@ -98,10 +108,7 @@ static inline uint16_t nrf54_rx_head(void)
 //
 static bool nrf54_uart_ready(void)
 {
-	uint16_t used = (nrf54_uart.tx_head - nrf54_uart.tx_tail) %
-			NRF54_TX_RING;
-
-	return used < NRF54_TX_RING / 2;
+	return nrf54_tx_used() < NRF54_TX_RING_SIZE / 2;
 }
 
 // Defined below, and declared here because the senders above it call it.
@@ -131,7 +138,7 @@ static void nrf54_uart_thru(uint8_t byte)
 	if (!nrf54_uart.up)
 		return;
 
-	uint16_t next = (nrf54_uart.tx_head + 1) % NRF54_TX_RING;
+	uint16_t next = (nrf54_uart.tx_head + 1) & NRF54_TX_RING_MASK;
 	if (next == nrf54_uart.tx_tail) {
 		nrf54_uart.dropped++;
 		return;
@@ -170,8 +177,8 @@ static void nrf54_uart_push(void)
 	if (dma_channel_is_busy(nrf54_uart.dma_tx))
 		return;
 
-	nrf54_uart.tx_tail = (nrf54_uart.tx_tail + nrf54_uart.tx_inflight) %
-			     NRF54_TX_RING;
+	nrf54_uart.tx_tail = (nrf54_uart.tx_tail + nrf54_uart.tx_inflight) &
+			     NRF54_TX_RING_MASK;
 	nrf54_uart.tx_bytes += nrf54_uart.tx_inflight;
 	nrf54_uart.tx_inflight = 0;
 
@@ -180,7 +187,8 @@ static void nrf54_uart_push(void)
 		return;
 
 	span = head > nrf54_uart.tx_tail ? head - nrf54_uart.tx_tail
-					 : NRF54_TX_RING - nrf54_uart.tx_tail;
+					 : NRF54_TX_RING_SIZE -
+					   nrf54_uart.tx_tail;
 
 	nrf54_uart.tx_inflight = span;
 	dma_channel_set_read_addr(nrf54_uart.dma_tx,
@@ -297,7 +305,8 @@ static void nrf54_uart_poll(void)
 		uint8_t packet[4];
 		uint8_t b = nrf54_uart.rx[nrf54_uart.rx_tail];
 
-		nrf54_uart.rx_tail = (nrf54_uart.rx_tail + 1) % NRF54_RX_RING;
+		nrf54_uart.rx_tail = (nrf54_uart.rx_tail + 1) &
+				     NRF54_RX_RING_MASK;
 		nrf54_uart.rx_bytes++;
 
 		if (!midi_parse_byte(&nrf54_uart.parser, b, packet))
@@ -386,7 +395,7 @@ static void nrf54_uart_init(void)
 	channel_config_set_read_increment(&rx, false);
 	channel_config_set_write_increment(&rx, true);
 	channel_config_set_dreq(&rx, uart_get_dreq(NRF54_UART, false));
-	channel_config_set_ring(&rx, true, NRF54_RX_RING_BITS);
+	channel_config_set_ring(&rx, true, NRF54_RX_RING_SHIFT);
 	dma_channel_configure(nrf54_uart.dma_rx, &rx, nrf54_uart.rx,
 			      &uart_get_hw(NRF54_UART)->dr, 0xffffffff, true);
 
