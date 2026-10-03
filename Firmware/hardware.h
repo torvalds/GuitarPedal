@@ -200,8 +200,8 @@ reset:
 // exactly its rate.  Put back there whenever it is not, which is the
 // first call and any time core 1 has fallen behind and lost frames.
 //
-// The test pattern is silence.  Audio from the radio is 16 bits in the
-// top of the word, so its low byte is zero and the pattern's is never.
+// The test pattern is silence.  The radio sends audio with the low byte
+// of each word zero, and the pattern's right word has 0xC3 there.
 //
 #define NRF54_I2S_LAG	8
 

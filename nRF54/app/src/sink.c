@@ -17,6 +17,8 @@
 #include <zephyr/bluetooth/audio/audio.h>
 #include <zephyr/bluetooth/audio/lc3.h>
 #include <zephyr/bluetooth/audio/pacs.h>
+#include <zephyr/bluetooth/audio/vcp.h>
+#include <math.h>
 #include <lc3.h>
 
 #include "sink.h"
@@ -219,6 +221,31 @@ void sink_poll(void)
 }
 
 /*
+ * The volume a phone sets, through the Volume Control Service, the way it
+ * sets an earbud's: 0 to 255 and a mute.  The service says nothing about
+ * the curve.  A Pixel sends its 25 steps as 10, 20, 31 ... 255, and this
+ * takes 1 to 255 as 40 dB in equal steps - 1.6 dB a press - with 0 as
+ * off: half way still has to be heard under a guitar.
+ *
+ * As a gain on a 16-bit sample, 65536 for none.  Set from the Bluetooth
+ * stack's thread and read whole by sink_pcm().
+ */
+static volatile int32_t gain = 65536;
+
+static void volume_set(struct bt_conn *conn, int err, uint8_t volume,
+		       uint8_t mute)
+{
+	if (err)
+		return;
+	gain = mute || !volume ? 0 :
+	       (int32_t)lrintf(65536.0f * powf(10.0f,
+				(volume - 255) * (40.0f / 254) / 20.0f));
+	printk("sink: volume %u%s\n", volume, mute ? ", muted" : "");
+}
+
+static struct bt_vcp_vol_rend_cb volume_cb = { .state = volume_set };
+
+/*
  * The next 'frames' of what is being received as 32-bit stereo frames for
  * the i2s link, or false if there is nothing to play and the caller should
  * send something else.
@@ -292,11 +319,14 @@ bool sink_pcm(int32_t *out, int frames)
 		calls = 0;
 		low = UINT32_MAX;
 	}
+	int32_t g = gain;
+
 	for (int i = 0; i < frames; i++) {
 		uint32_t at = pcm_tail & PCM_MASK;
 
-		out[2 * i] = (int32_t)pcm[0][at] << 16;
-		out[2 * i + 1] = (int32_t)pcm[1][at] << 16;
+		/* The low byte clear: 0xC3 there is the test pattern */
+		out[2 * i] = (pcm[0][at] * g) & ~0xff;
+		out[2 * i + 1] = (pcm[1][at] * g) & ~0xff;
 		if (!(pad && i == 0))
 			pcm_tail++;
 	}
@@ -331,6 +361,22 @@ void sink_start(void)
 		printk("sink: no capabilities, %d\n", err);
 		return;
 	}
+
+	/*
+	 * Full, until a phone says otherwise, which it does on connecting:
+	 * a broadcast has nothing else to set it, and the pedal's own Level
+	 * is what sets how loud it is against the guitar.
+	 */
+	struct bt_vcp_vol_rend_register_param vol = {
+		.step = 16,
+		.volume = 255,
+		.cb = &volume_cb,
+	};
+
+	volume_set(NULL, 0, vol.volume, 0);
+	err = bt_vcp_vol_rend_register(&vol);
+	if (err)
+		printk("sink: no volume control, %d\n", err);
 
 	err = unicast_start();
 	if (err)
