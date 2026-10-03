@@ -513,6 +513,12 @@ static void nrf54_midi_in(struct midi_parser *parser, uint8_t b,
 	sysex_from_radio = false;
 }
 
+static void nrf54_parser_reset(struct midi_parser *p)
+{
+	memset(p, 0, sizeof(*p));
+	p->want_sysex = true;
+}
+
 //
 // The parser for a peer's MIDI: its own if it has one.  Otherwise the slot
 // used longest ago among those with nothing half parsed, or failing that
@@ -541,9 +547,7 @@ static struct midi_parser *nrf54_parser(uint8_t peer)
 	}
 	if (idle < 0)
 		idle = oldest;
-	memset(&nrf54_uart.from[idle].parser, 0,
-	       sizeof(nrf54_uart.from[idle].parser));
-	nrf54_uart.from[idle].parser.want_sysex = true;
+	nrf54_parser_reset(&nrf54_uart.from[idle].parser);
 	nrf54_uart.from[idle].peer = peer;
 	nrf54_uart.from[idle].used = ++nrf54_uart.parser_clock;
 	return &nrf54_uart.from[idle].parser;
@@ -592,9 +596,8 @@ static void nrf54_link_hello(void)
 {
 	memset(&nrf54_uart.from, 0, sizeof(nrf54_uart.from));
 	for (int i = 0; i < NRF54_PEERS; i++)
-		nrf54_uart.from[i].parser.want_sysex = true;
-	memset(&nrf54_uart.ctl_parser, 0, sizeof(nrf54_uart.ctl_parser));
-	nrf54_uart.ctl_parser.want_sysex = true;
+		nrf54_parser_reset(&nrf54_uart.from[i].parser);
+	nrf54_parser_reset(&nrf54_uart.ctl_parser);
 	nrf54_uart.midi_len = 0;
 	nrf54_uart.ctl_sent = 0;
 
@@ -695,6 +698,12 @@ static void nrf54_uart_poll(void)
 		struct midi_parser *from = l->rx.buf[0] == LINK_MIDI ?
 					   nrf54_parser(l->rx.buf[1]) : NULL;
 		bool trusted = l->rx.buf[3] & LINK_TRUSTED;
+
+		// Not the rest of a message cut short by the gap
+		if (l->after_gap && from)
+			nrf54_parser_reset(from);
+		if (l->after_gap && l->rx.buf[0] == LINK_CONTROL)
+			nrf54_parser_reset(&nrf54_uart.ctl_parser);
 
 		for (uint16_t i = LINK_HEADER; i < l->rx.len; i++) {
 			uint8_t c = l->rx.buf[i];

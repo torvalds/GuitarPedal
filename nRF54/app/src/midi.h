@@ -48,6 +48,7 @@ void midi_ble_feed(uint8_t byte);
 void midi_ble_flush(void);
 void midi_ble_packet(uint8_t src, const uint8_t *buf, uint16_t len);
 void midi_ble_to(uint8_t peer);
+void midi_ble_resync(void);
 bool midi_ble_ready(void);
 void midi_ble_notices(void);
 void midi_radio_command(const uint8_t *msg, size_t len);
@@ -64,6 +65,7 @@ static inline void midi_ble_flush(void) { }
 static inline void midi_ble_packet(uint8_t s, const uint8_t *b, uint16_t l)
 					{ (void)s; (void)b; (void)l; }
 static inline void midi_ble_to(uint8_t peer) { (void)peer; }
+static inline void midi_ble_resync(void) { }
 static inline bool midi_ble_ready(void) { return true; }
 static inline void midi_ble_notices(void) { }
 static inline void midi_radio_command(const uint8_t *m, size_t l)

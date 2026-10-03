@@ -939,8 +939,25 @@ void midi_ble_to(uint8_t peer)
 {
 	if (peer == out_peer)
 		return;
+	midi_ble_resync();
 	midi_ble_flush();
 	out_peer = peer;
+}
+
+/*
+ * What comes next is not the rest of the message being parsed: a gap on
+ * the link cut it short, or the pedal has gone on to another peer, which it
+ * only does between messages.  A SysEx is closed rather than left for the
+ * far end to wait on, and anything half collected is forgotten.
+ */
+void midi_ble_resync(void)
+{
+	if (in.sysex)
+		pack_sysex_end();
+	in.sysex = false;
+	in.len = 0;
+	in.want = 0;
+	in.status = 0;
 }
 
 /*

@@ -586,6 +586,7 @@ static struct held {
 	uint8_t buf[LINK_PAYLOAD_MAX];
 	uint16_t len, pos;
 	uint8_t peer, seq, flags;
+	bool after_gap;			/* link.h's, for the MIDI parser */
 } in_hand[HELD_SIZE];
 static uint8_t hand_head, hand_tail;
 static bool heard;		/* the pedal has sent something */
@@ -633,6 +634,7 @@ static void link_in(void)
 		in_hand[hand_head & HELD_MASK].pos = 0;
 		in_hand[hand_head & HELD_MASK].peer = h[1];
 		in_hand[hand_head & HELD_MASK].seq = h[2];
+		in_hand[hand_head & HELD_MASK].after_gap = l->after_gap;
 		hand_head++;
 		break;
 
@@ -809,6 +811,8 @@ int main(void)
 			struct held *h = &in_hand[hand_tail & HELD_MASK];
 
 			midi_ble_to(h->peer);
+			if (!h->pos && h->after_gap)
+				midi_ble_resync();
 			while (h->pos < h->len && midi_ble_ready()) {
 				midi_ble_feed(h->buf[h->pos++]);
 				fed++;

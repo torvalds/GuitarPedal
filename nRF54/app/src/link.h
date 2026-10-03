@@ -330,6 +330,7 @@ struct link_stream {
 struct link {
 	struct link_stream s[LINK_STREAMS];
 	struct link_rx rx;
+	bool after_gap;		/* packets before the one in rx were lost */
 	bool up;		/* a hello has been seen */
 	uint32_t boot;		/* the id in the last hello */
 	uint32_t gaps;		/* packets that never arrived */
@@ -524,6 +525,11 @@ static inline void link_consumed(struct link *l)
  * What a packet that has just arrived means.  LINK_GOT_DATA leaves it in
  * l->rx for the caller, payload after the header, until the caller says
  * link_consumed(); everything else the link has dealt with itself.
+ *
+ * l->after_gap says that packets on its stream were lost or skipped before
+ * it, so that whatever parses the payload starts afresh rather than taking
+ * it as the rest of a message that was cut short.  A new stream's first
+ * packet counts, since it may follow a stream the far side had before.
  */
 enum { LINK_GOT_NOTHING, LINK_GOT_DATA, LINK_GOT_HELLO };
 
@@ -615,6 +621,7 @@ static inline int link_take(struct link *l)
 		link_consumed(l);
 		return LINK_GOT_NOTHING;
 	}
+	l->after_gap = s->rx_skip;
 	s->rx_skip = false;
 	return LINK_GOT_DATA;
 }

@@ -642,6 +642,40 @@ static void stalled(bool jump)
 	    radio.written_off, jump ? 0 : 2);
 }
 
+//
+// The receiver is told when a packet follows a gap, so that the parser
+// behind the link does not take it as the rest of a message cut short.
+//
+static void gap_flag(void)
+{
+	struct link pedal, radio;
+	uint8_t w[LINK_WIRE_MAX], p[1] = { 0x90 };
+	size_t n;
+
+	link_init(&pedal);
+	link_init(&radio);
+	pedal.up = radio.up = true;
+	deliver(&radio, (const uint8_t[]){ 0 }, 1);
+
+	n = link_pack(&pedal, LINK_MIDI, 1, LINK_FIRST, p, 1, w);
+	deliver(&radio, w, n);
+	chk("gap flag: a new stream's first packet", radio.after_gap, 1);
+	link_consumed(&radio);
+
+	n = link_pack(&pedal, LINK_MIDI, 1, LINK_FIRST, p, 1, w);
+	deliver(&radio, w, n);
+	chk("gap flag: the next in order", radio.after_gap, 0);
+	link_consumed(&radio);
+
+	link_pack(&pedal, LINK_MIDI, 1, LINK_FIRST, p, 1, w);	// lost
+	n = link_pack(&pedal, LINK_MIDI, 1, 0, p, 1, w);
+	chk("gap flag: the rest of the lost message is dropped",
+	    deliver(&radio, w, n), LINK_GOT_NOTHING);
+	n = link_pack(&pedal, LINK_MIDI, 1, LINK_FIRST, p, 1, w);
+	deliver(&radio, w, n);
+	chk("gap flag: the next message start", radio.after_gap, 1);
+}
+
 int main(void)
 {
 	coding();
@@ -655,6 +689,7 @@ int main(void)
 	new_stream();
 	stalled(true);
 	stalled(false);
+	gap_flag();
 	written_at_wrap();
 	printf("test-link: %d packets and the flow control, %s\n", PACKETS,
 	       fails ? "FAILED" : "all as expected");
