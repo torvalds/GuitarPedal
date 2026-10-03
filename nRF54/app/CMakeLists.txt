@@ -6,5 +6,5 @@ project(radio)
 target_sources(app PRIVATE src/main.c src/pins.c src/audio.c)
 
 if(CONFIG_BT)
-	target_sources(app PRIVATE src/midi.c src/scan.c src/bind.c)
+	target_sources(app PRIVATE src/midi.c src/scan.c src/bind.c src/bcast.c)
 endif()

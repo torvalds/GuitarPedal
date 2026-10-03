@@ -91,7 +91,43 @@ static struct {
 	uint32_t tail;			// frames taken from the ring
 	struct i2stest_rx rx;		// since the last report
 	uint32_t reported_at;
+
+	//
+	// The same frames read as audio, for when it is not the pattern:
+	// the peak of each channel, and how often each crosses zero going
+	// up, which over a second of a tone is its frequency.
+	//
+	int32_t peak[2];
+	uint32_t ups[2];
+	bool was_neg[2];
 } nrf54_i2s;
+
+static void nrf54_i2s_audio(int ch, int32_t v)
+{
+	int32_t a = v < 0 ? -(v + 1) : v;
+
+	if (a > nrf54_i2s.peak[ch])
+		nrf54_i2s.peak[ch] = a;
+	if (nrf54_i2s.was_neg[ch] && v >= 0)
+		nrf54_i2s.ups[ch]++;
+	nrf54_i2s.was_neg[ch] = v < 0;
+}
+
+// A peak as dBFS, to a tenth of a dB, for the report
+static void nrf54_i2s_dbfs(int32_t peak)
+{
+	int db10 = peak ? (int)lrintf(200.0f *
+				      log10f(peak / 2147483648.0f)) : -1200;
+
+	if (db10 < 0) {
+		dbg_puts("-");
+		db10 = -db10;
+	}
+	dbg_dec(db10 / 10);
+	dbg_puts(".");
+	dbg_dec(db10 % 10);
+	dbg_puts(" dBFS");
+}
 
 //
 // Check what the radio sent back, every frame of it, and say how it went
@@ -115,11 +151,27 @@ static void nrf54_i2s_poll(void)
 						NRF54_I2S_RX_MASK];
 
 		i2stest_check(&nrf54_i2s.rx, f->left, f->right);
+		nrf54_i2s_audio(0, f->left);
+		nrf54_i2s_audio(1, f->right);
 	}
 
 	now = to_ms_since_boot(get_absolute_time());
 	if (now - nrf54_i2s.reported_at < 1000)
 		return;
+
+	//
+	// Mostly not the pattern: say what it is as audio instead.
+	//
+	if (nrf54_i2s.rx.wrong > nrf54_i2s.rx.frames / 2) {
+		for (int ch = 0; ch < 2; ch++) {
+			dbg_puts(ch ? ", right " : "i2s from the radio: audio, left ");
+			dbg_dec(nrf54_i2s.ups[ch]);
+			dbg_puts(" Hz peak ");
+			nrf54_i2s_dbfs(nrf54_i2s.peak[ch]);
+		}
+		dbg_puts("\n");
+		goto reset;
+	}
 
 	dbg_puts("i2s from the radio: ");
 	dbg_dec(nrf54_i2s.rx.frames);
@@ -133,6 +185,9 @@ static void nrf54_i2s_poll(void)
 	dbg_puts(" shifted), ");
 	dbg_dec(nrf54_i2s.rx.slips);
 	dbg_puts(" slips\n");
+reset:
+	nrf54_i2s.peak[0] = nrf54_i2s.peak[1] = 0;
+	nrf54_i2s.ups[0] = nrf54_i2s.ups[1] = 0;
 	nrf54_i2s.rx.frames = nrf54_i2s.rx.wrong = 0;
 	nrf54_i2s.rx.swapped = nrf54_i2s.rx.shifted = 0;
 	nrf54_i2s.rx.slips = 0;

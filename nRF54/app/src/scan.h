@@ -22,6 +22,10 @@
 void scan_start(void);
 void scan_stop(void);
 
+/* The scanner, shared: running while anyone holds it */
+int scan_hold(void);
+void scan_release(void);
+
 /* Defined in midi.c: one device, once the pass is over. */
 void scan_found(const bt_addr_le_t *addr, const char *name);
 
