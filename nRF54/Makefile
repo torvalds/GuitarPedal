@@ -20,7 +20,8 @@ APP		:= app
 BUILD		:= $(TOPDIR)/build
 BUILD_NOBT	:= $(TOPDIR)/build-nobt
 
-SOURCES		:= $(wildcard $(APP)/src/*.c $(APP)/*.conf boards/pedal/minimal/*)
+SOURCES		:= $(wildcard $(APP)/src/*.c $(APP)/src/*.h $(APP)/*.conf \
+			      boards/pedal/minimal/*)
 
 all: $(BUILD)/app/zephyr/zephyr.hex
 

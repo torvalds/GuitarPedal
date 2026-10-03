@@ -86,6 +86,76 @@ static struct bt_conn *midi_get(void)
 	return conn;
 }
 
+/*
+ * Each connection's number on the link to the pedal (link.h), handed out in
+ * order as connections arrive - 1 to 255, skipping any still in use - so a
+ * number is never reused while something addressed to its old owner could
+ * still be on the way.  The pedal only echoes these back.
+ */
+static uint8_t peer_ids[CONFIG_BT_MAX_CONN];
+static uint8_t peer_next = 1;
+
+static void peer_assign(struct bt_conn *conn)
+{
+	uint8_t id;
+	bool taken;
+
+	do {
+		id = peer_next++;
+		if (!peer_next)
+			peer_next = 1;
+		taken = false;
+		for (int i = 0; i < CONFIG_BT_MAX_CONN; i++)
+			taken |= peer_ids[i] == id;
+	} while (taken);
+	peer_ids[bt_conn_index(conn)] = id;
+}
+
+struct peer_find {
+	uint8_t id;
+	struct bt_conn *found;
+};
+
+static void peer_find_one(struct bt_conn *conn, void *data)
+{
+	struct peer_find *f = data;
+
+	if (!f->found && peer_ids[bt_conn_index(conn)] == f->id)
+		f->found = bt_conn_ref(conn);
+}
+
+/* The connection a peer number belongs to, referenced, or NULL if gone */
+static struct bt_conn *peer_conn(uint8_t id)
+{
+	struct peer_find f = { .id = id };
+
+	bt_conn_foreach(BT_CONN_TYPE_LE, peer_find_one, &f);
+	return f.found;
+}
+
+/*
+ * Whether the pedal should trust what a connection sends: a host that
+ * connected to us, over Secure Connections, with a bond stored for it -
+ * which only the pairing window makes.  A device the radio connected to
+ * itself is a controller, never an editor, whatever its keys.
+ */
+static bool peer_trusted(struct bt_conn *conn)
+{
+	struct bt_conn_info info;
+
+	if (bind_owns(conn) || bt_conn_get_info(conn, &info))
+		return false;
+	return info.role == BT_CONN_ROLE_PERIPHERAL &&
+	       (info.security.flags & BT_SECURITY_FLAG_SC) &&
+	       bt_le_bond_exists(BT_ID_DEFAULT, bt_conn_get_dst(conn));
+}
+
+/*
+ * Which peer the MIDI being packed is for: 0 for the connection that
+ * subscribed last, as before peers had numbers.
+ */
+static uint8_t out_peer;
+
 /* ------------------------------------------------------------------ */
 /* How long a MIDI message is, from its status byte                    */
 /* ------------------------------------------------------------------ */
@@ -155,6 +225,19 @@ static struct {
 	uint32_t conns, dc3e, dc08;
 	uint8_t last_reason;
 
+	/*
+	 * The last host that connected: who, the security level its link
+	 * reached, the error if raising it failed, and why its last pairing
+	 * failed - which between them say whether the pedal trusts it.
+	 */
+	bt_addr_le_t peer;
+	uint8_t peer_level;
+	bool peer_sc;
+	int peer_err, pair_fail;
+
+	/* Writes that reached the MIDI characteristic, from anyone */
+	uint32_t writes;
+
 	/* MIDI handed to the bound device, and how much of it was refused */
 	uint32_t bound_sent, bound_failed;
 
@@ -175,10 +258,9 @@ static struct {
  *
  * So the completion callback is the flow control: one slot per buffer
  * the stack has, taken before sending and given back when that packet is
- * actually gone.  Waiting for a slot is the back-pressure - it stops
- * this thread draining the UART, which deasserts RTS, which pauses the
- * pedal.  Every other stage of this link already works that way; this
- * was the one that did not.
+ * actually gone.  Waiting for a slot is the back-pressure: the pedal's
+ * MIDI stays in main.c unacknowledged, and the link's window stops the
+ * pedal sending more.
  */
 #define MIDI_BLE_SLOTS	CONFIG_BT_ATT_TX_COUNT
 
@@ -280,7 +362,7 @@ void midi_ble_flush(void)
 		return;
 	}
 
-	conn = midi_get();
+	conn = out_peer ? peer_conn(out_peer) : midi_get();
 	if (!conn) {
 		out.noconn++;
 		out.len = 0;
@@ -292,9 +374,8 @@ void midi_ble_flush(void)
 	 * slot, so this cannot fire; 'noslot' reading non-zero means
 	 * somebody added a caller that does not ask.
 	 *
-	 * Waiting here would pause the wrong thing - the loop rather than
-	 * the pedal.  Declining to take bytes off the UART is what
-	 * deasserts RTS.
+	 * Waiting here would pause the loop, and every stream with it.
+	 * Leaving the MIDI unacknowledged is what holds the pedal off.
 	 */
 	if (k_sem_take(&slot_free, K_NO_WAIT) != 0) {
 		out.noslot++;
@@ -406,8 +487,8 @@ static void pack_sysex_end(void)
 
 /*
  * F0 7D 1x is the radio talking to the RP2354 rather than MIDI passing
- * through it.  The commands ride the same stream because there is only
- * one wire, and are taken out of it here so they never reach Bluetooth.
+ * through it.  Both directions go on the link's control stream, so they
+ * never meet the MIDI on its way to Bluetooth.
  *
  * Data bytes are seven bits, so an address goes out as twelve nibbles.
  */
@@ -445,7 +526,7 @@ static void radio_sysex(const uint8_t *body, size_t len)
 		msg[n++] = body[i] & 0x7f;
 	msg[n++] = 0xF7;
 
-	midi_uart_send(msg, n);
+	midi_uart_control(msg, n);
 }
 
 #ifdef CONFIG_BT_OBSERVER
@@ -491,12 +572,6 @@ void scan_done(unsigned int listed)
 }
 #endif
 
-//
-// One of ours, or MIDI passing through?
-//
-// Answered from the first two bytes after F0, so the rest of a message
-// that is not ours streams to the packer as it arrives rather than
-// having to be held whole.
 //
 /*
  * What the notify path did, when asked.
@@ -629,10 +704,14 @@ static void radio_json(uint8_t cmd, const char *fmt, ...)
  * us, and an answer that reads as a request answers itself for ever.
  *
  * f bytes in, o bytes notified, p packets, nc no connection, ns no slot,
- * fl notify refused, e its error, r the pedal's backlog here, s whether
- * the pedal is being held off, ccn how often a client asked to be sent
- * anything, lo bytes the pedal sent that there was no room for, bo keys
- * stored, rs the signal strength of the MIDI connection in dBm.
+ * fl notify refused, e its error, r the pedal's backlog here, ccn how
+ * often a client asked to be sent anything, lo bytes from the pedal
+ * overwritten before they were read, bo keys stored, rs the signal
+ * strength of the MIDI connection in dBm, and for the link to the pedal
+ * lg packets that never arrived, lr packets with nowhere to go, lb packets
+ * malformed, lt bytes for the pedal there was no room for, lw packets it
+ * sent and then took as lost, lc packets dropped for a wrong CRC, and rb
+ * bytes the UART has received, all told.
  *
  * Then cn connections accepted, 3e and 08 how many of them ended for
  * those reasons, dr why the last one ended, bs and bf MIDI sent to the
@@ -641,21 +720,34 @@ static void radio_json(uint8_t cmd, const char *fmt, ...)
  */
 static void stats_send(void)
 {
+	uint32_t gaps, refused, bad, lost;
+
+	midi_uart_link_counts(&gaps, &refused, &bad, &lost);
 	radio_json(RADIO_SYSEX_STATS,
 		   "{\"f\":%u,\"o\":%u,\"p\":%u,\"nc\":%u,\"ns\":%u"
-		   ",\"fl\":%u,\"e\":%d,\"r\":%u,\"s\":%u"
-		   ",\"ccn\":%u,\"lo\":%u,\"bo\":%u,\"rs\":%d}",
+		   ",\"fl\":%u,\"e\":%d,\"r\":%u"
+		   ",\"ccn\":%u,\"lo\":%u,\"bo\":%u,\"rs\":%d"
+		   ",\"lg\":%u,\"lr\":%u,\"lb\":%u,\"lt\":%u"
+		   ",\"lw\":%u,\"lc\":%u,\"rb\":%u}",
 		   out.fed, out.notified, out.sent, out.noconn, out.noslot,
 		   out.failed, out.err, midi_uart_backlog(),
-		   midi_uart_halted(), out.ccc_n, midi_uart_lost(),
-		   bonds(), midi_rssi());
+		   out.ccc_n, midi_uart_lost(),
+		   bonds(), midi_rssi(), gaps, refused, bad, lost,
+		   midi_uart_written_off(), midi_uart_crc_failed(),
+		   midi_uart_received());
 
+	char peer[BT_ADDR_LE_STR_LEN];
+
+	bt_addr_le_to_str(&out.peer, peer, sizeof(peer));
 	radio_json(RADIO_SYSEX_LINKS,
 		   "{\"cn\":%u,\"3e\":%u,\"08\":%u,\"dr\":%u"
-		   ",\"bs\":%u,\"bf\":%u,\"bd\":%u,\"be\":%d}",
+		   ",\"bs\":%u,\"bf\":%u,\"bd\":%u,\"be\":%d"
+		   ",\"pa\":\"%s\",\"pl\":%u,\"sc\":%u,\"pe\":%d"
+		   ",\"pf\":%d,\"w\":%u}",
 		   out.conns, out.dc3e, out.dc08, out.last_reason,
 		   out.bound_sent, out.bound_failed, bind_state(),
-		   bind_last_err());
+		   bind_last_err(), peer, out.peer_level, out.peer_sc,
+		   out.peer_err, out.pair_fail, out.writes);
 }
 
 /*
@@ -712,33 +804,7 @@ static struct {
 	int want;		/* how many the status byte asks for */
 	uint8_t status;		/* running status */
 	bool sysex;
-
-	/*
-	 * The start of a SysEx, held back while it is decided whether it
-	 * belongs to the radio.  'hold' is F0 and the two bytes after it.
-	 */
-	uint8_t hold[3];
-	uint8_t held;
-	bool mine;
-	uint8_t cmd;
-	uint8_t arg[32];
-	uint8_t nr_arg;
 } in;
-
-//
-// Not ours after all: put the start of the message back into the
-// packet before the rest of it streams through.
-//
-static void release_held(void)
-{
-	if (!in.held)
-		return;
-
-	pack_sysex_start();
-	for (uint8_t i = 1; i < in.held; i++)
-		pack_sysex_data(in.hold[i]);
-	in.held = 0;
-}
 
 static void radio_dispatch(uint8_t cmd, const uint8_t *arg, uint8_t len)
 {
@@ -864,6 +930,49 @@ static void radio_dispatch(uint8_t cmd, const uint8_t *arg, uint8_t len)
 	}
 }
 
+/*
+ * The MIDI fed from here on is for this peer.  A packet half built for
+ * another goes first, so the two never share one; the caller has asked
+ * midi_ble_ready(), so there is a slot for it.
+ */
+void midi_ble_to(uint8_t peer)
+{
+	if (peer == out_peer)
+		return;
+	midi_ble_resync();
+	midi_ble_flush();
+	out_peer = peer;
+}
+
+/*
+ * What comes next is not the rest of the message being parsed: a gap on
+ * the link cut it short, or the pedal has gone on to another peer, which it
+ * only does between messages.  A SysEx is closed rather than left for the
+ * far end to wait on, and anything half collected is forgotten.
+ */
+void midi_ble_resync(void)
+{
+	if (in.sysex)
+		pack_sysex_end();
+	in.sysex = false;
+	in.len = 0;
+	in.want = 0;
+	in.status = 0;
+}
+
+/*
+ * A command from the pedal, whole: F0 7D, the command, its arguments and
+ * F7, off the control stream.  It never meets the MIDI parser, so it cannot
+ * land in the middle of a SysEx on its way to the air.
+ */
+void midi_radio_command(const uint8_t *msg, size_t len)
+{
+	if (len < 4 || msg[0] != 0xF0 || msg[1] != 0x7D ||
+	    msg[len - 1] != 0xF7 || !radio_command(msg[2]))
+		return;
+	radio_dispatch(msg[2], msg + 3, (uint8_t)(len - 4));
+}
+
 void midi_ble_feed(uint8_t b)
 {
 	out.fed++;
@@ -880,14 +989,10 @@ void midi_ble_feed(uint8_t b)
 	}
 
 	if (b == 0xF0) {
-		//
-		// Held rather than packed, until the two bytes after F0
-		// say whether this is MIDI passing through or a command
-		// for the radio.  Two bytes is the whole lookahead.
-		//
+		if (in.sysex)
+			pack_sysex_end();
+		pack_sysex_start();
 		in.sysex = true;
-		in.held = 1;
-		in.mine = false;
 		in.want = 0;
 		in.len = 0;
 		in.status = 0;
@@ -895,15 +1000,9 @@ void midi_ble_feed(uint8_t b)
 	}
 
 	if (b == 0xF7) {
-		if (in.mine) {
-			radio_dispatch(in.cmd, in.arg, in.nr_arg);
-		} else if (in.sysex) {
-			release_held();
+		if (in.sysex)
 			pack_sysex_end();
-		}
 		in.sysex = false;
-		in.mine = false;
-		in.held = 0;
 		return;
 	}
 
@@ -935,31 +1034,7 @@ void midi_ble_feed(uint8_t b)
 	}
 
 	/* A data byte. */
-	if (in.mine) {
-		if (in.nr_arg < sizeof(in.arg))
-			in.arg[in.nr_arg++] = b;
-		return;
-	}
-
 	if (in.sysex) {
-		if (in.held) {
-			in.hold[in.held++] = b;
-
-			//
-			// F0 7D <cmd>: enough to know whose it is.
-			//
-			if (in.held == 3) {
-				if (in.hold[1] == 0x7D && radio_command(b)) {
-					in.mine = true;
-					in.cmd = b;
-					in.nr_arg = 0;
-					in.held = 0;
-					return;
-				}
-				release_held();
-			}
-			return;
-		}
 		pack_sysex_data(b);
 		return;
 	}
@@ -991,24 +1066,41 @@ void midi_ble_feed(uint8_t b)
 /* Unpacking: BLE packets in, byte stream to the UART                  */
 /* ------------------------------------------------------------------ */
 
-static uint8_t dec_status;
+/* Running status, per connection: two senders must not share one */
+static uint8_t dec_statuses[CONFIG_BT_MAX_CONN];
 
-static void midi_ble_decode(const uint8_t *buf, uint16_t len);
+static void midi_ble_decode(uint8_t *dec_status, const uint8_t *buf,
+			    uint16_t len);
 
 /*
- * One packet from over the air, from the main loop.
+ * One packet from over the air, from the main loop, with the connection it
+ * came on.
  *
  * Not from the callback that received it: that runs in the Bluetooth
  * stack's own thread, at a cooperative priority it cannot be preempted
  * back into, so anything done there that waits stalls the receive path.
  * midi_ble_queue() copies the packet and this deals with it later.
  */
-void midi_ble_packet(const uint8_t *buf, uint16_t len)
+void midi_ble_packet(uint8_t src, const uint8_t *buf, uint16_t len)
 {
-	midi_ble_decode(buf, len);
+	if (src < CONFIG_BT_MAX_CONN)
+		midi_ble_decode(&dec_statuses[src], buf, len);
 }
 
-static void midi_ble_decode(const uint8_t *buf, uint16_t len)
+/*
+ * A packet arriving, from the Bluetooth stack's thread: queued for the loop
+ * with which connection it came on, its peer number and whether to trust
+ * it, all of which are known only now.
+ */
+static void midi_ble_arrived(struct bt_conn *conn, const uint8_t *buf,
+			     uint16_t len)
+{
+	midi_ble_queue(bt_conn_index(conn), peer_ids[bt_conn_index(conn)],
+		       peer_trusted(conn) ? MIDI_FROM_TRUSTED : 0, buf, len);
+}
+
+static void midi_ble_decode(uint8_t *dec_status, const uint8_t *buf,
+			    uint16_t len)
 {
 	uint16_t i = 1;		/* [0] is the header byte */
 
@@ -1036,14 +1128,14 @@ static void midi_ble_decode(const uint8_t *buf, uint16_t len)
 
 			midi_uart_send(&status, 1);
 			if (status < 0xF0)
-				dec_status = status;
+				*dec_status = status;
 			else if (status >= 0xF8)
 				;	/* real-time cancels nothing */
 			else
-				dec_status = 0;
-		} else if (dec_status) {
+				*dec_status = 0;
+		} else if (*dec_status) {
 			/* Running status: the status byte was omitted. */
-			midi_uart_send(&dec_status, 1);
+			midi_uart_send(dec_status, 1);
 		}
 
 		while (i < len && !(buf[i] & 0x80))
@@ -1070,7 +1162,8 @@ static ssize_t midi_write(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 			  const void *buf, uint16_t len, uint16_t offset,
 			  uint8_t flags)
 {
-	midi_ble_queue(buf, len);
+	out.writes++;
+	midi_ble_arrived(conn, buf, len);
 	return len;
 }
 
@@ -1152,17 +1245,19 @@ static void midi_ccc_changed(const struct bt_gatt_attr *attr, uint16_t value)
 }
 
 //
-// Nothing here is reachable without a bond made with LE Secure Connections.
+// Anyone may write, and only a bond made with LE Secure Connections may
+// subscribe.
 //
-// BT_GATT_PERM_*_LESC is per attribute, which is what lets one image ask
-// this of a host while a footswitch still pairs the only way it can - the
-// radio is the client on that connection and never touches this
-// characteristic.  CONFIG_BT_SMP_SC_PAIR_ONLY would have been the blunt
-// way to ask and would have taken the footswitch with it.
+// Writing is open because a footswitch may pair the legacy way or not at
+// all, and it only ever says "somebody pressed me".  What it may say is the
+// pedal's decision: each packet goes to the pedal marked trusted or not
+// (peer_trusted()), and the pedal takes only channel messages from a peer
+// that is not.  Subscribing is what gets a peer the pedal's answers, so
+// that stays behind the bond.
 //
-// The requirement is a stored key with the Secure Connections flag, so an
-// encrypted session with no bond behind it does not qualify - which is
-// exactly the case a closed pairing window produces.
+// BT_GATT_PERM_*_LESC asks for a stored key with the Secure Connections
+// flag, so an encrypted session with no bond behind it does not qualify -
+// which is exactly the case a closed pairing window produces.
 //
 // The configuration descriptor carries it too, so a host that cannot be
 // sent anything is told when it subscribes rather than subscribing
@@ -1177,7 +1272,7 @@ BT_GATT_SERVICE_DEFINE(midi_svc,
 			       BT_GATT_CHRC_WRITE_WITHOUT_RESP |
 			       BT_GATT_CHRC_NOTIFY,
 			       BT_GATT_PERM_READ_LESC |
-			       BT_GATT_PERM_WRITE_LESC,
+			       BT_GATT_PERM_WRITE,
 			       midi_read, midi_write, NULL),
 	BT_GATT_CCC_WITH_WRITE_CB(midi_ccc_changed, midi_ccc_write,
 				  BT_GATT_PERM_READ_LESC |
@@ -1312,6 +1407,11 @@ static void name_set(const uint8_t *arg, uint8_t len)
 //
 static void connected(struct bt_conn *conn, uint8_t err)
 {
+	if (!err) {
+		peer_assign(conn);
+		dec_statuses[bt_conn_index(conn)] = 0;
+	}
+
 	if (bind_owns(conn)) {
 		bind_connected(conn, err);
 		return;
@@ -1325,12 +1425,18 @@ static void connected(struct bt_conn *conn, uint8_t err)
 
 	atomic_inc(&peers);
 	out.conns++;
+	bt_addr_le_copy(&out.peer, bt_conn_get_dst(conn));
+	out.peer_level = BT_SECURITY_L1;
+	out.peer_sc = false;
+	out.peer_err = out.pair_fail = 0;
 	printk("bt: connected\n");
 	adv_again();
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
+	peer_ids[bt_conn_index(conn)] = 0;
+
 	if (bind_owns(conn)) {
 		bind_disconnected(conn, reason);
 		return;
@@ -1357,7 +1463,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 		out.len = 0;
 		in.sysex = false;
 		in.len = in.want = 0;
-		in.status = dec_status = 0;
+		in.status = 0;
 	}
 
 	adv_again();
@@ -1368,14 +1474,24 @@ static void recycled(void)
 	adv_again();
 }
 
-#ifdef CONFIG_BT_CENTRAL
 static void security_changed(struct bt_conn *conn, bt_security_t level,
 			     enum bt_security_err err)
 {
-	if (bind_owns(conn))
+#ifdef CONFIG_BT_CENTRAL
+	if (bind_owns(conn)) {
 		bind_encrypted(conn, level, err);
-}
+		return;
+	}
 #endif
+	if (bt_addr_le_eq(bt_conn_get_dst(conn), &out.peer)) {
+		struct bt_conn_info info;
+
+		out.peer_level = level;
+		out.peer_err = err;
+		out.peer_sc = !bt_conn_get_info(conn, &info) &&
+			      (info.security.flags & BT_SECURITY_FLAG_SC);
+	}
+}
 
 //
 // Somebody bonded.  Only the fact is wanted here - which peer it was is the
@@ -1389,17 +1505,22 @@ static void bonded(struct bt_conn *conn, bool bonded)
 		out.bonded_pending = true;
 }
 
+static void pairing_failed(struct bt_conn *conn, enum bt_security_err reason)
+{
+	if (bt_addr_le_eq(bt_conn_get_dst(conn), &out.peer))
+		out.pair_fail = reason;
+}
+
 static struct bt_conn_auth_info_cb midi_auth_info = {
 	.pairing_complete = bonded,
+	.pairing_failed = pairing_failed,
 };
 
 BT_CONN_CB_DEFINE(midi_conn_cb) = {
 	.connected = connected,
 	.disconnected = disconnected,
 	.recycled = recycled,
-#ifdef CONFIG_BT_CENTRAL
 	.security_changed = security_changed,
-#endif
 };
 
 void midi_ble_start(void)
@@ -1443,8 +1564,9 @@ void midi_ble_start(void)
 // app goes through, so both end at midi_uart_send() and the pedal never
 // learns which it was.
 //
-void midi_ble_controller(const uint8_t *buf, uint16_t len)
+void midi_ble_controller(struct bt_conn *conn, const uint8_t *buf,
+			 uint16_t len)
 {
-	midi_ble_queue(buf, len);
+	midi_ble_arrived(conn, buf, len);
 }
 #endif

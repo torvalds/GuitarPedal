@@ -616,7 +616,7 @@ static void handle_switch_bindings(void)
 		//
 		if (populated_scenes() & (1u << pending_scene)) {
 			load_scene(pending_scene);
-			state_dump_tx = true;
+			midi_dest_add(&state_dump_tx, midi_from);
 		}
 		pending_scene = -1;
 	}
@@ -833,7 +833,7 @@ static void show_status(unsigned int ms)
 	if (nrf54_pairing && (int32_t)(ms - nrf54_pairing_until) >= 0) {
 		nrf54_pairing = false;
 		nrf54_pairing_tell(false);
-		sysex_send_pairing = true;
+		midi_dest_add(&sysex_send_pairing, midi_from);
 	}
 #endif
 

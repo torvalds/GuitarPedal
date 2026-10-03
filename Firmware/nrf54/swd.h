@@ -260,24 +260,6 @@ static uint32_t nrf54_probe(void)
 {
 	uint32_t idcode;
 
-	//
-	// Drive the radio's CTS low before it boots.
-	//
-	// The nRF's UART runs with hardware flow control and its CTS is
-	// active low, so it sends nothing while this pin is high.  Left
-	// undriven the pin is the same divider as nRESET above, which a
-	// typical part reads as high - so the radio would be mute from
-	// its first instruction, and only the extreme corner would work.
-	// A fault that varies between boards is worse than one that does
-	// not.
-	//
-	// TODO: the UART peripheral takes this pin over once the link to
-	// the radio is really implemented.
-	//
-	gpio_init(NRF54_RTS);
-	gpio_put(NRF54_RTS, 0);
-	gpio_set_dir(NRF54_RTS, GPIO_OUT);
-
 	gpio_put(NRF54_RESET, 1);
 	busy_wait_us_32(1000);
 

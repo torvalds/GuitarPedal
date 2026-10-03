@@ -100,10 +100,10 @@
 #define NRF54_RESET		12	// active low
 
 //
-// The command link, which carries MIDI and nothing else.
+// The link to the radio (nRF54/app/src/link.h).
 //
 // UART1 on this side, free because this board has no MIDI jacks, and
-// function select 2 is what makes these four pins that UART.  UARTE30
+// function select 2 is what makes these pins that UART.  UARTE30
 // on the nRF, because all four are in its low-power domain and a
 // peripheral there cannot reach across ports.
 //
@@ -114,12 +114,13 @@
 #define NRF54_UART		uart1
 #define NRF54_TX		4	// nRF P0.01, its RXD
 #define NRF54_RX		5	// nRF P0.00, its TXD
-#define NRF54_CTS		6	// nRF P0.02, its RTS
-#define NRF54_RTS		7	// nRF P0.03, its CTS
+#define NRF54_CTS		6	// nRF P0.02, its RTS - unused
+#define NRF54_RTS		7	// nRF P0.03, its CTS - unused
 #define NRF54_UART_FUNCSEL	2
 
 //
-// 1 Mbit, 8N1, both directions flow-controlled.
+// 1 Mbit, 8N1, and no flow control: the board wires RTS and CTS, and
+// nothing uses them.
 //
 // The same number is set on the nRF54 side, in 'current-speed' in
 // nRF54/boards/pedal/minimal/*.dts, and nothing checks that the two

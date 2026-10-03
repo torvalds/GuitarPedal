@@ -79,6 +79,7 @@ struct midi_msg {
 	uint32_t off;		// otherwise: where in the payload ring
 	uint16_t len;
 	bool more;
+	struct midi_dest dest;
 };
 
 //
@@ -120,7 +121,7 @@ struct midi_sink {
 // usb-device.c as well, where there is no definition to find.
 //
 static void nrf54_uart_thru(uint8_t byte);
-static bool nrf54_uart_ready(void);
+static bool nrf54_uart_ready(uint8_t peer);
 #endif
 
 static struct {
@@ -151,6 +152,7 @@ static struct {
 	// drain until midi_tx_commit(), so a reply that turns out not to
 	// fit leaves no trace of itself.
 	//
+	struct midi_dest dest;	// who the message being built is for
 	uint32_t txn_head;	// descriptor head when it started
 	uint32_t txn_pay;	// payload head when it started
 	uint32_t pend_off;	// bytes copied but not yet a descriptor
@@ -184,8 +186,9 @@ static inline uint32_t midi_tx_msgs_used(void)
 // a transaction that never committed had already failed, and its bytes
 // are not owed to anybody.
 //
-static void midi_tx_start(void)
+static void midi_tx_start(struct midi_dest dest)
 {
+	midi_tx.dest = dest;
 	midi_tx.txn_head = midi_tx.head;
 	midi_tx.txn_pay = midi_tx.pay_head;
 	midi_tx.pend_off = midi_tx.pay_head;
@@ -216,6 +219,7 @@ static void midi_tx_flush_pending(void)
 	m->off = midi_tx.pend_off;
 	m->len = midi_tx.pend_len;
 	m->more = true;
+	m->dest = midi_tx.dest;
 	midi_tx.head++;
 
 	midi_tx.pend_off = midi_tx.pay_head;
@@ -267,6 +271,7 @@ static void midi_tx_static(const uint8_t *buf, size_t len)
 	m->off = 0;
 	m->len = len;
 	m->more = true;
+	m->dest = midi_tx.dest;
 	midi_tx.head++;
 }
 
@@ -402,6 +407,12 @@ static void midi_tx_to_usb(void)
 			continue;
 		}
 
+		// For a Bluetooth peer only
+		if (!(m->dest.to & MIDI_TO_USB)) {
+			s->sent = m->len;
+			continue;
+		}
+
 		uint8_t b = midi_tx_byte(m, s->sent++);
 
 		if (b == 0xF0)
@@ -478,8 +489,8 @@ static bool midi_tx_short_to_radio(void)
 			midi_short.tail = midi_short.head;
 			break;
 		}
-		// Ready is under half full, far more room than three bytes
-		if (!nrf54_uart_ready())
+		// Room for a channel message, to every peer
+		if (!nrf54_uart_ready(0))
 			return false;
 		while (len--)
 			nrf54_uart_thru(midi_short.buf[midi_short.tail++ &
@@ -489,12 +500,12 @@ static bool midi_tx_short_to_radio(void)
 }
 
 //
-// The same bytes to the radio, unpacketised.
+// The same bytes to the radio, which collects them into packets.
 //
-// It stops when the link's queue is half full, which bounds a pass to
-// about 512 bytes without needing a budget of its own, and leaves the
-// rest for the next one.  A board with no radio answers ready and
-// discards, so this sink still moves and the queue is still reclaimed.
+// It stops when nrf54_uart_ready() says the packet being collected cannot
+// take more, and leaves the rest for the next pass.  Until something on
+// the radio's side is listening it discards, so this sink still moves and
+// the queue is still reclaimed.
 //
 static void midi_tx_to_radio(void)
 {
@@ -528,12 +539,12 @@ static void midi_tx_to_radio(void)
 		// USB one too.  The same reason midi_tx_push() discards
 		// for a host that is not mounted.
 		//
-		if (!nrf54_uart.listening) {
+		if (!nrf54_uart.listening || !(m->dest.to & MIDI_TO_RADIO)) {
 			s->sent = m->len;
 			continue;
 		}
 
-		if (!nrf54_uart_ready())
+		if (!nrf54_uart_ready(m->dest.peer))
 			return;
 
 		midi_short.mid = true;

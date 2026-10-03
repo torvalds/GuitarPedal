@@ -332,6 +332,7 @@ int main()
 		dap_poll();
 		nrf54_uart_poll();
 		sysex_send_radio();
+		sysex_send_linktest();
 		sysex_send_pairing_state();
 #endif
 
@@ -351,7 +352,7 @@ int main()
 		// and the host asked what they were once, at connect.
 		//
 		if (exp_follow_setting())
-			send_identity_tx = true;
+			midi_dest_add(&send_identity_tx, midi_from);
 		exp_sweep_task();
 		exp_treadle_task();
 		exp_calibrate_task();
