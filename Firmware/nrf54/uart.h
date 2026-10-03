@@ -86,6 +86,8 @@ static inline uint16_t nrf54_rx_head(void)
 {
 	uintptr_t at = dma_hw->ch[nrf54_uart.dma_rx].write_addr;
 
+	// The ring is read after this, not before
+	__dmb();
 	return (uint16_t)(at - (uintptr_t)nrf54_uart.rx) & NRF54_RX_RING_MASK;
 }
 
@@ -177,6 +179,8 @@ static void nrf54_uart_push(void)
 	if (dma_channel_is_busy(nrf54_uart.dma_tx))
 		return;
 
+	// Nothing reuses what the DMA read until it has finished reading
+	__dmb();
 	nrf54_uart.tx_tail = (nrf54_uart.tx_tail + nrf54_uart.tx_inflight) &
 			     NRF54_TX_RING_MASK;
 	nrf54_uart.tx_bytes += nrf54_uart.tx_inflight;
@@ -191,6 +195,8 @@ static void nrf54_uart_push(void)
 					   nrf54_uart.tx_tail;
 
 	nrf54_uart.tx_inflight = span;
+	// Every byte of the span is in memory before the DMA is started
+	__dmb();
 	dma_channel_set_read_addr(nrf54_uart.dma_tx,
 				  &nrf54_uart.tx[nrf54_uart.tx_tail], false);
 	dma_channel_set_trans_count(nrf54_uart.dma_tx, span, true);
