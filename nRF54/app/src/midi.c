@@ -155,6 +155,20 @@ static struct {
 	uint32_t conns, dc3e, dc08;
 	uint8_t last_reason;
 
+	/*
+	 * The last host that connected: who, the security level its link
+	 * reached, the error if raising it failed, and why its last pairing
+	 * failed.  The MIDI characteristic needs LE Secure Connections,
+	 * so these say whether a peer could write to it at all.
+	 */
+	bt_addr_le_t peer;
+	uint8_t peer_level;
+	bool peer_sc;
+	int peer_err, pair_fail;
+
+	/* Writes that reached the MIDI characteristic, from anyone */
+	uint32_t writes;
+
 	/* MIDI handed to the bound device, and how much of it was refused */
 	uint32_t bound_sent, bound_failed;
 
@@ -650,12 +664,18 @@ static void stats_send(void)
 		   midi_uart_halted(), out.ccc_n, midi_uart_lost(),
 		   bonds(), midi_rssi());
 
+	char peer[BT_ADDR_LE_STR_LEN];
+
+	bt_addr_le_to_str(&out.peer, peer, sizeof(peer));
 	radio_json(RADIO_SYSEX_LINKS,
 		   "{\"cn\":%u,\"3e\":%u,\"08\":%u,\"dr\":%u"
-		   ",\"bs\":%u,\"bf\":%u,\"bd\":%u,\"be\":%d}",
+		   ",\"bs\":%u,\"bf\":%u,\"bd\":%u,\"be\":%d"
+		   ",\"pa\":\"%s\",\"pl\":%u,\"sc\":%u,\"pe\":%d"
+		   ",\"pf\":%d,\"w\":%u}",
 		   out.conns, out.dc3e, out.dc08, out.last_reason,
 		   out.bound_sent, out.bound_failed, bind_state(),
-		   bind_last_err());
+		   bind_last_err(), peer, out.peer_level, out.peer_sc,
+		   out.peer_err, out.pair_fail, out.writes);
 }
 
 /*
@@ -1070,6 +1090,7 @@ static ssize_t midi_write(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 			  const void *buf, uint16_t len, uint16_t offset,
 			  uint8_t flags)
 {
+	out.writes++;
 	midi_ble_queue(buf, len);
 	return len;
 }
@@ -1325,6 +1346,10 @@ static void connected(struct bt_conn *conn, uint8_t err)
 
 	atomic_inc(&peers);
 	out.conns++;
+	bt_addr_le_copy(&out.peer, bt_conn_get_dst(conn));
+	out.peer_level = BT_SECURITY_L1;
+	out.peer_sc = false;
+	out.peer_err = out.pair_fail = 0;
 	printk("bt: connected\n");
 	adv_again();
 }
@@ -1368,14 +1393,24 @@ static void recycled(void)
 	adv_again();
 }
 
-#ifdef CONFIG_BT_CENTRAL
 static void security_changed(struct bt_conn *conn, bt_security_t level,
 			     enum bt_security_err err)
 {
-	if (bind_owns(conn))
+#ifdef CONFIG_BT_CENTRAL
+	if (bind_owns(conn)) {
 		bind_encrypted(conn, level, err);
-}
+		return;
+	}
 #endif
+	if (bt_addr_le_eq(bt_conn_get_dst(conn), &out.peer)) {
+		struct bt_conn_info info;
+
+		out.peer_level = level;
+		out.peer_err = err;
+		out.peer_sc = !bt_conn_get_info(conn, &info) &&
+			      (info.security.flags & BT_SECURITY_FLAG_SC);
+	}
+}
 
 //
 // Somebody bonded.  Only the fact is wanted here - which peer it was is the
@@ -1389,17 +1424,22 @@ static void bonded(struct bt_conn *conn, bool bonded)
 		out.bonded_pending = true;
 }
 
+static void pairing_failed(struct bt_conn *conn, enum bt_security_err reason)
+{
+	if (bt_addr_le_eq(bt_conn_get_dst(conn), &out.peer))
+		out.pair_fail = reason;
+}
+
 static struct bt_conn_auth_info_cb midi_auth_info = {
 	.pairing_complete = bonded,
+	.pairing_failed = pairing_failed,
 };
 
 BT_CONN_CB_DEFINE(midi_conn_cb) = {
 	.connected = connected,
 	.disconnected = disconnected,
 	.recycled = recycled,
-#ifdef CONFIG_BT_CENTRAL
 	.security_changed = security_changed,
-#endif
 };
 
 void midi_ble_start(void)

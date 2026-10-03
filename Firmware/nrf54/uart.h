@@ -320,6 +320,16 @@ static void nrf54_uart_poll(void)
 
 		nrf54_uart.packets++;
 
+		//
+		// What a footswitch or an editor played, on the debug port:
+		// channel messages, Code Index Number 0x8 to 0xE.
+		//
+		if ((packet[0] & 0x0f) >= 0x8 && (packet[0] & 0x0f) <= 0xe) {
+			dbg_puts("radio: ");
+			dbg_hex(packet + 1, midi_cin_length(packet[0] & 0x0f));
+			dbg_puts("\n");
+		}
+
 		sysex_from_radio = true;
 		if (!handle_midi_packet(packet))
 			usb_midi_write(packet);

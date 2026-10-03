@@ -84,6 +84,20 @@ static void dbg_dec(uint32_t v)
 }
 
 //
+// Bytes as hex, space separated.
+//
+static inline void dbg_hex(const uint8_t *buf, size_t len)
+{
+	static const char digit[] = "0123456789abcdef";
+
+	for (size_t i = 0; i < len; i++) {
+		char out[3] = { digit[buf[i] >> 4], digit[buf[i] & 15], ' ' };
+
+		dbg_write(out, i + 1 < len ? 3 : 2);
+	}
+}
+
+//
 // Hand whatever has been written to USB.
 //
 // From the main loop, beside everything else that happens there.  It does
