@@ -641,9 +641,10 @@ static void link_in(void)
 			if (linktest_cfg_unpack(h + LINK_HEADER, len, &cfg)) {
 				linktest_start(&test, &cfg, k_uptime_get_32());
 				printk("linktest: %u streams of %u, stream %d "
-				       "stuck %u ms, %u lines\n", cfg.streams,
-				       cfg.count, cfg.stuck == 0xff ? -1 :
-				       cfg.stuck, cfg.stuck_ms, cfg.lines);
+				       "stuck %u ms, %u lines, stall %u ms\n",
+				       cfg.streams, cfg.count,
+				       cfg.stuck == 0xff ? -1 : cfg.stuck,
+				       cfg.stuck_ms, cfg.lines, cfg.stall_ms);
 			} else if (len && h[LINK_HEADER] == LINKTEST_ASK) {
 				test_counts_due = true;
 			}
@@ -786,6 +787,11 @@ int main(void)
 			hello();
 
 		linktest_release(&test, &radio_link, k_uptime_get_32());
+		if (test.running && test.cfg.stall_ms && !test.stalled &&
+		    k_uptime_get_32() - test.started >= 1000) {
+			test.stalled = true;
+			k_busy_wait(test.cfg.stall_ms * 1000);
+		}
 		if (test.running && test.lines) {
 			printk("linktest line %u: the quick brown fox jumps "
 			       "over the lazy dog, 0123456789\n", test.lines);

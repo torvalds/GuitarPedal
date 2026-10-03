@@ -9,6 +9,9 @@
  * shut while everything else - the other test streams, commands, debug text
  * and real MIDI - has to keep moving.
  *
+ * The radio's loop can also be stopped once, a second into the run, so
+ * that the pedal's bytes pile up in its receive ring meanwhile.
+ *
  * The pedal starts a run and asks for the radio's counts on test stream 0,
  * which is the stream used to talk about the test rather than to load it.
  */
@@ -30,6 +33,7 @@ struct linktest_cfg {
 	uint8_t stuck;		/* the stream whose receiver holds, or 0xff */
 	uint16_t stuck_ms;	/* for how long from the start */
 	uint16_t lines;		/* debug lines the radio prints meanwhile */
+	uint16_t stall_ms;	/* how long the radio's loop stops, or 0 */
 };
 
 struct linktest {
@@ -46,6 +50,7 @@ struct linktest {
 	uint32_t held;				/* how many were held */
 	uint16_t lines;				/* lines still to print */
 	uint8_t turn;				/* round-robin over streams */
+	bool stalled;				/* the radio's loop has stopped */
 };
 
 static inline void linktest_start(struct linktest *t,
@@ -65,6 +70,7 @@ static inline size_t linktest_cfg_pack(const struct linktest_cfg *c,
 		LINKTEST_START, c->streams, c->count & 0x7f, c->count >> 7,
 		c->stuck, c->stuck_ms & 0x7f, c->stuck_ms >> 7,
 		c->lines & 0x7f, c->lines >> 7,
+		c->stall_ms & 0x7f, c->stall_ms >> 7,
 	};
 
 	for (size_t i = 0; i < sizeof(b); i++)
@@ -82,6 +88,7 @@ static inline bool linktest_cfg_unpack(const uint8_t *in, size_t len,
 	c->stuck = in[4] == 0x7f ? 0xff : in[4];
 	c->stuck_ms = in[5] | in[6] << 7;
 	c->lines = in[7] | in[8] << 7;
+	c->stall_ms = len >= 11 ? in[9] | in[10] << 7 : 0;
 	return true;
 }
 

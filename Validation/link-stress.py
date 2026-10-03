@@ -9,8 +9,10 @@ window of its own.  This starts the load test both firmwares carry
 --count packets at the other, every packet checked on arrival, while the
 radio prints --lines lines of debug text.  One stream can be made stuck: its
 receiver holds its packets for --stuck-ms, so its window stays shut, and the
-rest has to keep moving.  --ble also fetches the schema over Bluetooth
-meanwhile, which is real MIDI on a stream of its own.
+rest has to keep moving.  --stall-ms stops the radio's loop once, a second
+in, so that what the pedal sends piles up in the radio's receive ring.
+--ble also fetches the schema over Bluetooth meanwhile, which is real MIDI
+on a stream of its own.
 
 While the test runs, the radio's counters are asked for over and over.  That
 is a command on the control stream, through the radio and back, so how long
@@ -122,6 +124,8 @@ def main():
     ap.add_argument("--stuck-ms", type=int, default=3000)
     ap.add_argument("--lines", type=int, default=500,
                     help="debug lines the radio prints meanwhile")
+    ap.add_argument("--stall-ms", type=int, default=0,
+                    help="stop the radio's loop this long, a second in")
     ap.add_argument("--ble", help="also fetch the schema over Bluetooth "
                     "from the pedal with this name")
     ap.add_argument("--timeout", type=float, default=120.0)
@@ -143,13 +147,16 @@ def main():
 
     stuck = 0x7F if args.stuck < 0 else args.stuck
     raw.send(0x23, args.streams, *seven(args.count), stuck,
-             *seven(args.stuck_ms), *seven(args.lines))
+             *seven(args.stuck_ms), *seven(args.lines),
+             *seven(args.stall_ms))
     started = time.monotonic()
     print("%s: %d streams of %d packets each way, stream %s stuck for "
-          "%d ms, %d debug lines%s" % (
+          "%d ms, %d debug lines%s%s" % (
               d["label"], args.streams, args.count,
               "none" if args.stuck < 0 else args.stuck, args.stuck_ms,
-              args.lines, ", schema over Bluetooth" if args.ble else ""))
+              args.lines,
+              ", radio stalled %d ms" % args.stall_ms if args.stall_ms else "",
+              ", schema over Bluetooth" if args.ble else ""))
 
     ble = None
     if args.ble:
