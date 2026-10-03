@@ -753,28 +753,13 @@ int main(void)
 
 		link_tick(&radio_link, k_uptime_get_32());
 
-		link_out();
-
 		/*
-		 * Subscription changes go to the pedal before anything a
-		 * client asks for.  The pedal throws replies away until it
-		 * knows somebody is subscribed, and a client that
-		 * subscribes and asks at once has both arrive together:
-		 * the notice is queued here, ahead of the request, and
-		 * link_out() sends the control stream ahead of MIDI.
-		 */
-		midi_ble_notices();
-
-		/* What arrived over the air, decoded here rather than in
-		 * the callback that received it. */
-		while (air_room() && ble_in_drain())
-			;
-
-		/*
-		 * Everything the pedal has sent, every pass: commands are
-		 * dealt with at once, and MIDI waits in its slots, which the
-		 * window keeps from overflowing.  A slow Bluetooth client
-		 * holds up the MIDI stream and nothing else.
+		 * Everything the pedal has sent, first, so that the
+		 * acknowledgements link_out() sends next say where this side
+		 * really is.  After a stall, one sent before reading would
+		 * report the position from before it, and the pedal would
+		 * take what is waiting here as lost.  Commands and MIDI wait
+		 * in their slots, which the windows keep from overflowing.
 		 *
 		 * After an overrun the packet the decoder was in the middle of
 		 * is skipped too.
@@ -793,6 +778,23 @@ int main(void)
 				rx_failed(&radio_link.rx);
 			}
 		}
+
+		link_out();
+
+		/*
+		 * Subscription changes go to the pedal before anything a
+		 * client asks for.  The pedal throws replies away until it
+		 * knows somebody is subscribed, and a client that
+		 * subscribes and asks at once has both arrive together:
+		 * the notice is queued here, ahead of the request, and
+		 * link_out() sends the control stream ahead of MIDI.
+		 */
+		midi_ble_notices();
+
+		/* What arrived over the air, decoded here rather than in
+		 * the callback that received it. */
+		while (air_room() && ble_in_drain())
+			;
 
 		while (cmd_take())
 			cmds++;

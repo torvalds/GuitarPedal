@@ -411,9 +411,24 @@ static inline struct link_stream *link_stream(struct link *l, uint8_t kind,
 	return idle;
 }
 
-/* The time, for telling a lost packet from one still on its way */
+/*
+ * The time, for telling a lost packet from one still on its way.
+ *
+ * A jump means this side's loop was held up.  What it had queued mostly
+ * could not leave meanwhile, and an acknowledgement it reads now may be
+ * from before its packets did, so the time does not count towards a
+ * packet being lost.
+ */
 static inline void link_tick(struct link *l, uint32_t now_ms)
 {
+	uint32_t gap = now_ms - l->now;
+
+	if (gap > LINK_LOST_MS / 2) {
+		for (int i = 0; i < LINK_STREAMS; i++) {
+			l->s[i].sent_at += gap;
+			l->s[i].asked_at += gap;
+		}
+	}
 	l->now = now_ms;
 }
 

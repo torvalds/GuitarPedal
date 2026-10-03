@@ -662,8 +662,6 @@ static void nrf54_uart_poll(void)
 		nrf54_uart.acked_at = to_ms_since_boot(get_absolute_time());
 	}
 
-	nrf54_uart_push();
-
 	head = nrf54_rx_head();
 	while (nrf54_uart.rx_tail != head) {
 		struct link *l = &nrf54_uart.link;
@@ -720,6 +718,14 @@ static void nrf54_uart_poll(void)
 		}
 		link_consumed(l);
 	}
+
+	//
+	// After reading, so that the acknowledgements say where this side
+	// really is.  After a stall, one sent before reading would report the
+	// position from before it, and the radio would take what is waiting
+	// here as lost.
+	//
+	nrf54_uart_push();
 }
 
 //

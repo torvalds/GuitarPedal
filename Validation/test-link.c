@@ -193,6 +193,16 @@ static int deliver(struct link *to, const uint8_t *w, size_t n)
 	return got;
 }
 
+//
+// Move a side's clock on the way its loop would, a millisecond at a time:
+// link_tick() takes a jump as the loop having been held up.
+//
+static void tick(struct link *l, uint32_t to)
+{
+	while ((int32_t)(to - l->now) > 0)
+		link_tick(l, l->now + 1);
+}
+
 // Send whatever ack 'from' owes to 'to'
 static void ack(struct link *from, struct link *to)
 {
@@ -369,15 +379,15 @@ static void loss(void)
 		link_pack(&pedal, LINK_MIDI, LINK_ALL, LINK_FIRST, p, 1, w);
 
 	// Too soon to say: a repeated ack leaves the window shut
-	link_tick(&pedal, LINK_LOST_MS - 1);
-	link_tick(&radio, LINK_LOST_MS - 1);
+	tick(&pedal, LINK_LOST_MS - 1);
+	tick(&radio, LINK_LOST_MS - 1);
 	link_ack_again(&radio);
 	ack(&radio, &pedal);
 	chk("window shut while the packets could be on the way",
 	    link_can_send(&pedal, LINK_MIDI, LINK_ALL), 0);
 
 	// Late enough: written off, and the window opens
-	link_tick(&pedal, LINK_LOST_MS);
+	tick(&pedal, LINK_LOST_MS);
 	link_ack_again(&radio);
 	ack(&radio, &pedal);
 	chk("window open once the lost packets are written off",
@@ -398,7 +408,7 @@ static void loss(void)
 		n = link_pack(&pedal, LINK_MIDI, LINK_ALL, LINK_FIRST, p, 1, w);
 		deliver(&radio, w, n);
 	}
-	link_tick(&pedal, 10 * LINK_LOST_MS);
+	tick(&pedal, 10 * LINK_LOST_MS);
 	link_ack_again(&radio);
 	ack(&radio, &pedal);
 	chk("a slow receiver keeps its window shut",
@@ -429,12 +439,12 @@ static void lost_start(void)
 		link_pack(&pedal, LINK_MIDI, 5, LINK_FIRST, p, 1, w);
 
 	// No ask before the packets could have arrived
-	link_tick(&pedal, LINK_LOST_MS - 1);
-	link_tick(&radio, LINK_LOST_MS - 1);
+	tick(&pedal, LINK_LOST_MS - 1);
+	tick(&radio, LINK_LOST_MS - 1);
 	chk("no ask too soon", link_pack_ack(&pedal, w) > 0, 0);
 
-	link_tick(&pedal, LINK_LOST_MS);
-	link_tick(&radio, LINK_LOST_MS);
+	tick(&pedal, LINK_LOST_MS);
+	tick(&radio, LINK_LOST_MS);
 	link_ack_again(&radio);
 	ack(&radio, &pedal);
 	chk("a repeat alone does not open it",
@@ -481,8 +491,8 @@ static void lost_wrap(void)
 	chk("receiver's counts both 0", radio.s[0].rx_next | radio.s[0].rx_done,
 	    0);
 
-	link_tick(&pedal, LINK_LOST_MS);
-	link_tick(&radio, LINK_LOST_MS);
+	tick(&pedal, LINK_LOST_MS);
+	tick(&radio, LINK_LOST_MS);
 	link_ack_again(&radio);
 	ack(&radio, &pedal);
 	chk("the repeat opens it, counts at 0 or not",
@@ -516,7 +526,7 @@ static void written_at_wrap(void)
 	chk("two out, the second the last before the wrap",
 	    pedal.s[0].tx_next, 0);
 
-	link_tick(&pedal, pedal.now + LINK_LOST_MS);
+	tick(&pedal, pedal.now + LINK_LOST_MS);
 	link_ack_again(&radio);
 	ack(&radio, &pedal);
 	link_ack_again(&radio);
@@ -545,7 +555,7 @@ static void held_then_lost(void)
 	deliver(&radio, w, n);			// held, not consumed
 	link_pack(&pedal, LINK_MIDI, LINK_ALL, LINK_FIRST, p, 1, w);	// lost
 
-	link_tick(&pedal, LINK_LOST_MS);
+	tick(&pedal, LINK_LOST_MS);
 	for (int i = 0; i < 3; i++) {
 		link_ack_again(&radio);
 		ack(&radio, &pedal);
@@ -591,6 +601,47 @@ static void new_stream(void)
 	    (uint8_t)(pedal.s[0].tx_next - pedal.s[0].tx_acked), 0);
 }
 
+//
+// A side whose loop is held up reads acknowledgements that are older than
+// they look: the far side sent them before this side's queued packets got
+// out.  After a jump in its clock they must not write anything off; after
+// the same time passing a millisecond at a time, they must.
+//
+static void stalled(bool jump)
+{
+	struct link pedal, radio;
+	uint8_t w[LINK_WIRE_MAX], a[LINK_WIRE_MAX], p[1] = { 0x90 };
+	size_t n, an;
+
+	link_init(&pedal);
+	link_init(&radio);
+	pedal.up = radio.up = true;
+	deliver(&radio, (const uint8_t[]){ 0 }, 1);
+	deliver(&pedal, (const uint8_t[]){ 0 }, 1);
+
+	n = link_pack(&radio, LINK_DEBUG, LINK_ALL, LINK_FIRST, p, 1, w);
+	deliver(&pedal, w, n);
+	link_consumed(&pedal);
+	ack(&pedal, &radio);
+
+	// Two more, still in the radio's transmit ring
+	link_pack(&radio, LINK_DEBUG, LINK_ALL, LINK_FIRST, p, 1, w);
+	link_pack(&radio, LINK_DEBUG, LINK_ALL, LINK_FIRST, p, 1, w);
+
+	// The pedal says again how far it has got, which is not that far
+	link_ack_again(&pedal);
+	an = link_pack_ack(&pedal, a);
+
+	if (jump)
+		link_tick(&radio, radio.now + LINK_LOST_MS + 100);
+	else
+		tick(&radio, radio.now + LINK_LOST_MS + 100);
+	deliver(&radio, a, an);
+	chk(jump ? "after a stall, nothing written off"
+		 : "after the same time, both written off",
+	    radio.written_off, jump ? 0 : 2);
+}
+
 int main(void)
 {
 	coding();
@@ -602,6 +653,8 @@ int main(void)
 	lost_start();
 	lost_wrap();
 	new_stream();
+	stalled(true);
+	stalled(false);
 	written_at_wrap();
 	printf("test-link: %d packets and the flow control, %s\n", PACKETS,
 	       fails ? "FAILED" : "all as expected");
