@@ -49,6 +49,7 @@
 #include "scan.h"
 #include "bind.h"
 #include "sink.h"
+#include "phones.h"
 
 #define BT_UUID_MIDI_SERVICE_VAL \
 	BT_UUID_128_ENCODE(0x03b80e5a, 0xede8, 0x4b33, 0xa751, 0x6ce34ec4c700)
@@ -145,7 +146,8 @@ static bool peer_trusted(struct bt_conn *conn)
 {
 	struct bt_conn_info info;
 
-	if (bind_owns(conn) || bt_conn_get_info(conn, &info))
+	if (bind_owns(conn) || phones_owns(conn) ||
+	    bt_conn_get_info(conn, &info))
 		return false;
 	return info.role == BT_CONN_ROLE_PERIPHERAL &&
 	       (info.security.flags & BT_SECURITY_FLAG_SC) &&
@@ -923,7 +925,14 @@ static void radio_dispatch(uint8_t cmd, const uint8_t *arg, uint8_t len)
 		for (int i = 0; i < 6; i++)
 			addr.a.val[i] = (arg[1 + 2 * i] << 4) | arg[2 + 2 * i];
 
-		bind_to(&addr);
+		//
+		// A fourteenth byte of 1 means headphones rather than a
+		// controller: exploratory, until the app has a way to say so.
+		//
+		if (len >= 14 && arg[13] == 1)
+			phones_to(&addr);
+		else
+			bind_to(&addr);
 		break;
 	}
 #endif
@@ -1196,7 +1205,8 @@ static void midi_pick_one(struct bt_conn *conn, void *data)
 	struct midi_pick *pick = data;
 	struct bt_conn_info info;
 
-	if (pick->found || conn == pick->except || bind_owns(conn))
+	if (pick->found || conn == pick->except || bind_owns(conn) ||
+	    phones_owns(conn))
 		return;
 	if (bt_conn_get_info(conn, &info) ||
 	    info.state != BT_CONN_STATE_CONNECTED)
@@ -1364,11 +1374,14 @@ static void adv_start(struct k_work *work);
 static K_WORK_DELAYABLE_DEFINE(adv_work, adv_start);
 
 /*
- * Slowly while a phone streams audio: every advertising event takes the
- * radio from the stream, and at the fast rate a fifth of its packets were
- * lost.  Once a second still finds the pedal, a little later.
+ * Slowly while audio streams, with a phone or headphones: every
+ * advertising event takes the radio from the stream, and at the fast rate
+ * a phone's stream lost a fifth of its packets.  Once a second still finds
+ * the pedal, a little later.  One bit for each reason, so that one stream
+ * ending does not speed it up while the other goes on.
  */
-static bool quiet, quiet_changed;
+static atomic_t quiet;
+static bool quiet_changed;
 
 static void adv_start(struct k_work *work)
 {
@@ -1381,7 +1394,7 @@ static void adv_start(struct k_work *work)
 	if (atomic_get(&peers) >= CONFIG_BT_CTLR_SDC_PERIPHERAL_COUNT)
 		return;
 
-	err = bt_le_adv_start(quiet ?
+	err = bt_le_adv_start(atomic_get(&quiet) ?
 			      BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONN,
 					      BT_GAP_ADV_SLOW_INT_MIN,
 					      BT_GAP_ADV_SLOW_INT_MAX, NULL) :
@@ -1399,11 +1412,12 @@ static void adv_again(void)
 }
 
 /* From the Bluetooth stack's thread; adv_start() picks it up */
-void midi_ble_quiet(bool q)
+void midi_ble_quiet(unsigned int why, bool q)
 {
-	if (q == quiet)
+	atomic_val_t was = q ? atomic_or(&quiet, why) : atomic_and(&quiet, ~why);
+
+	if (!was == !atomic_get(&quiet))
 		return;
-	quiet = q;
 	quiet_changed = true;
 	adv_again();
 }
@@ -1471,6 +1485,10 @@ static void connected(struct bt_conn *conn, uint8_t err)
 		bind_connected(conn, err);
 		return;
 	}
+	if (phones_owns(conn)) {
+		phones_connected(conn, err);
+		return;
+	}
 
 	if (err) {
 		printk("bt: connect failed, %u\n", err);
@@ -1494,6 +1512,10 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 
 	if (bind_owns(conn)) {
 		bind_disconnected(conn, reason);
+		return;
+	}
+	if (phones_owns(conn)) {
+		phones_disconnected(conn, reason);
 		return;
 	}
 
@@ -1535,6 +1557,10 @@ static void security_changed(struct bt_conn *conn, bt_security_t level,
 #ifdef CONFIG_BT_CENTRAL
 	if (bind_owns(conn)) {
 		bind_encrypted(conn, level, err);
+		return;
+	}
+	if (phones_owns(conn)) {
+		phones_encrypted(conn, level, err);
 		return;
 	}
 #endif

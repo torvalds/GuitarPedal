@@ -58,14 +58,19 @@ static void kick(void)
 }
 
 /*
- * Not looking while a phone streams: a scan takes the radio's receiver
- * away from the phone's stream.
+ * Not looking while a phone streams, or while headphones are wanted: a
+ * scan takes the radio's receiver away from a phone's stream, and while
+ * one runs, Zephyr will not start a connection at all.  One bit for each
+ * reason, so that one ending does not end the other.
  */
-static bool paused;
+static atomic_t paused;
 
-void bcast_pause(bool pause)
+void bcast_pause(unsigned int why, bool pause)
 {
-	paused = pause;
+	if (pause)
+		atomic_or(&paused, why);
+	else
+		atomic_and(&paused, ~why);
 	kick();
 }
 
@@ -199,7 +204,7 @@ static void step(struct k_work *work)
 {
 	int err;
 
-	if (paused && (b.scanning || b.found || b.pa || b.sink))
+	if (atomic_get(&paused) && (b.scanning || b.found || b.pa || b.sink))
 		b.lost = true;
 	if (b.lost) {
 		if (b.sink) {
@@ -212,7 +217,7 @@ static void step(struct k_work *work)
 			scan_release();
 		memset(&b, 0, sizeof(b));
 	}
-	if (paused)
+	if (atomic_get(&paused))
 		return;
 
 	if (!b.scanning && !b.found) {

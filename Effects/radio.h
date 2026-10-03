@@ -22,10 +22,10 @@
 // INFO: arrives about as hot as a guitar does, and a backing track
 // INFO: usually wants to sit under it.
 // POT: "Out" ENUM(None Wet Dry Wet/Dry) = Wet
-// INFO: What the pedal sends back: what a phone hears as the pedal's
-// INFO: microphone, in a call or a recording. Wet/Dry puts the
-// INFO: processed signal on the left and the untouched input on the
-// INFO: right. None sends nothing.
+// INFO: What the pedal sends over Bluetooth: what a phone hears as
+// INFO: the pedal's microphone in a call, and what headphones play.
+// INFO: Wet/Dry puts the processed signal on the left and the untouched
+// INFO: input on the right. None sends nothing.
 //
 // The same choices as USB Audio's, in the same stored order.
 //

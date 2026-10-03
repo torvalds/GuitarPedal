@@ -22,6 +22,7 @@
 #include <lc3.h>
 
 #include "sink.h"
+#include "phones.h"
 
 #define RATE		48000
 #define FRAME_US	10000
@@ -52,10 +53,11 @@ static struct bt_pacs_cap cap = { .codec_cap = &codec_cap };
 #define CONTEXTS	(BT_AUDIO_CONTEXT_TYPE_UNSPECIFIED | SINK_AVAILABLE)
 
 /*
- * LC3 frames as they arrive, one channel each.  A frame that did not
- * arrive is kept as one with no bytes, which the decoder conceals.
+ * LC3 frames as they arrive, one channel each, 80 ms of stereo.  A frame
+ * that did not arrive is kept as one with no bytes, which the decoder
+ * conceals.
  */
-#define Q_SHIFT		5
+#define Q_SHIFT		4
 #define Q_SIZE		(1 << Q_SHIFT)
 #define Q_MASK		(Q_SIZE - 1)
 
@@ -400,6 +402,9 @@ void sink_start(void)
 	err = unicast_start();
 	if (err)
 		printk("sink: no unicast, %d\n", err);
+	err = phones_start();
+	if (err)
+		printk("sink: no headphones, %d\n", err);
 	err = bcast_start();
 	if (err)
 		printk("sink: no broadcast, %d\n", err);

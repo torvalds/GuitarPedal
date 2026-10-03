@@ -72,8 +72,8 @@ static void feeding(void)
 			chans |= 1u << streams[i].ch[c];
 	}
 	sink_feeding(SINK_UNICAST, chans, hz);
-	bcast_pause(any);
-	midi_ble_quiet(any);
+	bcast_pause(BCAST_PAUSE_UNICAST, any);
+	midi_ble_quiet(MIDI_QUIET_UNICAST, any);
 }
 
 /*

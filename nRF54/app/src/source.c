@@ -1,7 +1,7 @@
 /*
  * LE Audio out: what the pedal sends the radio over i2s (audio.c), encoded
  * with LC3 for a phone that hears the radio as a headset's microphone
- * (unicast.c).
+ * (unicast.c), or for headphones (phones.c).
  *
  * The pedal sends 48 kHz and a call wants less, 16 to 32 kHz; the encoder
  * takes 48 kHz in and downsamples itself.  One channel goes, the left.
@@ -42,12 +42,12 @@ static struct bt_pacs_cap cap = { .codec_cap = &codec_cap };
 #define CONTEXTS	(BT_AUDIO_CONTEXT_TYPE_UNSPECIFIED | SOURCE_AVAILABLE)
 
 /*
- * What the pedal sends, the left channel, as it arrives.  4096 samples is
- * 85 ms; TARGET of it is kept waiting, which rides out the i2s link's
+ * What the pedal sends, the left channel, as it arrives.  2048 samples is
+ * 43 ms; TARGET of it is kept waiting, which rides out the i2s link's
  * blocks of 256 arriving against packets of 480 going two at a time - with
  * only two packets' worth, some went out as silence.
  */
-#define PCM_SHIFT	12
+#define PCM_SHIFT	11
 #define PCM_SIZE	(1 << PCM_SHIFT)
 #define PCM_MASK	(PCM_SIZE - 1)
 #define TARGET		(3 * FRAME)
@@ -55,11 +55,20 @@ static struct bt_pacs_cap cap = { .codec_cap = &codec_cap };
 static int16_t pcm[PCM_SIZE];
 static uint32_t pcm_head, pcm_tail;
 
-NET_BUF_POOL_FIXED_DEFINE(tx_pool, 2, BT_ISO_SDU_BUF_SIZE(SINK_FRAME_MAX),
+#define STREAMS		2
+
+NET_BUF_POOL_FIXED_DEFINE(tx_pool, 2 * STREAMS,
+			  BT_ISO_SDU_BUF_SIZE(SINK_FRAME_MAX),
 			  CONFIG_BT_CONN_TX_USER_DATA_SIZE, NULL);
 
+/*
+ * Where the packets go: a phone's microphone stream, or a stream to each
+ * ear of a pair of headphones, which all get the same packet.  The first
+ * one's sent packets are what paces them all.
+ */
 static struct {
-	struct bt_bap_stream *stream;
+	struct bt_bap_stream *streams[STREAMS];
+	int n;
 	int rate, octets;
 	atomic_t room;			/* packets that may be queued */
 	uint16_t seq;
@@ -90,27 +99,42 @@ void source_put(int32_t left, int32_t right)
 	pcm[pcm_head++ & PCM_MASK] = left >> 16;
 }
 
+static struct k_spinlock out_lock;
+
 /* From the Bluetooth stack's thread */
 void source_started(struct bt_bap_stream *stream, int rate, int octets)
 {
-	out.rate = rate;
-	out.octets = octets;
-	out.seq = 0;
-	out.flowing = false;
-	atomic_set(&out.room, 2);
-	out.stream = stream;
-	printk("source: %d Hz, %d bytes a packet\n", rate, octets);
+	k_spinlock_key_t key = k_spin_lock(&out_lock);
+
+	if (!out.n) {
+		out.rate = rate;
+		out.octets = octets;
+		out.seq = 0;
+		out.flowing = false;
+		atomic_set(&out.room, 2);
+	}
+	if (out.n < STREAMS && rate == out.rate)
+		out.streams[out.n++] = stream;
+	k_spin_unlock(&out_lock, key);
+	printk("source: %d Hz, %d bytes a packet, %d streams\n", rate, octets,
+	       out.n);
 }
 
 void source_stopped(struct bt_bap_stream *stream)
 {
-	if (out.stream == stream)
-		out.stream = NULL;
+	k_spinlock_key_t key = k_spin_lock(&out_lock);
+
+	for (int i = 0; i < out.n; i++)
+		if (out.streams[i] == stream) {
+			out.streams[i] = out.streams[--out.n];
+			break;
+		}
+	k_spin_unlock(&out_lock, key);
 }
 
 void source_sent(struct bt_bap_stream *stream)
 {
-	if (out.stream == stream)
+	if (out.n && out.streams[0] == stream)
 		atomic_inc(&out.room);
 }
 
@@ -182,13 +206,19 @@ void source_poll(void)
 	static int enc_rate;
 	static uint32_t reported_at;
 	static int16_t frame[FRAME];
-	struct bt_bap_stream *stream = out.stream;
+	static uint8_t bytes[SINK_FRAME_MAX];
+	struct bt_bap_stream *streams[STREAMS];
 	uint32_t now = k_uptime_get_32();
+	int n;
 
-	while (stream && atomic_get(&out.room) > 0) {
-		struct net_buf *buf;
+	k_spinlock_key_t key = k_spin_lock(&out_lock);
+
+	n = out.n;
+	memcpy(streams, out.streams, sizeof(streams));
+	k_spin_unlock(&out_lock, key);
+
+	while (n && atomic_get(&out.room) > 0) {
 		uint32_t t0, us;
-		int err;
 
 		if (enc_rate != out.rate) {
 			enc_rate = out.rate;
@@ -199,23 +229,26 @@ void source_poll(void)
 			st.silent++;
 		}
 
-		buf = net_buf_alloc(&tx_pool, K_NO_WAIT);
-		if (!buf)
-			break;
-		net_buf_reserve(buf, BT_ISO_CHAN_SEND_RESERVE);
-
 		t0 = k_cycle_get_32();
-		lc3_encode(enc, LC3_PCM_FORMAT_S16, frame, 1, out.octets,
-			   net_buf_add(buf, out.octets));
+		lc3_encode(enc, LC3_PCM_FORMAT_S16, frame, 1, out.octets, bytes);
 		us = k_cyc_to_us_floor32(k_cycle_get_32() - t0);
 		if (us > st.encode_us)
 			st.encode_us = us;
 
-		err = bt_bap_stream_send(stream, buf, out.seq);
-		if (err) {
-			net_buf_unref(buf);
-			st.refused++;
-			break;
+		/* The same packet to each, with the same number */
+		for (int i = 0; i < n; i++) {
+			struct net_buf *buf = net_buf_alloc(&tx_pool, K_NO_WAIT);
+
+			if (!buf) {
+				st.refused++;
+				continue;
+			}
+			net_buf_reserve(buf, BT_ISO_CHAN_SEND_RESERVE);
+			net_buf_add_mem(buf, bytes, out.octets);
+			if (bt_bap_stream_send(streams[i], buf, out.seq)) {
+				net_buf_unref(buf);
+				st.refused++;
+			}
 		}
 		out.seq++;
 		atomic_dec(&out.room);
@@ -223,7 +256,7 @@ void source_poll(void)
 	}
 
 	if (now - reported_at >= 1000) {
-		if (stream || st.sent)
+		if (n || st.sent)
 			printk("source: %u sent, %u silent, %u refused, "
 			       "waiting %d, %u trimmed, %u padded, "
 			       "%u resettled, encode %u us\n", st.sent,

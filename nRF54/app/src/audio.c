@@ -8,7 +8,6 @@
  * pattern's right word never does, which tells the two apart per frame.
  */
 
-#include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/i2s.h>
@@ -29,9 +28,8 @@
 K_MEM_SLAB_DEFINE_STATIC(rx_slab, BLOCK_BYTES, BLOCKS, 4);
 K_MEM_SLAB_DEFINE_STATIC(tx_slab, BLOCK_BYTES, BLOCKS, 4);
 
-/* A block is a whole number of the pattern, so one block repeats */
+/* A block is a whole number of the pattern, so every block is the same */
 BUILD_ASSERT(BLOCK_FRAMES % I2STEST_FRAMES == 0);
-static int32_t pattern[BLOCK_FRAMES * 2];
 
 static const struct device *const i2s = DEVICE_DT_GET(DT_NODELABEL(i2s20));
 
@@ -164,8 +162,13 @@ static bool feed(void)
 	void *block;
 
 	while (k_mem_slab_alloc(&tx_slab, &block, K_NO_WAIT) == 0) {
-		if (!sink_pcm(block, BLOCK_FRAMES))
-			memcpy(block, pattern, BLOCK_BYTES);
+		int32_t *f = block;
+
+		if (!sink_pcm(f, BLOCK_FRAMES))
+			for (int i = 0; i < BLOCK_FRAMES; i++) {
+				f[2 * i] = i2stest_left[i & I2STEST_MASK];
+				f[2 * i + 1] = i2stest_right(i);
+			}
 		if (i2s_write(i2s, block, BLOCK_BYTES)) {
 			k_mem_slab_free(&tx_slab, block);
 			break;
@@ -211,10 +214,6 @@ void audio_start(void)
 	if (!device_is_ready(i2s)) {
 		printk("i2s: not ready\n");
 		return;
-	}
-	for (int i = 0; i < BLOCK_FRAMES; i++) {
-		pattern[2 * i] = i2stest_left[i & I2STEST_MASK];
-		pattern[2 * i + 1] = i2stest_right(i);
 	}
 	i2stest_rx_init(&t.rx);
 	t.reported_at = k_uptime_get_32();

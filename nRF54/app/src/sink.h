@@ -7,11 +7,12 @@
 /*
  * LE Audio in, from a broadcast (bcast.c) or a phone's unicast stream
  * (unicast.c), decoded by sink.c and sent to the pedal by audio.c; and
- * out, to a phone, by source.c.
+ * out, to a phone (unicast.c) or headphones (phones.c), encoded by
+ * source.c.
  *
- * sink_start() is called once Bluetooth is up and starts both sources,
- * sink_poll() from the main loop decodes, and sink_pcm() is what audio.c
- * asks for.  The rest is between sink.c and the two sources.
+ * sink_start() is called once Bluetooth is up and starts all of them,
+ * sink_poll() from the main loop decodes and encodes, and sink_pcm() is
+ * what audio.c asks for.
  */
 #ifdef CONFIG_BT
 #include <zephyr/bluetooth/audio/audio.h>
@@ -44,7 +45,7 @@ void sink_put(enum sink_from from, int ch, const uint8_t *data, uint16_t len);
 
 /*
  * source.c: LE Audio out, what the pedal sends the radio over i2s,
- * encoded for a phone that hears it as a headset's microphone.
+ * encoded once and sent on every stream started with it.
  */
 struct bt_bap_stream;
 
@@ -56,7 +57,9 @@ void source_stopped(struct bt_bap_stream *stream);
 void source_sent(struct bt_bap_stream *stream);
 
 int bcast_start(void);
-void bcast_pause(bool pause);
+#define BCAST_PAUSE_UNICAST	1	/* a phone is streaming */
+#define BCAST_PAUSE_PHONES	2	/* headphones are wanted */
+void bcast_pause(unsigned int why, bool pause);
 int unicast_start(void);
 void unicast_poll(void);
 #else
