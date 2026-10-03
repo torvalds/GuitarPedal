@@ -130,6 +130,209 @@ static void nrf54_i2s_dbfs(int32_t peak)
 }
 
 //
+// Times core 1 has had to move its read position in the radio's ring,
+// which skips or repeats audio.  Written by core 1 only.
+//
+static volatile uint32_t nrf54_i2s_moves;
+
+//
+// A timing check on audio from the radio, for when a phone plays the
+// tone Validation/vernier-tone.py makes: a sine of exactly 48 samples a
+// cycle on the left and 47 on the right.
+//
+// Upward zero crossings on a channel fall on a grid one period apart.
+// Samples dropped or repeated move the grid, by that many modulo the
+// period, and the two channels together say how many outright, up to
+// 1128 either way.  A crossing only counts after a cycle that reached
+// -50 dBFS, so silence and noise do not make any.
+//
+// The grid moves only when the crossings agree on a new place for
+// longer than an LC3 frame, 10 ms: a waveform the decoder made up for a
+// lost packet can sit a whole number of samples off it for most of one.
+// A crossing a fraction of a sample off is that, or the step a jump makes
+// through zero, and is counted and passed over; only a run of them long
+// enough to be something else - a pause, a resampler - starts a new grid.
+//
+#define VERNIER_JUMPS	8
+#define VERNIER_CONFIRM	12		// crossings, about 12 ms
+
+static const int vernier_period[2] = { 48, 47 };
+
+static struct {
+	uint32_t n;			// audio frames seen
+	struct {
+		int32_t prev, peak;
+		bool have;		// a grid to measure against
+		uint32_t at;		// a crossing on it: the frame before
+		float frac;		// ...and how far past that frame
+		int cand, cand_n;	// a whole-sample move, and times seen
+		int rag_n;		// crossings off by a fraction, in a row
+		int steady_n;		// crossings on the grid, in a row
+		bool odd;		// moved, not yet paired with the other
+		int d;			// ...by this many, modulo the period
+	} ch[2];
+	uint32_t steady;		// crossings on the grid
+	uint32_t ragged;		// off it by a fraction of a sample
+	uint32_t relocks;		// new grids after a run of those
+	uint32_t moves;			// nrf54_i2s_moves at the last report
+	int nj;
+	int32_t jump[VERNIER_JUMPS];	// samples repeated (+) or dropped (-)
+} vern;
+
+static void vernier_jump(int32_t d)
+{
+	if (vern.nj < VERNIER_JUMPS)
+		vern.jump[vern.nj] = d;
+	vern.nj++;
+}
+
+// The one jump that is dl modulo 48 and dr modulo 47, nearest zero
+static void vernier_solve(int dl, int dr)
+{
+	for (int32_t m = 0; m <= 24; m++)
+		for (int sign = 1; sign >= -1; sign -= 2) {
+			int32_t d = dl + sign * m * 48;
+
+			if ((((d - dr) % 47) + 47) % 47 == 0) {
+				vernier_jump(d);
+				return;
+			}
+		}
+}
+
+static void vernier_crossing(int c, uint32_t at, float frac)
+{
+	int p = vernier_period[c];
+	float off;
+	int d;
+
+	if (!vern.ch[c].have)
+		goto anchor;
+
+	// Where it falls against the grid, from -p/2 to p/2
+	off = (float)((at - vern.ch[c].at) % p) + frac - vern.ch[c].frac;
+	off -= p * floorf(off / p + 0.5f);
+	d = (int)lrintf(off);
+
+	if (fabsf(off) < 0.25f) {
+		vern.steady++;
+		vern.ch[c].steady_n++;
+		vern.ch[c].cand_n = vern.ch[c].rag_n = 0;
+		return;
+	}
+	vern.ch[c].steady_n = 0;
+	if (fabsf(off - d) > 0.25f) {
+		vern.ragged++;
+		vern.ch[c].cand_n = 0;
+		if (++vern.ch[c].rag_n < 2 * VERNIER_CONFIRM)
+			return;
+		vern.relocks++;
+		vern.ch[c].odd = false;
+		goto anchor;
+	}
+	// Modulo the period: half of one is +p/2 and -p/2 by turns
+	d = (d % p + p) % p;
+	vern.ch[c].rag_n = 0;
+	if (vern.ch[c].cand_n && vern.ch[c].cand == d) {
+		vern.ch[c].cand_n++;
+	} else {
+		vern.ch[c].cand = d;
+		vern.ch[c].cand_n = 1;
+	}
+	if (vern.ch[c].cand_n < VERNIER_CONFIRM)
+		return;
+
+	// Moved: the sum of moves is right modulo the period
+	vern.ch[c].d = vern.ch[c].odd ? vern.ch[c].d + d : d;
+	vern.ch[c].odd = true;
+anchor:
+	vern.ch[c].at = at;
+	vern.ch[c].frac = frac;
+	vern.ch[c].have = true;
+	vern.ch[c].cand_n = vern.ch[c].rag_n = vern.ch[c].steady_n = 0;
+}
+
+static void vernier_frame(int32_t l, int32_t r)
+{
+	int32_t v[2] = { l, r };
+
+	vern.n++;
+	for (int c = 0; c < 2; c++) {
+		int32_t a = v[c] < 0 ? -(v[c] + 1) : v[c];
+
+		if (a > vern.ch[c].peak)
+			vern.ch[c].peak = a;
+		if (vern.ch[c].prev < 0 && v[c] >= 0 &&
+		    vern.ch[c].peak > (int32_t)(0.00316f * 2147483648.0f)) {
+			vernier_crossing(c, vern.n - 1,
+					 (float)-vern.ch[c].prev /
+					 ((float)v[c] - (float)vern.ch[c].prev));
+			vern.ch[c].peak = 0;
+		}
+		vern.ch[c].prev = v[c];
+	}
+
+	//
+	// A jump, once both grids have moved.  Or one only, once the other
+	// has been on its grid for as long as a move takes to confirm: a
+	// jump that is a whole number of the other's periods.  A lost packet
+	// can hold one channel's confirmation back by a frame, so how long
+	// it has been is not enough.
+	//
+	if (vern.ch[0].odd && vern.ch[1].odd) {
+		vernier_solve(vern.ch[0].d, vern.ch[1].d);
+		vern.ch[0].odd = vern.ch[1].odd = false;
+	}
+	for (int c = 0; c < 2; c++)
+		if (vern.ch[c].odd && !vern.ch[!c].odd &&
+		    vern.ch[!c].steady_n >= VERNIER_CONFIRM) {
+			vernier_solve(c ? 0 : vern.ch[0].d, c ? vern.ch[1].d : 0);
+			vern.ch[c].odd = false;
+		}
+}
+
+// Not the tone: start again when it is
+static void vernier_lost(void)
+{
+	for (int c = 0; c < 2; c++)
+		vern.ch[c].have = vern.ch[c].odd = false;
+}
+
+static void dbg_sdec(int32_t v)
+{
+	dbg_puts(v < 0 ? "-" : "+");
+	dbg_dec(v < 0 ? -v : v);
+}
+
+static void vernier_report(void)
+{
+	uint32_t moves = nrf54_i2s_moves;
+
+	if (!vern.steady && !vern.nj && !vern.ragged && !vern.relocks &&
+	    moves == vern.moves)
+		return;
+	dbg_puts("vernier: ");
+	dbg_dec(vern.steady);
+	dbg_puts(" in step, ");
+	dbg_dec(vern.ragged);
+	dbg_puts(" ragged, ");
+	dbg_dec(vern.relocks);
+	dbg_puts(" relocks, ");
+	dbg_dec(moves - vern.moves);
+	dbg_puts(" moves, ");
+	dbg_dec(vern.nj);
+	dbg_puts(" jumps");
+	for (int i = 0; i < vern.nj && i < VERNIER_JUMPS; i++) {
+		dbg_puts(" ");
+		dbg_sdec(vern.jump[i]);
+	}
+	dbg_puts("\n");
+	vern.steady = vern.ragged = vern.relocks = 0;
+	vern.nj = 0;
+	vern.moves = moves;
+}
+
+//
 // Check what the radio sent back, every frame of it, and say how it went
 // on the debug port once a second.  A frame is only counted once both of
 // its words are in: the write address rounded down to a whole frame.
@@ -153,6 +356,10 @@ static void nrf54_i2s_poll(void)
 		i2stest_check(&nrf54_i2s.rx, f->left, f->right);
 		nrf54_i2s_audio(0, f->left);
 		nrf54_i2s_audio(1, f->right);
+		if ((f->right & 0xff) == 0xc3)
+			vernier_lost();
+		else
+			vernier_frame(f->left, f->right);
 	}
 
 	now = to_ms_since_boot(get_absolute_time());
@@ -162,6 +369,7 @@ static void nrf54_i2s_poll(void)
 	//
 	// Mostly not the pattern: say what it is as audio instead.
 	//
+	vernier_report();
 	if (nrf54_i2s.rx.wrong > nrf54_i2s.rx.frames / 2) {
 		for (int ch = 0; ch < 2; ch++) {
 			dbg_puts(ch ? ", right " : "i2s from the radio: audio, left ");
@@ -218,8 +426,11 @@ sample_t __audio_func(get_radio_audio_input)(void)
 	head = (dma_hw->ch[nrf54_dma_rx].write_addr - (uintptr_t)nrf54_i2s_rx) /
 	       sizeof(raw_sample_t);
 	d = (head - nrf54_i2s_at) & NRF54_I2S_RX_MASK;
-	if (d < NRF54_I2S_LAG / 2 || d > 4 * NRF54_I2S_LAG)
+	if (d < NRF54_I2S_LAG / 2 || d > 4 * NRF54_I2S_LAG) {
+		if (nrf54_i2s_at)
+			nrf54_i2s_moves++;
 		nrf54_i2s_at = head - NRF54_I2S_LAG;
+	}
 
 	f = nrf54_i2s_rx[nrf54_i2s_at++ & NRF54_I2S_RX_MASK];
 	if ((f.right & 0xff) == 0xc3)
