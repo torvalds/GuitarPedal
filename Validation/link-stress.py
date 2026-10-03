@@ -19,10 +19,9 @@ each answer takes says whether commands are held up behind the load.
 It passes when every test packet arrived exactly once and intact on both
 sides, the stuck stream was held and then let go, the link counted no gaps,
 nothing was refused, malformed or failed its CRC, and no command took longer
-than --max-rtt-ms.  Either side prints each packet it drops on the pedal's
-debug port, as it came off the wire.  The radio's 'hs' counter is the times its receiver stopped,
-which it does when it runs out of buffers or sees a bad byte; the UART also
-raises RTS in hardware when it is busy, and nothing counts that.
+than --max-rtt-ms, and the radio overwrote nothing in its receive ring.
+Either side prints each packet it drops on the pedal's debug port, as it
+came off the wire.
 
 	./link-stress.py --target DA54
 	./link-stress.py --target DA54 --streams 4 --count 3000 --stuck 2 \\
@@ -199,12 +198,12 @@ def main():
                                     c["lost"], c["early"], c["held"],
                                     c["sent"]))
     print("  pedal's side of the link: %s" % last["link"])
-    keys = ("lg", "lr", "lb", "lc", "lt", "hs", "lw", "lo", "fl")
+    keys = ("lg", "lr", "lb", "lc", "lt", "lw", "lo", "fl")
     print("  radio counters: %s" % {k: after.get(k) for k in keys})
     sent = last["link"]["tx_bytes"] - first["link"]["tx_bytes"]
     got = after["rb"] - before["rb"]
     print("  bytes from the pedal to the radio: %d sent, %d received by "
-          "its UART driver, %d short (a few in flight is normal)" % (
+          "its UART, %d short (a few in flight is normal)" % (
               sent, got, sent - got))
     if rtts:
         print("  command round trips: %d, median %.1f ms, max %.1f ms, "
@@ -234,12 +233,12 @@ def main():
     check("nothing refused",
           last["link"]["refused"] == first["link"]["refused"] and
           after["lr"] == before["lr"])
+    check("nothing overwritten in the radio's receive ring",
+          after["lo"] == before["lo"])
     check("every command answered within %.0f ms" % args.max_rtt_ms,
           bool(rtts) and not unanswered and max(rtts) <= args.max_rtt_ms)
     if ble:
         check("schema arrived over Bluetooth", "parses as JSON" in ble_out)
-    print("  the radio's receiver stopped %d times during the run (hs)" %
-          (after["hs"] - before["hs"]))
     return 0 if ok else 1
 
 

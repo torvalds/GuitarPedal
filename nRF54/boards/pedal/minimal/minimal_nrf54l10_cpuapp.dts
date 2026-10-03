@@ -102,17 +102,16 @@
  */
 
 /*
- * The only way in or out.  1 Mbit with the RTS/CTS pair the board
- * wires, which is far more than the MIDI it will carry needs - the
- * point of the speed is that a bulk transfer does not hold up a note.
+ * The only way in or out.  No driver: app/src/main.c sets the registers
+ * itself, and takes the pins and speed from here.  1 Mbit is far more than
+ * the MIDI it carries needs; the point of the speed is that a bulk
+ * transfer does not hold up a note.
  */
 &uart30 {
 	status = "okay";
 	current-speed = <1000000>;
-	hw-flow-control;
 	pinctrl-0 = <&uart30_default>;
-	pinctrl-1 = <&uart30_sleep>;
-	pinctrl-names = "default", "sleep";
+	pinctrl-names = "default";
 };
 
 /* Wired, described, and driven by nothing yet. */

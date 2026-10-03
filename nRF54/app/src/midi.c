@@ -258,10 +258,9 @@ static struct {
  *
  * So the completion callback is the flow control: one slot per buffer
  * the stack has, taken before sending and given back when that packet is
- * actually gone.  Waiting for a slot is the back-pressure - it stops
- * this thread draining the UART, which deasserts RTS, which pauses the
- * pedal.  Every other stage of this link already works that way; this
- * was the one that did not.
+ * actually gone.  Waiting for a slot is the back-pressure: the pedal's
+ * MIDI stays in main.c unacknowledged, and the link's window stops the
+ * pedal sending more.
  */
 #define MIDI_BLE_SLOTS	CONFIG_BT_ATT_TX_COUNT
 
@@ -375,9 +374,8 @@ void midi_ble_flush(void)
 	 * slot, so this cannot fire; 'noslot' reading non-zero means
 	 * somebody added a caller that does not ask.
 	 *
-	 * Waiting here would pause the wrong thing - the loop rather than
-	 * the pedal.  Declining to take bytes off the UART is what
-	 * deasserts RTS.
+	 * Waiting here would pause the loop, and every stream with it.
+	 * Leaving the MIDI unacknowledged is what holds the pedal off.
 	 */
 	if (k_sem_take(&slot_free, K_NO_WAIT) != 0) {
 		out.noslot++;
@@ -712,16 +710,14 @@ static void radio_json(uint8_t cmd, const char *fmt, ...)
  * us, and an answer that reads as a request answers itself for ever.
  *
  * f bytes in, o bytes notified, p packets, nc no connection, ns no slot,
- * fl notify refused, e its error, r the pedal's backlog here, s whether
- * the pedal is being held off, ccn how often a client asked to be sent
- * anything, lo bytes the pedal sent that there was no room for, bo keys
- * stored, rs the signal strength of the MIDI connection in dBm, and for
- * the link to the pedal lg packets that never arrived, lr packets with
- * nowhere to go, lb packets malformed, lt bytes for the pedal there was
- * no room for, hs the times the radio ran out of receive buffers, which
- * is when it raises RTS to stop the pedal, lw packets it sent and then
- * took as lost, lc packets dropped for a wrong CRC, and rb bytes the UART
- * driver has delivered, all told.
+ * fl notify refused, e its error, r the pedal's backlog here, ccn how
+ * often a client asked to be sent anything, lo bytes from the pedal
+ * overwritten before they were read, bo keys stored, rs the signal
+ * strength of the MIDI connection in dBm, and for the link to the pedal
+ * lg packets that never arrived, lr packets with nowhere to go, lb packets
+ * malformed, lt bytes for the pedal there was no room for, lw packets it
+ * sent and then took as lost, lc packets dropped for a wrong CRC, and rb
+ * bytes the UART has received, all told.
  *
  * Then cn connections accepted, 3e and 08 how many of them ended for
  * those reasons, dr why the last one ended, bs and bf MIDI sent to the
@@ -730,19 +726,19 @@ static void radio_json(uint8_t cmd, const char *fmt, ...)
  */
 static void stats_send(void)
 {
-	uint32_t gaps, refused, bad, lost, stops;
+	uint32_t gaps, refused, bad, lost;
 
-	midi_uart_link_counts(&gaps, &refused, &bad, &lost, &stops);
+	midi_uart_link_counts(&gaps, &refused, &bad, &lost);
 	radio_json(RADIO_SYSEX_STATS,
 		   "{\"f\":%u,\"o\":%u,\"p\":%u,\"nc\":%u,\"ns\":%u"
-		   ",\"fl\":%u,\"e\":%d,\"r\":%u,\"s\":%u"
+		   ",\"fl\":%u,\"e\":%d,\"r\":%u"
 		   ",\"ccn\":%u,\"lo\":%u,\"bo\":%u,\"rs\":%d"
-		   ",\"lg\":%u,\"lr\":%u,\"lb\":%u,\"lt\":%u,\"hs\":%u"
+		   ",\"lg\":%u,\"lr\":%u,\"lb\":%u,\"lt\":%u"
 		   ",\"lw\":%u,\"lc\":%u,\"rb\":%u}",
 		   out.fed, out.notified, out.sent, out.noconn, out.noslot,
 		   out.failed, out.err, midi_uart_backlog(),
-		   midi_uart_halted(), out.ccc_n, midi_uart_lost(),
-		   bonds(), midi_rssi(), gaps, refused, bad, lost, stops,
+		   out.ccc_n, midi_uart_lost(),
+		   bonds(), midi_rssi(), gaps, refused, bad, lost,
 		   midi_uart_written_off(), midi_uart_crc_failed(),
 		   midi_uart_received());
 

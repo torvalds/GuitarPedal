@@ -25,15 +25,12 @@ void midi_ble_queue(uint8_t src, uint8_t peer, uint8_t flags,
 /* main.c: how many bytes from the pedal are waiting to be dealt with */
 uint32_t midi_uart_backlog(void);
 
-/* main.c: true while the pedal is being held off */
-bool midi_uart_halted(void);
-
-/* main.c: bytes the pedal sent that there was no room for */
+/* main.c: bytes from the pedal overwritten before they were read */
 uint32_t midi_uart_lost(void);
 
 /* main.c: the packet link's counts */
 void midi_uart_link_counts(uint32_t *gaps, uint32_t *refused, uint32_t *bad,
-			   uint32_t *lost, uint32_t *stops);
+			   uint32_t *lost);
 uint32_t midi_uart_written_off(void);
 uint32_t midi_uart_crc_failed(void);
 uint32_t midi_uart_received(void);

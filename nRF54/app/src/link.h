@@ -93,14 +93,6 @@
 #define LINK_LOST_MS	200
 
 /*
- * Whether the UART's RTS and CTS lines pace it as well.  The windows make
- * them unnecessary for the link itself, but the radio's receiver still
- * loses bytes without them, so they stay on.  With this 0 the pedal leaves
- * them alone, and the radio's build checks that its devicetree agrees.
- */
-#define LINK_FLOW_CONTROL	1
-
-/*
  * CRC-8 with polynomial 0x07, as SMBus uses: it catches every error of one
  * bit, of an odd number of bits, and of a burst up to eight bits long.
  */

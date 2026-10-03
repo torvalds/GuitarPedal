@@ -1,6 +1,6 @@
 /*
- * The UART side of the bridge: uart30 carries a plain MIDI byte stream
- * to and from the RP2354.  midi.c is the Bluetooth side.
+ * The UART side of the bridge: uart30 carries the link (link.h) to and
+ * from the RP2354.  midi.c is the Bluetooth side.
  *
  * It carries nothing else.  There is no console anywhere on this radio -
  * prj.conf says why.
@@ -8,11 +8,11 @@
 
 #include <string.h>
 #include <zephyr/kernel.h>
-#include <zephyr/device.h>
-#include <zephyr/drivers/uart.h>
+#include <zephyr/drivers/pinctrl.h>
 #include <zephyr/sys/ring_buffer.h>
 #include <zephyr/sys/printk-hooks.h>
 #include <zephyr/random/random.h>
+#include <hal/nrf_uarte.h>
 
 #include "midi.h"
 #include "link.h"
@@ -29,52 +29,130 @@
 #error "RTT costs Bluetooth connections - see prj.conf"
 #endif
 
-static const struct device *const link =
-	DEVICE_DT_GET(DT_CHOSEN(pedal_midi_uart));
+/*
+ * uart30, driven from the loop rather than by Zephyr's driver: one ring
+ * each way and no interrupt.  The devicetree says which pins; uart_start()
+ * sets the rest.
+ *
+ * There is no RTS/CTS.  The receiver never stops, so RTS would never be
+ * raised, and the link's windows already pace both sides.
+ */
+#define LINK_UART	DT_CHOSEN(pedal_midi_uart)
 
-/* link.h and the devicetree have to agree about RTS/CTS */
-#if LINK_FLOW_CONTROL != DT_PROP(DT_CHOSEN(pedal_midi_uart), hw_flow_control)
-#error "LINK_FLOW_CONTROL in link.h disagrees with the devicetree's hw-flow-control"
-#endif
+PINCTRL_DT_DEFINE(LINK_UART);
+
+static NRF_UARTE_Type *const uarte = (NRF_UARTE_Type *)DT_REG_ADDR(LINK_UART);
 
 /*
- * Buffers for the asynchronous UART API - see prj.conf for why it is
- * that one.
+ * Receive is one ring that the DMA refills from the top for ever: the
+ * END to START shortcut restarts it, and its pointer is never moved.
  *
- * Four, so that one is free whenever the driver asks: it asks for the next
- * buffer as it starts on one, which can be before it has given back the one
- * it finished, and with none to give it stops receiving.
+ * Nothing says where the DMA has got to while it runs, except that AMOUNT
+ * is also updated on a match, and the match filter is set to the zero that
+ * ends every packet.  So the loop knows up to the end of the last whole
+ * packet, which is all the decoder needs.  END counts the wraps.
  *
- * The timeout is what stops a short message waiting for a full buffer:
- * without it a three-byte controller change sits here until 256 bytes
- * have arrived, which on a quiet link is never.
+ * The ring holds what arrives while the loop is busy elsewhere: 4 kB is
+ * 40 ms at 1 Mbit.
  */
-#define RX_BUFS		4
-#define RX_BUF_LEN	256
-#define RX_TIMEOUT_US	200	/* 20 byte-times at 1 Mbit */
+#define RX_SHIFT	12
+#define RX_SIZE		(1 << RX_SHIFT)
+#define RX_MASK		(RX_SIZE - 1)
 
-static uint8_t rx_buf[RX_BUFS][RX_BUF_LEN];
+static uint8_t rx_ring[RX_SIZE];
+static uint32_t rx_wraps;
+static uint32_t rx_head;	/* bytes the DMA has written, to the last zero */
+static uint32_t rx_tail;	/* bytes the link has taken */
+static uint32_t rx_lost;	/* bytes overwritten before they were read */
 
 /*
- * Which buffers the driver does not currently hold.
- *
- * A flag each rather than an index of the last one released: the driver
- * asks for the next buffer when it starts using one, not when it gives
- * one back, so the two events do not alternate and an index is wrong as
- * soon as two requests arrive together.  Handing out a buffer that is
- * already being filled loses whatever was in it.
+ * Transmit is a ring the loop fills, sent by the DMA from the tail to the
+ * head or the end of the ring, whichever comes first.
  */
-static bool rx_free[RX_BUFS];
+#define TX_SHIFT	10
+#define TX_SIZE		(1 << TX_SHIFT)
+#define TX_MASK		(TX_SIZE - 1)
 
-static uint8_t *rx_take(void)
+static uint8_t tx_ring[TX_SIZE];
+static uint16_t tx_head, tx_tail;
+static uint16_t tx_len;		/* bytes the DMA has, 0 when idle */
+
+static void uart_start(void)
 {
-	for (int i = 0; i < RX_BUFS; i++) {
-		if (rx_free[i]) {
-			rx_free[i] = false;
-			return rx_buf[i];
-		}
+	pinctrl_apply_state(PINCTRL_DT_DEV_CONFIG_GET(LINK_UART),
+			    PINCTRL_STATE_DEFAULT);
+
+	/* 8N1, no RTS/CTS, is the reset value */
+	BUILD_ASSERT(DT_PROP(LINK_UART, current_speed) == 1000000);
+	nrf_uarte_baudrate_set(uarte, NRF_UARTE_BAUDRATE_1000000);
+	nrf_uarte_enable(uarte);
+
+	uarte->DMA.RX.MATCH.CANDIDATE[0] = 0;
+	uarte->DMA.RX.MATCH.CONFIG = UARTE_DMA_RX_MATCH_CONFIG_ENABLE0_Msk;
+	nrf_uarte_rx_buffer_set(uarte, rx_ring, RX_SIZE);
+	nrf_uarte_shorts_enable(uarte, NRF_UARTE_SHORT_ENDRX_STARTRX);
+	nrf_uarte_task_trigger(uarte, NRF_UARTE_TASK_STARTRX);
+}
+
+/*
+ * Bring rx_head up to the last zero the DMA has written.  AMOUNT is the
+ * position in the current pass after a match, and the whole ring after END
+ * until the next match; END is read on both sides of it so that the two
+ * are from the same pass.
+ */
+static void rx_written(void)
+{
+	uint32_t end, amount, pos;
+
+	do {
+		end = uarte->EVENTS_DMA.RX.END;
+		amount = uarte->DMA.RX.AMOUNT;
+	} while (uarte->EVENTS_DMA.RX.END != end);
+	if (end) {
+		uarte->EVENTS_DMA.RX.END = 0;
+		rx_wraps++;
 	}
-	return NULL;
+	pos = (rx_wraps << RX_SHIFT) + (amount == RX_SIZE ? 0 : amount);
+	if ((int32_t)(pos - rx_head) > 0)
+		rx_head = pos;
+	__DMB();
+}
+
+static bool tx_room(void)
+{
+	return TX_SIZE - (uint16_t)(tx_head - tx_tail) >= LINK_WIRE_MAX;
+}
+
+static void tx_put(const uint8_t *buf, size_t len)
+{
+	for (size_t i = 0; i < len; i++)
+		tx_ring[tx_head++ & TX_MASK] = buf[i];
+}
+
+static void tx_kick(void)
+{
+	uint16_t len, to_end;
+
+	if (tx_len) {
+		if (!uarte->EVENTS_DMA.TX.END)
+			return;
+		uarte->EVENTS_DMA.TX.END = 0;
+		__DMB();
+		tx_tail += tx_len;
+		tx_len = 0;
+	}
+
+	len = tx_head - tx_tail;
+	to_end = TX_SIZE - (tx_tail & TX_MASK);
+	if (len > to_end)
+		len = to_end;
+	if (!len)
+		return;
+
+	tx_len = len;
+	__DMB();
+	nrf_uarte_tx_buffer_set(uarte, tx_ring + (tx_tail & TX_MASK), len);
+	nrf_uarte_task_trigger(uarte, NRF_UARTE_TASK_STARTTX);
 }
 
 /*
@@ -95,127 +173,6 @@ static uint8_t *rx_take(void)
  */
 RING_BUF_DECLARE(ble_in_ring, 1024);
 static uint32_t ble_in_dropped;
-
-/*
- * A ring each way: the driver fills one and empties the other, and the
- * loop below does the opposite.
- *
- * The receive ring is the one that has to be sized.  A SysEx schema is
- * tens of kilobytes arriving at 1 Mbit while Bluetooth carries it away
- * more slowly, and the difference collects here.  rx_starved() is what
- * happens when it fills.
- */
-RING_BUF_DECLARE(uart_rx_ring, 4096);
-RING_BUF_DECLARE(uart_tx_ring, 1024);
-
-static bool tx_busy;
-static uint32_t tx_claimed;
-static bool rx_stopped;
-static uint32_t rx_stops;	/* times RTS went up because buffers ran out */
-static uint32_t rx_bytes;	/* bytes the driver has delivered */
-static uint32_t rx_pos;		/* bytes the link has taken off the ring */
-
-/*
- * Bytes the pedal sent that there was no room for.
- *
- * ring_buf_put() takes what fits and says how much, and ignoring that is
- * how a byte disappears with nobody the wiser.
- */
-static uint32_t rx_lost;
-
-/*
- * Is there room for another buffer's worth?
- *
- * Answering "no" is how RTS gets deasserted: the driver is refused a
- * buffer, the current one runs out, and a UARTE with nowhere to put the
- * next byte stops the far end instead of losing it.  Discarding here
- * would drop most of a schema and report nothing.
- *
- * Room for every buffer the driver may still be holding, not just for
- * one: it has one active and one already queued when it requests the
- * next, so up to RX_BUFS bufferfuls can still arrive after the
- * refusal.
- */
-static bool rx_starved(void)
-{
-	return ring_buf_space_get(&uart_rx_ring) < RX_BUFS * RX_BUF_LEN;
-}
-
-static void tx_kick(void)
-{
-	uint8_t *data;
-	uint32_t len;
-
-	if (tx_busy)
-		return;
-
-	len = ring_buf_get_claim(&uart_tx_ring, &data, UINT32_MAX);
-	if (!len)
-		return;
-
-	tx_busy = true;
-	tx_claimed = len;
-	uart_tx(link, data, len, SYS_FOREVER_US);
-}
-
-static void uart_cb(const struct device *dev, struct uart_event *evt,
-		    void *user_data)
-{
-	ARG_UNUSED(user_data);
-
-	switch (evt->type) {
-	case UART_RX_RDY: {
-		uint32_t took;
-
-		rx_bytes += evt->data.rx.len;
-		took = ring_buf_put(&uart_rx_ring,
-					     evt->data.rx.buf +
-					     evt->data.rx.offset,
-					     evt->data.rx.len);
-
-		if (took < evt->data.rx.len)
-			rx_lost += evt->data.rx.len - took;
-		break;
-	}
-
-	case UART_RX_BUF_REQUEST: {
-		uint8_t *buf;
-
-		if (rx_starved())
-			break;
-		buf = rx_take();
-		if (buf)
-			uart_rx_buf_rsp(dev, buf, RX_BUF_LEN);
-		break;
-	}
-
-	case UART_RX_BUF_RELEASED:
-		for (int i = 0; i < RX_BUFS; i++)
-			if (evt->data.rx_buf.buf == rx_buf[i])
-				rx_free[i] = true;
-		break;
-
-	case UART_RX_STOPPED:
-		printk("uart: receive stopped, reason %d\n",
-		       evt->data.rx_stop.reason);
-		break;
-
-	case UART_RX_DISABLED:
-		rx_stopped = true;
-		rx_stops++;
-		break;
-
-	case UART_TX_DONE:
-	case UART_TX_ABORTED:
-		ring_buf_get_finish(&uart_tx_ring, tx_claimed);
-		tx_claimed = 0;
-		tx_busy = false;
-		break;
-
-	default:
-		break;
-	}
-}
 
 /*
  * One packet from over the air, held for the loop to deal with.
@@ -406,11 +363,6 @@ static uint16_t dbg_take(uint8_t *out)
 	return len;
 }
 
-static bool tx_room(void)
-{
-	return ring_buf_space_get(&uart_tx_ring) >= LINK_WIRE_MAX;
-}
-
 /*
  * Whatever can go to the pedal now: acknowledgements first, then a packet
  * from each stream that has something and room in its window, in turn.
@@ -422,7 +374,7 @@ static void link_out(void)
 	size_t n;
 
 	while (tx_room() && (n = link_pack_ack(&radio_link, wire)))
-		ring_buf_put(&uart_tx_ring, wire, n);
+		tx_put(wire, n);
 
 	do {
 		moved = false;
@@ -446,7 +398,7 @@ static void link_out(void)
 			}
 			n = link_pack(&radio_link, LINK_CONTROL, LINK_ALL,
 				      flags, chunk, take, wire);
-			ring_buf_put(&uart_tx_ring, wire, n);
+			tx_put(wire, n);
 			moved = true;
 		}
 
@@ -475,7 +427,7 @@ static void link_out(void)
 						       chunk[0] != 0xF7 ?
 						       LINK_FIRST : 0),
 					      chunk, take, wire);
-				ring_buf_put(&uart_tx_ring, wire, n);
+				tx_put(wire, n);
 				moved = true;
 			}
 		}
@@ -486,7 +438,7 @@ static void link_out(void)
 
 			n = link_pack(&radio_link, LINK_TEST, LINK_ALL,
 				      LINK_FIRST | LINK_LAST, chunk, len, wire);
-			ring_buf_put(&uart_tx_ring, wire, n);
+			tx_put(wire, n);
 			test_counts_due = false;
 			moved = true;
 		}
@@ -499,7 +451,7 @@ static void link_out(void)
 				n = link_pack(&radio_link, LINK_TEST, i + 1,
 					      LINK_FIRST | LINK_LAST, chunk,
 					      len, wire);
-				ring_buf_put(&uart_tx_ring, wire, n);
+				tx_put(wire, n);
 				moved = true;
 			}
 		}
@@ -512,7 +464,7 @@ static void link_out(void)
 				n = link_pack(&radio_link, LINK_DEBUG, LINK_ALL,
 					      LINK_FIRST | LINK_LAST, chunk,
 					      len, wire);
-				ring_buf_put(&uart_tx_ring, wire, n);
+				tx_put(wire, n);
 				moved = true;
 			}
 		}
@@ -521,23 +473,10 @@ static void link_out(void)
 	tx_kick();
 }
 
-/*
- * How much the pedal has sent that has not been dealt with yet, and
- * whether it is being held off.
- *
- * Read by the radio's statistics message.  A backlog that is not
- * draining is what refuses the driver a buffer and deasserts RTS, so
- * between them the two say whether the pedal has been stopped, is
- * keeping up, or is simply not sending.
- */
+/* How much the pedal has sent that has not been dealt with yet */
 uint32_t midi_uart_backlog(void)
 {
-	return ring_buf_size_get(&uart_rx_ring);
-}
-
-bool midi_uart_halted(void)
-{
-	return rx_stopped;
+	return rx_head - rx_tail;
 }
 
 uint32_t midi_uart_lost(void)
@@ -547,17 +486,15 @@ uint32_t midi_uart_lost(void)
 
 /*
  * The link's own counts: packets that never arrived, had nowhere to go, or
- * were malformed, bytes for the pedal there was no room for, and the times
- * the receiver stopped.
+ * were malformed, and bytes for the pedal there was no room for.
  */
 void midi_uart_link_counts(uint32_t *gaps, uint32_t *refused, uint32_t *bad,
-			   uint32_t *lost, uint32_t *stops)
+			   uint32_t *lost)
 {
 	*gaps = radio_link.gaps;
 	*refused = radio_link.refused;
 	*bad = radio_link.rx.bad;
 	*lost = to_pedal_lost;
-	*stops = rx_stops;
 }
 
 uint32_t midi_uart_written_off(void)
@@ -572,7 +509,7 @@ uint32_t midi_uart_crc_failed(void)
 
 uint32_t midi_uart_received(void)
 {
-	return rx_bytes;
+	return rx_head;
 }
 
 /*
@@ -587,7 +524,7 @@ static void rx_failed(const struct link_rx *rx)
 
 	printk("link: dropped, %s, %u bytes, ending at byte %u\n",
 	       rx->failed == LINK_FAILED_CRC ? "CRC" : "malformed",
-	       rx->wire_len, rx_pos);
+	       rx->wire_len, rx_tail);
 	for (uint16_t i = 0; i < rx->wire_len; i += 32) {
 		uint16_t n = 0;
 
@@ -624,8 +561,8 @@ static void hello(void)
 	memcpy(payload + 4, who, sizeof(who) - 1);
 
 	wire[0] = 0;
-	ring_buf_put(&uart_tx_ring, wire, 1);
-	ring_buf_put(&uart_tx_ring, wire,
+	tx_put(wire, 1);
+	tx_put(wire,
 		     link_encode(LINK_HELLO, LINK_ALL, 0, LINK_FIRST | LINK_LAST,
 				 payload, sizeof(payload), wire));
 	tx_kick();
@@ -755,17 +692,11 @@ static uint32_t acked_at;
 
 int main(void)
 {
-	if (!device_is_ready(link))
-		return -ENODEV;
-
 	link_init(&radio_link);
 	radio_link.up = true;
 	__printk_hook_install(dbg_putc);
 
-	uart_callback_set(link, uart_cb, NULL);
-	for (int i = 1; i < RX_BUFS; i++)
-		rx_free[i] = true;
-	uart_rx_enable(link, rx_buf[0], RX_BUF_LEN, RX_TIMEOUT_US);
+	uart_start();
 
 	boot_id = sys_rand32_get();
 	hello();
@@ -773,8 +704,7 @@ int main(void)
 	midi_ble_start();
 
 	for (;;) {
-		uint8_t *buf;
-		uint32_t n, took = 0, fed = 0;
+		uint32_t took = 0, fed = 0;
 
 		link_tick(&radio_link, k_uptime_get_32());
 
@@ -800,18 +730,30 @@ int main(void)
 		 * dealt with at once, and MIDI waits in its slots, which the
 		 * window keeps from overflowing.  A slow Bluetooth client
 		 * holds up the MIDI stream and nothing else.
+		 *
+		 * The DMA overwrites what has been waiting a whole ring, and
+		 * it can be a packet past rx_head without saying so; one more
+		 * packet's room covers the time it takes to read the rest.
+		 * What was overwritten is skipped, and so is the packet the
+		 * decoder was in the middle of.
 		 */
-		n = ring_buf_get_claim(&uart_rx_ring, &buf, UINT32_MAX);
-		for (took = 0; took < n; took++) {
-			rx_pos++;
-			if (link_rx_byte(&radio_link.rx, buf[took])) {
+		rx_written();
+		if (rx_head - rx_tail > RX_SIZE - 2 * LINK_WIRE_MAX) {
+			rx_lost += rx_head - rx_tail;
+			rx_tail = rx_head;
+			radio_link.rx.synced = false;
+		}
+		while (rx_tail != rx_head) {
+			uint8_t b = rx_ring[rx_tail++ & RX_MASK];
+
+			took++;
+			if (link_rx_byte(&radio_link.rx, b)) {
 				heard = true;
 				link_in();
 			} else if (radio_link.rx.failed) {
 				rx_failed(&radio_link.rx);
 			}
 		}
-		ring_buf_get_finish(&uart_rx_ring, took);
 
 		/*
 		 * The MIDI held, onto the air as fast as it will go.  One
@@ -848,20 +790,6 @@ int main(void)
 		 */
 		if (midi_ble_ready())
 			midi_ble_flush();
-
-		/*
-		 * And if the ring filled far enough to stop the far end,
-		 * it has now drained: start listening again.
-		 */
-		if (rx_stopped && !rx_starved()) {
-			uint8_t *buf = rx_take();
-
-			if (buf) {
-				rx_stopped = false;
-				uart_rx_enable(link, buf, RX_BUF_LEN,
-					       RX_TIMEOUT_US);
-			}
-		}
 
 		if (!heard && k_uptime_get_32() - hello_at >= HELLO_MS)
 			hello();

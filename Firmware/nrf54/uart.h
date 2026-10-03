@@ -13,10 +13,8 @@
 // radio - the Bluetooth packets, their timestamps, the attribute they are
 // written to - is the radio's business.
 //
-// Flow control is the board's normal state rather than an option.  All
-// four wires exist, and the nRF's CTS is active low with a pull-up on it,
-// so a floating CTS reads as "not clear to send" and the radio never
-// transmits at all.
+// There is no RTS/CTS: the link's windows pace both sides, and the radio
+// receives into a ring that never stops.
 //
 // Not to be confused with midi/uart.h, which is MIDI over the TRS jacks
 // on the boards that have them.  This board has none, which is why uart1
@@ -726,14 +724,8 @@ static void nrf54_uart_poll(void)
 
 //
 // Bring the link up, with the radio held in reset while the pins change
-// hands.
-//
-// The order is the whole of this function.  swd_init() drives
-// NRF54_RTS low as a plain GPIO so that a radio released from reset is
-// not mute; the moment the UART takes that pin it owns it, and a PL011
-// with RTSEn not yet set deasserts RTS - drives it high - which would
-// mute a running radio.  So reset goes back down first, the UART is
-// configured whole, and only then is the radio let go.
+// hands, so that the first thing it sends arrives at a UART that is set
+// up.
 //
 // Called only when nrf54_probe() found a radio.  It leaves reset
 // released, the state nrf54_probe() left it in.
@@ -744,7 +736,6 @@ static void nrf54_uart_init(void)
 
 	uart_init(NRF54_UART, NRF54_UART_BAUD);
 	uart_set_format(NRF54_UART, 8, 1, UART_PARITY_NONE);
-	uart_set_hw_flow(NRF54_UART, LINK_FLOW_CONTROL, LINK_FLOW_CONTROL);
 
 	//
 	// FIFOs off, because the DMA is on.
@@ -758,10 +749,6 @@ static void nrf54_uart_init(void)
 
 	gpio_set_function(NRF54_TX, NRF54_UART_FUNCSEL);
 	gpio_set_function(NRF54_RX, NRF54_UART_FUNCSEL);
-#if LINK_FLOW_CONTROL
-	gpio_set_function(NRF54_CTS, NRF54_UART_FUNCSEL);
-	gpio_set_function(NRF54_RTS, NRF54_UART_FUNCSEL);
-#endif
 
 	//
 	// An idle UART line is high, and this one is undriven for as long
@@ -773,13 +760,7 @@ static void nrf54_uart_init(void)
 	// The pull-up holds it at idle instead, so a radio that never
 	// answers delivers nothing rather than an endless break.
 	//
-	// CTS has the same pull-down and the opposite problem: low is
-	// "clear to send", so while the radio boots with its RTS undriven,
-	// whatever is sent goes into a UART that is not listening yet.  The
-	// pull-up holds it at "not clear" until the radio drives it.
-	//
 	gpio_pull_up(NRF54_RX);
-	gpio_pull_up(NRF54_CTS);
 
 	//
 	// SysEx, because the web app's protocol is built on it.  The TRS
@@ -793,9 +774,7 @@ static void nrf54_uart_init(void)
 	//
 	// Receive first and never stopped: 0xffffffff transfers into a
 	// ring that wraps on its own address bits, so there is no
-	// completion, no restart and nothing to miss.  CTS is honoured by
-	// the UART itself, so the transmit side stalls in hardware when
-	// the radio says stop.
+	// completion, no restart and nothing to miss.
 	//
 	nrf54_uart.dma_rx = dma_claim_unused_channel(true);
 	dma_channel_config rx = dma_channel_get_default_config(nrf54_uart.dma_rx);
