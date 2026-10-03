@@ -52,9 +52,25 @@
 // millisecond.  That is not a failure, it is a wait, and the queue is
 // somewhere to wait.
 //
+//
+// Who sent the message being handled now: USB, or a Bluetooth peer, or -
+// outside the handling of any message - everyone, which is who whatever the
+// pedal says of its own accord is for.  handle_midi_packet_from() sets it.
+//
+static struct midi_dest midi_from = { MIDI_TO_USB | MIDI_TO_RADIO, 0 };
+
+//
+// A reply to whoever sent the message being handled, which for one built
+// later from a flag is whoever set the flag - see the reply flags below.
+//
 static void sysex_tx_start(void)
 {
-	midi_tx_start();
+	midi_tx_start(midi_from);
+}
+
+static void sysex_tx_start_to(struct midi_dest dest)
+{
+	midi_tx_start(dest);
 }
 
 //
@@ -119,10 +135,10 @@ static void sysex_write_num(uint32_t val)
 // scales with the window rather than with the reply.  Any figure taken
 // off a raw byte count has that in it.
 //
-bool send_identity_tx = false;
+struct midi_dest send_identity_tx;
 static void sysex_send_identity(void)
 {
-	if (!send_identity_tx)
+	if (!send_identity_tx.to)
 		return;
 
 	//
@@ -146,7 +162,7 @@ static void sysex_send_identity(void)
 	static const uint8_t sysex_identity_header[] = { 0xF0, 0x7D, 0x0A };
 	static const uint8_t sysex_identity_trailer[] = { 0xF7 };
 
-	sysex_tx_start();
+	sysex_tx_start_to(send_identity_tx);
 	sysex_stream_write(sysex_identity_header, sizeof(sysex_identity_header));
 
 	//
@@ -286,7 +302,7 @@ static void sysex_send_identity(void)
 
 	sysex_stream_write(sysex_identity_trailer, sizeof(sysex_identity_trailer));
 	if (sysex_tx_finish("Sent identity"))
-		send_identity_tx = false;
+		send_identity_tx = MIDI_DEST_NONE;
 }
 
 //
@@ -372,10 +388,12 @@ static uint16_t fraction_to_14bit(float f)
 // rather than making it.
 //
 #ifdef EXP_TIP_GPIO
-bool send_exp_tx = false;
+struct midi_dest send_exp_tx;
 static void sysex_send_exp(void)
 {
-	if (!send_exp_tx)
+	struct midi_dest to = send_exp_tx;
+
+	if (!to.to)
 		return;
 
 	//
@@ -389,7 +407,7 @@ static void sysex_send_exp(void)
 	}
 	if (midi_tx_busy())
 		return;
-	send_exp_tx = false;
+	send_exp_tx = MIDI_DEST_NONE;
 
 	static const uint8_t hdr[] = { 0xF0, 0x7D, 0x0E };
 	static const uint8_t trailer[] = { 0xF7 };
@@ -412,7 +430,7 @@ static void sysex_send_exp(void)
 	body[1 + 2 * EXP_NR_READINGS] = exp_verdict(reading);
 	body[2 + 2 * EXP_NR_READINGS] = expression.accessory;
 
-	sysex_tx_start();
+	sysex_tx_start_to(to);
 	sysex_stream_write(hdr, sizeof(hdr));
 	sysex_stream_write(body, sizeof(body));
 	sysex_stream_write(trailer, sizeof(trailer));
@@ -427,24 +445,26 @@ static void sysex_send_exp(void)
 // Not an acknowledgement: it is what the pedal is actually doing, so a
 // window that timed out says so without being asked.
 //
-bool sysex_send_pairing = false;
+struct midi_dest sysex_send_pairing;
 
 static void sysex_send_pairing_state(void)
 {
-	if (!sysex_send_pairing)
+	struct midi_dest to = sysex_send_pairing;
+
+	if (!to.to)
 		return;
 	if (midi_tx_busy())
 		return;
-	sysex_send_pairing = false;
+	sysex_send_pairing = MIDI_DEST_NONE;
 
 	const uint8_t msg[] = { 0xF0, 0x7D, 0x06, nrf54_pairing, 0xF7 };
 
-	sysex_tx_start();
+	sysex_tx_start_to(to);
 	sysex_stream_write(msg, sizeof(msg));
 	midi_tx_commit();
 }
 
-bool send_radio_tx = false;
+struct midi_dest send_radio_tx;
 //
 // How the link to the radio is doing.
 //
@@ -454,16 +474,18 @@ bool send_radio_tx = false;
 //
 static void sysex_send_radio(void)
 {
-	if (!send_radio_tx)
+	struct midi_dest to = send_radio_tx;
+
+	if (!to.to)
 		return;
 	if (midi_tx_busy())
 		return;
-	send_radio_tx = false;
+	send_radio_tx = MIDI_DEST_NONE;
 
 	static const uint8_t hdr[] = { 0xF0, 0x7D, 0x0F };
 	static const uint8_t trailer[] = { 0xF7 };
 
-	sysex_tx_start();
+	sysex_tx_start_to(to);
 	sysex_stream_write(hdr, sizeof(hdr));
 	sysex_write_str("{\"baud\":");
 	sysex_write_num(NRF54_UART_BAUD);
@@ -483,14 +505,16 @@ static void sysex_send_radio(void)
 }
 #endif
 
-bool send_telemetry_tx = false;
+struct midi_dest send_telemetry_tx;
 static void sysex_send_telemetry(void)
 {
-	if (!send_telemetry_tx)
+	struct midi_dest to = send_telemetry_tx;
+
+	if (!to.to)
 		return;
 	if (midi_tx_busy())
 		return;
-	send_telemetry_tx = false;
+	send_telemetry_tx = MIDI_DEST_NONE;
 
 	static const uint8_t sysex_telemetry_header[] = { 0xF0, 0x7D, 0x0B };
 	static const uint8_t sysex_telemetry_trailer[] = { 0xF7 };
@@ -542,7 +566,7 @@ static void sysex_send_telemetry(void)
 #endif
 	};
 
-	sysex_tx_start();
+	sysex_tx_start_to(to);
 	sysex_stream_write(sysex_telemetry_header, sizeof(sysex_telemetry_header));
 	sysex_stream_write(body, sizeof(body));
 	sysex_stream_write(sysex_telemetry_trailer, sizeof(sysex_telemetry_trailer));
@@ -560,10 +584,10 @@ static void sysex_send_telemetry(void)
 	midi_tx_commit();
 }
 
-bool send_schema_tx = false;
+struct midi_dest send_schema_tx;
 static void sysex_send_schema(void)
 {
-	if (!send_schema_tx)
+	if (!send_schema_tx.to)
 		return;
 	if (midi_tx_busy())
 		return;
@@ -581,18 +605,18 @@ static void sysex_send_schema(void)
 	// Three descriptors and four bytes of RAM instead: a generated
 	// header, the flash body, a generated trailer.
 	//
-	sysex_tx_start();
+	sysex_tx_start_to(send_schema_tx);
 	sysex_stream_write(sysex_schema_header, sizeof(sysex_schema_header));
 	midi_tx_static((const uint8_t *)midi_schema_json, strlen(midi_schema_json));
 	sysex_stream_write(sysex_schema_trailer, sizeof(sysex_schema_trailer));
 	if (sysex_tx_finish("Sent schema information"))
-		send_schema_tx = false;
+		send_schema_tx = MIDI_DEST_NONE;
 }
 
-bool send_status_tx = false;
+struct midi_dest send_status_tx;
 static void sysex_send_status(void)
 {
-	if (!send_status_tx)
+	if (!send_status_tx.to)
 		return;
 	if (midi_tx_busy())
 		return;
@@ -614,7 +638,7 @@ static void sysex_send_status(void)
 	//
 	const char *status = get_status();
 
-	sysex_tx_start();
+	sysex_tx_start_to(send_status_tx);
 	sysex_stream_write(sysex_status_header, sizeof(sysex_status_header));
 	if (status)
 		sysex_stream_write((const uint8_t *)status, strlen(status));
@@ -642,7 +666,7 @@ static void sysex_send_status(void)
 	// destroy the one message somebody was asking for.
 	//
 	if (midi_tx_commit())
-		send_status_tx = false;
+		send_status_tx = MIDI_DEST_NONE;
 	else if (status)
 		report_info(status);
 }
@@ -744,7 +768,8 @@ static bool sysex_echo_pots(int eff, const uint8_t *pairs, int n)
 	for (int i = 0; i < n; i++)
 		pot_batch_add(&batch, pairs[2 * i], pairs[2 * i + 1]);
 
-	sysex_tx_start();
+	// For every editor, not only whoever moved it
+	sysex_tx_start_to(MIDI_DEST_ALL);
 	pot_batch_send(&batch);
 
 	// Which is what committed, not what was queued: a transaction that
@@ -844,10 +869,10 @@ static void sysex_send_bindings(unsigned int level)
 	sysex_tx_finish("Sent control bindings");
 }
 
-bool state_dump_tx = false;
+struct midi_dest state_dump_tx;
 static void sysex_send_state_dump(void)
 {
-	if (!state_dump_tx)
+	if (!state_dump_tx.to)
 		return;
 	if (midi_tx_busy())
 		return;
@@ -875,7 +900,7 @@ static void sysex_send_state_dump(void)
 	// core 0 for the timeout times the message count - seconds.
 	// Once it is set every write below quietly does nothing.
 	//
-	sysex_tx_start();
+	sysex_tx_start_to(state_dump_tx);
 
 	//
 	// Then the effect states - for the effects that have one.
@@ -952,7 +977,7 @@ static void sysex_send_state_dump(void)
 	sysex_stream_write(sysex_routing_trailer, sizeof(sysex_routing_trailer));
 
 	if (sysex_tx_finish("Sent state dump"))
-		state_dump_tx = false;
+		state_dump_tx = MIDI_DEST_NONE;
 }
 
 //
@@ -987,7 +1012,7 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 {
 	uint8_t cmd = sysex_buf[0];
 	if (cmd == 0x01) { // Schema Request
-		send_schema_tx = true;
+		midi_dest_add(&send_schema_tx, midi_from);
 	} else if (cmd == 0x03 && sysex_len >= 4) { // Set Parameter
 		//
 		// One effect, and then as many (pot, value) pairs as the
@@ -1063,20 +1088,20 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 
 	} else if (cmd == 0x09) { // Diagnostic Request
 
-		send_status_tx = true;
+		midi_dest_add(&send_status_tx, midi_from);
 
 	} else if (cmd == 0x0a) { // Identity Request
 
-		send_identity_tx = true;
+		midi_dest_add(&send_identity_tx, midi_from);
 
 	} else if (cmd == 0x0b) { // Telemetry Request
 
-		send_telemetry_tx = true;
+		midi_dest_add(&send_telemetry_tx, midi_from);
 
 #ifdef NRF54_SWDIO
 	} else if (cmd == 0x0f) { // Radio link - bringup only
 
-		send_radio_tx = true;
+		midi_dest_add(&send_radio_tx, midi_from);
 
 	} else if (cmd == 0x06) {
 		//
@@ -1103,7 +1128,7 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 				NRF54_PAIRING_MS;
 			nrf54_pairing_tell(want);
 		}
-		sysex_send_pairing = true;
+		midi_dest_add(&sysex_send_pairing, midi_from);
 
 	} else if (cmd == 0x07 && !sysex_from_radio) {
 		//
@@ -1127,7 +1152,7 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 		//
 		nrf54_pairing = false;
 		nrf54_pairing_tell(false);
-		sysex_send_pairing = true;
+		midi_dest_add(&sysex_send_pairing, midi_from);
 
 	} else if (cmd == 0x16 && sysex_from_radio && sysex_len >= 2) {
 		//
@@ -1186,7 +1211,7 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 			// it takes a transaction around it to become a
 			// message anyone will send.
 			//
-			sysex_tx_start();
+			sysex_tx_start_to(MIDI_DEST_USB);
 			sysex_stream_write(msg, n);
 			midi_tx_commit();
 		} else {
@@ -1197,7 +1222,7 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 #ifdef EXP_TIP_GPIO
 	} else if (cmd == 0x0e) { // Expression jack probe - bringup only
 
-		send_exp_tx = true;
+		midi_dest_add(&send_exp_tx, midi_from);
 #endif
 
 	} else if (cmd == 0x21) { // Learn the hum cuts, or clear them
@@ -1211,7 +1236,7 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 
 	} else if (cmd == 0x05) { // State Dump Request
 
-		state_dump_tx = true;
+		midi_dest_add(&state_dump_tx, midi_from);
 
 	} else if (cmd == 0x0c && sysex_len >= 2) { // Write one rule level
 		unsigned int level = sysex_buf[1];
@@ -1263,7 +1288,29 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 }
 
 
+static bool handle_midi_packet_as(const uint8_t packet[4]);
+
+//
+// A message from someone in particular, who any reply to it is for.
+//
+bool handle_midi_packet_from(const uint8_t packet[4],
+			     struct midi_dest from)
+{
+	bool handled;
+
+	midi_from = from;
+	handled = handle_midi_packet_as(packet);
+	midi_from = MIDI_DEST_ALL;
+	return handled;
+}
+
+// From USB, which is where usb-device.c finds this
 bool handle_midi_packet(const uint8_t packet[4])
+{
+	return handle_midi_packet_from(packet, MIDI_DEST_USB);
+}
+
+static bool handle_midi_packet_as(const uint8_t packet[4])
 {
 	uint8_t code = packet[0] & 0x0F;
 

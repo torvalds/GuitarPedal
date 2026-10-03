@@ -80,6 +80,7 @@ static struct {
 	struct link link;
 	uint8_t midi[LINK_PAYLOAD_MAX];
 	uint16_t midi_len;
+	uint8_t midi_peer;		// who what is in 'midi' is for
 	uint8_t ctl[NRF54_CTL_RING_SIZE];
 	uint16_t ctl_head, ctl_tail, ctl_sent;
 	struct midi_parser ctl_parser;
@@ -182,7 +183,8 @@ static void nrf54_link_out(void)
 		moved = false;
 
 		if (nrf54_uart.midi_len && nrf54_uart_room() &&
-		    link_can_send(&nrf54_uart.link, LINK_MIDI, LINK_ALL)) {
+		    link_can_send(&nrf54_uart.link, LINK_MIDI,
+				  nrf54_uart.midi_peer)) {
 			uint8_t first = nrf54_uart.midi[0];
 
 			//
@@ -190,7 +192,8 @@ static void nrf54_link_out(void)
 			// receiver needs after a lost packet is where the next
 			// one starts, which is a status byte that is not F7.
 			//
-			n = link_pack(&nrf54_uart.link, LINK_MIDI, LINK_ALL,
+			n = link_pack(&nrf54_uart.link, LINK_MIDI,
+				      nrf54_uart.midi_peer,
 				      (first & 0x80) && first != 0xF7 ?
 				      LINK_FIRST : 0,
 				      nrf54_uart.midi, nrf54_uart.midi_len, wire);
@@ -245,12 +248,20 @@ static void nrf54_link_out(void)
 //
 #define NRF54_MIDI_ROOM	3
 
-static bool nrf54_uart_ready(void)
+// And for one peer: a packet goes to one peer or to all of them, so MIDI
+// for another waits until the one being collected has gone.
+//
+static bool nrf54_uart_ready(uint8_t peer)
 {
-	if (nrf54_uart.midi_len > LINK_PAYLOAD_MAX - NRF54_MIDI_ROOM)
+	if (nrf54_uart.midi_len &&
+	    (nrf54_uart.midi_peer != peer ||
+	     nrf54_uart.midi_len > LINK_PAYLOAD_MAX - NRF54_MIDI_ROOM))
 		nrf54_link_out();
-	return nrf54_uart.link.up &&
-	       nrf54_uart.midi_len <= LINK_PAYLOAD_MAX - NRF54_MIDI_ROOM;
+	if (!nrf54_uart.link.up || nrf54_uart.midi_len)
+		return nrf54_uart.link.up && nrf54_uart.midi_peer == peer &&
+		       nrf54_uart.midi_len <= LINK_PAYLOAD_MAX - NRF54_MIDI_ROOM;
+	nrf54_uart.midi_peer = peer;
+	return true;
 }
 
 // Defined below, and declared here because the senders above it call it.
@@ -420,7 +431,7 @@ static bool sysex_from_radio;
 // One byte of MIDI from the radio.
 //
 static void nrf54_midi_in(struct midi_parser *parser, uint8_t b,
-			  bool trusted)
+			  uint8_t peer, bool trusted)
 {
 	uint8_t packet[4];
 	uint8_t cin;
@@ -456,7 +467,8 @@ static void nrf54_midi_in(struct midi_parser *parser, uint8_t b,
 	}
 
 	sysex_from_radio = true;
-	if (!handle_midi_packet(packet))
+	if (!handle_midi_packet_from(packet,
+				     (struct midi_dest){ MIDI_TO_RADIO, peer }))
 		usb_midi_write(packet);
 	sysex_from_radio = false;
 }
@@ -610,11 +622,11 @@ static void nrf54_uart_poll(void)
 
 			switch (l->rx.buf[0]) {
 			case LINK_MIDI:
-				nrf54_midi_in(from, c, trusted);
+				nrf54_midi_in(from, c, l->rx.buf[1], trusted);
 				break;
 			case LINK_CONTROL:
 				// The radio itself, which is trusted
-				nrf54_midi_in(&nrf54_uart.ctl_parser, c, true);
+				nrf54_midi_in(&nrf54_uart.ctl_parser, c, 0, true);
 				break;
 			case LINK_DEBUG:
 				// A line of the radio's printk

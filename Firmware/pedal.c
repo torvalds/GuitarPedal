@@ -351,7 +351,7 @@ int main()
 		// and the host asked what they were once, at connect.
 		//
 		if (exp_follow_setting())
-			send_identity_tx = true;
+			midi_dest_add(&send_identity_tx, midi_from);
 		exp_sweep_task();
 		exp_treadle_task();
 		exp_calibrate_task();

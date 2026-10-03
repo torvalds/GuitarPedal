@@ -231,7 +231,48 @@ emit_sysex:
 	return true;
 }
 
+//
+// Who a message is for.
+//
+// A reply goes to whoever asked: USB, or one Bluetooth peer by the number
+// the radio gave it (nRF54/app/src/link.h), or several of those when more
+// than one asked before it was built.  What nobody asked for - a pot moved
+// on the pedal, a status change - goes to everyone.  'to' empty means
+// nobody, which is what a reply flag holds when no reply is wanted.
+//
+#define MIDI_TO_USB	0x01
+#define MIDI_TO_RADIO	0x02
+
+struct midi_dest {
+	uint8_t to;
+	uint8_t peer;		// the radio peer; 0 is every one
+};
+
+#define MIDI_DEST_NONE	((struct midi_dest){ 0, 0 })
+#define MIDI_DEST_ALL	((struct midi_dest){ MIDI_TO_USB | MIDI_TO_RADIO, 0 })
+#define MIDI_DEST_USB	((struct midi_dest){ MIDI_TO_USB, 0 })
+
+//
+// Add an asker to a destination.  Two different radio peers become every
+// radio peer, since a message goes to one peer or to all of them.
+//
+static inline void midi_dest_add(struct midi_dest *d, struct midi_dest from)
+{
+	if (from.to & MIDI_TO_RADIO) {
+		if ((d->to & MIDI_TO_RADIO) && d->peer != from.peer)
+			d->peer = 0;
+		else if (!(d->to & MIDI_TO_RADIO))
+			d->peer = from.peer;
+	}
+	d->to |= from.to;
+}
+
 bool handle_midi_packet(const uint8_t packet[4]);
+
+// A message from someone in particular: defined in sysex.h, and declared
+// here for the receive paths that come before it.
+bool handle_midi_packet_from(const uint8_t packet[4],
+			     struct midi_dest from);
 void usb_midi_poll(void);
 bool usb_midi_write(const uint8_t packet[4]);
 bool usb_midi_write_nb(const uint8_t packet[4]);
