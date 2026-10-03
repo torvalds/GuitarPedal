@@ -69,15 +69,75 @@ static int i2s_dma_channel(uint sm, bool is_tx, raw_sample_t *buf,
 #include "nRF54/app/src/i2stest.h"
 
 //
-// The radio's audio link, carrying a test pattern (i2stest.h) that the
-// radio checks: a ring of exactly one repeat of it, which the DMA loops
-// with nothing else to do.  What comes back lands in a ring of its own.
+// The radio's audio link, carrying a test pattern (i2stest.h) both ways.
+// What goes out is a ring of exactly one repeat of it, which the DMA loops
+// with nothing else to do.  What comes back is the radio's copy, into a
+// ring deep enough - 85 ms - that the main loop checks every frame of it.
 //
+#define NRF54_I2S_RX_SHIFT	12
+#define NRF54_I2S_RX_FRAMES	(1 << NRF54_I2S_RX_SHIFT)
+#define NRF54_I2S_RX_MASK	(NRF54_I2S_RX_FRAMES - 1)
+
 static raw_sample_t __attribute__((aligned(sizeof(raw_sample_t) *
 					 I2STEST_FRAMES)))
 	nrf54_i2s_tx[I2STEST_FRAMES];
-static raw_sample_t __attribute__((aligned(128))) nrf54_i2s_rx[16];
+static raw_sample_t __attribute__((aligned(sizeof(raw_sample_t) *
+					 NRF54_I2S_RX_FRAMES)))
+	nrf54_i2s_rx[NRF54_I2S_RX_FRAMES];
 static int nrf54_dma_tx, nrf54_dma_rx;
+
+static struct {
+	bool on;
+	uint32_t tail;			// frames taken from the ring
+	struct i2stest_rx rx;		// since the last report
+	uint32_t reported_at;
+} nrf54_i2s;
+
+//
+// Check what the radio sent back, every frame of it, and say how it went
+// on the debug port once a second.  A frame is only counted once both of
+// its words are in: the write address rounded down to a whole frame.
+//
+static void nrf54_i2s_poll(void)
+{
+	uint32_t head, now;
+
+	if (!nrf54_i2s.on)
+		return;
+
+	head = (dma_hw->ch[nrf54_dma_rx].write_addr - (uintptr_t)nrf54_i2s_rx) /
+	       sizeof(raw_sample_t);
+	// The ring is read after this, not before
+	__dmb();
+	while ((nrf54_i2s.tail & NRF54_I2S_RX_MASK) !=
+	       (head & NRF54_I2S_RX_MASK)) {
+		raw_sample_t *f = &nrf54_i2s_rx[nrf54_i2s.tail++ &
+						NRF54_I2S_RX_MASK];
+
+		i2stest_check(&nrf54_i2s.rx, f->left, f->right);
+	}
+
+	now = to_ms_since_boot(get_absolute_time());
+	if (now - nrf54_i2s.reported_at < 1000)
+		return;
+
+	dbg_puts("i2s from the radio: ");
+	dbg_dec(nrf54_i2s.rx.frames);
+	dbg_puts(nrf54_i2s.rx.phase >= 0 ? " frames, in step, " :
+					   " frames, not in step, ");
+	dbg_dec(nrf54_i2s.rx.wrong);
+	dbg_puts(" wrong (");
+	dbg_dec(nrf54_i2s.rx.swapped);
+	dbg_puts(" swapped, ");
+	dbg_dec(nrf54_i2s.rx.shifted);
+	dbg_puts(" shifted), ");
+	dbg_dec(nrf54_i2s.rx.slips);
+	dbg_puts(" slips\n");
+	nrf54_i2s.rx.frames = nrf54_i2s.rx.wrong = 0;
+	nrf54_i2s.rx.swapped = nrf54_i2s.rx.shifted = 0;
+	nrf54_i2s.rx.slips = 0;
+	nrf54_i2s.reported_at = now;
+}
 #endif
 
 //
@@ -149,7 +209,10 @@ static void init_i2s(void)
 			nrf54_i2s_tx[i].right = i2stest_right(i);
 		}
 		nrf54_dma_rx = i2s_dma_channel(PIO0_NRF54_I2S_RX_SM, false,
-					       nrf54_i2s_rx, 7);
+					       nrf54_i2s_rx,
+					       3 + NRF54_I2S_RX_SHIFT);
+		i2stest_rx_init(&nrf54_i2s.rx);
+		nrf54_i2s.on = true;
 		_Static_assert(sizeof(raw_sample_t) == 1 << 3,
 			       "the transmit ring is 2^3 bytes a frame");
 		nrf54_dma_tx = i2s_dma_channel(PIO0_NRF54_I2S_TX_SM, true,
