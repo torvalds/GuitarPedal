@@ -41,7 +41,8 @@ static struct {
 // the side that increments and the side the ring wraps, and which of
 // read or write that is depends on which way the samples are going.
 //
-static int i2s_dma_channel(uint sm, bool is_tx, raw_sample_t *buf)
+static int i2s_dma_channel(uint sm, bool is_tx, raw_sample_t *buf,
+			   uint ring_bits)
 {
 	int chan = dma_claim_unused_channel(true);
 	dma_channel_config c = dma_channel_get_default_config(chan);
@@ -50,7 +51,7 @@ static int i2s_dma_channel(uint sm, bool is_tx, raw_sample_t *buf)
 	channel_config_set_read_increment(&c, is_tx);
 	channel_config_set_write_increment(&c, !is_tx);
 	channel_config_set_dreq(&c, pio_get_dreq(pio0, sm, is_tx));
-	channel_config_set_ring(&c, !is_tx, 7);	// 128 bytes, the buffer
+	channel_config_set_ring(&c, !is_tx, ring_bits);	// the buffer
 
 	pio_sm_clear_fifos(pio0, sm);
 
@@ -65,12 +66,17 @@ static int i2s_dma_channel(uint sm, bool is_tx, raw_sample_t *buf)
 }
 
 #ifdef NRF54_SWDIO
+#include "nRF54/app/src/i2stest.h"
+
 //
-// The radio's audio link, which nothing reads or writes yet: the nRF's
-// i2s is described in its devicetree and driven by nothing, so this
-// carries silence and exists to prove the pins.
+// The radio's audio link, carrying a test pattern (i2stest.h) that the
+// radio checks: a ring of exactly one repeat of it, which the DMA loops
+// with nothing else to do.  What comes back lands in a ring of its own.
 //
-static raw_sample_t __attribute__((aligned(128))) nrf54_i2s_buf[16];
+static raw_sample_t __attribute__((aligned(sizeof(raw_sample_t) *
+					 I2STEST_FRAMES)))
+	nrf54_i2s_tx[I2STEST_FRAMES];
+static raw_sample_t __attribute__((aligned(128))) nrf54_i2s_rx[16];
 static int nrf54_dma_tx, nrf54_dma_rx;
 #endif
 
@@ -114,8 +120,8 @@ static void init_i2s(void)
 	i2s_rx_program_init(pio0, PIO0_I2S_RX_SM, rx_offset,
 			    I2S_FSYNC, I2S_DOUT);
 
-	dma_rx = i2s_dma_channel(PIO0_I2S_RX_SM, false, i2s_dma_buf);
-	dma_tx = i2s_dma_channel(PIO0_I2S_TX_SM, true, i2s_dma_buf);
+	dma_rx = i2s_dma_channel(PIO0_I2S_RX_SM, false, i2s_dma_buf, 7);
+	dma_tx = i2s_dma_channel(PIO0_I2S_TX_SM, true, i2s_dma_buf, 7);
 
 	sms = (1u << PIO0_I2S_TX_SM) | (1u << PIO0_I2S_RX_SM);
 	dmas = (1u << dma_rx) | (1u << dma_tx);
@@ -138,10 +144,17 @@ static void init_i2s(void)
 		i2s_rx_program_init(pio0, PIO0_NRF54_I2S_RX_SM, rx_offset,
 				    NRF54_I2S_FSYNC, NRF54_I2S_DOUT);
 
+		for (int i = 0; i < I2STEST_FRAMES; i++) {
+			nrf54_i2s_tx[i].left = i2stest_left[i];
+			nrf54_i2s_tx[i].right = i2stest_right(i);
+		}
 		nrf54_dma_rx = i2s_dma_channel(PIO0_NRF54_I2S_RX_SM, false,
-					       nrf54_i2s_buf);
+					       nrf54_i2s_rx, 7);
+		_Static_assert(sizeof(raw_sample_t) == 1 << 3,
+			       "the transmit ring is 2^3 bytes a frame");
 		nrf54_dma_tx = i2s_dma_channel(PIO0_NRF54_I2S_TX_SM, true,
-					       nrf54_i2s_buf);
+					       nrf54_i2s_tx,
+					       3 + I2STEST_SHIFT);
 
 		sms |= (1u << PIO0_NRF54_I2S_TX_SM) |
 		       (1u << PIO0_NRF54_I2S_RX_SM);

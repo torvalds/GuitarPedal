@@ -114,7 +114,7 @@
 	pinctrl-names = "default";
 };
 
-/* Wired, described, and driven by nothing yet. */
+/* The audio link from the RP2354, received as a slave: app/src/audio.c */
 &i2s20 {
 	status = "okay";
 	pinctrl-0 = <&i2s20_default>;

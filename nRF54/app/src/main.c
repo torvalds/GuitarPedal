@@ -17,6 +17,7 @@
 #include "link.h"
 #include "linktest.h"
 #include "uartrx.h"
+#include "audio.h"
 
 /*
  * Reading RTT stalls the core long enough to miss Bluetooth connection
@@ -744,6 +745,7 @@ int main(void)
 	__printk_hook_install(dbg_putc);
 
 	uart_start();
+	audio_start();
 
 	boot_id = sys_rand32_get();
 	hello();
@@ -754,6 +756,7 @@ int main(void)
 		uint32_t took = 0, fed = 0, cmds = 0;
 
 		link_tick(&radio_link, k_uptime_get_32());
+		audio_poll();
 
 		/*
 		 * Everything the pedal has sent, first, so that the
