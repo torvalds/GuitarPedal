@@ -319,11 +319,14 @@ static void stream_recv(struct bt_bap_stream *stream,
 	sink_put(SINK_BCAST, channel_of(stream), buf->data, ok ? buf->len : 0);
 }
 
-/* One BIS is heard in both channels, two are left and right */
+/*
+ * One BIS is heard in both channels, two are left and right.  At 48 kHz,
+ * taken as read: a broadcast at another rate would want its BASE read.
+ */
 static void streams_changed(void)
 {
 	sink_feeding(SINK_BCAST, !b.streams_up ? 0 :
-				 b.streams_up == 1 ? 1 : 3);
+				 b.streams_up == 1 ? 1 : 3, 48000);
 }
 
 static void stream_started(struct bt_bap_stream *stream)

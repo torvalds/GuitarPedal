@@ -264,8 +264,8 @@ noise gate and the master volume
 **Settings**, which is whether the input jack is carrying one channel or
 two, the MIDI channel, LED brightness and what the tuner is tuning to,
 the **USB Audio**, which is what crosses the wire in each direction, the
-**Bluetooth Audio**, which is where audio from a phone joins and how loud
-it is, on a board with a radio, and the **Expression Jack**, which is what
+**Bluetooth Audio**, which is where audio from a phone joins, how loud it
+is and what goes back, on a board with a radio, and the **Expression Jack**, which is what
 is plugged into it and where that thing's travel ends.
 
 They're listed in the order they run in by default.  This is an overview

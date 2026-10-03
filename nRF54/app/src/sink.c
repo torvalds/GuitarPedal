@@ -1,7 +1,7 @@
 /*
  * LE Audio in: what the radio says it can receive, the LC3 frames that
  * arrive, decoded by the main loop, and handed to the i2s link (audio.c)
- * at the link's rate.
+ * at the link's rate.  The way out is source.c.
  *
  * Two sources feed it, a broadcast (bcast.c) and a phone's unicast stream
  * (unicast.c), and one plays at a time.  Unicast wins, because a phone
@@ -29,27 +29,27 @@
 #define CHANNELS	2
 
 /*
- * 48 kHz and 10 ms only, which is what a phone asks for when it can, and
+ * 10 ms frames, at 48 kHz for music and down to 16 kHz for a call, and
  * one or two channels a stream with up to two frames of each in a packet:
- * a phone sends stereo as one stream of both.
+ * a phone sends stereo as one stream of both.  Whatever the rate, the
+ * decoder gives 48 kHz.
  */
 static const struct bt_audio_codec_cap codec_cap = BT_AUDIO_CODEC_CAP_LC3(
-	BT_AUDIO_CODEC_CAP_FREQ_48KHZ, BT_AUDIO_CODEC_CAP_DURATION_10,
-	BT_AUDIO_CODEC_CAP_CHAN_COUNT_SUPPORT(1, 2), 40u, SINK_FRAME_MAX, 2u,
+	BT_AUDIO_CODEC_CAP_FREQ_16KHZ | BT_AUDIO_CODEC_CAP_FREQ_24KHZ |
+	BT_AUDIO_CODEC_CAP_FREQ_32KHZ | BT_AUDIO_CODEC_CAP_FREQ_48KHZ,
+	BT_AUDIO_CODEC_CAP_DURATION_10,
+	BT_AUDIO_CODEC_CAP_CHAN_COUNT_SUPPORT(1, 2), 26u, SINK_FRAME_MAX, 2u,
 	BT_AUDIO_CONTEXT_TYPE_MEDIA);
 
 static struct bt_pacs_cap cap = { .codec_cap = &codec_cap };
 
 /*
- * Media only, as what is available now.  With Unspecified there too, a
- * Pixel took a call as a reason to configure a stream on the radio,
- * never started it, and played nothing to the radio again - music
- * included - until its Bluetooth was restarted.  Unspecified reads as
- * anything, and a call wants a microphone the radio does not have.
+ * Unspecified is supported, as it has to be, but not offered as available:
+ * a phone takes that to mean anything at all, and offered it, a Pixel set
+ * up streams for things the radio could not do and then stopped playing to
+ * it.
  */
-#define CONTEXTS	(BT_AUDIO_CONTEXT_TYPE_UNSPECIFIED | \
-			 BT_AUDIO_CONTEXT_TYPE_MEDIA)
-#define AVAILABLE	BT_AUDIO_CONTEXT_TYPE_MEDIA
+#define CONTEXTS	(BT_AUDIO_CONTEXT_TYPE_UNSPECIFIED | SINK_AVAILABLE)
 
 /*
  * LC3 frames as they arrive, one channel each.  A frame that did not
@@ -67,8 +67,9 @@ static struct frame {
 static uint16_t q_head, q_tail;
 static struct k_spinlock q_lock;
 
-/* What each source is sending, and which of them is being played */
+/* What each source is sending, at what rate, and which is being played */
 static unsigned int feeding[SINK_FROMS];
+static int rate[SINK_FROMS];
 static int from = -1;
 
 static struct {
@@ -82,11 +83,12 @@ static struct {
 	uint32_t gap_ms;	/* the longest between two calls */
 } st;
 
-void sink_feeding(enum sink_from src, unsigned int chans)
+void sink_feeding(enum sink_from src, unsigned int chans, int hz)
 {
 	k_spinlock_key_t key = k_spin_lock(&q_lock);
 
 	feeding[src] = chans;
+	rate[src] = hz;
 	from = feeding[SINK_UNICAST] ? SINK_UNICAST :
 	       feeding[SINK_BCAST] ? SINK_BCAST : -1;
 	k_spin_unlock(&q_lock, key);
@@ -138,6 +140,7 @@ static int far;			/* low points in a row more than a frame out */
 
 static lc3_decoder_mem_48k_t dec_mem[CHANNELS];
 static lc3_decoder_t dec[CHANNELS];
+static int dec_rate;
 
 /*
  * At most two frames off the queue each time, whichever channels they
@@ -155,6 +158,15 @@ void sink_poll(void)
 	if (called_at && now - called_at > st.gap_ms)
 		st.gap_ms = now - called_at;
 	called_at = now;
+
+	/* Set up for what is being played, from the main loop */
+	if (from >= 0 && rate[from] && rate[from] != dec_rate) {
+		dec_rate = rate[from];
+		for (int i = 0; i < CHANNELS; i++)
+			dec[i] = lc3_setup_decoder(FRAME_US, dec_rate, RATE,
+						   &dec_mem[i]);
+		printk("sink: decoding %d Hz\n", dec_rate);
+	}
 
 	for (int n = 0; n < CHANNELS; n++) {
 		k_spinlock_key_t key = k_spin_lock(&q_lock);
@@ -200,6 +212,7 @@ void sink_poll(void)
 	}
 
 	unicast_poll();
+	source_poll();
 	if (now - reported_at >= 1000) {
 		if (from >= 0 || st.frames)
 			printk("sink: %s, %u frames, %u concealed, "
@@ -338,9 +351,12 @@ void sink_start(void)
 	const struct bt_pacs_register_param pacs = {
 		.snk_pac = true,
 		.snk_loc = true,
+		.src_pac = true,
+		.src_loc = true,
 	};
 	int err;
 
+	dec_rate = RATE;
 	for (int i = 0; i < CHANNELS; i++)
 		dec[i] = lc3_setup_decoder(FRAME_US, RATE, RATE, &dec_mem[i]);
 
@@ -356,11 +372,14 @@ void sink_start(void)
 						     CONTEXTS);
 	if (!err || err == -EALREADY)
 		err = bt_pacs_set_available_contexts(BT_AUDIO_DIR_SINK,
-						     AVAILABLE);
+						     SINK_AVAILABLE);
 	if (err && err != -EALREADY) {
 		printk("sink: no capabilities, %d\n", err);
 		return;
 	}
+	err = source_start();
+	if (err)
+		printk("sink: no microphone, %d\n", err);
 
 	/*
 	 * Full, until a phone says otherwise, which it does on connecting:

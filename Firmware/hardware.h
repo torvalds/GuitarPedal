@@ -69,18 +69,26 @@ static int i2s_dma_channel(uint sm, bool is_tx, raw_sample_t *buf,
 #include "nRF54/app/src/i2stest.h"
 
 //
-// The radio's audio link, carrying a test pattern (i2stest.h) both ways.
-// What goes out is a ring of exactly one repeat of it, which the DMA loops
-// with nothing else to do.  What comes back is the radio's copy, into a
-// ring deep enough - 85 ms - that the main loop checks every frame of it.
+// The radio's audio link, in rings the DMA loops round.  What goes out is
+// what the audio core writes a few frames ahead of the DMA - audio, or the
+// test pattern (i2stest.h) when Bluetooth Audio's Out is None - and starts
+// as the pattern.  What comes back is audio or the radio's copy of the
+// pattern, into a ring deep enough - 85 ms - that the main loop checks
+// every frame of it.
 //
+#define NRF54_I2S_TX_SHIFT	8
+#define NRF54_I2S_TX_FRAMES	(1 << NRF54_I2S_TX_SHIFT)
+#define NRF54_I2S_TX_MASK	(NRF54_I2S_TX_FRAMES - 1)
 #define NRF54_I2S_RX_SHIFT	12
 #define NRF54_I2S_RX_FRAMES	(1 << NRF54_I2S_RX_SHIFT)
 #define NRF54_I2S_RX_MASK	(NRF54_I2S_RX_FRAMES - 1)
 
 static raw_sample_t __attribute__((aligned(sizeof(raw_sample_t) *
-					 I2STEST_FRAMES)))
-	nrf54_i2s_tx[I2STEST_FRAMES];
+					 NRF54_I2S_TX_FRAMES)))
+	nrf54_i2s_tx[NRF54_I2S_TX_FRAMES];
+
+// One repeat of the pattern, in RAM for the audio core
+static raw_sample_t nrf54_i2s_pattern[I2STEST_FRAMES];
 static raw_sample_t __attribute__((aligned(sizeof(raw_sample_t) *
 					 NRF54_I2S_RX_FRAMES)))
 	nrf54_i2s_rx[NRF54_I2S_RX_FRAMES];
@@ -130,10 +138,10 @@ static void nrf54_i2s_dbfs(int32_t peak)
 }
 
 //
-// Times core 1 has had to move its read position in the radio's ring,
-// which skips or repeats audio.  Written by core 1 only.
+// Times core 1 has had to move its read or its write position in the
+// radio's rings, which skips or repeats audio.  Written by core 1 only.
 //
-static volatile uint32_t nrf54_i2s_moves;
+static volatile uint32_t nrf54_i2s_moves, nrf54_i2s_out_moves;
 
 //
 // A timing check on audio from the radio, for when a phone plays the
@@ -370,6 +378,17 @@ static void nrf54_i2s_poll(void)
 	// Mostly not the pattern: say what it is as audio instead.
 	//
 	vernier_report();
+
+	// The audio core's write position, moved: audio skipped or repeated
+	static uint32_t out_moves;
+
+	if (nrf54_i2s_out_moves != out_moves) {
+		dbg_puts("i2s to the radio: ");
+		dbg_dec(nrf54_i2s_out_moves - out_moves);
+		dbg_puts(" moves\n");
+		out_moves = nrf54_i2s_out_moves;
+	}
+
 	if (nrf54_i2s.rx.wrong > nrf54_i2s.rx.frames / 2) {
 		for (int ch = 0; ch < 2; ch++) {
 			dbg_puts(ch ? ", right " : "i2s from the radio: audio, left ");
@@ -441,10 +460,63 @@ sample_t __audio_func(get_radio_audio_input)(void)
 		.right = f.right * (1.0f / 2147483648.0f)
 	};
 }
+
+//
+// What the pedal sends the radio, chosen like USB's: a fixed few frames
+// ahead of the ring's DMA, put back there whenever it is not.  Audio goes
+// with the low byte of each word clear, which is how the radio tells it
+// from the pattern.
+//
+#define NRF54_I2S_LEAD	16
+
+static uint32_t nrf54_i2s_out;
+
+void __audio_func(put_radio_audio_output)(raw_sample_t wet, raw_sample_t dry)
+{
+	uint32_t tail, d;
+	raw_sample_t f;
+
+	if (!nrf54_i2s.on)
+		return;
+
+	tail = (dma_hw->ch[nrf54_dma_tx].read_addr - (uintptr_t)nrf54_i2s_tx) /
+	       sizeof(raw_sample_t);
+	d = (nrf54_i2s_out - tail) & NRF54_I2S_TX_MASK;
+	if (d < NRF54_I2S_LEAD / 2 || d > 4 * NRF54_I2S_LEAD) {
+		if (nrf54_i2s_out)
+			nrf54_i2s_out_moves++;
+		nrf54_i2s_out = tail + NRF54_I2S_LEAD;
+	}
+
+	switch (radioaudio.output) {
+	case LR_None:
+		f = nrf54_i2s_pattern[nrf54_i2s_out & I2STEST_MASK];
+		break;
+	case LR_Wet:
+		f = wet;
+		break;
+	case LR_Dry:
+		f = dry;
+		break;
+	default:
+		f.left = wet.left;
+		f.right = dry.left;
+		break;
+	}
+	if (radioaudio.output != LR_None) {
+		f.left &= ~0xff;
+		f.right &= ~0xff;
+	}
+	nrf54_i2s_tx[nrf54_i2s_out++ & NRF54_I2S_TX_MASK] = f;
+}
 #else
 sample_t get_radio_audio_input(void)
 {
 	return (sample_t) { 0, 0 };
+}
+
+void put_radio_audio_output(raw_sample_t wet, raw_sample_t dry)
+{
 }
 #endif
 
@@ -513,9 +585,11 @@ static void init_i2s(void)
 				    NRF54_I2S_FSYNC, NRF54_I2S_DOUT);
 
 		for (int i = 0; i < I2STEST_FRAMES; i++) {
-			nrf54_i2s_tx[i].left = i2stest_left[i];
-			nrf54_i2s_tx[i].right = i2stest_right(i);
+			nrf54_i2s_pattern[i].left = i2stest_left[i];
+			nrf54_i2s_pattern[i].right = i2stest_right(i);
 		}
+		for (int i = 0; i < NRF54_I2S_TX_FRAMES; i++)
+			nrf54_i2s_tx[i] = nrf54_i2s_pattern[i & I2STEST_MASK];
 		nrf54_dma_rx = i2s_dma_channel(PIO0_NRF54_I2S_RX_SM, false,
 					       nrf54_i2s_rx,
 					       3 + NRF54_I2S_RX_SHIFT);
@@ -525,7 +599,7 @@ static void init_i2s(void)
 			       "the transmit ring is 2^3 bytes a frame");
 		nrf54_dma_tx = i2s_dma_channel(PIO0_NRF54_I2S_TX_SM, true,
 					       nrf54_i2s_tx,
-					       3 + I2STEST_SHIFT);
+					       3 + NRF54_I2S_TX_SHIFT);
 
 		sms |= (1u << PIO0_NRF54_I2S_TX_SM) |
 		       (1u << PIO0_NRF54_I2S_RX_SM);

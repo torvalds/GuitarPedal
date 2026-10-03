@@ -34,6 +34,10 @@
 //   sample_t                 i2s link: hardware.h on the pedal, silence
 //                            on the bench.
 //
+//   put_radio_audio_output() and what goes back to it, called from
+//                            process.h: hardware.h on the pedal, nothing
+//                            on the bench.
+//
 // The i2s DMA is *not* in that list even though the buffer and the two
 // pointer helpers are defined below.  The bench drives them itself
 // through a shim - it writes i2s_dma_buf and moves fake DMA registers
@@ -64,6 +68,7 @@
 
 sample_t get_usb_audio_input(void);
 sample_t get_radio_audio_input(void);
+void put_radio_audio_output(raw_sample_t wet, raw_sample_t dry);
 
 //
 // A pot's raw value turned into whatever the pot is measured in.  Takes

@@ -48,6 +48,7 @@
 #include "midi.h"
 #include "scan.h"
 #include "bind.h"
+#include "sink.h"
 
 #define BT_UUID_MIDI_SERVICE_VAL \
 	BT_UUID_128_ENCODE(0x03b80e5a, 0xede8, 0x4b33, 0xa751, 0x6ce34ec4c700)
@@ -1309,10 +1310,9 @@ static const struct bt_data ad[] = {
 static char adv_name[CONFIG_BT_DEVICE_NAME_MAX + 1] = CONFIG_BT_DEVICE_NAME;
 
 /*
- * After the name, the two LE Audio announcements a phone looks for before
- * it offers to play to us, 5 and 10 bytes.  The context bytes are what
- * the sink is available for - media, as sink.c has it - and then the
- * source's, which there is none of.
+ * After the name, the two LE Audio announcements, 5 and 10 bytes: the
+ * Common Audio Service, and the stream endpoints with what each way is
+ * available for, as sink.h has it.
  */
 static struct bt_data sd[] = {
 	BT_DATA(BT_DATA_NAME_COMPLETE, adv_name,
@@ -1324,8 +1324,8 @@ static struct bt_data sd[] = {
 	BT_DATA_BYTES(BT_DATA_SVC_DATA16,
 		      BT_UUID_16_ENCODE(BT_UUID_ASCS_VAL),
 		      BT_AUDIO_UNICAST_ANNOUNCEMENT_TARGETED,
-		      BT_BYTES_LIST_LE16(BT_AUDIO_CONTEXT_TYPE_MEDIA),
-		      BT_BYTES_LIST_LE16(0),
+		      BT_BYTES_LIST_LE16(SINK_AVAILABLE),
+		      BT_BYTES_LIST_LE16(SOURCE_AVAILABLE),
 		      0x00),
 #endif
 };

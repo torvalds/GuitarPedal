@@ -96,6 +96,10 @@ sample_t get_radio_audio_input(void)
 	return zero;
 }
 
+void put_radio_audio_output(raw_sample_t wet, raw_sample_t dry)
+{
+}
+
 static void die(const char *fmt, ...)
 	__attribute__((format(printf, 1, 2), noreturn));
 

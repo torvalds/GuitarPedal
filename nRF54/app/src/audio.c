@@ -1,8 +1,11 @@
 /*
- * The i2s link with the RP2354, which for now carries only the test
- * pattern in i2stest.h, both ways: received as a slave - the RP2354 drives
- * both clocks - and checked bit for bit, with a report once a second on the
- * debug stream, and sent back for the pedal to check the same way.
+ * The i2s link with the RP2354, received as a slave - the RP2354 drives
+ * both clocks.  It carries audio both ways, or the test pattern in
+ * i2stest.h when there is none: from the pedal, what it sends to a phone
+ * (source.c), and to it, what a phone or a broadcast sends (sink.c).  The
+ * pattern is checked bit for bit, with a report once a second on the
+ * debug stream.  Audio has the low byte of each word clear and the
+ * pattern's right word never does, which tells the two apart per frame.
  */
 
 #include <string.h>
@@ -35,6 +38,7 @@ static const struct device *const i2s = DEVICE_DT_GET(DT_NODELABEL(i2s20));
 static struct {
 	bool running;
 	struct i2stest_rx rx;	/* since the last report */
+	uint32_t audio;		/* frames of audio, as against the pattern */
 	uint32_t restarts;	/* nothing for a while: restarted */
 	uint32_t block_at;	/* when a block last arrived */
 	uint32_t reported_at;
@@ -236,8 +240,14 @@ void audio_poll(void)
 	while (i2s_read(i2s, &block, &size) == 0) {
 		const int32_t *s = block;
 
-		for (size_t i = 0; i + 1 < size / sizeof(int32_t); i += 2)
-			i2stest_check(&t.rx, s[i], s[i + 1]);
+		for (size_t i = 0; i + 1 < size / sizeof(int32_t); i += 2) {
+			if ((s[i + 1] & 0xff) == 0xc3) {
+				i2stest_check(&t.rx, s[i], s[i + 1]);
+			} else {
+				source_put(s[i], s[i + 1]);
+				t.audio++;
+			}
+		}
 		k_mem_slab_free(&rx_slab, block);
 		t.block_at = k_uptime_get_32();
 	}
@@ -256,8 +266,10 @@ void audio_poll(void)
 	uint32_t ms = now - t.reported_at;
 
 	if (ms >= 1000) {
-		printk("i2s: %u frames/s, %s, %u wrong (%u swapped, "
-		       "%u shifted), %u slips, %u restarts\n",
+		printk("i2s: %u frames/s of audio, %u of the pattern, %s, "
+		       "%u wrong (%u swapped, %u shifted), %u slips, "
+		       "%u restarts\n",
+		       (uint32_t)((uint64_t)t.audio * 1000 / ms),
 		       (uint32_t)((uint64_t)t.rx.frames * 1000 / ms),
 		       t.rx.phase >= 0 ? "in step" : "not in step",
 		       t.rx.wrong, t.rx.swapped, t.rx.shifted, t.rx.slips,
@@ -274,7 +286,7 @@ void audio_poll(void)
 			       a / 1000, a % 1000, secs);
 		}
 		t.rx.frames = t.rx.wrong = t.rx.swapped = t.rx.shifted = 0;
-		t.rx.slips = t.restarts = 0;
+		t.rx.slips = t.restarts = t.audio = 0;
 		t.reported_at = now;
 	}
 }
