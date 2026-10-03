@@ -998,10 +998,56 @@ static void sysex_send_state_dump(void)
 //
 #define SYSEX_BUF_MAX	((1 + MAX_RULES * 6) > 192 ? (1 + MAX_RULES * 6) : 192)
 
-static uint8_t sysex_buf[SYSEX_BUF_MAX];
-static int sysex_len = 0;
-static bool in_sysex = false;
-static bool sysex_over = false;
+//
+// SysEx being put back together, one message per source: USB, the jacks,
+// the radio's own answers, and each Bluetooth peer.  The radio link
+// interleaves its streams a packet at a time, so a message from one source
+// can arrive while another's is half assembled, and one buffer between
+// them would splice the two.
+//
+#define SYSEX_SOURCES	6
+
+static struct sysex_in {
+	struct midi_dest from;
+	uint8_t buf[SYSEX_BUF_MAX];
+	int len;
+	bool in;			// between F0 and F7
+	bool over;			// longer than buf: drop it
+	uint32_t used;
+} sysex_in[SYSEX_SOURCES];
+static uint32_t sysex_clock;
+
+//
+// The slot for a source: its own, else one with no message half built,
+// else the one used longest ago.
+//
+static struct sysex_in *sysex_slot(struct midi_dest from)
+{
+	struct sysex_in *pick = NULL;
+
+	for (int i = 0; i < SYSEX_SOURCES; i++) {
+		struct sysex_in *in = &sysex_in[i];
+
+		if (in->used && in->from.to == from.to &&
+		    in->from.peer == from.peer) {
+			in->used = ++sysex_clock;
+			return in;
+		}
+	}
+	for (int i = 0; i < SYSEX_SOURCES; i++) {
+		struct sysex_in *in = &sysex_in[i];
+
+		if (!pick || (!in->in && pick->in) ||
+		    (in->in == pick->in &&
+		     (int32_t)(in->used - pick->used) < 0))
+			pick = in;
+	}
+	pick->from = from;
+	pick->len = 0;
+	pick->in = pick->over = false;
+	pick->used = ++sysex_clock;
+	return pick;
+}
 
 
 // Set by the dispatch below, taken by hum_task()
@@ -1316,14 +1362,16 @@ static bool handle_midi_packet_as(const uint8_t packet[4])
 
 	// Handle SysEx parsing across packets
 	if (code == 0x04 || code == 0x05 || code == 0x06 || code == 0x07) {
+		struct sysex_in *in = sysex_slot(midi_from);
+
 		for (int i = 1; i <= 3; i++) {
 			uint8_t b = packet[i];
 			if (b == 0xF0) {
-				in_sysex = true;
-				sysex_len = 0;
-				sysex_over = false;
-			} else if (b == 0xF7 && in_sysex) {
-				in_sysex = false;
+				in->in = true;
+				in->len = 0;
+				in->over = false;
+			} else if (b == 0xF7 && in->in) {
+				in->in = false;
 				//
 				// A message that did not fit is dropped whole
 				// rather than acted on short.
@@ -1338,17 +1386,17 @@ static bool handle_midi_packet_as(const uint8_t packet[4])
 				// half the pots in a batch would be set and the
 				// other half silently ignored.
 				//
-				if (sysex_over)
+				if (in->over)
 					report_info("MIDI message too long, dropped");
 				else
-					handle_sysex_payload(sysex_buf, sysex_len);
-			} else if (in_sysex) {
-				if (sysex_len == 0 && b == 0x7D) {
+					handle_sysex_payload(in->buf, in->len);
+			} else if (in->in) {
+				if (in->len == 0 && b == 0x7D) {
 					// Consume header 7D
-				} else if (sysex_len < SYSEX_BUF_MAX) {
-					sysex_buf[sysex_len++] = b;
+				} else if (in->len < SYSEX_BUF_MAX) {
+					in->buf[in->len++] = b;
 				} else {
-					sysex_over = true;
+					in->over = true;
 				}
 			}
 			if (code == 0x05 && i == 1) break;
