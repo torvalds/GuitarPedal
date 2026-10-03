@@ -3,12 +3,14 @@
 
 #ifdef NRF54_SWDIO
 
+#include "nRF54/app/src/link.h"
+
 //
-// The command link to the radio, which is a MIDI port and nothing else.
-//
-// Bytes go out, bytes come in, and nothing here knows what carries them
-// afterwards: the packet format, the timestamps and the Bluetooth
-// attribute they are written to are all the radio's business.
+// The link to the radio, as packets (nRF54/app/src/link.h): MIDI to and
+// from Bluetooth, commands for the radio and its answers, and its debug
+// text, each on streams of its own.  What happens to the MIDI after the
+// radio - the Bluetooth packets, their timestamps, the attribute they are
+// written to - is the radio's business.
 //
 // Flow control is the board's normal state rather than an option.  All
 // four wires exist, and the nRF's CTS is active low with a pull-up on it,
@@ -35,9 +37,20 @@
 #define NRF54_TX_RING_SIZE	(1 << NRF54_TX_RING_SHIFT)
 #define NRF54_TX_RING_MASK	(NRF54_TX_RING_SIZE - 1)
 
-#define NRF54_RX_RING_SHIFT	10
+#define NRF54_RX_RING_SHIFT	12
 #define NRF54_RX_RING_SIZE	(1 << NRF54_RX_RING_SHIFT)
 #define NRF54_RX_RING_MASK	(NRF54_RX_RING_SIZE - 1)
+
+//
+// Commands waiting for the radio, whole, each behind a length byte.  None
+// is longer than a SysEx message the pedal accepts, so a byte is enough.
+//
+#define NRF54_CTL_RING_SHIFT	9
+#define NRF54_CTL_RING_SIZE	(1 << NRF54_CTL_RING_SHIFT)
+#define NRF54_CTL_RING_MASK	(NRF54_CTL_RING_SIZE - 1)
+
+// How often acknowledgements are said again (nRF54/app/src/link.h)
+#define NRF54_ACK_AGAIN_MS	100
 
 static struct {
 	uint8_t tx[NRF54_TX_RING_SIZE];
@@ -50,7 +63,21 @@ static struct {
 
 	int dma_tx, dma_rx;
 
-	struct midi_parser parser;
+	//
+	// The link is packets (nRF54/app/src/link.h), and each kind of
+	// traffic is its own stream with its own window.  MIDI on its way
+	// out collects into 'midi' until a packet is full or the main loop
+	// comes round; commands wait whole in 'ctl'.  What comes in is MIDI
+	// and the radio's answers, each through a parser of its own so that
+	// one cannot land in the middle of the other.
+	//
+	struct link link;
+	uint8_t midi[LINK_PAYLOAD_MAX];
+	uint16_t midi_len;
+	uint8_t ctl[NRF54_CTL_RING_SIZE];
+	uint16_t ctl_head, ctl_tail, ctl_sent;
+	struct midi_parser parser, ctl_parser;
+	uint32_t acked_at;		// when acks were last said again
 
 	uint32_t tx_bytes, rx_bytes;
 	uint32_t packets, dropped;
@@ -69,12 +96,6 @@ static struct {
 	bool listening;
 } nrf54_uart;
 
-// Bytes in the transmit ring
-static uint16_t nrf54_tx_used(void)
-{
-	return (nrf54_uart.tx_head - nrf54_uart.tx_tail) & NRF54_TX_RING_MASK;
-}
-
 //
 // Where the receive DMA has got to.
 //
@@ -91,26 +112,126 @@ static inline uint16_t nrf54_rx_head(void)
 	return (uint16_t)(at - (uintptr_t)nrf54_uart.rx) & NRF54_RX_RING_MASK;
 }
 
+// Bytes in the transmit ring
+static uint16_t nrf54_tx_used(void)
+{
+	return (nrf54_uart.tx_head - nrf54_uart.tx_tail) & NRF54_TX_RING_MASK;
+}
+
+//
+// Bytes into the transmit ring, all of them or none.
+//
+static bool nrf54_uart_put(const uint8_t *buf, size_t len)
+{
+	uint16_t used = nrf54_tx_used();
+
+	if (len > NRF54_TX_RING_MASK - used)
+		return false;
+	for (size_t i = 0; i < len; i++) {
+		nrf54_uart.tx[nrf54_uart.tx_head] = buf[i];
+		nrf54_uart.tx_head = (nrf54_uart.tx_head + 1) &
+				     NRF54_TX_RING_MASK;
+	}
+	return true;
+}
+
+static bool nrf54_uart_room(void)
+{
+	uint16_t used = nrf54_tx_used();
+
+	return NRF54_TX_RING_MASK - used >= LINK_WIRE_MAX;
+}
+
+//
+// Whatever can go out now: acknowledgements first, since they cost the
+// radio nothing and free its windows, then a packet from each stream that
+// has something and room in its window, in turn.
+//
+static void nrf54_link_out(void)
+{
+	uint8_t wire[LINK_WIRE_MAX];
+	bool moved;
+	size_t n;
+
+	while (nrf54_uart_room() && (n = link_pack_ack(&nrf54_uart.link, wire)))
+		nrf54_uart_put(wire, n);
+
+	if (!nrf54_uart.link.up)
+		return;
+
+	do {
+		moved = false;
+
+		if (nrf54_uart.midi_len && nrf54_uart_room() &&
+		    link_can_send(&nrf54_uart.link, LINK_MIDI, LINK_ALL)) {
+			uint8_t first = nrf54_uart.midi[0];
+
+			//
+			// MIDI says where its own messages end; what the
+			// receiver needs after a lost packet is where the next
+			// one starts, which is a status byte that is not F7.
+			//
+			n = link_pack(&nrf54_uart.link, LINK_MIDI, LINK_ALL,
+				      (first & 0x80) && first != 0xF7 ?
+				      LINK_FIRST : 0,
+				      nrf54_uart.midi, nrf54_uart.midi_len, wire);
+			nrf54_uart_put(wire, n);
+			nrf54_uart.midi_len = 0;
+			moved = true;
+		}
+
+
+		if (nrf54_uart.ctl_tail != nrf54_uart.ctl_head &&
+		    nrf54_uart_room() &&
+		    link_can_send(&nrf54_uart.link, LINK_CONTROL, LINK_ALL)) {
+			uint8_t chunk[LINK_PAYLOAD_MAX];
+			uint16_t at = nrf54_uart.ctl_tail;
+			uint8_t len = nrf54_uart.ctl[at & NRF54_CTL_RING_MASK];
+			uint16_t left = len - nrf54_uart.ctl_sent;
+			uint16_t take = left < LINK_PAYLOAD_MAX ? left
+							       : LINK_PAYLOAD_MAX;
+			uint8_t flags = 0;
+
+			for (uint16_t i = 0; i < take; i++)
+				chunk[i] = nrf54_uart.ctl[(at + 1 +
+					nrf54_uart.ctl_sent + i) &
+					NRF54_CTL_RING_MASK];
+			if (!nrf54_uart.ctl_sent)
+				flags |= LINK_FIRST;
+			nrf54_uart.ctl_sent += take;
+			if (nrf54_uart.ctl_sent == len) {
+				flags |= LINK_LAST;
+				nrf54_uart.ctl_tail = at + 1 + len;
+				nrf54_uart.ctl_sent = 0;
+			}
+			n = link_pack(&nrf54_uart.link, LINK_CONTROL, LINK_ALL,
+				      flags, chunk, take, wire);
+			nrf54_uart_put(wire, n);
+			moved = true;
+		}
+	} while (moved);
+}
+
 //
 // Is there room for another byte on its way to the radio?
 //
 // Asked by midi_tx_to_radio() before it takes a byte off a message, so
-// that a full queue pauses this consumer rather than losing the middle of
-// a SysEx.  Half full rather than full: a message is taken apart a byte
-// at a time and the caller checks once per byte, so stopping at the
-// half-way mark leaves room for the burst already in flight.
+// that a full packet pauses this consumer rather than losing the middle of
+// a SysEx.  The packet waits for its stream's window, and the window waits
+// for the radio to have put the packet before it on the air, so a
+// Bluetooth client that cannot keep up stops this consumer, and only this
+// one: USB carries on, which is what the cursors are for.
 //
-// It is the last stage of a chain that starts at the far end.  A
-// Bluetooth Low Energy client that cannot keep up stops the radio
-// draining its receive ring; the ring deasserts RTS; this pedal's
-// transmitter stalls on CTS and its queue fills, and then this returns
-// false.  Each stage stops the one before it, so a schema of tens of
-// kilobytes crosses as one message instead of being cut short - and it
-// stops this consumer only, which is what the cursors are for.
+// Three bytes, because a channel message is written whole after one ask.
 //
+#define NRF54_MIDI_ROOM	3
+
 static bool nrf54_uart_ready(void)
 {
-	return nrf54_tx_used() < NRF54_TX_RING_SIZE / 2;
+	if (nrf54_uart.midi_len > LINK_PAYLOAD_MAX - NRF54_MIDI_ROOM)
+		nrf54_link_out();
+	return nrf54_uart.link.up &&
+	       nrf54_uart.midi_len <= LINK_PAYLOAD_MAX - NRF54_MIDI_ROOM;
 }
 
 // Defined below, and declared here because the senders above it call it.
@@ -120,61 +241,51 @@ static void nrf54_uart_write(const uint8_t *buf, size_t len);
 // One outgoing MIDI byte, on its way to the radio.
 //
 // Called from midi_tx_to_radio(), which walks the send queue with a
-// cursor of its own, so falling behind here costs USB nothing.  Declared
-// in midi/tx.h because that file comes first; see the note there.
-//
-// It queues rather than writes.  midi_tx_drain() empties a whole message
-// in a tight loop, so a state dump arrives here as several hundred bytes
-// in a few microseconds, while the wire carries one byte per 10 us - the
-// transmit FIFO is 32 deep and a burst would lose everything past it.
-// Queuing here and draining from the main loop is what makes the link
-// keep up with MIDI rather than with the loop that generates it.
-//
-// A full ring drops rather than blocking, because the caller has no way
-// to wait.  With nrf54_uart_ready() honoured above it that cannot happen,
-// so 'dropped' reading non-zero means somebody added a caller that does
-// not ask first.
+// cursor of its own and asks nrf54_uart_ready() first.  Declared in
+// midi/tx.h because that file comes first; see the note there.
 //
 static void nrf54_uart_thru(uint8_t byte)
 {
-	if (!nrf54_uart.up)
-		return;
-
-	uint16_t next = (nrf54_uart.tx_head + 1) & NRF54_TX_RING_MASK;
-	if (next == nrf54_uart.tx_tail) {
+	if (!nrf54_uart.up || nrf54_uart.midi_len == LINK_PAYLOAD_MAX) {
 		nrf54_uart.dropped++;
 		return;
 	}
-
-	nrf54_uart.tx[nrf54_uart.tx_head] = byte;
-	nrf54_uart.tx_head = next;
+	nrf54_uart.midi[nrf54_uart.midi_len++] = byte;
 }
 
 //
-// Hand the transmit DMA the next run of bytes, if it has finished the
-// last.
-//
-// One contiguous span at a time, because the ring wraps and the DMA does
-// not: what is left after the end of the buffer goes on the next call.
-// The bytes it is working on stay counted in the ring until it is done,
-// so nrf54_uart_ready() sees them and the back-pressure above still
-// measures the real backlog.
-//
-//
-// A whole message to the radio, from something that is not the send queue.
-//
-// Used for the commands the radio answers itself, which arrive over USB
-// and have to reach it without being treated as MIDI on the way.
+// A whole command for the radio, from something that is not the send
+// queue: the commands the radio answers itself, from USB or from the
+// pedal.  It waits for the control stream's window, behind any command
+// before it, and is dropped only if the queue of them is full.
 //
 static void nrf54_uart_write(const uint8_t *buf, size_t len)
 {
+	uint16_t used = nrf54_uart.ctl_head - nrf54_uart.ctl_tail;
+
+	if (!nrf54_uart.up || len > 255 ||
+	    len + 1 > NRF54_CTL_RING_SIZE - used) {
+		nrf54_uart.dropped++;
+		return;
+	}
+	nrf54_uart.ctl[nrf54_uart.ctl_head++ & NRF54_CTL_RING_MASK] = len;
 	for (size_t i = 0; i < len; i++)
-		nrf54_uart_thru(buf[i]);
+		nrf54_uart.ctl[nrf54_uart.ctl_head++ & NRF54_CTL_RING_MASK] =
+			buf[i];
 }
 
+//
+// Packets into the ring, and the next run of the ring to the transmit DMA
+// if it has finished the last.
+//
+// One contiguous span at a time, because the ring wraps and the DMA does
+// not: what is left after the end of the buffer goes on the next call.
+//
 static void nrf54_uart_push(void)
 {
 	uint16_t head, span;
+
+	nrf54_link_out();
 
 	if (dma_channel_is_busy(nrf54_uart.dma_tx))
 		return;
@@ -248,8 +359,7 @@ static void nrf54_forget_bonds(void)
 // digits of the chip's unique id, the current board's USB name, so that
 // pedals in one Bluetooth scan can be told apart.
 //
-// Sent once, as the link comes up.  The radio is held in reset until
-// then, and the bytes wait on CTS until its UART is listening.
+// Sent whenever the radio says hello, which it does each time it starts.
 //
 #define NRF54_CMD_NAME	0x1f
 
@@ -288,12 +398,90 @@ static void nrf54_name_tell(void)
 static bool sysex_from_radio;
 
 //
-// Drain whatever the radio has sent, and treat it as MIDI.
+// One byte of MIDI from the radio.
+//
+static void nrf54_midi_in(struct midi_parser *parser, uint8_t b)
+{
+	uint8_t packet[4];
+
+	if (!midi_parse_byte(parser, b, packet))
+		return;
+
+	nrf54_uart.packets++;
+
+	//
+	// What a footswitch or an editor played, on the debug port: channel
+	// messages, Code Index Number 0x8 to 0xE.
+	//
+	if ((packet[0] & 0x0f) >= 0x8 && (packet[0] & 0x0f) <= 0xe) {
+		dbg_puts("radio: ");
+		dbg_hex(packet + 1, midi_cin_length(packet[0] & 0x0f));
+		dbg_puts("\n");
+	}
+
+	sysex_from_radio = true;
+	if (!handle_midi_packet(packet))
+		usb_midi_write(packet);
+	sysex_from_radio = false;
+}
+
+//
+// The radio has started, for the first time or again.  Every stream begins
+// afresh, half a message from before is nothing, and the radio is told
+// what it needs to know about the pedal, since it knows nothing.
+//
+static void nrf54_link_hello(void)
+{
+	memset(&nrf54_uart.parser, 0, sizeof(nrf54_uart.parser));
+	memset(&nrf54_uart.ctl_parser, 0, sizeof(nrf54_uart.ctl_parser));
+	nrf54_uart.parser.want_sysex = true;
+	nrf54_uart.ctl_parser.want_sysex = true;
+	nrf54_uart.midi_len = 0;
+	nrf54_uart.ctl_sent = 0;
+
+	// Nothing has subscribed to a radio that has just started
+	nrf54_uart.listening = false;
+
+	//
+	// A zero first: the radio's decoder believes nothing until it has
+	// seen one, and anything sent before this may have reached it while
+	// it was still in reset, so without it the first packet after the
+	// hello is lost.
+	//
+	{
+		const uint8_t sync = 0;
+
+		nrf54_uart_put(&sync, 1);
+	}
+
+	nrf54_name_tell();
+	nrf54_pairing_tell(nrf54_pairing);
+}
+
+//
+// A packet from the radio that was dropped, on the debug port as it came
+// off the wire, and where in the byte stream it ended, for finding what
+// the losses have in common.
+//
+static void nrf54_link_failed(const struct link_rx *rx)
+{
+	dbg_puts(rx->failed == LINK_FAILED_CRC ? "link: dropped, CRC, " :
+						  "link: dropped, malformed, ");
+	dbg_dec(rx->wire_len);
+	dbg_puts(" bytes, ending at byte ");
+	dbg_dec(nrf54_uart.rx_bytes);
+	dbg_puts("\nlink:   ");
+	dbg_hex(rx->wire, rx->wire_len);
+	dbg_puts("\n");
+}
+
+//
+// Drain whatever the radio has sent, a packet at a time.
 //
 // The DMA has already put the bytes in memory, so this reads a pointer
 // and walks what is new.  It needs no iteration count: the ring holds
-// 1024 bytes, so that is the most one pass can find however much noise
-// the line is carrying.  A loop over the UART itself would need one,
+// NRF54_RX_RING_SIZE bytes, so that is the most one pass can find however much
+// noise the line is carrying.  A loop over the UART itself would need one,
 // because an undriven receive pin delivers framing errors without end
 // and would starve tud_task() until the board stopped enumerating.
 //
@@ -304,36 +492,62 @@ static void nrf54_uart_poll(void)
 	if (!nrf54_uart.up)
 		return;
 
+	link_tick(&nrf54_uart.link, to_ms_since_boot(get_absolute_time()));
+
+	// Say again how far every stream has got, in case an ack was lost
+	if (to_ms_since_boot(get_absolute_time()) - nrf54_uart.acked_at >=
+	    NRF54_ACK_AGAIN_MS) {
+		link_ack_again(&nrf54_uart.link);
+		nrf54_uart.acked_at = to_ms_since_boot(get_absolute_time());
+	}
+
 	nrf54_uart_push();
 
 	head = nrf54_rx_head();
 	while (nrf54_uart.rx_tail != head) {
-		uint8_t packet[4];
+		struct link *l = &nrf54_uart.link;
 		uint8_t b = nrf54_uart.rx[nrf54_uart.rx_tail];
 
 		nrf54_uart.rx_tail = (nrf54_uart.rx_tail + 1) &
 				     NRF54_RX_RING_MASK;
 		nrf54_uart.rx_bytes++;
 
-		if (!midi_parse_byte(&nrf54_uart.parser, b, packet))
+		if (!link_rx_byte(&l->rx, b)) {
+			if (l->rx.failed)
+				nrf54_link_failed(&l->rx);
 			continue;
-
-		nrf54_uart.packets++;
-
-		//
-		// What a footswitch or an editor played, on the debug port:
-		// channel messages, Code Index Number 0x8 to 0xE.
-		//
-		if ((packet[0] & 0x0f) >= 0x8 && (packet[0] & 0x0f) <= 0xe) {
-			dbg_puts("radio: ");
-			dbg_hex(packet + 1, midi_cin_length(packet[0] & 0x0f));
-			dbg_puts("\n");
 		}
 
-		sysex_from_radio = true;
-		if (!handle_midi_packet(packet))
-			usb_midi_write(packet);
-		sysex_from_radio = false;
+		switch (link_take(l)) {
+		case LINK_GOT_HELLO:
+			nrf54_link_hello();
+			continue;
+		case LINK_GOT_DATA:
+			break;
+		default:
+			continue;
+		}
+
+		for (uint16_t i = LINK_HEADER; i < l->rx.len; i++) {
+			uint8_t c = l->rx.buf[i];
+
+			switch (l->rx.buf[0]) {
+			case LINK_MIDI:
+				nrf54_midi_in(&nrf54_uart.parser, c);
+				break;
+			case LINK_CONTROL:
+				nrf54_midi_in(&nrf54_uart.ctl_parser, c);
+				break;
+			case LINK_DEBUG:
+				// A line of the radio's printk
+				if (i == LINK_HEADER &&
+				    (l->rx.buf[3] & LINK_FIRST))
+					dbg_puts("nrf54: ");
+				dbg_write((const char *)&c, 1);
+				break;
+			}
+		}
+		link_consumed(l);
 	}
 }
 
@@ -357,7 +571,7 @@ static void nrf54_uart_init(void)
 
 	uart_init(NRF54_UART, NRF54_UART_BAUD);
 	uart_set_format(NRF54_UART, 8, 1, UART_PARITY_NONE);
-	uart_set_hw_flow(NRF54_UART, true, true);
+	uart_set_hw_flow(NRF54_UART, LINK_FLOW_CONTROL, LINK_FLOW_CONTROL);
 
 	//
 	// FIFOs off, because the DMA is on.
@@ -371,8 +585,10 @@ static void nrf54_uart_init(void)
 
 	gpio_set_function(NRF54_TX, NRF54_UART_FUNCSEL);
 	gpio_set_function(NRF54_RX, NRF54_UART_FUNCSEL);
+#if LINK_FLOW_CONTROL
 	gpio_set_function(NRF54_CTS, NRF54_UART_FUNCSEL);
 	gpio_set_function(NRF54_RTS, NRF54_UART_FUNCSEL);
+#endif
 
 	//
 	// An idle UART line is high, and this one is undriven for as long
@@ -397,6 +613,8 @@ static void nrf54_uart_init(void)
 	// jacks leave it off; this link is 32 times faster and carries it.
 	//
 	nrf54_uart.parser.want_sysex = true;
+	nrf54_uart.ctl_parser.want_sysex = true;
+	link_init(&nrf54_uart.link);
 
 	//
 	// Receive first and never stopped: 0xffffffff transfers into a
@@ -429,8 +647,6 @@ static void nrf54_uart_init(void)
 
 	busy_wait_us_32(1000);
 	gpio_put(NRF54_RESET, 1);
-
-	nrf54_name_tell();
 }
 
 #endif /* NRF54_SWDIO */

@@ -459,7 +459,7 @@ static void radio_sysex(const uint8_t *body, size_t len)
 		msg[n++] = body[i] & 0x7f;
 	msg[n++] = 0xF7;
 
-	midi_uart_send(msg, n);
+	midi_uart_control(msg, n);
 }
 
 #ifdef CONFIG_BT_OBSERVER
@@ -646,7 +646,13 @@ static void radio_json(uint8_t cmd, const char *fmt, ...)
  * fl notify refused, e its error, r the pedal's backlog here, s whether
  * the pedal is being held off, ccn how often a client asked to be sent
  * anything, lo bytes the pedal sent that there was no room for, bo keys
- * stored, rs the signal strength of the MIDI connection in dBm.
+ * stored, rs the signal strength of the MIDI connection in dBm, and for
+ * the link to the pedal lg packets that never arrived, lr packets with
+ * nowhere to go, lb packets malformed, lt bytes for the pedal there was
+ * no room for, hs the times the radio ran out of receive buffers, which
+ * is when it raises RTS to stop the pedal, lw packets it sent and then
+ * took as lost, lc packets dropped for a wrong CRC, and rb bytes the UART
+ * driver has delivered, all told.
  *
  * Then cn connections accepted, 3e and 08 how many of them ended for
  * those reasons, dr why the last one ended, bs and bf MIDI sent to the
@@ -655,14 +661,21 @@ static void radio_json(uint8_t cmd, const char *fmt, ...)
  */
 static void stats_send(void)
 {
+	uint32_t gaps, refused, bad, lost, stops;
+
+	midi_uart_link_counts(&gaps, &refused, &bad, &lost, &stops);
 	radio_json(RADIO_SYSEX_STATS,
 		   "{\"f\":%u,\"o\":%u,\"p\":%u,\"nc\":%u,\"ns\":%u"
 		   ",\"fl\":%u,\"e\":%d,\"r\":%u,\"s\":%u"
-		   ",\"ccn\":%u,\"lo\":%u,\"bo\":%u,\"rs\":%d}",
+		   ",\"ccn\":%u,\"lo\":%u,\"bo\":%u,\"rs\":%d"
+		   ",\"lg\":%u,\"lr\":%u,\"lb\":%u,\"lt\":%u,\"hs\":%u"
+		   ",\"lw\":%u,\"lc\":%u,\"rb\":%u}",
 		   out.fed, out.notified, out.sent, out.noconn, out.noslot,
 		   out.failed, out.err, midi_uart_backlog(),
 		   midi_uart_halted(), out.ccc_n, midi_uart_lost(),
-		   bonds(), midi_rssi());
+		   bonds(), midi_rssi(), gaps, refused, bad, lost, stops,
+		   midi_uart_written_off(), midi_uart_crc_failed(),
+		   midi_uart_received());
 
 	char peer[BT_ADDR_LE_STR_LEN];
 
@@ -882,6 +895,19 @@ static void radio_dispatch(uint8_t cmd, const uint8_t *arg, uint8_t len)
 	default:
 		break;
 	}
+}
+
+/*
+ * A command from the pedal, whole: F0 7D, the command, its arguments and
+ * F7, off the control stream.  It never meets the MIDI parser, so it cannot
+ * land in the middle of a SysEx on its way to the air.
+ */
+void midi_radio_command(const uint8_t *msg, size_t len)
+{
+	if (len < 4 || msg[0] != 0xF0 || msg[1] != 0x7D ||
+	    msg[len - 1] != 0xF7 || !radio_command(msg[2]))
+		return;
+	radio_dispatch(msg[2], msg + 3, (uint8_t)(len - 4));
 }
 
 void midi_ble_feed(uint8_t b)

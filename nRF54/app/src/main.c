@@ -6,12 +6,16 @@
  * prj.conf says why.
  */
 
+#include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/uart.h>
 #include <zephyr/sys/ring_buffer.h>
+#include <zephyr/sys/printk-hooks.h>
+#include <zephyr/random/random.h>
 
 #include "midi.h"
+#include "link.h"
 
 /*
  * Reading RTT stalls the core long enough to miss Bluetooth connection
@@ -27,15 +31,24 @@
 static const struct device *const link =
 	DEVICE_DT_GET(DT_CHOSEN(pedal_midi_uart));
 
+/* link.h and the devicetree have to agree about RTS/CTS */
+#if LINK_FLOW_CONTROL != DT_PROP(DT_CHOSEN(pedal_midi_uart), hw_flow_control)
+#error "LINK_FLOW_CONTROL in link.h disagrees with the devicetree's hw-flow-control"
+#endif
+
 /*
  * Buffers for the asynchronous UART API - see prj.conf for why it is
  * that one.
+ *
+ * Four, so that one is free whenever the driver asks: it asks for the next
+ * buffer as it starts on one, which can be before it has given back the one
+ * it finished, and with none to give it stops receiving.
  *
  * The timeout is what stops a short message waiting for a full buffer:
  * without it a three-byte controller change sits here until 256 bytes
  * have arrived, which on a quiet link is never.
  */
-#define RX_BUFS		2
+#define RX_BUFS		4
 #define RX_BUF_LEN	256
 #define RX_TIMEOUT_US	200	/* 20 byte-times at 1 Mbit */
 
@@ -91,12 +104,15 @@ static uint32_t ble_in_dropped;
  * more slowly, and the difference collects here.  rx_starved() is what
  * happens when it fills.
  */
-RING_BUF_DECLARE(uart_rx_ring, 2048);
+RING_BUF_DECLARE(uart_rx_ring, 4096);
 RING_BUF_DECLARE(uart_tx_ring, 1024);
 
 static bool tx_busy;
 static uint32_t tx_claimed;
 static bool rx_stopped;
+static uint32_t rx_stops;	/* times RTS went up because buffers ran out */
+static uint32_t rx_bytes;	/* bytes the driver has delivered */
+static uint32_t rx_pos;		/* bytes the link has taken off the ring */
 
 /*
  * Bytes the pedal sent that there was no room for.
@@ -148,7 +164,10 @@ static void uart_cb(const struct device *dev, struct uart_event *evt,
 
 	switch (evt->type) {
 	case UART_RX_RDY: {
-		uint32_t took = ring_buf_put(&uart_rx_ring,
+		uint32_t took;
+
+		rx_bytes += evt->data.rx.len;
+		took = ring_buf_put(&uart_rx_ring,
 					     evt->data.rx.buf +
 					     evt->data.rx.offset,
 					     evt->data.rx.len);
@@ -175,8 +194,14 @@ static void uart_cb(const struct device *dev, struct uart_event *evt,
 				rx_free[i] = true;
 		break;
 
+	case UART_RX_STOPPED:
+		printk("uart: receive stopped, reason %d\n",
+		       evt->data.rx_stop.reason);
+		break;
+
 	case UART_RX_DISABLED:
 		rx_stopped = true;
+		rx_stops++;
 		break;
 
 	case UART_TX_DONE:
@@ -230,14 +255,186 @@ static bool ble_in_drain(void)
 }
 
 /*
- * MIDI bytes for the RP2354, from whatever arrived over Bluetooth.
- *
- * Reached only from the loop now, by way of ble_in_drain(), so it is the
- * one writer of this ring and tx_kick() has one caller.
+ * The link to the pedal (link.h).  What goes to it waits here until its
+ * stream's window allows: MIDI from the air as bytes, the radio's answers
+ * whole behind a length byte.  Both queues are written only from the loop.
  */
+static struct link radio_link;
+
+#define AIR_Q_SHIFT	10
+#define AIR_Q_SIZE	(1 << AIR_Q_SHIFT)
+#define AIR_Q_MASK	(AIR_Q_SIZE - 1)
+#define CTL_Q_SHIFT	9
+#define CTL_Q_SIZE	(1 << CTL_Q_SHIFT)
+#define CTL_Q_MASK	(CTL_Q_SIZE - 1)
+
+static uint8_t air_q[AIR_Q_SIZE];
+static uint16_t air_head, air_tail;
+static uint8_t ctl_q[CTL_Q_SIZE];
+static uint16_t ctl_head, ctl_tail, ctl_sent;
+static uint32_t to_pedal_lost;
+
+/* MIDI bytes for the RP2354, from whatever arrived over Bluetooth */
 void midi_uart_send(const uint8_t *buf, size_t len)
 {
-	ring_buf_put(&uart_tx_ring, buf, len);
+	if (len > (uint16_t)(AIR_Q_SIZE - (uint16_t)(air_head - air_tail))) {
+		to_pedal_lost += len;
+		return;
+	}
+	for (size_t i = 0; i < len; i++)
+		air_q[air_head++ & AIR_Q_MASK] = buf[i];
+}
+
+/* Room for the most one packet from the air can decode to */
+static bool air_room(void)
+{
+	return (uint16_t)(AIR_Q_SIZE - (uint16_t)(air_head - air_tail)) >= 256;
+}
+
+void midi_uart_control(const uint8_t *msg, size_t len)
+{
+	uint16_t room = CTL_Q_SIZE - (uint16_t)(ctl_head - ctl_tail);
+
+	if (len > 255 || len + 1 > room) {
+		to_pedal_lost += len;
+		return;
+	}
+	ctl_q[ctl_head++ & CTL_Q_MASK] = len;
+	for (size_t i = 0; i < len; i++)
+		ctl_q[ctl_head++ & CTL_Q_MASK] = msg[i];
+}
+
+/*
+ * printk's text, a line at a time, for the debug stream.  printk can be
+ * called from the Bluetooth stack's thread or from an interrupt as well as
+ * from the loop, so the line and the queue are kept under a lock.  A line
+ * longer than a packet is cut where the packet ends; one with no room in
+ * the queue is dropped and counted.
+ */
+#define DBG_Q_SHIFT	10
+#define DBG_Q_SIZE	(1 << DBG_Q_SHIFT)
+#define DBG_Q_MASK	(DBG_Q_SIZE - 1)
+
+static uint8_t dbg_q[DBG_Q_SIZE];
+static uint16_t dbg_head, dbg_tail;
+static char dbg_line[LINK_PAYLOAD_MAX];
+static uint16_t dbg_len;
+static uint32_t dbg_lost;
+static struct k_spinlock dbg_lock;
+
+static int dbg_putc(int c)
+{
+	k_spinlock_key_t key = k_spin_lock(&dbg_lock);
+
+	if (c != '\r') {
+		dbg_line[dbg_len++] = c;
+		if (c == '\n' || dbg_len == sizeof(dbg_line)) {
+			uint16_t room = DBG_Q_SIZE -
+					(uint16_t)(dbg_head - dbg_tail);
+
+			if (1u + dbg_len <= room) {
+				dbg_q[dbg_head++ & DBG_Q_MASK] = dbg_len;
+				for (uint16_t i = 0; i < dbg_len; i++)
+					dbg_q[dbg_head++ & DBG_Q_MASK] =
+						dbg_line[i];
+			} else {
+				dbg_lost++;
+			}
+			dbg_len = 0;
+		}
+	}
+	k_spin_unlock(&dbg_lock, key);
+	return c;
+}
+
+/* The next whole line, if there is one */
+static uint16_t dbg_take(uint8_t *out)
+{
+	k_spinlock_key_t key = k_spin_lock(&dbg_lock);
+	uint16_t len = 0;
+
+	if (dbg_head != dbg_tail) {
+		len = dbg_q[dbg_tail++ & DBG_Q_MASK];
+		for (uint16_t i = 0; i < len; i++)
+			out[i] = dbg_q[dbg_tail++ & DBG_Q_MASK];
+	}
+	k_spin_unlock(&dbg_lock, key);
+	return len;
+}
+
+static bool tx_room(void)
+{
+	return ring_buf_space_get(&uart_tx_ring) >= LINK_WIRE_MAX;
+}
+
+/*
+ * Whatever can go to the pedal now: acknowledgements first, then a packet
+ * from each stream that has something and room in its window, in turn.
+ */
+static void link_out(void)
+{
+	uint8_t wire[LINK_WIRE_MAX], chunk[LINK_PAYLOAD_MAX];
+	bool moved;
+	size_t n;
+
+	while (tx_room() && (n = link_pack_ack(&radio_link, wire)))
+		ring_buf_put(&uart_tx_ring, wire, n);
+
+	do {
+		moved = false;
+
+		if (ctl_head != ctl_tail && tx_room() &&
+		    link_can_send(&radio_link, LINK_CONTROL, LINK_ALL)) {
+			uint8_t len = ctl_q[ctl_tail & CTL_Q_MASK];
+			uint16_t left = len - ctl_sent;
+			uint16_t take = left < LINK_PAYLOAD_MAX ? left
+							       : LINK_PAYLOAD_MAX;
+			uint8_t flags = ctl_sent ? 0 : LINK_FIRST;
+
+			for (uint16_t i = 0; i < take; i++)
+				chunk[i] = ctl_q[(ctl_tail + 1 + ctl_sent + i) &
+						 CTL_Q_MASK];
+			ctl_sent += take;
+			if (ctl_sent == len) {
+				flags |= LINK_LAST;
+				ctl_tail += 1 + len;
+				ctl_sent = 0;
+			}
+			n = link_pack(&radio_link, LINK_CONTROL, LINK_ALL,
+				      flags, chunk, take, wire);
+			ring_buf_put(&uart_tx_ring, wire, n);
+			moved = true;
+		}
+
+		if (air_head != air_tail && tx_room() &&
+		    link_can_send(&radio_link, LINK_MIDI, LINK_ALL)) {
+			uint16_t have = air_head - air_tail;
+			uint16_t take = have < LINK_PAYLOAD_MAX ? have
+							       : LINK_PAYLOAD_MAX;
+
+			for (uint16_t i = 0; i < take; i++)
+				chunk[i] = air_q[air_tail++ & AIR_Q_MASK];
+			n = link_pack(&radio_link, LINK_MIDI, LINK_ALL,
+				      (chunk[0] & 0x80) && chunk[0] != 0xF7 ?
+				      LINK_FIRST : 0, chunk, take, wire);
+			ring_buf_put(&uart_tx_ring, wire, n);
+			moved = true;
+		}
+
+		if (dbg_head != dbg_tail && tx_room() &&
+		    link_can_send(&radio_link, LINK_DEBUG, LINK_ALL)) {
+			uint16_t len = dbg_take(chunk);
+
+			if (len) {
+				n = link_pack(&radio_link, LINK_DEBUG, LINK_ALL,
+					      LINK_FIRST | LINK_LAST, chunk,
+					      len, wire);
+				ring_buf_put(&uart_tx_ring, wire, n);
+				moved = true;
+			}
+		}
+	} while (moved);
+
 	tx_kick();
 }
 
@@ -265,56 +462,251 @@ uint32_t midi_uart_lost(void)
 	return rx_lost;
 }
 
+/*
+ * The link's own counts: packets that never arrived, had nowhere to go, or
+ * were malformed, bytes for the pedal there was no room for, and the times
+ * the receiver stopped.
+ */
+void midi_uart_link_counts(uint32_t *gaps, uint32_t *refused, uint32_t *bad,
+			   uint32_t *lost, uint32_t *stops)
+{
+	*gaps = radio_link.gaps;
+	*refused = radio_link.refused;
+	*bad = radio_link.rx.bad;
+	*lost = to_pedal_lost;
+	*stops = rx_stops;
+}
+
+uint32_t midi_uart_written_off(void)
+{
+	return radio_link.written_off;
+}
+
+uint32_t midi_uart_crc_failed(void)
+{
+	return radio_link.rx.crc;
+}
+
+uint32_t midi_uart_received(void)
+{
+	return rx_bytes;
+}
+
+/*
+ * A packet from the pedal that was dropped, as it came off the wire, and
+ * where in the byte stream it ended, for finding what the losses have in
+ * common.  32 bytes a line, so that a line fits a debug packet.
+ */
+static void rx_failed(const struct link_rx *rx)
+{
+	static const char digit[] = "0123456789abcdef";
+	char line[3 * 32 + 1];
+
+	printk("link: dropped, %s, %u bytes, ending at byte %u\n",
+	       rx->failed == LINK_FAILED_CRC ? "CRC" : "malformed",
+	       rx->wire_len, rx_pos);
+	for (uint16_t i = 0; i < rx->wire_len; i += 32) {
+		uint16_t n = 0;
+
+		for (uint16_t j = i; j < rx->wire_len && j < i + 32; j++) {
+			line[n++] = digit[rx->wire[j] >> 4];
+			line[n++] = digit[rx->wire[j] & 15];
+			line[n++] = ' ';
+		}
+		line[n - 1] = 0;
+		printk("link:   %s\n", line);
+	}
+}
+
+/*
+ * The radio's hello (link.h): a zero first, so that the pedal's decoder is
+ * in step, then the boot id that tells a repeat from a new start, and what
+ * this image is.  Sent at boot and every HELLO_MS after, until the pedal
+ * has sent anything back.
+ */
+#define HELLO_MS	50
+
+static uint32_t boot_id, hello_at;
+
+static void hello(void)
+{
+	static const char who[] = "radio " __DATE__ " " __TIME__;
+	uint8_t payload[4 + sizeof(who) - 1];
+	uint8_t wire[LINK_WIRE_MAX];
+
+	payload[0] = boot_id;
+	payload[1] = boot_id >> 8;
+	payload[2] = boot_id >> 16;
+	payload[3] = boot_id >> 24;
+	memcpy(payload + 4, who, sizeof(who) - 1);
+
+	wire[0] = 0;
+	ring_buf_put(&uart_tx_ring, wire, 1);
+	ring_buf_put(&uart_tx_ring, wire,
+		     link_encode(LINK_HELLO, LINK_ALL, 0, LINK_FIRST | LINK_LAST,
+				 payload, sizeof(payload), wire));
+	tx_kick();
+	hello_at = k_uptime_get_32();
+}
+
+/*
+ * MIDI packets from the pedal, held until they are on the air - at least
+ * as many as the windows let the pedal send, so there is always a slot,
+ * and a power of two because the indices are masked - and a command
+ * being put back together from its packets.
+ */
+#define HELD_SHIFT	5
+#define HELD_SIZE	(1 << HELD_SHIFT)
+#define HELD_MASK	(HELD_SIZE - 1)
+BUILD_ASSERT(HELD_SIZE >= LINK_WINDOW * LINK_STREAMS);
+
+static struct held {
+	uint8_t buf[LINK_PAYLOAD_MAX];
+	uint16_t len, pos;
+	uint8_t seq;
+} in_hand[HELD_SIZE];
+static uint8_t hand_head, hand_tail;
+static bool heard;		/* the pedal has sent something */
+
+static uint8_t cmd_in[256];
+static uint16_t cmd_len;
+static bool cmd_ok;
+
+/*
+ * A packet from the pedal.  A command is dealt with as soon as its last
+ * packet is in; MIDI waits in a slot, and is acknowledged once it has gone.
+ */
+static void link_in(void)
+{
+	struct link *l = &radio_link;
+	const uint8_t *h = l->rx.buf;
+	uint16_t len = l->rx.len - LINK_HEADER;
+
+	if (link_take(l) != LINK_GOT_DATA)
+		return;
+
+	switch (h[0]) {
+	case LINK_MIDI:
+		if ((uint8_t)(hand_head - hand_tail) == HELD_SIZE) {
+			l->refused++;
+			link_consumed(l);
+			break;
+		}
+		memcpy(in_hand[hand_head & HELD_MASK].buf, h + LINK_HEADER,
+		       len);
+		in_hand[hand_head & HELD_MASK].len = len;
+		in_hand[hand_head & HELD_MASK].pos = 0;
+		in_hand[hand_head & HELD_MASK].seq = h[2];
+		hand_head++;
+		break;
+
+	case LINK_CONTROL:
+		if (h[3] & LINK_FIRST) {
+			cmd_len = 0;
+			cmd_ok = true;
+		}
+		if (cmd_len + len > sizeof(cmd_in))
+			cmd_ok = false;
+		else {
+			memcpy(cmd_in + cmd_len, h + LINK_HEADER, len);
+			cmd_len += len;
+		}
+		if ((h[3] & LINK_LAST) && cmd_ok)
+			midi_radio_command(cmd_in, cmd_len);
+		link_consumed(l);
+		break;
+
+	default:
+		link_consumed(l);
+		break;
+	}
+}
+
+/* How often acknowledgements are said again (link.h) */
+#define ACK_AGAIN_MS	100
+
+static uint32_t acked_at;
+
 int main(void)
 {
 	if (!device_is_ready(link))
 		return -ENODEV;
+
+	link_init(&radio_link);
+	radio_link.up = true;
+	__printk_hook_install(dbg_putc);
 
 	uart_callback_set(link, uart_cb, NULL);
 	for (int i = 1; i < RX_BUFS; i++)
 		rx_free[i] = true;
 	uart_rx_enable(link, rx_buf[0], RX_BUF_LEN, RX_TIMEOUT_US);
 
+	boot_id = sys_rand32_get();
+	hello();
+
 	midi_ble_start();
 
 	for (;;) {
 		uint8_t *buf;
-		uint32_t n, took = 0;
+		uint32_t n, took = 0, fed = 0;
+
+		link_tick(&radio_link, k_uptime_get_32());
+
+		link_out();
 
 		/*
 		 * Subscription changes go to the pedal before anything a
 		 * client asks for.  The pedal throws replies away until it
-		 * knows somebody is subscribed, a client that subscribes
-		 * and asks at once has both arrive together, and the one
-		 * wire keeps them in the order they are written here.
+		 * knows somebody is subscribed, and a client that
+		 * subscribes and asks at once has both arrive together:
+		 * the notice is queued here, ahead of the request, and
+		 * link_out() sends the control stream ahead of MIDI.
 		 */
 		midi_ble_notices();
 
 		/* What arrived over the air, decoded here rather than in
 		 * the callback that received it. */
-		while (ble_in_drain())
+		while (air_room() && ble_in_drain())
 			;
 
 		/*
-		 * Bytes from the pedal, and only as many as the radio can
-		 * take right now: midi_ble_feed() may have to send a
-		 * packet to make room, and checking first is what stops it
-		 * having to wait.  What is left stays in the ring, which
-		 * fills, which deasserts RTS and pauses the pedal.
-		 *
-		 * One free buffer per byte is enough, and that is the
-		 * invariant the whole arrangement rests on.  A single byte
-		 * can fill the packet being built and so send one - and
-		 * once sent, the next packet has the whole MTU free, which
-		 * is far more than the handful of bytes any one call still
-		 * has to write.  So no call needs two.
+		 * Everything the pedal has sent, every pass: commands are
+		 * dealt with at once, and MIDI waits in its slots, which the
+		 * window keeps from overflowing.  A slow Bluetooth client
+		 * holds up the MIDI stream and nothing else.
 		 */
 		n = ring_buf_get_claim(&uart_rx_ring, &buf, UINT32_MAX);
-		while (took < n && midi_ble_ready())
-			midi_ble_feed(buf[took++]);
+		for (took = 0; took < n; took++) {
+			rx_pos++;
+			if (link_rx_byte(&radio_link.rx, buf[took])) {
+				heard = true;
+				link_in();
+			} else if (radio_link.rx.failed) {
+				rx_failed(&radio_link.rx);
+			}
+		}
 		ring_buf_get_finish(&uart_rx_ring, took);
 
-		if (took)
+		/*
+		 * The MIDI held, onto the air as fast as it will go.  One
+		 * free buffer per byte is enough: a single byte can fill the
+		 * packet being built and so send one, and once sent the next
+		 * packet has the whole MTU free.
+		 */
+		while (hand_tail != hand_head && midi_ble_ready()) {
+			struct held *h = &in_hand[hand_tail & HELD_MASK];
+
+			while (h->pos < h->len && midi_ble_ready()) {
+				midi_ble_feed(h->buf[h->pos++]);
+				fed++;
+			}
+			if (h->pos < h->len)
+				break;
+			link_done(&radio_link, LINK_MIDI, LINK_ALL, h->seq);
+			hand_tail++;
+		}
+
+		if (took || fed)
 			continue;
 
 		/*
@@ -344,7 +736,15 @@ int main(void)
 			}
 		}
 
-		tx_kick();
+		if (!heard && k_uptime_get_32() - hello_at >= HELLO_MS)
+			hello();
+
+		if (k_uptime_get_32() - acked_at >= ACK_AGAIN_MS) {
+			link_ack_again(&radio_link);
+			acked_at = k_uptime_get_32();
+		}
+
+		link_out();
 		k_sleep(K_MSEC(1));
 	}
 }

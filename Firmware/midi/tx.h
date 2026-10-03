@@ -489,12 +489,12 @@ static bool midi_tx_short_to_radio(void)
 }
 
 //
-// The same bytes to the radio, unpacketised.
+// The same bytes to the radio, which collects them into packets.
 //
-// It stops when the link's queue is half full, which bounds a pass to
-// about 512 bytes without needing a budget of its own, and leaves the
-// rest for the next one.  A board with no radio answers ready and
-// discards, so this sink still moves and the queue is still reclaimed.
+// It stops when nrf54_uart_ready() says the packet being collected cannot
+// take more, and leaves the rest for the next pass.  Until something on
+// the radio's side is listening it discards, so this sink still moves and
+// the queue is still reclaimed.
 //
 static void midi_tx_to_radio(void)
 {
