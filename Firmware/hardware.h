@@ -193,6 +193,48 @@ reset:
 	nrf54_i2s.rx.slips = 0;
 	nrf54_i2s.reported_at = now;
 }
+
+//
+// What the radio sends, as core 1's input: a fixed few frames behind the
+// ring's DMA, which runs off the same PIO clock as the codec's and so at
+// exactly its rate.  Put back there whenever it is not, which is the
+// first call and any time core 1 has fallen behind and lost frames.
+//
+// The test pattern is silence.  Audio from the radio is 16 bits in the
+// top of the word, so its low byte is zero and the pattern's is never.
+//
+#define NRF54_I2S_LAG	8
+
+static uint32_t nrf54_i2s_at;
+
+sample_t __audio_func(get_radio_audio_input)(void)
+{
+	uint32_t head, d;
+	raw_sample_t f;
+
+	if (!nrf54_i2s.on)
+		return (sample_t) { 0, 0 };
+
+	head = (dma_hw->ch[nrf54_dma_rx].write_addr - (uintptr_t)nrf54_i2s_rx) /
+	       sizeof(raw_sample_t);
+	d = (head - nrf54_i2s_at) & NRF54_I2S_RX_MASK;
+	if (d < NRF54_I2S_LAG / 2 || d > 4 * NRF54_I2S_LAG)
+		nrf54_i2s_at = head - NRF54_I2S_LAG;
+
+	f = nrf54_i2s_rx[nrf54_i2s_at++ & NRF54_I2S_RX_MASK];
+	if ((f.right & 0xff) == 0xc3)
+		return (sample_t) { 0, 0 };
+
+	return (sample_t) {
+		.left = f.left * (1.0f / 2147483648.0f),
+		.right = f.right * (1.0f / 2147483648.0f)
+	};
+}
+#else
+sample_t get_radio_audio_input(void)
+{
+	return (sample_t) { 0, 0 };
+}
 #endif
 
 //
