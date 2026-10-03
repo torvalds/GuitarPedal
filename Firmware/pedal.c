@@ -332,6 +332,7 @@ int main()
 		dap_poll();
 		nrf54_uart_poll();
 		sysex_send_radio();
+		sysex_send_linktest();
 		sysex_send_pairing_state();
 #endif
 

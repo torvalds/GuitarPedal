@@ -16,6 +16,7 @@
 
 #include "midi.h"
 #include "link.h"
+#include "linktest.h"
 
 /*
  * Reading RTT stalls the core long enough to miss Bluetooth connection
@@ -272,6 +273,10 @@ static bool ble_in_drain(void)
  */
 static struct link radio_link;
 
+/* A run of the link's load test (linktest.h), and counts owed to the pedal */
+static struct linktest test;
+static bool test_counts_due;
+
 #define AIR_Q_SHIFT	11
 #define AIR_Q_SIZE	(1 << AIR_Q_SHIFT)
 #define AIR_Q_MASK	(AIR_Q_SIZE - 1)
@@ -475,6 +480,30 @@ static void link_out(void)
 			}
 		}
 
+		if (test_counts_due && tx_room() &&
+		    link_can_send(&radio_link, LINK_TEST, LINK_ALL)) {
+			size_t len = linktest_counts_pack(&test, chunk);
+
+			n = link_pack(&radio_link, LINK_TEST, LINK_ALL,
+				      LINK_FIRST | LINK_LAST, chunk, len, wire);
+			ring_buf_put(&uart_tx_ring, wire, n);
+			test_counts_due = false;
+			moved = true;
+		}
+
+		if (tx_room()) {
+			size_t len;
+			int i = linktest_next(&test, &radio_link, chunk, &len);
+
+			if (i >= 0) {
+				n = link_pack(&radio_link, LINK_TEST, i + 1,
+					      LINK_FIRST | LINK_LAST, chunk,
+					      len, wire);
+				ring_buf_put(&uart_tx_ring, wire, n);
+				moved = true;
+			}
+		}
+
 		if (dbg_head != dbg_tail && tx_room() &&
 		    link_can_send(&radio_link, LINK_DEBUG, LINK_ALL)) {
 			uint16_t len = dbg_take(chunk);
@@ -671,6 +700,48 @@ static void link_in(void)
 		link_consumed(l);
 		break;
 
+	case LINK_TEST:
+		if (h[1] == LINK_ALL) {
+			struct linktest_cfg cfg;
+
+			if (linktest_cfg_unpack(h + LINK_HEADER, len, &cfg)) {
+				linktest_start(&test, &cfg, k_uptime_get_32());
+				printk("linktest: %u streams of %u, stream %d "
+				       "stuck %u ms, %u lines\n", cfg.streams,
+				       cfg.count, cfg.stuck == 0xff ? -1 :
+				       cfg.stuck, cfg.stuck_ms, cfg.lines);
+			} else if (len && h[LINK_HEADER] == LINKTEST_ASK) {
+				test_counts_due = true;
+			}
+		} else {
+			uint32_t bad = test.bad;
+			bool keep = linktest_got(&test, h[2], h + LINK_HEADER,
+						 len, k_uptime_get_32());
+
+			/* Which packet, and where it differs, for the log */
+			if (test.bad != bad) {
+				uint8_t want[LINK_PAYLOAD_MAX];
+				size_t wl = linktest_fill(h[LINK_HEADER],
+					h[LINK_HEADER + 1] |
+					h[LINK_HEADER + 2] << 8, want);
+				size_t j = 0;
+
+				while (j < len && j < wl &&
+				       want[j] == h[LINK_HEADER + j])
+					j++;
+				printk("linktest bad: stream %u cnt %u len %u "
+				       "want %u, differs at %u: %02x not %02x\n",
+				       h[LINK_HEADER], h[LINK_HEADER + 1] |
+				       h[LINK_HEADER + 2] << 8, len, wl, j,
+				       j < len ? h[LINK_HEADER + j] : 0,
+				       j < wl ? want[j] : 0);
+			}
+			if (!keep)
+				break;		/* held, on the stuck stream */
+		}
+		link_consumed(l);
+		break;
+
 	default:
 		link_consumed(l);
 		break;
@@ -795,6 +866,12 @@ int main(void)
 		if (!heard && k_uptime_get_32() - hello_at >= HELLO_MS)
 			hello();
 
+		linktest_release(&test, &radio_link, k_uptime_get_32());
+		if (test.running && test.lines) {
+			printk("linktest line %u: the quick brown fox jumps "
+			       "over the lazy dog, 0123456789\n", test.lines);
+			test.lines--;
+		}
 		if (k_uptime_get_32() - acked_at >= ACK_AGAIN_MS) {
 			link_ack_again(&radio_link);
 			acked_at = k_uptime_get_32();

@@ -70,6 +70,7 @@
 #define LINK_ACK	3	/* seq is how far the receiver has got */
 #define LINK_HELLO	4	/* the radio has just started */
 #define LINK_ASK	5	/* a packet has gone unacknowledged: ack, please */
+#define LINK_TEST	6	/* load for testing the link itself */
 
 /* Peers */
 #define LINK_ALL	0

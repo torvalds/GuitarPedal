@@ -464,6 +464,92 @@ static void sysex_send_pairing_state(void)
 	midi_tx_commit();
 }
 
+#ifdef NRF54_SWDIO
+//
+// The link load test's counts: the pedal's, the radio's as it last
+// reported them, and the link's own counters on the pedal's side.  The
+// radio is asked again at the same time, so asking twice a moment apart
+// gives counts from both sides at the end of a run.
+//
+struct midi_dest send_linktest_tx;
+
+static void sysex_write_test(const struct linktest *t)
+{
+	sysex_write_str("{\"sent\":[");
+	for (int i = 0; i < LINKTEST_STREAMS; i++) {
+		if (i)
+			sysex_write_str(",");
+		sysex_write_num(t->sent[i]);
+	}
+	sysex_write_str("],\"got\":");
+	sysex_write_num(t->got);
+	sysex_write_str(",\"bad\":");
+	sysex_write_num(t->bad);
+	sysex_write_str(",\"lost\":");
+	sysex_write_num(t->lost);
+	sysex_write_str(",\"early\":");
+	sysex_write_num(t->early);
+	sysex_write_str(",\"held\":");
+	sysex_write_num(t->held);
+	sysex_write_str("}");
+}
+
+static void sysex_send_linktest(void)
+{
+	static const uint8_t header[] = { 0xF0, 0x7D, 0x24 };
+	static const uint8_t trailer[] = { 0xF7 };
+
+	if (!send_linktest_tx.to || midi_tx_busy())
+		return;
+
+	sysex_tx_start_to(send_linktest_tx);
+	sysex_stream_write(header, sizeof(header));
+	sysex_write_str("{\"pedal\":");
+	sysex_write_test(&nrf54_uart.test);
+	sysex_write_str(",\"radio\":");
+	sysex_write_test(&nrf54_uart.radio_test);
+	sysex_write_str(",\"link\":{\"gaps\":");
+	sysex_write_num(nrf54_uart.link.gaps);
+	sysex_write_str(",\"refused\":");
+	sysex_write_num(nrf54_uart.link.refused);
+	sysex_write_str(",\"bad\":");
+	sysex_write_num(nrf54_uart.link.rx.bad);
+	sysex_write_str(",\"crc\":");
+	sysex_write_num(nrf54_uart.link.rx.crc);
+	sysex_write_str(",\"tx_bytes\":");
+	sysex_write_num(nrf54_uart.tx_bytes);
+	sysex_write_str(",\"dropped\":");
+	sysex_write_num(nrf54_uart.dropped);
+	sysex_write_str(",\"written_off\":");
+	sysex_write_num(nrf54_uart.link.written_off);
+	// And the stream table, which is what shows a stall
+	sysex_write_str(",\"streams\":[");
+	for (int i = 0, n = 0; i < LINK_STREAMS; i++) {
+		const struct link_stream *st = &nrf54_uart.link.s[i];
+
+		if (!st->used)
+			continue;
+		sysex_write_str(n++ ? ",[" : "[");
+		sysex_write_num(st->kind);
+		sysex_write_str(",");
+		sysex_write_num(st->peer);
+		sysex_write_str(",");
+		sysex_write_num(st->tx_next);
+		sysex_write_str(",");
+		sysex_write_num(st->tx_acked);
+		sysex_write_str(",");
+		sysex_write_num(st->rx_next);
+		sysex_write_str(",");
+		sysex_write_num(st->rx_done);
+		sysex_write_str("]");
+	}
+	sysex_write_str("]}}");
+	sysex_stream_write(trailer, sizeof(trailer));
+	if (sysex_tx_finish("Sent link test counts"))
+		send_linktest_tx = MIDI_DEST_NONE;
+}
+#endif
+
 struct midi_dest send_radio_tx;
 //
 // How the link to the radio is doing.
@@ -1279,6 +1365,26 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 	} else if (cmd == 0x22) { // Report the hum cuts
 
 		hum_report_request = true;
+
+#ifdef NRF54_SWDIO
+	} else if (cmd == 0x23 && sysex_len >= 9) { // Start a link load test
+		//
+		// The settings, seven bits a byte, in the order linktest.h
+		// packs them: test streams, packets on each (two bytes), the
+		// stuck stream or 7F, how long it stays stuck in ms (two
+		// bytes), and debug lines for the radio to print (two bytes).
+		//
+		struct linktest_cfg cfg;
+
+		sysex_buf[0] = LINKTEST_START;
+		if (linktest_cfg_unpack(sysex_buf, sysex_len, &cfg))
+			nrf54_test_start(&cfg);
+
+	} else if (cmd == 0x24) { // The link load test's counts
+
+		nrf54_test_ask();
+		midi_dest_add(&send_linktest_tx, midi_from);
+#endif
 
 	} else if (cmd == 0x05) { // State Dump Request
 

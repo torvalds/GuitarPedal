@@ -4,6 +4,7 @@
 #ifdef NRF54_SWDIO
 
 #include "nRF54/app/src/link.h"
+#include "nRF54/app/src/linktest.h"
 
 //
 // The link to the radio, as packets (nRF54/app/src/link.h): MIDI to and
@@ -98,6 +99,13 @@ static struct {
 	uint32_t parser_clock;
 	uint32_t refused;		// what untrusted peers may not send
 	uint32_t acked_at;		// when acks were last said again
+
+	//
+	// A run of the link's load test (linktest.h): this side's own, the
+	// radio's counts as last reported, and what is owed to the radio.
+	//
+	struct linktest test, radio_test;
+	bool test_start_due, test_ask_due;
 
 	uint32_t tx_bytes, rx_bytes;
 	uint32_t packets, dropped;
@@ -202,6 +210,40 @@ static void nrf54_link_out(void)
 			moved = true;
 		}
 
+		if ((nrf54_uart.test_start_due || nrf54_uart.test_ask_due) &&
+		    nrf54_uart_room() &&
+		    link_can_send(&nrf54_uart.link, LINK_TEST, LINK_ALL)) {
+			uint8_t msg[16];
+			size_t len;
+
+			if (nrf54_uart.test_start_due) {
+				len = linktest_cfg_pack(&nrf54_uart.test.cfg, msg);
+				nrf54_uart.test_start_due = false;
+			} else {
+				msg[0] = LINKTEST_ASK;
+				len = 1;
+				nrf54_uart.test_ask_due = false;
+			}
+			n = link_pack(&nrf54_uart.link, LINK_TEST, LINK_ALL,
+				      LINK_FIRST | LINK_LAST, msg, len, wire);
+			nrf54_uart_put(wire, n);
+			moved = true;
+		}
+
+		if (nrf54_uart_room()) {
+			uint8_t chunk[LINK_PAYLOAD_MAX];
+			size_t len;
+			int i = linktest_next(&nrf54_uart.test,
+					      &nrf54_uart.link, chunk, &len);
+
+			if (i >= 0) {
+				n = link_pack(&nrf54_uart.link, LINK_TEST, i + 1,
+					      LINK_FIRST | LINK_LAST, chunk,
+					      len, wire);
+				nrf54_uart_put(wire, n);
+				moved = true;
+			}
+		}
 
 		if (nrf54_uart.ctl_tail != nrf54_uart.ctl_head &&
 		    nrf54_uart_room() &&
@@ -510,6 +552,40 @@ static struct midi_parser *nrf54_parser(uint8_t peer)
 }
 
 //
+// A load-test packet: the radio's counts on stream 0, test load on the
+// others, which is checked and, on the stuck stream, held for a while.
+//
+static void nrf54_test_in(void)
+{
+	struct link *l = &nrf54_uart.link;
+	const uint8_t *p = l->rx.buf + LINK_HEADER;
+	size_t len = l->rx.len - LINK_HEADER;
+
+	if (l->rx.buf[1] == LINK_ALL)
+		linktest_counts_unpack(p, len, &nrf54_uart.radio_test);
+	else if (!linktest_got(&nrf54_uart.test, l->rx.buf[2], p, len,
+			       to_ms_since_boot(get_absolute_time())))
+		return;
+	link_consumed(l);
+}
+
+//
+// Start a load test on both sides, and ask the radio for its counts.
+//
+static void nrf54_test_start(const struct linktest_cfg *cfg)
+{
+	linktest_start(&nrf54_uart.test, cfg,
+		       to_ms_since_boot(get_absolute_time()));
+	nrf54_uart.radio_test = (struct linktest){ 0 };
+	nrf54_uart.test_start_due = true;
+}
+
+static void nrf54_test_ask(void)
+{
+	nrf54_uart.test_ask_due = true;
+}
+
+//
 // The radio has started, for the first time or again.  Every stream begins
 // afresh, half a message from before is nothing, and the radio is told
 // what it needs to know about the pedal, since it knows nothing.
@@ -578,6 +654,8 @@ static void nrf54_uart_poll(void)
 		return;
 
 	link_tick(&nrf54_uart.link, to_ms_since_boot(get_absolute_time()));
+	linktest_release(&nrf54_uart.test, &nrf54_uart.link,
+			 to_ms_since_boot(get_absolute_time()));
 
 	// Say again how far every stream has got, in case an ack was lost
 	if (to_ms_since_boot(get_absolute_time()) - nrf54_uart.acked_at >=
@@ -610,6 +688,11 @@ static void nrf54_uart_poll(void)
 		case LINK_GOT_DATA:
 			break;
 		default:
+			continue;
+		}
+
+		if (l->rx.buf[0] == LINK_TEST) {
+			nrf54_test_in();
 			continue;
 		}
 
