@@ -16,6 +16,7 @@
 #include "midi.h"
 #include "link.h"
 #include "linktest.h"
+#include "uartrx.h"
 
 /*
  * Reading RTT stalls the core long enough to miss Bluetooth connection
@@ -42,27 +43,9 @@ PINCTRL_DT_DEFINE(LINK_UART);
 
 static NRF_UARTE_Type *const uarte = (NRF_UARTE_Type *)DT_REG_ADDR(LINK_UART);
 
-/*
- * Receive is one ring that the DMA refills from the top for ever: the
- * END to START shortcut restarts it, and its pointer is never moved.
- *
- * Nothing says where the DMA has got to while it runs, except that AMOUNT
- * is also updated on a match, and the match filter is set to the zero that
- * ends every packet.  So the loop knows up to the end of the last whole
- * packet, which is all the decoder needs.  END counts the wraps.
- *
- * The ring holds what arrives while the loop is busy elsewhere: 4 kB is
- * 40 ms at 1 Mbit.
- */
-#define RX_SHIFT	12
-#define RX_SIZE		(1 << RX_SHIFT)
-#define RX_MASK		(RX_SIZE - 1)
-
-static uint8_t rx_ring[RX_SIZE];
-static uint32_t rx_wraps;
-static uint32_t rx_head;	/* bytes the DMA has written, to the last zero */
-static uint32_t rx_tail;	/* bytes the link has taken */
-static uint32_t rx_lost;	/* bytes overwritten before they were read */
+/* Receive is one ring, refilled by the DMA for ever (uartrx.h) */
+static uint8_t rx_ring[UARTRX_SIZE];
+static struct uartrx uart_rx;
 
 /*
  * Transmit is a ring the loop fills, sent by the DMA from the tail to the
@@ -88,32 +71,23 @@ static void uart_start(void)
 
 	uarte->DMA.RX.MATCH.CANDIDATE[0] = 0;
 	uarte->DMA.RX.MATCH.CONFIG = UARTE_DMA_RX_MATCH_CONFIG_ENABLE0_Msk;
-	nrf_uarte_rx_buffer_set(uarte, rx_ring, RX_SIZE);
+	nrf_uarte_rx_buffer_set(uarte, rx_ring, UARTRX_SIZE);
 	nrf_uarte_shorts_enable(uarte, NRF_UARTE_SHORT_ENDRX_STARTRX);
 	nrf_uarte_task_trigger(uarte, NRF_UARTE_TASK_STARTRX);
 }
 
-/*
- * Bring rx_head up to the last zero the DMA has written.  AMOUNT is the
- * position in the current pass after a match, and the whole ring after END
- * until the next match; END is read on both sides of it so that the two
- * are from the same pass.
- */
+/* END is read on both sides of AMOUNT, so that the two are from one pass */
 static void rx_written(void)
 {
-	uint32_t end, amount, pos;
+	uint32_t end, amount;
 
 	do {
 		end = uarte->EVENTS_DMA.RX.END;
 		amount = uarte->DMA.RX.AMOUNT;
 	} while (uarte->EVENTS_DMA.RX.END != end);
-	if (end) {
+	if (end)
 		uarte->EVENTS_DMA.RX.END = 0;
-		rx_wraps++;
-	}
-	pos = (rx_wraps << RX_SHIFT) + (amount == RX_SIZE ? 0 : amount);
-	if ((int32_t)(pos - rx_head) > 0)
-		rx_head = pos;
+	uartrx_written(&uart_rx, end, amount);
 	__DMB();
 }
 
@@ -499,12 +473,12 @@ static void link_out(void)
 /* How much the pedal has sent that has not been dealt with yet */
 uint32_t midi_uart_backlog(void)
 {
-	return rx_head - rx_tail;
+	return uart_rx.head - uart_rx.tail;
 }
 
 uint32_t midi_uart_lost(void)
 {
-	return rx_lost;
+	return uart_rx.lost;
 }
 
 /*
@@ -532,7 +506,7 @@ uint32_t midi_uart_crc_failed(void)
 
 uint32_t midi_uart_received(void)
 {
-	return rx_head;
+	return uart_rx.head;
 }
 
 /*
@@ -547,7 +521,7 @@ static void rx_failed(const struct link_rx *rx)
 
 	printk("link: dropped, %s, %u bytes, ending at byte %u\n",
 	       rx->failed == LINK_FAILED_CRC ? "CRC" : "malformed",
-	       rx->wire_len, rx_tail);
+	       rx->wire_len, uart_rx.tail);
 	for (uint16_t i = 0; i < rx->wire_len; i += 32) {
 		uint16_t n = 0;
 
@@ -754,20 +728,14 @@ int main(void)
 		 * window keeps from overflowing.  A slow Bluetooth client
 		 * holds up the MIDI stream and nothing else.
 		 *
-		 * The DMA overwrites what has been waiting a whole ring, and
-		 * it can be a packet past rx_head without saying so; one more
-		 * packet's room covers the time it takes to read the rest.
-		 * What was overwritten is skipped, and so is the packet the
-		 * decoder was in the middle of.
+		 * After an overrun the packet the decoder was in the middle of
+		 * is skipped too.
 		 */
 		rx_written();
-		if (rx_head - rx_tail > RX_SIZE - 2 * LINK_WIRE_MAX) {
-			rx_lost += rx_head - rx_tail;
-			rx_tail = rx_head;
+		if (uartrx_overrun(&uart_rx))
 			radio_link.rx.synced = false;
-		}
-		while (rx_tail != rx_head) {
-			uint8_t b = rx_ring[rx_tail++ & RX_MASK];
+		while (uart_rx.tail != uart_rx.head) {
+			uint8_t b = rx_ring[uart_rx.tail++ & UARTRX_MASK];
 
 			took++;
 			if (link_rx_byte(&radio_link.rx, b)) {

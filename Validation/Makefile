@@ -19,6 +19,9 @@ test-midi-cin: test-midi-cin.c
 test-link: test-link.c ../nRF54/app/src/link.h
 	$(CC) $(CFLAGS) -o $@ test-link.c
 
+test-uartrx: test-uartrx.c ../nRF54/app/src/uartrx.h ../nRF54/app/src/link.h
+	$(CC) $(CFLAGS) -o $@ test-uartrx.c
+
 #
 # The effect bench: the pedal's own audio core, built for the host.
 #
@@ -277,9 +280,10 @@ check-reboot:
 	./test-reboot.py $(if $(TARGET),--target $(TARGET)) \
 			 $(if $(JSON),--json $(JSON)) $(BOOTARGS)
 
-check: test-midi-cin test-link bench/bench bench/coeff bench/gen/midi_schema.h
+check: test-midi-cin test-link test-uartrx bench/bench bench/coeff bench/gen/midi_schema.h
 	./test-midi-cin
 	./test-link
+	./test-uartrx
 	./test-biquad.py
 	./test-effects.py
 	./effectmap.py
