@@ -223,18 +223,22 @@ static void uart_cb(const struct device *dev, struct uart_event *evt,
  * Whole packet or none: a partial one would be read back as a length and
  * then somebody else's bytes.
  */
-void midi_ble_queue(const uint8_t *buf, uint16_t len)
+void midi_ble_queue(uint8_t src, uint8_t peer, uint8_t flags,
+		    const uint8_t *buf, uint16_t len)
 {
-	uint8_t hdr = (uint8_t)len;
+	uint8_t hdr[4] = { (uint8_t)len, src, peer, flags };
 
 	if (!len || len > 255 ||
-	    ring_buf_space_get(&ble_in_ring) < 1u + len) {
+	    ring_buf_space_get(&ble_in_ring) < sizeof(hdr) + len) {
 		ble_in_dropped++;
 		return;
 	}
-	ring_buf_put(&ble_in_ring, &hdr, 1);
+	ring_buf_put(&ble_in_ring, hdr, sizeof(hdr));
 	ring_buf_put(&ble_in_ring, buf, len);
 }
+
+static void air_begin(uint8_t peer, uint8_t flags);
+static void air_end(void);
 
 /*
  * Hand the next waiting packet to the decoder, and say whether there was
@@ -243,25 +247,32 @@ void midi_ble_queue(const uint8_t *buf, uint16_t len)
 static bool ble_in_drain(void)
 {
 	uint8_t pkt[256];
-	uint8_t len;
+	uint8_t hdr[4];
 
-	if (ring_buf_get(&ble_in_ring, &len, 1) != 1)
+	if (ring_buf_get(&ble_in_ring, hdr, sizeof(hdr)) != sizeof(hdr))
 		return false;
-	if (ring_buf_get(&ble_in_ring, pkt, len) != len)
+	if (ring_buf_get(&ble_in_ring, pkt, hdr[0]) != hdr[0])
 		return false;		/* cannot happen: written together */
 
-	midi_ble_packet(pkt, len);
+	air_begin(hdr[2], hdr[3]);
+	midi_ble_packet(hdr[1], pkt, hdr[0]);
+	air_end();
 	return true;
 }
 
 /*
  * The link to the pedal (link.h).  What goes to it waits here until its
- * stream's window allows: MIDI from the air as bytes, the radio's answers
- * whole behind a length byte.  Both queues are written only from the loop.
+ * stream's window allows: the radio's answers whole behind a length byte,
+ * and MIDI from the air as records, each the bytes one Bluetooth packet
+ * decoded to with the peer it came from and whether to trust it:
+ *
+ *	peer, flags, length (two bytes, low first), bytes
+ *
+ * Both queues are written only from the loop.
  */
 static struct link radio_link;
 
-#define AIR_Q_SHIFT	10
+#define AIR_Q_SHIFT	11
 #define AIR_Q_SIZE	(1 << AIR_Q_SHIFT)
 #define AIR_Q_MASK	(AIR_Q_SIZE - 1)
 #define CTL_Q_SHIFT	9
@@ -269,12 +280,46 @@ static struct link radio_link;
 #define CTL_Q_MASK	(CTL_Q_SIZE - 1)
 
 static uint8_t air_q[AIR_Q_SIZE];
-static uint16_t air_head, air_tail;
+static uint16_t air_head, air_done, air_tail, air_off;
+static uint16_t air_rec;		/* where the open record starts */
 static uint8_t ctl_q[CTL_Q_SIZE];
 static uint16_t ctl_head, ctl_tail, ctl_sent;
 static uint32_t to_pedal_lost;
 
-/* MIDI bytes for the RP2354, from whatever arrived over Bluetooth */
+/*
+ * The most one Bluetooth packet can decode to: every byte of it, with a
+ * status byte put back in front of each running-status message.
+ */
+#define AIR_REC_MAX	(4 + 2 * 256)
+
+static bool air_room(void)
+{
+	return (uint16_t)(AIR_Q_SIZE - (uint16_t)(air_head - air_tail)) >=
+	       AIR_REC_MAX;
+}
+
+static void air_begin(uint8_t peer, uint8_t flags)
+{
+	air_rec = air_head;
+	air_q[air_head++ & AIR_Q_MASK] = peer;
+	air_q[air_head++ & AIR_Q_MASK] = flags;
+	air_head += 2;
+}
+
+static void air_end(void)
+{
+	uint16_t len = air_head - air_rec - 4;
+
+	if (!len) {
+		air_head = air_rec;
+		return;
+	}
+	air_q[(air_rec + 2) & AIR_Q_MASK] = len & 0xff;
+	air_q[(air_rec + 3) & AIR_Q_MASK] = len >> 8;
+	air_done = air_head;
+}
+
+/* MIDI bytes for the RP2354, from the packet being decoded */
 void midi_uart_send(const uint8_t *buf, size_t len)
 {
 	if (len > (uint16_t)(AIR_Q_SIZE - (uint16_t)(air_head - air_tail))) {
@@ -283,12 +328,6 @@ void midi_uart_send(const uint8_t *buf, size_t len)
 	}
 	for (size_t i = 0; i < len; i++)
 		air_q[air_head++ & AIR_Q_MASK] = buf[i];
-}
-
-/* Room for the most one packet from the air can decode to */
-static bool air_room(void)
-{
-	return (uint16_t)(AIR_Q_SIZE - (uint16_t)(air_head - air_tail)) >= 256;
 }
 
 void midi_uart_control(const uint8_t *msg, size_t len)
@@ -406,19 +445,34 @@ static void link_out(void)
 			moved = true;
 		}
 
-		if (air_head != air_tail && tx_room() &&
-		    link_can_send(&radio_link, LINK_MIDI, LINK_ALL)) {
-			uint16_t have = air_head - air_tail;
-			uint16_t take = have < LINK_PAYLOAD_MAX ? have
+		if (air_tail != air_done && tx_room()) {
+			uint8_t peer = air_q[air_tail & AIR_Q_MASK];
+			uint8_t trust = air_q[(air_tail + 1) & AIR_Q_MASK] &
+					LINK_TRUSTED;
+			uint16_t len = air_q[(air_tail + 2) & AIR_Q_MASK] |
+				       air_q[(air_tail + 3) & AIR_Q_MASK] << 8;
+			uint16_t left = len - air_off;
+			uint16_t take = left < LINK_PAYLOAD_MAX ? left
 							       : LINK_PAYLOAD_MAX;
 
-			for (uint16_t i = 0; i < take; i++)
-				chunk[i] = air_q[air_tail++ & AIR_Q_MASK];
-			n = link_pack(&radio_link, LINK_MIDI, LINK_ALL,
-				      (chunk[0] & 0x80) && chunk[0] != 0xF7 ?
-				      LINK_FIRST : 0, chunk, take, wire);
-			ring_buf_put(&uart_tx_ring, wire, n);
-			moved = true;
+			if (link_can_send(&radio_link, LINK_MIDI, peer)) {
+				for (uint16_t i = 0; i < take; i++)
+					chunk[i] = air_q[(air_tail + 4 +
+							  air_off + i) &
+							 AIR_Q_MASK];
+				air_off += take;
+				if (air_off == len) {
+					air_tail += 4 + len;
+					air_off = 0;
+				}
+				n = link_pack(&radio_link, LINK_MIDI, peer,
+					      trust | ((chunk[0] & 0x80) &&
+						       chunk[0] != 0xF7 ?
+						       LINK_FIRST : 0),
+					      chunk, take, wire);
+				ring_buf_put(&uart_tx_ring, wire, n);
+				moved = true;
+			}
 		}
 
 		if (dbg_head != dbg_tail && tx_room() &&
@@ -563,7 +617,7 @@ BUILD_ASSERT(HELD_SIZE >= LINK_WINDOW * LINK_STREAMS);
 static struct held {
 	uint8_t buf[LINK_PAYLOAD_MAX];
 	uint16_t len, pos;
-	uint8_t seq;
+	uint8_t peer, seq;
 } in_hand[HELD_SIZE];
 static uint8_t hand_head, hand_tail;
 static bool heard;		/* the pedal has sent something */
@@ -596,6 +650,7 @@ static void link_in(void)
 		       len);
 		in_hand[hand_head & HELD_MASK].len = len;
 		in_hand[hand_head & HELD_MASK].pos = 0;
+		in_hand[hand_head & HELD_MASK].peer = h[1];
 		in_hand[hand_head & HELD_MASK].seq = h[2];
 		hand_head++;
 		break;
@@ -696,13 +751,14 @@ int main(void)
 		while (hand_tail != hand_head && midi_ble_ready()) {
 			struct held *h = &in_hand[hand_tail & HELD_MASK];
 
+			midi_ble_to(h->peer);
 			while (h->pos < h->len && midi_ble_ready()) {
 				midi_ble_feed(h->buf[h->pos++]);
 				fed++;
 			}
 			if (h->pos < h->len)
 				break;
-			link_done(&radio_link, LINK_MIDI, LINK_ALL, h->seq);
+			link_done(&radio_link, LINK_MIDI, h->peer, h->seq);
 			hand_tail++;
 		}
 

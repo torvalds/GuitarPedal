@@ -119,7 +119,7 @@ static uint8_t notified(struct bt_conn *c, struct bt_gatt_subscribe_params *p,
 		return BT_GATT_ITER_STOP;
 	}
 
-	midi_ble_controller(data, len);
+	midi_ble_controller(c, data, len);
 	return BT_GATT_ITER_CONTINUE;
 }
 

@@ -49,6 +49,12 @@
 #define NRF54_CTL_RING_SIZE	(1 << NRF54_CTL_RING_SHIFT)
 #define NRF54_CTL_RING_MASK	(NRF54_CTL_RING_SIZE - 1)
 
+//
+// Peers sending MIDI at once that the pedal parses separately.  The radio
+// takes four connections; one more covers a peer that has just left.
+//
+#define NRF54_PEERS		5
+
 // How often acknowledgements are said again (nRF54/app/src/link.h)
 #define NRF54_ACK_AGAIN_MS	100
 
@@ -76,7 +82,20 @@ static struct {
 	uint16_t midi_len;
 	uint8_t ctl[NRF54_CTL_RING_SIZE];
 	uint16_t ctl_head, ctl_tail, ctl_sent;
-	struct midi_parser parser, ctl_parser;
+	struct midi_parser ctl_parser;
+
+	//
+	// MIDI from the air, a parser per peer, so that what two peers send
+	// at once cannot run together into one message.  'used' says which
+	// slot to reuse when a new peer turns up.
+	//
+	struct {
+		uint8_t peer;
+		uint32_t used;
+		struct midi_parser parser;
+	} from[NRF54_PEERS];
+	uint32_t parser_clock;
+	uint32_t refused;		// what untrusted peers may not send
 	uint32_t acked_at;		// when acks were last said again
 
 	uint32_t tx_bytes, rx_bytes;
@@ -400,14 +419,31 @@ static bool sysex_from_radio;
 //
 // One byte of MIDI from the radio.
 //
-static void nrf54_midi_in(struct midi_parser *parser, uint8_t b)
+static void nrf54_midi_in(struct midi_parser *parser, uint8_t b,
+			  bool trusted)
 {
 	uint8_t packet[4];
+	uint8_t cin;
 
 	if (!midi_parse_byte(parser, b, packet))
 		return;
 
 	nrf54_uart.packets++;
+	cin = packet[0] & 0x0f;
+
+	//
+	// A peer the radio does not vouch for - one that did not bond with
+	// Secure Connections through the pairing window - is a controller:
+	// it may play the pedal, not reprogram it.  So no SysEx, and not the
+	// value of CC 20 that reboots into the bootloader.
+	//
+	if (!trusted &&
+	    ((cin >= 0x4 && cin <= 0x7) ||
+	     (cin == 0xB && packet[2] == MIDI_CC_GLOBAL_ENABLE &&
+	      packet[3] == 126))) {
+		nrf54_uart.refused++;
+		return;
+	}
 
 	//
 	// What a footswitch or an editor played, on the debug port: channel
@@ -426,15 +462,52 @@ static void nrf54_midi_in(struct midi_parser *parser, uint8_t b)
 }
 
 //
+// The parser for a peer's MIDI: its own if it has one.  Otherwise the slot
+// used longest ago among those with nothing half parsed, or failing that
+// the slot used longest ago of all.  The radio says nothing when a peer
+// leaves, so a peer that left in the middle of a SysEx gives its slot back
+// only by being the oldest.
+//
+static struct midi_parser *nrf54_parser(uint8_t peer)
+{
+	int idle = -1, oldest = 0;
+
+	for (int i = 0; i < NRF54_PEERS; i++) {
+		uint32_t used = nrf54_uart.from[i].used;
+
+		if (nrf54_uart.from[i].peer == peer) {
+			nrf54_uart.from[i].used = ++nrf54_uart.parser_clock;
+			return &nrf54_uart.from[i].parser;
+		}
+		if (!nrf54_uart.from[i].parser.idx &&
+		    !nrf54_uart.from[i].parser.in_sysex &&
+		    (idle < 0 ||
+		     (int32_t)(used - nrf54_uart.from[idle].used) < 0))
+			idle = i;
+		if ((int32_t)(used - nrf54_uart.from[oldest].used) < 0)
+			oldest = i;
+	}
+	if (idle < 0)
+		idle = oldest;
+	memset(&nrf54_uart.from[idle].parser, 0,
+	       sizeof(nrf54_uart.from[idle].parser));
+	nrf54_uart.from[idle].parser.want_sysex = true;
+	nrf54_uart.from[idle].peer = peer;
+	nrf54_uart.from[idle].used = ++nrf54_uart.parser_clock;
+	return &nrf54_uart.from[idle].parser;
+}
+
+//
 // The radio has started, for the first time or again.  Every stream begins
 // afresh, half a message from before is nothing, and the radio is told
 // what it needs to know about the pedal, since it knows nothing.
 //
 static void nrf54_link_hello(void)
 {
-	memset(&nrf54_uart.parser, 0, sizeof(nrf54_uart.parser));
+	memset(&nrf54_uart.from, 0, sizeof(nrf54_uart.from));
+	for (int i = 0; i < NRF54_PEERS; i++)
+		nrf54_uart.from[i].parser.want_sysex = true;
 	memset(&nrf54_uart.ctl_parser, 0, sizeof(nrf54_uart.ctl_parser));
-	nrf54_uart.parser.want_sysex = true;
 	nrf54_uart.ctl_parser.want_sysex = true;
 	nrf54_uart.midi_len = 0;
 	nrf54_uart.ctl_sent = 0;
@@ -528,15 +601,20 @@ static void nrf54_uart_poll(void)
 			continue;
 		}
 
+		struct midi_parser *from = l->rx.buf[0] == LINK_MIDI ?
+					   nrf54_parser(l->rx.buf[1]) : NULL;
+		bool trusted = l->rx.buf[3] & LINK_TRUSTED;
+
 		for (uint16_t i = LINK_HEADER; i < l->rx.len; i++) {
 			uint8_t c = l->rx.buf[i];
 
 			switch (l->rx.buf[0]) {
 			case LINK_MIDI:
-				nrf54_midi_in(&nrf54_uart.parser, c);
+				nrf54_midi_in(from, c, trusted);
 				break;
 			case LINK_CONTROL:
-				nrf54_midi_in(&nrf54_uart.ctl_parser, c);
+				// The radio itself, which is trusted
+				nrf54_midi_in(&nrf54_uart.ctl_parser, c, true);
 				break;
 			case LINK_DEBUG:
 				// A line of the radio's printk
@@ -612,7 +690,8 @@ static void nrf54_uart_init(void)
 	// SysEx, because the web app's protocol is built on it.  The TRS
 	// jacks leave it off; this link is 32 times faster and carries it.
 	//
-	nrf54_uart.parser.want_sysex = true;
+	for (int i = 0; i < NRF54_PEERS; i++)
+		nrf54_uart.from[i].parser.want_sysex = true;
 	nrf54_uart.ctl_parser.want_sysex = true;
 	link_init(&nrf54_uart.link);
 

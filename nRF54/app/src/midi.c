@@ -86,6 +86,76 @@ static struct bt_conn *midi_get(void)
 	return conn;
 }
 
+/*
+ * Each connection's number on the link to the pedal (link.h), handed out in
+ * order as connections arrive - 1 to 255, skipping any still in use - so a
+ * number is never reused while something addressed to its old owner could
+ * still be on the way.  The pedal only echoes these back.
+ */
+static uint8_t peer_ids[CONFIG_BT_MAX_CONN];
+static uint8_t peer_next = 1;
+
+static void peer_assign(struct bt_conn *conn)
+{
+	uint8_t id;
+	bool taken;
+
+	do {
+		id = peer_next++;
+		if (!peer_next)
+			peer_next = 1;
+		taken = false;
+		for (int i = 0; i < CONFIG_BT_MAX_CONN; i++)
+			taken |= peer_ids[i] == id;
+	} while (taken);
+	peer_ids[bt_conn_index(conn)] = id;
+}
+
+struct peer_find {
+	uint8_t id;
+	struct bt_conn *found;
+};
+
+static void peer_find_one(struct bt_conn *conn, void *data)
+{
+	struct peer_find *f = data;
+
+	if (!f->found && peer_ids[bt_conn_index(conn)] == f->id)
+		f->found = bt_conn_ref(conn);
+}
+
+/* The connection a peer number belongs to, referenced, or NULL if gone */
+static struct bt_conn *peer_conn(uint8_t id)
+{
+	struct peer_find f = { .id = id };
+
+	bt_conn_foreach(BT_CONN_TYPE_LE, peer_find_one, &f);
+	return f.found;
+}
+
+/*
+ * Whether the pedal should trust what a connection sends: a host that
+ * connected to us, over Secure Connections, with a bond stored for it -
+ * which only the pairing window makes.  A device the radio connected to
+ * itself is a controller, never an editor, whatever its keys.
+ */
+static bool peer_trusted(struct bt_conn *conn)
+{
+	struct bt_conn_info info;
+
+	if (bind_owns(conn) || bt_conn_get_info(conn, &info))
+		return false;
+	return info.role == BT_CONN_ROLE_PERIPHERAL &&
+	       (info.security.flags & BT_SECURITY_FLAG_SC) &&
+	       bt_le_bond_exists(BT_ID_DEFAULT, bt_conn_get_dst(conn));
+}
+
+/*
+ * Which peer the MIDI being packed is for: 0 for the connection that
+ * subscribed last, as before peers had numbers.
+ */
+static uint8_t out_peer;
+
 /* ------------------------------------------------------------------ */
 /* How long a MIDI message is, from its status byte                    */
 /* ------------------------------------------------------------------ */
@@ -158,8 +228,7 @@ static struct {
 	/*
 	 * The last host that connected: who, the security level its link
 	 * reached, the error if raising it failed, and why its last pairing
-	 * failed.  The MIDI characteristic needs LE Secure Connections,
-	 * so these say whether a peer could write to it at all.
+	 * failed - which between them say whether the pedal trusts it.
 	 */
 	bt_addr_le_t peer;
 	uint8_t peer_level;
@@ -294,7 +363,7 @@ void midi_ble_flush(void)
 		return;
 	}
 
-	conn = midi_get();
+	conn = out_peer ? peer_conn(out_peer) : midi_get();
 	if (!conn) {
 		out.noconn++;
 		out.len = 0;
@@ -898,6 +967,19 @@ static void radio_dispatch(uint8_t cmd, const uint8_t *arg, uint8_t len)
 }
 
 /*
+ * The MIDI fed from here on is for this peer.  A packet half built for
+ * another goes first, so the two never share one; the caller has asked
+ * midi_ble_ready(), so there is a slot for it.
+ */
+void midi_ble_to(uint8_t peer)
+{
+	if (peer == out_peer)
+		return;
+	midi_ble_flush();
+	out_peer = peer;
+}
+
+/*
  * A command from the pedal, whole: F0 7D, the command, its arguments and
  * F7, off the control stream.  It never meets the MIDI parser, so it cannot
  * land in the middle of a SysEx on its way to the air.
@@ -1037,24 +1119,41 @@ void midi_ble_feed(uint8_t b)
 /* Unpacking: BLE packets in, byte stream to the UART                  */
 /* ------------------------------------------------------------------ */
 
-static uint8_t dec_status;
+/* Running status, per connection: two senders must not share one */
+static uint8_t dec_statuses[CONFIG_BT_MAX_CONN];
 
-static void midi_ble_decode(const uint8_t *buf, uint16_t len);
+static void midi_ble_decode(uint8_t *dec_status, const uint8_t *buf,
+			    uint16_t len);
 
 /*
- * One packet from over the air, from the main loop.
+ * One packet from over the air, from the main loop, with the connection it
+ * came on.
  *
  * Not from the callback that received it: that runs in the Bluetooth
  * stack's own thread, at a cooperative priority it cannot be preempted
  * back into, so anything done there that waits stalls the receive path.
  * midi_ble_queue() copies the packet and this deals with it later.
  */
-void midi_ble_packet(const uint8_t *buf, uint16_t len)
+void midi_ble_packet(uint8_t src, const uint8_t *buf, uint16_t len)
 {
-	midi_ble_decode(buf, len);
+	if (src < CONFIG_BT_MAX_CONN)
+		midi_ble_decode(&dec_statuses[src], buf, len);
 }
 
-static void midi_ble_decode(const uint8_t *buf, uint16_t len)
+/*
+ * A packet arriving, from the Bluetooth stack's thread: queued for the loop
+ * with which connection it came on, its peer number and whether to trust
+ * it, all of which are known only now.
+ */
+static void midi_ble_arrived(struct bt_conn *conn, const uint8_t *buf,
+			     uint16_t len)
+{
+	midi_ble_queue(bt_conn_index(conn), peer_ids[bt_conn_index(conn)],
+		       peer_trusted(conn) ? MIDI_FROM_TRUSTED : 0, buf, len);
+}
+
+static void midi_ble_decode(uint8_t *dec_status, const uint8_t *buf,
+			    uint16_t len)
 {
 	uint16_t i = 1;		/* [0] is the header byte */
 
@@ -1082,14 +1181,14 @@ static void midi_ble_decode(const uint8_t *buf, uint16_t len)
 
 			midi_uart_send(&status, 1);
 			if (status < 0xF0)
-				dec_status = status;
+				*dec_status = status;
 			else if (status >= 0xF8)
 				;	/* real-time cancels nothing */
 			else
-				dec_status = 0;
-		} else if (dec_status) {
+				*dec_status = 0;
+		} else if (*dec_status) {
 			/* Running status: the status byte was omitted. */
-			midi_uart_send(&dec_status, 1);
+			midi_uart_send(dec_status, 1);
 		}
 
 		while (i < len && !(buf[i] & 0x80))
@@ -1117,7 +1216,7 @@ static ssize_t midi_write(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 			  uint8_t flags)
 {
 	out.writes++;
-	midi_ble_queue(buf, len);
+	midi_ble_arrived(conn, buf, len);
 	return len;
 }
 
@@ -1199,17 +1298,19 @@ static void midi_ccc_changed(const struct bt_gatt_attr *attr, uint16_t value)
 }
 
 //
-// Nothing here is reachable without a bond made with LE Secure Connections.
+// Anyone may write, and only a bond made with LE Secure Connections may
+// subscribe.
 //
-// BT_GATT_PERM_*_LESC is per attribute, which is what lets one image ask
-// this of a host while a footswitch still pairs the only way it can - the
-// radio is the client on that connection and never touches this
-// characteristic.  CONFIG_BT_SMP_SC_PAIR_ONLY would have been the blunt
-// way to ask and would have taken the footswitch with it.
+// Writing is open because a footswitch may pair the legacy way or not at
+// all, and it only ever says "somebody pressed me".  What it may say is the
+// pedal's decision: each packet goes to the pedal marked trusted or not
+// (peer_trusted()), and the pedal takes only channel messages from a peer
+// that is not.  Subscribing is what gets a peer the pedal's answers, so
+// that stays behind the bond.
 //
-// The requirement is a stored key with the Secure Connections flag, so an
-// encrypted session with no bond behind it does not qualify - which is
-// exactly the case a closed pairing window produces.
+// BT_GATT_PERM_*_LESC asks for a stored key with the Secure Connections
+// flag, so an encrypted session with no bond behind it does not qualify -
+// which is exactly the case a closed pairing window produces.
 //
 // The configuration descriptor carries it too, so a host that cannot be
 // sent anything is told when it subscribes rather than subscribing
@@ -1224,7 +1325,7 @@ BT_GATT_SERVICE_DEFINE(midi_svc,
 			       BT_GATT_CHRC_WRITE_WITHOUT_RESP |
 			       BT_GATT_CHRC_NOTIFY,
 			       BT_GATT_PERM_READ_LESC |
-			       BT_GATT_PERM_WRITE_LESC,
+			       BT_GATT_PERM_WRITE,
 			       midi_read, midi_write, NULL),
 	BT_GATT_CCC_WITH_WRITE_CB(midi_ccc_changed, midi_ccc_write,
 				  BT_GATT_PERM_READ_LESC |
@@ -1359,6 +1460,11 @@ static void name_set(const uint8_t *arg, uint8_t len)
 //
 static void connected(struct bt_conn *conn, uint8_t err)
 {
+	if (!err) {
+		peer_assign(conn);
+		dec_statuses[bt_conn_index(conn)] = 0;
+	}
+
 	if (bind_owns(conn)) {
 		bind_connected(conn, err);
 		return;
@@ -1382,6 +1488,8 @@ static void connected(struct bt_conn *conn, uint8_t err)
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
+	peer_ids[bt_conn_index(conn)] = 0;
+
 	if (bind_owns(conn)) {
 		bind_disconnected(conn, reason);
 		return;
@@ -1408,7 +1516,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 		out.len = 0;
 		in.sysex = false;
 		in.len = in.want = 0;
-		in.status = dec_status = 0;
+		in.status = 0;
 	}
 
 	adv_again();
@@ -1509,8 +1617,9 @@ void midi_ble_start(void)
 // app goes through, so both end at midi_uart_send() and the pedal never
 // learns which it was.
 //
-void midi_ble_controller(const uint8_t *buf, uint16_t len)
+void midi_ble_controller(struct bt_conn *conn, const uint8_t *buf,
+			 uint16_t len)
 {
-	midi_ble_queue(buf, len);
+	midi_ble_arrived(conn, buf, len);
 }
 #endif
