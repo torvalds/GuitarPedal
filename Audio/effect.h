@@ -754,7 +754,7 @@ static __attribute__((noinline)) void __audio_func(make_one_noise)(void)
 
 	static int disable = 0;
 	while (disable != disable_all) {
-		float mix = disable / (float) EFF_ENABLE_STEPS;
+		float mix = 1.0f - disable / (float) EFF_ENABLE_STEPS;
 		disable += (disable < disable_all) ? 1 : -1;
 		single_sample(mix);
 	}
