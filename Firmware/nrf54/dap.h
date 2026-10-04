@@ -14,8 +14,6 @@
 // share a debug interface and differ in how much memory they declare,
 // and ours is a quarter of the smaller figure.
 //
-// Nothing here has run against hardware.
-//
 
 #ifdef NRF54_SWDIO
 
@@ -203,13 +201,31 @@ static void dap_swj_sequence(const uint8_t *p, unsigned int bits)
 #define DAP_PIN_SWDIO		(1u << 1)
 #define DAP_PIN_NRESET		(1u << 7)
 
+//
+// SWCLK and SWDIO belong to the PIO program.  Setting them means letting
+// it finish whatever was queued and stopping it, because a running state
+// machine would drive SWCLK low again; the next transfer starts it.
+//
 static uint8_t dap_swj_pins(uint8_t value, uint8_t select)
 {
-	if (select & DAP_PIN_SWCLK)
-		gpio_put(NRF54_SWDCLK, !!(value & DAP_PIN_SWCLK));
+	uint32_t pins = 0, mask = 0;
+
+	if (select & DAP_PIN_SWCLK) {
+		mask |= 1u << NRF54_SWDCLK;
+		if (value & DAP_PIN_SWCLK)
+			pins |= 1u << NRF54_SWDCLK;
+	}
 	if (select & DAP_PIN_SWDIO) {
-		gpio_set_dir(NRF54_SWDIO, GPIO_OUT);
-		gpio_put(NRF54_SWDIO, !!(value & DAP_PIN_SWDIO));
+		mask |= 1u << NRF54_SWDIO;
+		if (value & DAP_PIN_SWDIO)
+			pins |= 1u << NRF54_SWDIO;
+	}
+	swd_flush();
+	if (mask) {
+		pio_sm_set_enabled(SWD_PIO, SWD_SM, false);
+		swd_stopped = true;
+		pio_sm_set_pindirs_with_mask(SWD_PIO, SWD_SM, mask, mask);
+		pio_sm_set_pins_with_mask(SWD_PIO, SWD_SM, pins, mask);
 	}
 	if (select & DAP_PIN_NRESET)
 		gpio_put(NRF54_RESET, !!(value & DAP_PIN_NRESET));

@@ -314,6 +314,7 @@ add_library(pedal_pio INTERFACE)
 pico_generate_pio_header(pedal_pio ${PIO_DIR}/bitstream.pio)
 pico_generate_pio_header(pedal_pio ${PIO_DIR}/debounce.pio)
 pico_generate_pio_header(pedal_pio ${PIO_DIR}/rotary.pio)
+pico_generate_pio_header(pedal_pio ${PIO_DIR}/swd.pio)
 
 #
 # ...and the header-generating targets it made, named after it, which
@@ -324,7 +325,8 @@ pico_generate_pio_header(pedal_pio ${PIO_DIR}/rotary.pio)
 set(PEDAL_PIO_TARGETS
 	pedal_pio_bitstream_pio_h
 	pedal_pio_debounce_pio_h
-	pedal_pio_rotary_pio_h)
+	pedal_pio_rotary_pio_h
+	pedal_pio_swd_pio_h)
 
 #
 # One board, one target, one name.  Everything below here is per-board;

@@ -1,0 +1,71 @@
+;
+; The SWD wire: SWCLK on side-set, SWDIO on out, in and set.
+;
+; Bits only.  What they mean - requests, acknowledgements, parity - is
+; swd_transfer()'s, in nrf54/swd.h.  Each operation is one FIFO word:
+;
+;	bits 7:0	how many bits, less one
+;	bit 8		1 to read, 0 to write
+;
+; and a write is followed by a word of data, sent least significant bit
+; first.  A read pushes what it read, shifted in from the top, so the
+; last bit read is bit 31.
+;
+; Four state machine cycles to a bit, two with SWCLK low and two high.
+; Data changes while the clock is low and the target samples it on the
+; rising edge; a bit the target drives is sampled at the end of the low
+; half, after it has had the whole of it to settle.  Between operations
+; the clock stops low, which SWD allows.
+;
+
+.program swd
+.side_set 1 opt
+
+public start:
+.wrap_target
+	pull			side 0
+	out x, 8
+	out y, 1
+	jmp !y write
+	set pindirs, 0
+read:
+	nop			side 0
+	in pins, 1
+	jmp x-- read		side 1 [1]
+	push			side 0
+	jmp start
+write:
+	set pindirs, 1
+	pull
+write_bit:
+	out pins, 1		side 0 [1]
+	jmp x-- write_bit	side 1 [1]
+.wrap
+
+% c-sdk {
+#define SWD_PIO_READ	(1u << 8)
+
+static inline void swd_program_init(PIO pio, uint sm, uint offset,
+				    uint swclk, uint swdio)
+{
+	pio_sm_config c = swd_program_get_default_config(offset);
+
+	pio_gpio_init(pio, swclk);
+	pio_gpio_init(pio, swdio);
+	pio_sm_set_pins_with_mask(pio, sm, 0, 1u << swclk);
+	pio_sm_set_pindirs_with_mask(pio, sm, 1u << swclk,
+				     (1u << swclk) | (1u << swdio));
+
+	sm_config_set_sideset_pins(&c, swclk);
+	sm_config_set_out_pins(&c, swdio, 1);
+	sm_config_set_set_pins(&c, swdio, 1);
+	sm_config_set_in_pins(&c, swdio);
+
+	// Both least significant bit first, and no auto anything
+	sm_config_set_out_shift(&c, true, false, 32);
+	sm_config_set_in_shift(&c, true, false, 32);
+
+	pio_sm_init(pio, sm, offset, &c);
+	pio_sm_set_enabled(pio, sm, true);
+}
+%}
