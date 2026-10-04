@@ -95,14 +95,40 @@ static inline float _single_pole_step(float in,
 // quantity small all the way through: sqrt(2u) dominates u rather than
 // nearly cancelling it.
 //
-// Undefined above Nyquist, as it was before: fastsincos() wraps and the
-// answer comes back down again.  Nothing asks.
+// Undefined above Nyquist: fastsincos() wraps and the answer comes
+// back down again.  A corner up there is single_pole_match()'s job.
 //
 static inline struct single_pole_coeff single_pole_freq(float freq)
 {
 	float s = fastsincos(0.5f * freq / SAMPLES_PER_SEC).sin;
 	float u = 2.0f * s * s;
 	struct single_pole_coeff coeff = { sqrtf(u * (u + 2.0f)) - u };
+	return coeff;
+}
+
+//
+// An RC low-pass with its corner at 'freq', matched to the analog
+// magnitude at 'at' rather than at the corner.  With r = (at/freq)^2
+// the analog magnitude there, squared, is 1/(1+r), and solving for
+// alpha gives
+//
+//	alpha = (sqrt(u*(u+2r)) - u) / r
+//
+// which is single_pole_freq() exactly when 'at' is 'freq'.  'freq' may
+// be anywhere, including above Nyquist; 'at' has to be below it.
+//
+// A one-pole without a zero cannot follow an RC everywhere once the
+// corner is near Nyquist, so this is for a corner too high to match
+// where it is: matching it in the audible band instead gets the band
+// right, where single_pole_freq() would get an inaudible frequency
+// right and be a dB or two dark below it.
+//
+static inline struct single_pole_coeff single_pole_match(float freq, float at)
+{
+	float s = fastsincos(0.5f * at / SAMPLES_PER_SEC).sin;
+	float u = 2.0f * s * s;
+	float r = (at / freq) * (at / freq);
+	struct single_pole_coeff coeff = { (sqrtf(u * (u + 2.0f * r)) - u) / r };
 	return coeff;
 }
 

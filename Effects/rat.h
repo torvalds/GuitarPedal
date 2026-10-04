@@ -408,9 +408,16 @@ void rat_init(unsigned char pot[10])
 
 	rat.kout = RAT_KOUT * RAT_TAPER(rat_volume_pot(pot)) / RAT_VPEAK;
 
-	rat.lp_filt_c =
-		single_pole_freq(1.0f / (TWOPI * (filt * RAT_RFILT + RAT_R6)
-					 * RAT_C8));
+	/*
+	 * The Filter corner runs from 475 Hz up to 32 kHz, past Nyquist,
+	 * and the bottom fifth of the knob is above 20 kHz on the pedal
+	 * too.  Above 10 kHz, match the RC's level at 10 kHz rather than
+	 * at its corner: the -3dB point cannot be matched up there, and
+	 * aiming at it made the bottom of the knob both darker than the
+	 * pedal and non-monotonic.
+	 */
+	float fc = 1.0f / (TWOPI * (filt * RAT_RFILT + RAT_R6) * RAT_C8);
+	rat.lp_filt_c = single_pole_match(fc, fc < 10000.0f ? fc : 10000.0f);
 	/*
 	 * The loop, as conductances at the feedback node.
 	 *
