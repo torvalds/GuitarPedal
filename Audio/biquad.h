@@ -15,8 +15,9 @@ struct biquad {
 	struct biquad_state state;
 };
 
-// Direct form 1 may need more state than the "canonical" DF2,
-// but gets noisy much quicker.
+// Direct form 1.  x[] and y[] are the last two inputs and outputs,
+// newest first, and are shifted before returning - so each filter in
+// a cascade needs its own, rather than sharing its neighbour's.
 static inline float biquad_step_df1(const struct biquad_coeff *c, float in, float x[2], float y[2])
 {
 	float out = c->b0*in + c->b1*x[0] + c->b2*x[1] - c->a1*y[0] - c->a2*y[1];

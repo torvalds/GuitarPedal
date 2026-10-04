@@ -20,7 +20,7 @@
 struct {
 	struct lfo_state lfo;
 	struct biquad_coeff coeff;
-	float s0[2], s1[2], s2[2], s3[2];
+	struct biquad_state stage[3];
 	float center_f, octaves, Q, feedback;
 } phaser;
 
@@ -43,10 +43,9 @@ float phaser_step(float in)
 
 	_biquad_allpass_filter(&phaser.coeff, freq, phaser.Q);
 
-	out = in + phaser.feedback * phaser.s3[0];
-	out = biquad_step_df1(&phaser.coeff, out, phaser.s0, phaser.s1);
-	out = biquad_step_df1(&phaser.coeff, out, phaser.s1, phaser.s2);
-	out = biquad_step_df1(&phaser.coeff, out, phaser.s2, phaser.s3);
+	out = in + phaser.feedback * phaser.stage[2].y[0];
+	for (int i = 0; i < 3; i++)
+		out = _biquad_step(&phaser.coeff, &phaser.stage[i], out);
 
 	return tanhf(in + out);
 }
