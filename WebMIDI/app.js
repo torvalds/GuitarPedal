@@ -1395,10 +1395,16 @@ function handleSysex(data) {
         // by itself after a minute and a pairing having used it up, so
         // nothing here has to poll or guess.
         //
-        case SYSEX_CMD.PAIRING:
+        case SYSEX_CMD.PAIRING: {
+            const was = pairingOpen;
+
             pairingOpen = data.length > 3 && data[3] !== 0;
             renderPairing();
+            // Closed, perhaps by a pairing: the list may have grown
+            if (was && !pairingOpen)
+                askBonds();
             break;
+        }
 
         //
         // One key the radio holds.  The address arrives as a scan result's

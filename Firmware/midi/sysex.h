@@ -447,6 +447,15 @@ static void sysex_send_exp(void)
 //
 struct midi_dest sysex_send_pairing;
 
+//
+// Everyone who has asked about the window since it last closed, which is
+// who hears it close.  Not whoever sent the last message: when a bond
+// closes it, that is the radio, and when it times out, it is anybody.
+// Forgotten once told, so that a Bluetooth peer's number does not outlive
+// the peer.
+//
+static struct midi_dest pairing_watchers;
+
 static void sysex_send_pairing_state(void)
 {
 	struct midi_dest to = sysex_send_pairing;
@@ -1260,6 +1269,7 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 				NRF54_PAIRING_MS;
 			nrf54_pairing_tell(want);
 		}
+		midi_dest_add(&pairing_watchers, midi_from);
 		midi_dest_add(&sysex_send_pairing, midi_from);
 
 	} else if (cmd == 0x07 && !sysex_from_radio) {
@@ -1284,7 +1294,8 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 		//
 		nrf54_pairing = false;
 		nrf54_pairing_tell(false);
-		midi_dest_add(&sysex_send_pairing, midi_from);
+		midi_dest_add(&sysex_send_pairing, pairing_watchers);
+		pairing_watchers = MIDI_DEST_NONE;
 
 	} else if (cmd == 0x16 && sysex_from_radio && sysex_len >= 2) {
 		//
