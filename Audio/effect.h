@@ -30,6 +30,14 @@
 //                         bench, since what an effect does to a signal
 //                         is not a question about USB.
 //
+//   get_radio_audio_input()  the same, for what the radio sends over its
+//   sample_t                 i2s link: hardware.h on the pedal, silence
+//                            on the bench.
+//
+//   put_radio_audio_output() and what goes back to it, called from
+//                            process.h: hardware.h on the pedal, nothing
+//                            on the bench.
+//
 // The i2s DMA is *not* in that list even though the buffer and the two
 // pointer helpers are defined below.  The bench drives them itself
 // through a shim - it writes i2s_dma_buf and moves fake DMA registers
@@ -59,6 +67,8 @@
 #define EFF_ENABLE_STEPS ((int)SAMPLES_PER_SEC/10)
 
 sample_t get_usb_audio_input(void);
+sample_t get_radio_audio_input(void);
+void put_radio_audio_output(raw_sample_t wet, raw_sample_t dry);
 
 //
 // A pot's raw value turned into whatever the pot is measured in.  Takes
@@ -652,11 +662,25 @@ static inline void __audio_func(single_sample)(float mix)
 	// what comes out is a function of what the host sent and nothing
 	// else.
 	//
-	if (usbaudio.input == USB_IN_PRE_FX) {
+	// The radio's audio, from Bluetooth, takes the same choices.
+	//
+	sample_t radio_in = get_radio_audio_input();
+
+	radio_in.left *= radioaudio.level;
+	radio_in.right *= radioaudio.level;
+
+	if (usbaudio.input == USB_IN_REPLACE ||
+	    radioaudio.input == USB_IN_REPLACE)
+		in = (sample_t) { 0, 0 };
+	if (usbaudio.input == USB_IN_PRE_FX ||
+	    usbaudio.input == USB_IN_REPLACE) {
 		in.left += usb_in.left;
 		in.right += usb_in.right;
-	} else if (usbaudio.input == USB_IN_REPLACE) {
-		in = usb_in;
+	}
+	if (radioaudio.input == USB_IN_PRE_FX ||
+	    radioaudio.input == USB_IN_REPLACE) {
+		in.left += radio_in.left;
+		in.right += radio_in.right;
 	}
 
 	//
@@ -699,6 +723,10 @@ static inline void __audio_func(single_sample)(float mix)
 	if (usbaudio.input == USB_IN_MIX) {
 		out.left += usb_in.left;
 		out.right += usb_in.right;
+	}
+	if (radioaudio.input == USB_IN_MIX) {
+		out.left += radio_in.left;
+		out.right += radio_in.right;
 	}
 
 	//

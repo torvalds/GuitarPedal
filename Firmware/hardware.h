@@ -41,7 +41,8 @@ static struct {
 // the side that increments and the side the ring wraps, and which of
 // read or write that is depends on which way the samples are going.
 //
-static int i2s_dma_channel(uint sm, bool is_tx, raw_sample_t *buf)
+static int i2s_dma_channel(uint sm, bool is_tx, raw_sample_t *buf,
+			   uint ring_bits)
 {
 	int chan = dma_claim_unused_channel(true);
 	dma_channel_config c = dma_channel_get_default_config(chan);
@@ -50,7 +51,7 @@ static int i2s_dma_channel(uint sm, bool is_tx, raw_sample_t *buf)
 	channel_config_set_read_increment(&c, is_tx);
 	channel_config_set_write_increment(&c, !is_tx);
 	channel_config_set_dreq(&c, pio_get_dreq(pio0, sm, is_tx));
-	channel_config_set_ring(&c, !is_tx, 7);	// 128 bytes, the buffer
+	channel_config_set_ring(&c, !is_tx, ring_bits);	// the buffer
 
 	pio_sm_clear_fifos(pio0, sm);
 
@@ -65,13 +66,458 @@ static int i2s_dma_channel(uint sm, bool is_tx, raw_sample_t *buf)
 }
 
 #ifdef NRF54_SWDIO
+#include "nRF54/app/src/i2stest.h"
+
 //
-// The radio's audio link, which nothing reads or writes yet: the nRF's
-// i2s is described in its devicetree and driven by nothing, so this
-// carries silence and exists to prove the pins.
+// The radio's audio link, in rings the DMA loops round.  What goes out is
+// what the audio core writes a few frames ahead of the DMA - audio, or the
+// test pattern (i2stest.h) when Bluetooth Audio's Out is None - and starts
+// as the pattern.  What comes back is audio or the radio's copy of the
+// pattern, into a ring deep enough - 85 ms - that the main loop checks
+// every frame of it.
 //
-static raw_sample_t __attribute__((aligned(128))) nrf54_i2s_buf[16];
+#define NRF54_I2S_TX_SHIFT	8
+#define NRF54_I2S_TX_FRAMES	(1 << NRF54_I2S_TX_SHIFT)
+#define NRF54_I2S_TX_MASK	(NRF54_I2S_TX_FRAMES - 1)
+#define NRF54_I2S_RX_SHIFT	12
+#define NRF54_I2S_RX_FRAMES	(1 << NRF54_I2S_RX_SHIFT)
+#define NRF54_I2S_RX_MASK	(NRF54_I2S_RX_FRAMES - 1)
+
+static raw_sample_t __attribute__((aligned(sizeof(raw_sample_t) *
+					 NRF54_I2S_TX_FRAMES)))
+	nrf54_i2s_tx[NRF54_I2S_TX_FRAMES];
+
+// One repeat of the pattern, in RAM for the audio core
+static raw_sample_t nrf54_i2s_pattern[I2STEST_FRAMES];
+static raw_sample_t __attribute__((aligned(sizeof(raw_sample_t) *
+					 NRF54_I2S_RX_FRAMES)))
+	nrf54_i2s_rx[NRF54_I2S_RX_FRAMES];
 static int nrf54_dma_tx, nrf54_dma_rx;
+
+static struct {
+	bool on;
+	uint32_t tail;			// frames taken from the ring
+	struct i2stest_rx rx;		// since the last report
+	uint32_t reported_at;
+
+	//
+	// The same frames read as audio, for when it is not the pattern:
+	// the peak of each channel, and how often each crosses zero going
+	// up, which over a second of a tone is its frequency.
+	//
+	int32_t peak[2];
+	uint32_t ups[2];
+	bool was_neg[2];
+} nrf54_i2s;
+
+static void nrf54_i2s_audio(int ch, int32_t v)
+{
+	int32_t a = v < 0 ? -(v + 1) : v;
+
+	if (a > nrf54_i2s.peak[ch])
+		nrf54_i2s.peak[ch] = a;
+	if (nrf54_i2s.was_neg[ch] && v >= 0)
+		nrf54_i2s.ups[ch]++;
+	nrf54_i2s.was_neg[ch] = v < 0;
+}
+
+// A peak as dBFS, to a tenth of a dB, for the report
+static void nrf54_i2s_dbfs(int32_t peak)
+{
+	int db10 = peak ? (int)lrintf(200.0f *
+				      log10f(peak / 2147483648.0f)) : -1200;
+
+	if (db10 < 0) {
+		dbg_puts("-");
+		db10 = -db10;
+	}
+	dbg_dec(db10 / 10);
+	dbg_puts(".");
+	dbg_dec(db10 % 10);
+	dbg_puts(" dBFS");
+}
+
+//
+// Times core 1 has had to move its read or its write position in the
+// radio's rings, which skips or repeats audio.  Written by core 1 only.
+//
+static volatile uint32_t nrf54_i2s_moves, nrf54_i2s_out_moves;
+
+//
+// A timing check on audio from the radio, for when a phone plays the
+// tone Validation/vernier-tone.py makes: a sine of exactly 48 samples a
+// cycle on the left and 47 on the right.
+//
+// Upward zero crossings on a channel fall on a grid one period apart.
+// Samples dropped or repeated move the grid, by that many modulo the
+// period, and the two channels together say how many outright, up to
+// 1128 either way.  A crossing only counts after a cycle that reached
+// -50 dBFS, so silence and noise do not make any.
+//
+// The grid moves only when the crossings agree on a new place for
+// longer than an LC3 frame, 10 ms: a waveform the decoder made up for a
+// lost packet can sit a whole number of samples off it for most of one.
+// A crossing a fraction of a sample off is that, or the step a jump makes
+// through zero, and is counted and passed over; only a run of them long
+// enough to be something else - a pause, a resampler - starts a new grid.
+//
+#define VERNIER_JUMPS	8
+#define VERNIER_CONFIRM	12		// crossings, about 12 ms
+
+static const int vernier_period[2] = { 48, 47 };
+
+static struct {
+	uint32_t n;			// audio frames seen
+	struct {
+		int32_t prev, peak;
+		bool have;		// a grid to measure against
+		uint32_t at;		// a crossing on it: the frame before
+		float frac;		// ...and how far past that frame
+		int cand, cand_n;	// a whole-sample move, and times seen
+		int rag_n;		// crossings off by a fraction, in a row
+		int steady_n;		// crossings on the grid, in a row
+		bool odd;		// moved, not yet paired with the other
+		int d;			// ...by this many, modulo the period
+	} ch[2];
+	uint32_t steady;		// crossings on the grid
+	uint32_t ragged;		// off it by a fraction of a sample
+	uint32_t relocks;		// new grids after a run of those
+	uint32_t moves;			// nrf54_i2s_moves at the last report
+	int nj;
+	int32_t jump[VERNIER_JUMPS];	// samples repeated (+) or dropped (-)
+} vern;
+
+static void vernier_jump(int32_t d)
+{
+	if (vern.nj < VERNIER_JUMPS)
+		vern.jump[vern.nj] = d;
+	vern.nj++;
+}
+
+// The one jump that is dl modulo 48 and dr modulo 47, nearest zero
+static void vernier_solve(int dl, int dr)
+{
+	for (int32_t m = 0; m <= 24; m++)
+		for (int sign = 1; sign >= -1; sign -= 2) {
+			int32_t d = dl + sign * m * 48;
+
+			if ((((d - dr) % 47) + 47) % 47 == 0) {
+				vernier_jump(d);
+				return;
+			}
+		}
+}
+
+static void vernier_crossing(int c, uint32_t at, float frac)
+{
+	int p = vernier_period[c];
+	float off;
+	int d;
+
+	if (!vern.ch[c].have)
+		goto anchor;
+
+	// Where it falls against the grid, from -p/2 to p/2
+	off = (float)((at - vern.ch[c].at) % p) + frac - vern.ch[c].frac;
+	off -= p * floorf(off / p + 0.5f);
+	d = (int)lrintf(off);
+
+	if (fabsf(off) < 0.25f) {
+		vern.steady++;
+		vern.ch[c].steady_n++;
+		vern.ch[c].cand_n = vern.ch[c].rag_n = 0;
+		return;
+	}
+	vern.ch[c].steady_n = 0;
+	if (fabsf(off - d) > 0.25f) {
+		vern.ragged++;
+		vern.ch[c].cand_n = 0;
+		if (++vern.ch[c].rag_n < 2 * VERNIER_CONFIRM)
+			return;
+		vern.relocks++;
+		vern.ch[c].odd = false;
+		goto anchor;
+	}
+	// Modulo the period: half of one is +p/2 and -p/2 by turns
+	d = (d % p + p) % p;
+	vern.ch[c].rag_n = 0;
+	if (vern.ch[c].cand_n && vern.ch[c].cand == d) {
+		vern.ch[c].cand_n++;
+	} else {
+		vern.ch[c].cand = d;
+		vern.ch[c].cand_n = 1;
+	}
+	if (vern.ch[c].cand_n < VERNIER_CONFIRM)
+		return;
+
+	// Moved: the sum of moves is right modulo the period
+	vern.ch[c].d = vern.ch[c].odd ? vern.ch[c].d + d : d;
+	vern.ch[c].odd = true;
+anchor:
+	vern.ch[c].at = at;
+	vern.ch[c].frac = frac;
+	vern.ch[c].have = true;
+	vern.ch[c].cand_n = vern.ch[c].rag_n = vern.ch[c].steady_n = 0;
+}
+
+static void vernier_frame(int32_t l, int32_t r)
+{
+	int32_t v[2] = { l, r };
+
+	vern.n++;
+	for (int c = 0; c < 2; c++) {
+		int32_t a = v[c] < 0 ? -(v[c] + 1) : v[c];
+
+		if (a > vern.ch[c].peak)
+			vern.ch[c].peak = a;
+		if (vern.ch[c].prev < 0 && v[c] >= 0 &&
+		    vern.ch[c].peak > (int32_t)(0.00316f * 2147483648.0f)) {
+			vernier_crossing(c, vern.n - 1,
+					 (float)-vern.ch[c].prev /
+					 ((float)v[c] - (float)vern.ch[c].prev));
+			vern.ch[c].peak = 0;
+		}
+		vern.ch[c].prev = v[c];
+	}
+
+	//
+	// A jump, once both grids have moved.  Or one only, once the other
+	// has been on its grid for as long as a move takes to confirm: a
+	// jump that is a whole number of the other's periods.  A lost packet
+	// can hold one channel's confirmation back by a frame, so how long
+	// it has been is not enough.
+	//
+	if (vern.ch[0].odd && vern.ch[1].odd) {
+		vernier_solve(vern.ch[0].d, vern.ch[1].d);
+		vern.ch[0].odd = vern.ch[1].odd = false;
+	}
+	for (int c = 0; c < 2; c++)
+		if (vern.ch[c].odd && !vern.ch[!c].odd &&
+		    vern.ch[!c].steady_n >= VERNIER_CONFIRM) {
+			vernier_solve(c ? 0 : vern.ch[0].d, c ? vern.ch[1].d : 0);
+			vern.ch[c].odd = false;
+		}
+}
+
+// Not the tone: start again when it is
+static void vernier_lost(void)
+{
+	for (int c = 0; c < 2; c++)
+		vern.ch[c].have = vern.ch[c].odd = false;
+}
+
+static void dbg_sdec(int32_t v)
+{
+	dbg_puts(v < 0 ? "-" : "+");
+	dbg_dec(v < 0 ? -v : v);
+}
+
+static void vernier_report(void)
+{
+	uint32_t moves = nrf54_i2s_moves;
+
+	if (!vern.steady && !vern.nj && !vern.ragged && !vern.relocks &&
+	    moves == vern.moves)
+		return;
+	dbg_puts("vernier: ");
+	dbg_dec(vern.steady);
+	dbg_puts(" in step, ");
+	dbg_dec(vern.ragged);
+	dbg_puts(" ragged, ");
+	dbg_dec(vern.relocks);
+	dbg_puts(" relocks, ");
+	dbg_dec(moves - vern.moves);
+	dbg_puts(" moves, ");
+	dbg_dec(vern.nj);
+	dbg_puts(" jumps");
+	for (int i = 0; i < vern.nj && i < VERNIER_JUMPS; i++) {
+		dbg_puts(" ");
+		dbg_sdec(vern.jump[i]);
+	}
+	dbg_puts("\n");
+	vern.steady = vern.ragged = vern.relocks = 0;
+	vern.nj = 0;
+	vern.moves = moves;
+}
+
+//
+// Check what the radio sent back, every frame of it, and say how it went
+// on the debug port once a second.  A frame is only counted once both of
+// its words are in: the write address rounded down to a whole frame.
+//
+static void nrf54_i2s_poll(void)
+{
+	uint32_t head, now;
+
+	if (!nrf54_i2s.on)
+		return;
+
+	head = (dma_hw->ch[nrf54_dma_rx].write_addr - (uintptr_t)nrf54_i2s_rx) /
+	       sizeof(raw_sample_t);
+	// The ring is read after this, not before
+	__dmb();
+	while ((nrf54_i2s.tail & NRF54_I2S_RX_MASK) !=
+	       (head & NRF54_I2S_RX_MASK)) {
+		raw_sample_t *f = &nrf54_i2s_rx[nrf54_i2s.tail++ &
+						NRF54_I2S_RX_MASK];
+
+		i2stest_check(&nrf54_i2s.rx, f->left, f->right);
+		nrf54_i2s_audio(0, f->left);
+		nrf54_i2s_audio(1, f->right);
+		if ((f->right & 0xff) == 0xc3)
+			vernier_lost();
+		else
+			vernier_frame(f->left, f->right);
+	}
+
+	now = to_ms_since_boot(get_absolute_time());
+	if (now - nrf54_i2s.reported_at < 1000)
+		return;
+
+	//
+	// Mostly not the pattern: say what it is as audio instead.
+	//
+	vernier_report();
+
+	// The audio core's write position, moved: audio skipped or repeated
+	static uint32_t out_moves;
+
+	if (nrf54_i2s_out_moves != out_moves) {
+		dbg_puts("i2s to the radio: ");
+		dbg_dec(nrf54_i2s_out_moves - out_moves);
+		dbg_puts(" moves\n");
+		out_moves = nrf54_i2s_out_moves;
+	}
+
+	if (nrf54_i2s.rx.wrong > nrf54_i2s.rx.frames / 2) {
+		for (int ch = 0; ch < 2; ch++) {
+			dbg_puts(ch ? ", right " : "i2s from the radio: audio, left ");
+			dbg_dec(nrf54_i2s.ups[ch]);
+			dbg_puts(" Hz peak ");
+			nrf54_i2s_dbfs(nrf54_i2s.peak[ch]);
+		}
+		dbg_puts("\n");
+		goto reset;
+	}
+
+	dbg_puts("i2s from the radio: ");
+	dbg_dec(nrf54_i2s.rx.frames);
+	dbg_puts(nrf54_i2s.rx.phase >= 0 ? " frames, in step, " :
+					   " frames, not in step, ");
+	dbg_dec(nrf54_i2s.rx.wrong);
+	dbg_puts(" wrong (");
+	dbg_dec(nrf54_i2s.rx.swapped);
+	dbg_puts(" swapped, ");
+	dbg_dec(nrf54_i2s.rx.shifted);
+	dbg_puts(" shifted), ");
+	dbg_dec(nrf54_i2s.rx.slips);
+	dbg_puts(" slips\n");
+reset:
+	nrf54_i2s.peak[0] = nrf54_i2s.peak[1] = 0;
+	nrf54_i2s.ups[0] = nrf54_i2s.ups[1] = 0;
+	nrf54_i2s.rx.frames = nrf54_i2s.rx.wrong = 0;
+	nrf54_i2s.rx.swapped = nrf54_i2s.rx.shifted = 0;
+	nrf54_i2s.rx.slips = 0;
+	nrf54_i2s.reported_at = now;
+}
+
+//
+// What the radio sends, as core 1's input: a fixed few frames behind the
+// ring's DMA, which runs off the same PIO clock as the codec's and so at
+// exactly its rate.  Put back there whenever it is not, which is the
+// first call and any time core 1 has fallen behind and lost frames.
+//
+// The test pattern is silence.  The radio sends audio with the low byte
+// of each word zero, and the pattern's right word has 0xC3 there.
+//
+#define NRF54_I2S_LAG	8
+
+static uint32_t nrf54_i2s_at;
+
+sample_t __audio_func(get_radio_audio_input)(void)
+{
+	uint32_t head, d;
+	raw_sample_t f;
+
+	if (!nrf54_i2s.on)
+		return (sample_t) { 0, 0 };
+
+	head = (dma_hw->ch[nrf54_dma_rx].write_addr - (uintptr_t)nrf54_i2s_rx) /
+	       sizeof(raw_sample_t);
+	d = (head - nrf54_i2s_at) & NRF54_I2S_RX_MASK;
+	if (d < NRF54_I2S_LAG / 2 || d > 4 * NRF54_I2S_LAG) {
+		if (nrf54_i2s_at)
+			nrf54_i2s_moves++;
+		nrf54_i2s_at = head - NRF54_I2S_LAG;
+	}
+
+	f = nrf54_i2s_rx[nrf54_i2s_at++ & NRF54_I2S_RX_MASK];
+	if ((f.right & 0xff) == 0xc3)
+		return (sample_t) { 0, 0 };
+
+	return (sample_t) {
+		.left = f.left * (1.0f / 2147483648.0f),
+		.right = f.right * (1.0f / 2147483648.0f)
+	};
+}
+
+//
+// What the pedal sends the radio, chosen like USB's: a fixed few frames
+// ahead of the ring's DMA, put back there whenever it is not.  Audio goes
+// with the low byte of each word clear, which is how the radio tells it
+// from the pattern.
+//
+#define NRF54_I2S_LEAD	16
+
+static uint32_t nrf54_i2s_out;
+
+void __audio_func(put_radio_audio_output)(raw_sample_t wet, raw_sample_t dry)
+{
+	uint32_t tail, d;
+	raw_sample_t f;
+
+	if (!nrf54_i2s.on)
+		return;
+
+	tail = (dma_hw->ch[nrf54_dma_tx].read_addr - (uintptr_t)nrf54_i2s_tx) /
+	       sizeof(raw_sample_t);
+	d = (nrf54_i2s_out - tail) & NRF54_I2S_TX_MASK;
+	if (d < NRF54_I2S_LEAD / 2 || d > 4 * NRF54_I2S_LEAD) {
+		if (nrf54_i2s_out)
+			nrf54_i2s_out_moves++;
+		nrf54_i2s_out = tail + NRF54_I2S_LEAD;
+	}
+
+	switch (radioaudio.output) {
+	case LR_None:
+		f = nrf54_i2s_pattern[nrf54_i2s_out & I2STEST_MASK];
+		break;
+	case LR_Wet:
+		f = wet;
+		break;
+	case LR_Dry:
+		f = dry;
+		break;
+	default:
+		f.left = wet.left;
+		f.right = dry.left;
+		break;
+	}
+	if (radioaudio.output != LR_None) {
+		f.left &= ~0xff;
+		f.right &= ~0xff;
+	}
+	nrf54_i2s_tx[nrf54_i2s_out++ & NRF54_I2S_TX_MASK] = f;
+}
+#else
+sample_t get_radio_audio_input(void)
+{
+	return (sample_t) { 0, 0 };
+}
+
+void put_radio_audio_output(raw_sample_t wet, raw_sample_t dry)
+{
+}
 #endif
 
 //
@@ -114,8 +560,8 @@ static void init_i2s(void)
 	i2s_rx_program_init(pio0, PIO0_I2S_RX_SM, rx_offset,
 			    I2S_FSYNC, I2S_DOUT);
 
-	dma_rx = i2s_dma_channel(PIO0_I2S_RX_SM, false, i2s_dma_buf);
-	dma_tx = i2s_dma_channel(PIO0_I2S_TX_SM, true, i2s_dma_buf);
+	dma_rx = i2s_dma_channel(PIO0_I2S_RX_SM, false, i2s_dma_buf, 7);
+	dma_tx = i2s_dma_channel(PIO0_I2S_TX_SM, true, i2s_dma_buf, 7);
 
 	sms = (1u << PIO0_I2S_TX_SM) | (1u << PIO0_I2S_RX_SM);
 	dmas = (1u << dma_rx) | (1u << dma_tx);
@@ -138,10 +584,22 @@ static void init_i2s(void)
 		i2s_rx_program_init(pio0, PIO0_NRF54_I2S_RX_SM, rx_offset,
 				    NRF54_I2S_FSYNC, NRF54_I2S_DOUT);
 
+		for (int i = 0; i < I2STEST_FRAMES; i++) {
+			nrf54_i2s_pattern[i].left = i2stest_left[i];
+			nrf54_i2s_pattern[i].right = i2stest_right(i);
+		}
+		for (int i = 0; i < NRF54_I2S_TX_FRAMES; i++)
+			nrf54_i2s_tx[i] = nrf54_i2s_pattern[i & I2STEST_MASK];
 		nrf54_dma_rx = i2s_dma_channel(PIO0_NRF54_I2S_RX_SM, false,
-					       nrf54_i2s_buf);
+					       nrf54_i2s_rx,
+					       3 + NRF54_I2S_RX_SHIFT);
+		i2stest_rx_init(&nrf54_i2s.rx);
+		nrf54_i2s.on = true;
+		_Static_assert(sizeof(raw_sample_t) == 1 << 3,
+			       "the transmit ring is 2^3 bytes a frame");
 		nrf54_dma_tx = i2s_dma_channel(PIO0_NRF54_I2S_TX_SM, true,
-					       nrf54_i2s_buf);
+					       nrf54_i2s_tx,
+					       3 + NRF54_I2S_TX_SHIFT);
 
 		sms |= (1u << PIO0_NRF54_I2S_TX_SM) |
 		       (1u << PIO0_NRF54_I2S_RX_SM);

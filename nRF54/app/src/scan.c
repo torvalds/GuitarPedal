@@ -82,12 +82,16 @@ static bool ad_name(struct bt_data *data, void *user_data)
 	return false;		/* the name is all this wanted */
 }
 
-static void device_seen(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
+static void device_seen(const struct bt_le_scan_recv_info *info,
 			struct net_buf_simple *ad)
 {
+	const bt_addr_le_t *addr = info->addr;
 	struct seen *s;
 
-	switch (type) {
+	if (!running)
+		return;
+
+	switch (info->adv_type) {
 	/* Only what can be connected to; a beacon cannot be bound. */
 	case BT_GAP_ADV_TYPE_ADV_IND:
 	case BT_GAP_ADV_TYPE_ADV_DIRECT_IND:
@@ -119,11 +123,43 @@ static void device_seen(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
 	}
 }
 
+static struct bt_le_scan_cb listing_cb = {
+	.recv = device_seen,
+};
+
+/*
+ * The scanner is shared: this listing wants it for a while, and the
+ * broadcast audio sink wants it until it has found a source.  It runs while
+ * anyone holds it, and each user takes what it wants from the results
+ * through a callback of its own.
+ */
+static int holds;
+
+int scan_hold(void)
+{
+	int err;
+
+	if (holds++)
+		return 0;
+	err = bt_le_scan_start(BT_LE_SCAN_ACTIVE, NULL);
+	if (err && err != -EALREADY) {
+		holds--;
+		return err;
+	}
+	return 0;
+}
+
+void scan_release(void)
+{
+	if (holds && !--holds)
+		bt_le_scan_stop();
+}
+
 static void looking_done(struct k_work *work)
 {
 	ARG_UNUSED(work);
 
-	bt_le_scan_stop();
+	scan_release();
 
 	for (unsigned int i = 0; i < nr_seen; i++)
 		scan_found(&seen[i].addr, seen[i].name);
@@ -161,8 +197,15 @@ void scan_start(void)
 	memset(seen, 0, sizeof(seen));
 	running = true;
 
+	static bool registered;
+
+	if (!registered) {
+		bt_le_scan_cb_register(&listing_cb);
+		registered = true;
+	}
+
 	/* Active, because the name is in the scan response. */
-	err = bt_le_scan_start(BT_LE_SCAN_ACTIVE, device_seen);
+	err = scan_hold();
 	if (err) {
 		running = false;
 		scan_done(0);

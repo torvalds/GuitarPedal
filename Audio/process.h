@@ -171,6 +171,8 @@ static inline raw_sample_t process_output(sample_t out, raw_sample_t dry)
 	};
 	raw_sample_t usb;
 
+	put_radio_audio_output(wet, dry);
+
 	switch (usbaudio.output) {
 	case LR_None: return wet;
 	case LR_Wet: usb = wet; break;

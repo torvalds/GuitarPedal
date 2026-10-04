@@ -49,6 +49,9 @@ void midi_ble_flush(void);
 void midi_ble_packet(uint8_t src, const uint8_t *buf, uint16_t len);
 void midi_ble_to(uint8_t peer);
 void midi_ble_resync(void);
+#define MIDI_QUIET_UNICAST	1	/* a phone is streaming */
+#define MIDI_QUIET_PHONES	2	/* so are headphones */
+void midi_ble_quiet(unsigned int why, bool quiet);
 bool midi_ble_ready(void);
 void midi_ble_notices(void);
 void midi_radio_command(const uint8_t *msg, size_t len);

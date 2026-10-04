@@ -257,15 +257,16 @@ between scenes with no computer in sight.
 
 ## Audio effects
 
-Nineteen of them, plus four that are always there and can't be
+Nineteen of them, plus five that are always there and can't be
 unrouted: the **Signal Chain** at the front, which is the input trim, the
 noise gate and the master volume
 ([measured](Documentation/effects/signal-chain.md)), and behind them the
 **Settings**, which is whether the input jack is carrying one channel or
 two, the MIDI channel, LED brightness and what the tuner is tuning to,
-the **USB Audio**, which is what crosses the wire in each direction, and
-the **Expression Jack**, which is what is plugged into it and where that
-thing's travel ends.
+the **USB Audio**, which is what crosses the wire in each direction, the
+**Bluetooth Audio**, which is where audio from a phone joins, how loud it
+is and what goes back, on a board with a radio, and the **Expression Jack**, which is what
+is plugged into it and where that thing's travel ends.
 
 They're listed in the order they run in by default.  This is an overview
 and not documentation - the app is the reference, because it gets the
