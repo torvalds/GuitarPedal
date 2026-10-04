@@ -84,6 +84,16 @@ $(BUILD)/app/zephyr/zephyr.hex: .stamp-sdk $(SOURCES)
 	$(WEST) build -b $(BOARD) -d $(BUILD) $(APP) -- -DBOARD_ROOT=$(TOPDIR)
 
 #
+# What the pedal's ble board embeds, built when it is out of date.  It
+# never fetches the SDK, because the pedal's build is what calls it and a
+# few gigabytes is not something to start as a side effect.
+#
+image:
+	@test -e .stamp-sdk || \
+		{ echo "nRF54: no SDK - run 'make -C nRF54 fetch' first"; exit 1; }
+	@$(MAKE) --no-print-directory $(BUILD)/app/zephyr/zephyr.hex
+
+#
 # The same program without the radio stack.  It exists for bring-up:
 # MPSL initialises ahead of the UART, so a board that says nothing has
 # either failed before MPSL or inside it, and this image is what tells
@@ -104,4 +114,4 @@ clean:
 distclean: clean
 	rm -rf $(VENV) .west .stamp-* bootloader modules nrfxlib tools zephyr
 
-.PHONY: all nobt fetch clean distclean
+.PHONY: all image nobt fetch clean distclean

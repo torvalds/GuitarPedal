@@ -802,8 +802,10 @@ static void probe_hardware(void)
 	// answered.  Its i2s waits for the same answer and is started by
 	// init_i2s(), with the codec's.
 	//
-	if (hardware.radio)
+	if (hardware.radio) {
 		nrf54_uart_init();
+		nrf54_update_start();
+	}
 #endif
 }
 static uint debounce_offset;

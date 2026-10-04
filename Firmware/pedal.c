@@ -85,6 +85,8 @@ uint8_t routed_effect_count = 0;
 #include "scene.h"
 #include "nrf54/swd.h"
 #include "nrf54/dap.h"
+#include "nrf54/rram.h"
+#include "nrf54/update.h"
 #include "nrf54/uart.h"
 #include "hardware.h"
 #include "exp.h"
@@ -331,8 +333,13 @@ int main()
 		// the wire costs USB audio packets.  That is what
 		// bounds the retry count in DAP_TransferConfigure.
 		//
-		dap_poll();
+		// None while the radio is being rewritten, which uses the
+		// same two wires.
+		//
+		if (!nrf54_update_busy())
+			dap_poll();
 		nrf54_uart_poll();
+		nrf54_update_poll();	// after a hello has been read
 		nrf54_i2s_poll();
 		sysex_send_radio();
 		sysex_send_linktest();

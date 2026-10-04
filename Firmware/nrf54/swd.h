@@ -4,10 +4,11 @@
 //
 // SWD - ARM's two-wire Serial Wire Debug - to the nRF54L10.
 //
-// Two callers.  The boot probe below needs a single register read to
-// answer "is there a radio on the other end of these wires", and a host
-// programs the part over CMSIS-DAP (dap.h).  This file has the
-// transactions; what to do with them is not here.
+// Three callers.  The boot probe below needs a single register read to
+// answer "is there a radio on the other end of these wires".  A host
+// programs the part over CMSIS-DAP (dap.h), and the ble board writes its
+// embedded image itself (rram.h).  This file has the transactions; what
+// to do with them is not here.
 //
 // The debug port is ADIv5, the older of ARM's two debug architectures,
 // with the memory access port at index 0, and it needs no dormant-state
