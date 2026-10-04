@@ -11,7 +11,9 @@
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/sys/printk-hooks.h>
 #include <zephyr/random/random.h>
+#include <zephyr/linker/linker-defs.h>
 #include <hal/nrf_uarte.h>
+#include <psa/crypto.h>
 
 #include "midi.h"
 #include "link.h"
@@ -552,17 +554,50 @@ static void rx_failed(const struct link_rx *rx)
 
 static uint32_t boot_id, hello_at;
 
+/*
+ * The SHA-256 of this image as it is in RRAM now, and how long working it
+ * out took.  Read back rather than recorded at build time, so that a
+ * partly written image reports a hash of its own rather than the one it
+ * was meant to have.
+ *
+ * The range is what zephyr.bin holds, from the start of the image to the
+ * end of the last section that is loaded from it.
+ */
+static uint8_t image_hash[32];
+static uint32_t image_hash_us;
+
+static void hash_image(void)
+{
+	uint32_t start = k_cycle_get_32();
+	size_t len;
+
+	psa_crypto_init();
+	if (psa_hash_compute(PSA_ALG_SHA_256,
+			     (const uint8_t *)__rom_region_start,
+			     (size_t)_flash_used, image_hash,
+			     sizeof(image_hash), &len) != PSA_SUCCESS)
+		memset(image_hash, 0, sizeof(image_hash));
+
+	image_hash_us = k_cyc_to_us_floor32(k_cycle_get_32() - start);
+}
+
 static void hello(void)
 {
 	static const char who[] = "radio " __DATE__ " " __TIME__;
-	uint8_t payload[4 + sizeof(who) - 1];
+	uint8_t payload[LINK_HELLO_TEXT + sizeof(who) - 1];
 	uint8_t wire[LINK_WIRE_MAX];
 
 	payload[0] = boot_id;
 	payload[1] = boot_id >> 8;
 	payload[2] = boot_id >> 16;
 	payload[3] = boot_id >> 24;
-	memcpy(payload + 4, who, sizeof(who) - 1);
+	payload[LINK_HELLO_FORMAT] = LINK_HELLO_V1;
+	memcpy(payload + LINK_HELLO_HASH, image_hash, sizeof(image_hash));
+	payload[LINK_HELLO_HASH_US] = image_hash_us;
+	payload[LINK_HELLO_HASH_US + 1] = image_hash_us >> 8;
+	payload[LINK_HELLO_HASH_US + 2] = image_hash_us >> 16;
+	payload[LINK_HELLO_HASH_US + 3] = image_hash_us >> 24;
+	memcpy(payload + LINK_HELLO_TEXT, who, sizeof(who) - 1);
 
 	wire[0] = 0;
 	tx_put(wire, 1);
@@ -749,6 +784,7 @@ int main(void)
 	audio_start();
 
 	boot_id = sys_rand32_get();
+	hash_image();
 	hello();
 
 	midi_ble_start();

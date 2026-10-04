@@ -80,6 +80,19 @@
 #define LINK_LAST	0x02	/* the payload ends a message */
 #define LINK_TRUSTED	0x04	/* from a peer bonded with Secure Connections */
 
+/*
+ * A hello's payload: the boot id, a format byte, the SHA-256 of the image
+ * the radio is running as it read it back at this boot, how long that took
+ * in microseconds, and then text saying when the image was built.  A hello
+ * from before the format byte existed has the text at LINK_HELLO_FORMAT,
+ * which is never LINK_HELLO_V1.
+ */
+#define LINK_HELLO_FORMAT	4
+#define LINK_HELLO_V1		1
+#define LINK_HELLO_HASH		5
+#define LINK_HELLO_HASH_US	37
+#define LINK_HELLO_TEXT		41
+
 #define LINK_HEADER		4
 #define LINK_PAYLOAD_MAX	128
 #define LINK_FRAME_MAX		(LINK_HEADER + LINK_PAYLOAD_MAX + 1)
