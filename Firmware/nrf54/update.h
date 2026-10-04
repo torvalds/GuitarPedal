@@ -150,13 +150,21 @@ static void nrf54_update_reset(void)
 }
 
 //
-// Reset the radio after a failure too, so that it does not carry on from
-// where it was halted, over what is now partly another image.
+// If the radio was halted, let a commit that is under way finish and
+// release it, as far as it still answers.  Then reset it, so that it does
+// not carry on from where it was halted over what is now partly another
+// image.
 //
 static void nrf54_update_failed(const char *result)
 {
+	const char *step = nrf54_swd_err.step;	// what failed, not this
+
 	nrf54_update.write_us = time_us_32() - nrf54_update.since;
-	nrf54_rram_end();
+	if (nrf54_halted) {
+		nrf54_rram_commit();
+		nrf54_rram_end();
+	}
+	nrf54_swd_err.step = step;
 	nrf54_update_reset();
 	nrf54_update_done(result);
 }

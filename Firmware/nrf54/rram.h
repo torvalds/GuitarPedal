@@ -11,9 +11,10 @@
 // controller on that bus.
 //
 // The access port setup follows probe-rs's AHB3 access port, and the
-// write sequence follows Zephyr's soc_flash_nrf_rram.c: enable writes
-// with a 32-line write buffer, write the words, commit what is left in
-// the buffer, wait for READY, disable writes.  RRAM has no erase.
+// write sequence Zephyr's soc_flash_nrf_rram.c: enable writes with a
+// 32-line write buffer, write the words, commit what is left in the
+// buffer, disable writes.  Unlike Zephyr, the buffer's timeout is off and
+// the commit is waited for.  RRAM has no erase.
 //
 
 #ifdef NRF54_IMAGE
@@ -77,6 +78,7 @@
 #define RRAMC_READY		(RRAMC + 0x400)
 #define RRAMC_WRITEBUFEMPTY	(RRAMC + 0x418)
 #define RRAMC_CONFIG		(RRAMC + 0x500)
+#define RRAMC_READYNEXTTIMEOUT	(RRAMC + 0x50c)
 #define RRAMC_CONFIG_WEN	(1u << 0)
 #define RRAMC_CONFIG_BUF32	(32u << 8)
 
@@ -88,10 +90,11 @@
 
 //
 // The radio's bus stalls a write while RRAM is busy, and the access port
-// answers WAIT until it is done.  A stall is one word's write, about 65
-// microseconds, and no more than 30 WAITs in a row have been seen.
+// answers WAIT until it is done.  The longest stall is the write buffer
+// being committed, which Zephyr's driver puts at up to 7.1 ms for 32
+// lines.
 //
-#define NRF54_WAIT_RETRIES	1000
+#define NRF54_WAIT_US		20000
 
 //
 // The first transfer to fail since this was last cleared, for the debug
@@ -120,7 +123,9 @@ static int nrf54_xfer(unsigned int req, uint32_t wdata, uint32_t *rdata)
 	uint32_t ctrl_stat = 0;
 	int ack = SWD_ACK_WAIT;
 
-	for (int i = 0; i < NRF54_WAIT_RETRIES && ack == SWD_ACK_WAIT; i++)
+	uint32_t start = time_us_32();
+
+	while (ack == SWD_ACK_WAIT && time_us_32() - start < NRF54_WAIT_US)
 		ack = swd_transfer(req, wdata, rdata);
 	if (ack == SWD_ACK_OK)
 		return 0;
@@ -212,6 +217,7 @@ static int nrf54_mem_wait(uint32_t addr, uint32_t bits, int tries)
 #define NRF54_HALT_TRIES	100
 
 static bool nrf54_ap_closed;
+static bool nrf54_halted;	// and so attached, with writes enabled
 static uint32_t nrf54_erase_us;	// how long an erase took, or zero
 
 //
@@ -320,7 +326,18 @@ static int nrf54_rram_begin(void)
 	if (i == NRF54_HALT_TRIES)
 		return -1;
 
+	//
+	// The write buffer also commits when no write has come for
+	// READYNEXTTIMEOUT clocks, and the radio's flash driver sets that to
+	// 1 us at boot, so every word over SWD would be committed by itself.
+	// Writing 0 clears its enable bit; even its longest, 32 us, is less
+	// than the gap at the end of every block.  A reset turns it off too,
+	// and the radio's driver turns it on again.
+	//
+	nrf54_halted = true;
 	nrf54_swd_err.step = "write";
+	if (nrf54_mem_write(RRAMC_READYNEXTTIMEOUT, 0))
+		return -1;
 	return nrf54_mem_write(RRAMC_CONFIG, RRAMC_CONFIG_WEN |
 					     RRAMC_CONFIG_BUF32);
 }
@@ -356,7 +373,10 @@ static int nrf54_rram_write(uint32_t addr, const uint32_t *words, unsigned int n
 }
 
 //
-// Commit what is still in the write buffer and wait for RRAM to finish.
+// Commit what is still in the write buffer and wait for RRAM to finish:
+// until the buffer says it has been committed, and then until the
+// controller says it is ready.  READY alone is not enough, because it
+// does not follow writes to the buffer.
 //
 static int nrf54_rram_commit(void)
 {
@@ -367,6 +387,8 @@ static int nrf54_rram_commit(void)
 		return -1;
 	if (!(val & 1) && nrf54_mem_write(RRAMC_COMMITWRITEBUF, 1))
 		return -1;
+	if (nrf54_mem_wait(RRAMC_WRITEBUFEMPTY, 1, 1000))
+		return -1;
 	return nrf54_mem_wait(RRAMC_READY, 1, 1000);
 }
 
@@ -376,6 +398,7 @@ static int nrf54_rram_commit(void)
 //
 static void nrf54_rram_end(void)
 {
+	nrf54_halted = false;
 	nrf54_mem_write(RRAMC_CONFIG, 0);
 	nrf54_mem_write(DEMCR, 0);
 	nrf54_mem_write(DHCSR, DHCSR_KEY);

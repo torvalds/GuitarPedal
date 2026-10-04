@@ -31,11 +31,12 @@
 // SWD_HZ is both the rate and the most any caller gets, whatever a host
 // asks for in DAP_SWJ_Clock.  Writing the whole radio image twice, each
 // time changing every word, and reading it back after each, three boards
-// had no error of any kind at 4.8, 6.4 or 7.68 MHz; this is well under
-// half of that.  At 153.6 MHz it is 48 system clocks to a bit, a state
-// machine divider of 12, and so 3.2 MHz exactly.
+// had no error of any kind at 4.8, 6.4 or 7.68 MHz, the fastest tried,
+// against the nRF54L's limit of 8.  This is half of 7.68: at 153.6 MHz it
+// is 40 system clocks to a bit, a state machine divider of 10, and so
+// 3.84 MHz exactly.
 //
-#define SWD_HZ		3200000
+#define SWD_HZ		3840000
 
 static void swd_set_clock(uint32_t hz)
 {
