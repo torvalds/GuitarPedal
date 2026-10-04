@@ -4,110 +4,100 @@
 //
 // SWD - ARM's two-wire Serial Wire Debug - to the nRF54L10.
 //
-// Two callers, wanting different amounts of it.  The boot probe below
-// needs a single register read to answer "is there a radio on the other
-// end of these wires".  Programming the part is the host's job over
-// CMSIS-DAP, and that is the same transactions with somebody else
-// choosing them.  This file has the transactions; what to do with them
-// is not here.
+// Three callers.  The boot probe below needs a single register read to
+// answer "is there a radio on the other end of these wires".  A host
+// programs the part over CMSIS-DAP (dap.h), and the ble board writes its
+// embedded image itself (rram.h).  This file has the transactions; what
+// to do with them is not here.
 //
-// Two things about this part, both read out of probe-rs's nRF54L
-// target rather than observed.  Its debug port is ADIv5, the older of
-// ARM's two debug architectures, with the access port at index 0; and
-// it needs no dormant-state wake-up sequence before the ordinary
-// JTAG-to-SWD switch, because probe-rs does not override the default
-// connection sequence for it.
-//
-// Nothing here has run against hardware.
+// The debug port is ADIv5, the older of ARM's two debug architectures,
+// with the memory access port at index 0, and it needs no dormant-state
+// wake-up before the ordinary JTAG-to-SWD switch.
 //
 
 #ifdef NRF54_SWDIO
 
 //
-// Half a clock period, counted in nops.
+// The wire is a PIO program (pio/swd.pio), on pio2 beside the WS2812s.
 //
-// Slow on purpose to start with: a bit-banged line that works is worth
-// more on a board nobody has run yet than a fast one that is marginal,
-// and it can be wound down to a few kilohertz to be looked at with a
-// scope.  PIO is the right way to drive this once it is known to work
-// at all - it is how the speed gets to where a bulk transfer would
-// notice - and swd_transfer() is the seam that change happens behind.
-//
-static uint32_t swd_half_period = 48;
-
-static inline void swd_delay(void)
-{
-	for (uint32_t i = 0; i < swd_half_period; i++)
-		__asm__ volatile ("nop");
-}
+#define SWD_PIO		pio2
+#define SWD_SM		PIO2_SWD_SM
 
 //
-// What the host asked for in DAP_SWJ_Clock, as near as a nop loop can
-// offer it.
+// Four state machine cycles to a bit, and a whole number of system
+// clocks to each of those, so every edge lands on the same system clock
+// edge every time.  Rounded so the line is never faster than asked.
 //
-// A turn of the loop is not one cycle: it is the nop, an increment, a
-// compare and a branch, so roughly four.  Dividing by that is what
-// makes the answer the right order of magnitude rather than four times
-// too slow - and the fixed subtraction on top is the pin writes either
-// side, which happen once per bit however long the loop is.
+// SWD_HZ is both the rate and the most any caller gets, whatever a host
+// asks for in DAP_SWJ_Clock.  Writing the whole radio image twice, each
+// time changing every word, and reading it back after each, three boards
+// had no error of any kind at 4.8, 6.4 or 7.68 MHz, the fastest tried,
+// against the nRF54L's limit of 8.  This is half of 7.68: at 153.6 MHz it
+// is 40 system clocks to a bit, a state machine divider of 10, and so
+// 3.84 MHz exactly.
 //
-// It is an estimate and nothing has checked it against a scope.  The
-// error that matters is being too fast, so where it is uncertain it is
-// biased slow: a line driven harder than it can carry fails in a way
-// that looks like broken hardware.
-//
-#define SWD_LOOP_CYCLES		4
-#define SWD_BIT_OVERHEAD	20
+#define SWD_HZ		3840000
 
 static void swd_set_clock(uint32_t hz)
 {
-	uint32_t cycles;
+	uint32_t div;
 
 	if (!hz)
 		return;
+	if (hz > SWD_HZ)
+		hz = SWD_HZ;
 
-	cycles = clock_get_hz(clk_sys) / (2 * hz);
-	cycles = cycles > SWD_BIT_OVERHEAD ? cycles - SWD_BIT_OVERHEAD : 1;
-	cycles /= SWD_LOOP_CYCLES;
-
-	swd_half_period = cycles ? (cycles > 4000 ? 4000 : cycles) : 1;
+	div = (clock_get_hz(clk_sys) + 4 * hz - 1) / (4 * hz);
+	if (div > 65535)
+		div = 65535;
+	pio_sm_set_clkdiv_int_frac(SWD_PIO, SWD_SM, div, 0);
 }
 
 //
-// Both directions follow one rule: data changes on the falling edge of
-// SWCLK and is sampled on the rising edge.  So a bit we drive goes out
-// while the clock is low and the target takes it on the way up, and a
-// bit we read is sampled at the end of the low phase, after the target
-// has had all of it to drive the line.
+// Stopped by dap_swj_pins(), which sets the pins itself and leaves them
+// as they are until the next transfer starts the state machine again.
+//
+static bool swd_stopped;
+
+static void swd_start(void)
+{
+	if (swd_stopped) {
+		pio_sm_set_enabled(SWD_PIO, SWD_SM, true);
+		swd_stopped = false;
+	}
+}
+
+//
+// Up to 32 bits each way, least significant first.  A write returns as
+// soon as its two words are in the FIFO; a read waits for its bits, and
+// so for everything queued ahead of it.
 //
 static void swd_write_bits(uint32_t bits, int n)
 {
-	gpio_set_dir(NRF54_SWDIO, GPIO_OUT);
-
-	while (n--) {
-		gpio_put(NRF54_SWDIO, bits & 1);
-		bits >>= 1;
-		swd_delay();
-		gpio_put(NRF54_SWDCLK, 1);
-		swd_delay();
-		gpio_put(NRF54_SWDCLK, 0);
-	}
+	swd_start();
+	pio_sm_put_blocking(SWD_PIO, SWD_SM, n - 1);
+	pio_sm_put_blocking(SWD_PIO, SWD_SM, bits);
 }
 
 static uint32_t swd_read_bits(int n)
 {
-	uint32_t bits = 0;
+	swd_start();
+	pio_sm_put_blocking(SWD_PIO, SWD_SM, (n - 1) | SWD_PIO_READ);
+	return pio_sm_get_blocking(SWD_PIO, SWD_SM) >> (32 - n);
+}
 
-	gpio_set_dir(NRF54_SWDIO, GPIO_IN);
+//
+// Wait until every bit queued has been clocked out, for whatever wants
+// the pins in a known state afterwards.
+//
+static void swd_flush(void)
+{
+	uint32_t stalled = 1u << (PIO_FDEBUG_TXSTALL_LSB + SWD_SM);
 
-	for (int i = 0; i < n; i++) {
-		swd_delay();
-		bits |= (uint32_t)gpio_get(NRF54_SWDIO) << i;
-		gpio_put(NRF54_SWDCLK, 1);
-		swd_delay();
-		gpio_put(NRF54_SWDCLK, 0);
-	}
-	return bits;
+	SWD_PIO->fdebug = stalled;
+	while (!pio_sm_is_tx_fifo_empty(SWD_PIO, SWD_SM) ||
+	       !(SWD_PIO->fdebug & stalled))
+		;
 }
 
 //
@@ -235,13 +225,10 @@ static void swd_init(void)
 	gpio_put(NRF54_RESET, 0);
 	gpio_set_dir(NRF54_RESET, GPIO_OUT);
 
-	gpio_init(NRF54_SWDCLK);
-	gpio_put(NRF54_SWDCLK, 0);
-	gpio_set_dir(NRF54_SWDCLK, GPIO_OUT);
-
-	gpio_init(NRF54_SWDIO);
 	gpio_pull_up(NRF54_SWDIO);
-	gpio_set_dir(NRF54_SWDIO, GPIO_IN);
+	swd_program_init(SWD_PIO, SWD_SM, pio_add_program(SWD_PIO, &swd_program),
+			 NRF54_SWDCLK, NRF54_SWDIO);
+	swd_set_clock(SWD_HZ);
 }
 
 //

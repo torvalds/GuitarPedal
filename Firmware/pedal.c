@@ -21,6 +21,7 @@
 #include "debounce.pio.h"
 #include "rotary.pio.h"
 #include "i2s.pio.h"
+#include "swd.pio.h"
 
 // Both i2s links live on pio0 so that they share one copy of the two
 // programs: an instance costs a state machine rather than another 18
@@ -33,10 +34,11 @@
 
 // PIO1 runs one debounce state machine per switch, and the state
 // machine index is the switch id - see switch.h.  PIO2 has the one
-// rotary encoder, and the WS2812s, which were on pio0 until its four
-// state machines went to the two i2s links.
+// rotary encoder, the WS2812s, which were on pio0 until its four state
+// machines went to the two i2s links, and the SWD wire to the radio.
 #define ROTARY_SM 0
 #define PIO2_WS2812_SM 1
+#define PIO2_SWD_SM 2
 
 #define PWM_WRAP 4096	// Entirely arbitrary
 
@@ -83,6 +85,8 @@ uint8_t routed_effect_count = 0;
 #include "scene.h"
 #include "nrf54/swd.h"
 #include "nrf54/dap.h"
+#include "nrf54/rram.h"
+#include "nrf54/update.h"
 #include "nrf54/uart.h"
 #include "hardware.h"
 #include "exp.h"
@@ -325,12 +329,17 @@ int main()
 		//
 		// Nothing below waits on it, but tud_task() above does:
 		// the audio and MIDI endpoints are serviced from this
-		// same loop, so a command that spends milliseconds
-		// bit-banging costs USB audio packets.  That is what
+		// same loop, so a command that spends milliseconds on
+		// the wire costs USB audio packets.  That is what
 		// bounds the retry count in DAP_TransferConfigure.
 		//
-		dap_poll();
+		// None while the radio is being rewritten, which uses the
+		// same two wires.
+		//
+		if (!nrf54_update_busy())
+			dap_poll();
 		nrf54_uart_poll();
+		nrf54_update_poll();	// after a hello has been read
 		nrf54_i2s_poll();
 		sysex_send_radio();
 		sysex_send_linktest();

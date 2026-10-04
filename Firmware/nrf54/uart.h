@@ -682,6 +682,8 @@ static void nrf54_uart_poll(void)
 
 		switch (link_take(l)) {
 		case LINK_GOT_HELLO:
+			nrf54_update_hello(l->rx.buf + LINK_HEADER,
+					   l->rx.len - LINK_HEADER);
 			nrf54_link_hello();
 			continue;
 		case LINK_GOT_DATA:

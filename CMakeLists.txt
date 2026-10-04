@@ -54,7 +54,10 @@ pico_sdk_init()
 # What is left is the pin map, which the unified board shares four GPIOs
 # of and no more.  That is the whole of the build-time question.
 #
-set(PEDAL_BOARDS split unified minimal)
+# ble is minimal's pin map with the radio's firmware embedded, and it is a
+# build of its own because building it needs the Nordic SDK.
+#
+set(PEDAL_BOARDS split unified minimal ble)
 
 # ...and the same list as prose, for the messages below.
 list(JOIN PEDAL_BOARDS " " PEDAL_BOARDS_PRETTY)
@@ -314,6 +317,7 @@ add_library(pedal_pio INTERFACE)
 pico_generate_pio_header(pedal_pio ${PIO_DIR}/bitstream.pio)
 pico_generate_pio_header(pedal_pio ${PIO_DIR}/debounce.pio)
 pico_generate_pio_header(pedal_pio ${PIO_DIR}/rotary.pio)
+pico_generate_pio_header(pedal_pio ${PIO_DIR}/swd.pio)
 
 #
 # ...and the header-generating targets it made, named after it, which
@@ -324,7 +328,8 @@ pico_generate_pio_header(pedal_pio ${PIO_DIR}/rotary.pio)
 set(PEDAL_PIO_TARGETS
 	pedal_pio_bitstream_pio_h
 	pedal_pio_debounce_pio_h
-	pedal_pio_rotary_pio_h)
+	pedal_pio_rotary_pio_h
+	pedal_pio_swd_pio_h)
 
 #
 # One board, one target, one name.  Everything below here is per-board;
@@ -527,6 +532,34 @@ target_compile_options(${tgt} PRIVATE
 	-fsingle-precision-constant
 	-Wfloat-conversion)
 
+#
+# The ble board carries the radio's image.  nRF54/ is built first, by its
+# own Makefile with Nordic's toolchain, which has to have been fetched
+# already.
+#
+if (board STREQUAL "ble")
+	set(nrf54_dir "${CMAKE_CURRENT_SOURCE_DIR}/nRF54")
+	set(nrf54_out "${nrf54_dir}/build/app/zephyr")
+	set(image_dir "${CMAKE_CURRENT_BINARY_DIR}/radio-${board}")
+
+	add_custom_target(${tgt}_radio
+		COMMAND make -C "${nrf54_dir}" image
+		BYPRODUCTS "${nrf54_out}/zephyr.bin" "${nrf54_out}/zephyr.elf"
+		COMMENT "Building the radio's image"
+		VERBATIM)
+	add_custom_command(OUTPUT "${image_dir}/nrf54_image.h"
+		COMMAND ${CMAKE_COMMAND} -E make_directory "${image_dir}"
+		COMMAND "${SCRIPT_DIR}/radio-image.py"
+			"${nrf54_out}/zephyr.bin" "${nrf54_out}/zephyr.elf"
+			"${CMAKE_NM}" "${image_dir}/nrf54_image.h"
+		DEPENDS "${SCRIPT_DIR}/radio-image.py" "${nrf54_out}/zephyr.bin"
+		COMMENT "Embedding the radio's image"
+		VERBATIM)
+	add_dependencies(${tgt} ${tgt}_radio)
+	target_sources(${tgt} PRIVATE "${image_dir}/nrf54_image.h")
+	target_include_directories(${tgt} PRIVATE "${image_dir}")
+endif()
+
 # create map/bin/hex/uf2 file in addition to ELF.
 pico_add_extra_outputs(${tgt})
 
@@ -582,8 +615,17 @@ endif()
 
 endfunction()
 
+#
+# all-boards includes ble only where the Nordic SDK has been fetched,
+# because building it builds the radio too, and a clone without the SDK
+# should still be able to check every board it can build.
+#
 foreach(board ${PEDAL_BOARDS})
 	add_pedal_board(${board})
+	if (board STREQUAL "ble" AND
+	    NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/nRF54/.stamp-sdk")
+		continue()
+	endif()
 	list(APPEND PEDAL_BOARD_TARGETS "pedal-${board}")
 endforeach()
 
