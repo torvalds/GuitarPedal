@@ -709,6 +709,7 @@ const demoPedal = {
 
         return {
             build: 'the schema this app was built with',
+            schema: BUILT_IN_SCHEMA_HASH,
             scenes: 8,
             midi_hw: false,
             found: { i2c_codec: true, codec: 'none - demo pedal',
@@ -1031,7 +1032,7 @@ function updateMidiState() {
         // Who is this, then what does it have
         sendSysex([SYSEX_CMD.IDENTITY]);
         updateTelemetryPolling();
-        askForSchema();
+        awaitSchemaHash();
         sendSysex([SYSEX_CMD.DIAGNOSTIC]); // Request diagnostic status
     } else {
         schemaDone();
@@ -1142,8 +1143,8 @@ let diagnosticTimeout = null;
 // title bar saying "Connected" and nothing else, and no way out but
 // picking another port and coming back.
 //
-// It is asked for at the worst moment on purpose - the instant a port is
-// selected - because there is nothing to show until it arrives.  Over
+// It is asked for as soon as the identity reply shows the app has no copy,
+// because there is nothing to show until it arrives.  Over
 // Bluetooth that is a connection seconds old, with its subscription just
 // written and its connection parameters not yet negotiated, carrying the
 // largest message the pedal ever sends.
@@ -1186,6 +1187,91 @@ function schemaDone() {
     schemaWanted = false;
     if (schemaTimer) clearTimeout(schemaTimer);
     schemaTimer = null;
+    if (identityTimer) clearTimeout(identityTimer);
+    identityTimer = null;
+}
+
+//
+// The identity reply carries a hash of the pedal's schema, so the schema
+// itself is asked for only when the app has no copy with that hash.  Over
+// Bluetooth the full schema takes several seconds.
+//
+// Firmware older than the hash sends an identity reply without it, which
+// is a miss.  A reply that never comes is one too, after IDENTITY_WAIT_MS:
+// waiting longer only delays the download that is going to happen anyway.
+//
+const IDENTITY_WAIT_MS = 1500;
+let identityTimer = null;
+let pedalSchemaHash = null;
+
+function awaitSchemaHash() {
+    schemaDone();
+    pedalSchemaHash = null;
+    identityTimer = setTimeout(() => {
+        identityTimer = null;
+        askForSchema();
+    }, IDENTITY_WAIT_MS);
+}
+
+function schemaHashArrived(hash) {
+    pedalSchemaHash = hash || null;
+    if (!identityTimer)
+        return;
+    clearTimeout(identityTimer);
+    identityTimer = null;
+
+    const json = hash ? cachedSchema(hash) : null;
+    if (json) {
+        try {
+            applySchema(JSON.parse(json));
+            return;
+        } catch (e) {
+            console.error('[WebMIDI] cached schema ' + hash + ' failed', e);
+        }
+    }
+    askForSchema();
+}
+
+//
+// The last few schemas received, newest first, as the JSON the pedal sent.
+// Every build that changes an effect header has a new hash, so without a
+// limit this grows by tens of kilobytes a time all through a day of
+// development.
+//
+// Kept as the raw string, so the fallbacks in applySchema() for older
+// firmware run on it again each time rather than being stored.  Storage
+// that is full or refused is a miss, never an error.
+//
+const SCHEMA_CACHE_KEY = 'schema.cache';
+const SCHEMA_CACHE_SIZE = 4;
+
+function schemaCacheList() {
+    try {
+        const list = JSON.parse(localStorage.getItem(SCHEMA_CACHE_KEY));
+        return Array.isArray(list) ? list : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function rememberSchema(hash, json) {
+    if (!hash)
+        return;
+    const list = schemaCacheList().filter((c) => c.hash !== hash);
+    list.unshift({ hash, json });
+    try {
+        localStorage.setItem(SCHEMA_CACHE_KEY,
+                             JSON.stringify(list.slice(0, SCHEMA_CACHE_SIZE)));
+    } catch (e) {
+        console.warn('[WebMIDI] could not keep schema ' + hash, e);
+    }
+}
+
+function cachedSchema(hash) {
+    const hit = schemaCacheList().find((c) => c.hash === hash);
+    if (hit)
+        rememberSchema(hash, hit.json);
+    return hit ? hit.json : null;
 }
 
 function scheduleDiagnostic() {
@@ -1269,6 +1355,75 @@ function applyPotValue(effId, potIdx, val) {
     }
 }
 
+//
+// Put a schema on screen, whether the pedal sent it or the cache had it.
+//
+// The schema used to be a bare array of effects and is now an object
+// with the effects under a key, alongside the steering parameters every
+// effect shares.  Both shapes are accepted: a cached copy of this app can
+// meet firmware older than itself, and a service worker makes that
+// likelier than it sounds.
+//
+function applySchema(parsed) {
+    PEDAL_EFFECTS = Array.isArray(parsed) ? parsed : parsed.effects;
+    PEDAL_STEERING = Array.isArray(parsed) ? null : parsed.steering;
+
+    //
+    // Which effects are global is the pedal's to say, and
+    // older firmware does not.  Absent, not false: a schema
+    // that carries the flag carries it on every effect, so
+    // one missing key means the whole idea is missing.
+    //
+    // Fall back to what the rule used to be: the last
+    // effect.  Released firmware without the flag has one
+    // global effect and it sorts last, so this is not a
+    // guess about those - it is the same answer they used
+    // to get from the app counting positions itself.
+    //
+    if (PEDAL_EFFECTS.length && !PEDAL_EFFECTS.some((e) => 'global' in e))
+        PEDAL_EFFECTS[PEDAL_EFFECTS.length - 1].global = true;
+
+    //
+    // Which effects a scene cannot switch off. Absent from
+    // firmware that had no word for it, where the answer
+    // was the same as "not routable": effect 0 and
+    // anything kept once.
+    //
+    if (PEDAL_EFFECTS.length &&
+        !PEDAL_EFFECTS.some((e) => 'always' in e)) {
+        PEDAL_EFFECTS.forEach((e, idx) => {
+            if (idx === 0 || e.global)
+                e.always = true;
+        });
+    }
+
+    //
+    // And where the pinned ones sit, which is absent on
+    // every effect that is free to be moved - so the test
+    // is whether any of them carries it at all.  Older
+    // firmware pinned effect 0 to the front and anything
+    // kept once to the back.
+    //
+    if (PEDAL_EFFECTS.length &&
+        !PEDAL_EFFECTS.some((e) => 'position' in e)) {
+        PEDAL_EFFECTS.forEach((e, idx) => {
+            if (idx === 0)
+                e.position = 'front';
+            else if (e.global)
+                e.position = 'back';
+        });
+    }
+
+    schemaDone();
+    effectIdMap.clear();
+    PEDAL_EFFECTS.forEach((e, idx) => effectIdMap.set(e.id, idx));
+    renderUI();
+    bindMidiChannel();
+    // Request State and Status
+    sendSysex([SYSEX_CMD.REQ_STATE]);
+    sendSysex([SYSEX_CMD.DIAGNOSTIC]);
+}
+
 function handleSysex(data) {
     const cmd = data[2];
     console.debug(`[WebMIDI] Received SysEx cmd=0x${cmd.toString(16)}, data=[${Array.from(data).map(b => '0x' + b.toString(16).padStart(2, '0')).join(', ')}]`);
@@ -1281,72 +1436,8 @@ function handleSysex(data) {
                 jsonStr += String.fromCharCode(data[i]);
             }
             try {
-                //
-                // The schema used to be a bare array of effects and is
-                // now an object with the effects under a key, alongside
-                // the steering parameters every effect shares.  Both
-                // shapes are accepted: a cached copy of this app can
-                // meet firmware older than itself, and a service worker
-                // makes that likelier than it sounds.
-                //
-                const parsed = JSON.parse(jsonStr);
-                PEDAL_EFFECTS = Array.isArray(parsed) ? parsed : parsed.effects;
-                PEDAL_STEERING = Array.isArray(parsed) ? null : parsed.steering;
-
-                //
-                // Which effects are global is the pedal's to say, and
-                // older firmware does not.  Absent, not false: a schema
-                // that carries the flag carries it on every effect, so
-                // one missing key means the whole idea is missing.
-                //
-                // Fall back to what the rule used to be: the last
-                // effect.  Released firmware without the flag has one
-                // global effect and it sorts last, so this is not a
-                // guess about those - it is the same answer they used
-                // to get from the app counting positions itself.
-                //
-                if (PEDAL_EFFECTS.length && !PEDAL_EFFECTS.some((e) => 'global' in e))
-                    PEDAL_EFFECTS[PEDAL_EFFECTS.length - 1].global = true;
-
-                //
-                // Which effects a scene cannot switch off. Absent from
-                // firmware that had no word for it, where the answer
-                // was the same as "not routable": effect 0 and
-                // anything kept once.
-                //
-                if (PEDAL_EFFECTS.length &&
-                    !PEDAL_EFFECTS.some((e) => 'always' in e)) {
-                    PEDAL_EFFECTS.forEach((e, idx) => {
-                        if (idx === 0 || e.global)
-                            e.always = true;
-                    });
-                }
-
-                //
-                // And where the pinned ones sit, which is absent on
-                // every effect that is free to be moved - so the test
-                // is whether any of them carries it at all.  Older
-                // firmware pinned effect 0 to the front and anything
-                // kept once to the back.
-                //
-                if (PEDAL_EFFECTS.length &&
-                    !PEDAL_EFFECTS.some((e) => 'position' in e)) {
-                    PEDAL_EFFECTS.forEach((e, idx) => {
-                        if (idx === 0)
-                            e.position = 'front';
-                        else if (e.global)
-                            e.position = 'back';
-                    });
-                }
-
-                schemaDone();
-                effectIdMap.clear();
-                PEDAL_EFFECTS.forEach((e, idx) => effectIdMap.set(e.id, idx));
-                renderUI();
-                bindMidiChannel();
-                // Request State and Status
-                sendSysex([SYSEX_CMD.REQ_STATE]);
-                sendSysex([SYSEX_CMD.DIAGNOSTIC]);
+                applySchema(JSON.parse(jsonStr));
+                rememberSchema(pedalSchemaHash, jsonStr);
             } catch (e) {
                 console.error("Failed to parse schema", e);
             }
@@ -1368,6 +1459,7 @@ function handleSysex(data) {
                 //
                 console.log('[Pedal Identity]', id);
                 handleIdentity(id);
+                schemaHashArrived(id.schema);
             } catch (e) {
                 console.error("Failed to parse identity", e);
             }

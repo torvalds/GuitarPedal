@@ -198,7 +198,8 @@ const WANT = ['handleIdentity', 'populateScenePicker', 'updateSceneLabels',
               'routeEffect', 'unrouteEffect',
               'potToValue', 'valueToPot', 'clampToNeighbours', 'pileAt',
               'uiPref', 'setUiPref',
-              'controlDef', 'actionsFor', 'hwName'];
+              'controlDef', 'actionsFor', 'hwName',
+              'awaitSchemaHash', 'BUILT_IN_SCHEMA_HASH'];
 
 //
 // ble-midi.js is evaluated in the same scope, so its codec comes out
@@ -385,7 +386,7 @@ if (!schemaFile) {
     process.exit(1);
 }
 
-const literal = fs.readFileSync(schemaFile, 'utf8').match(/"((?:[^"\\]|\\.)*)"/);
+const literal = fs.readFileSync(schemaFile, 'utf8').match(/= "((?:[^"\\]|\\.)*)";/);
 
 //
 // The C literal is the JSON with a second layer of escaping over it.
@@ -1067,6 +1068,63 @@ check('BLE MIDI: a packet whose header has bit 6 set is refused',
           decoder.packet(Uint8Array.of(0xc0, 0x80, 0xb0, 0x07, 0x40));
           return out.length === 0;
       })());
+
+//
+// The schema is asked for only when the hash in the identity reply is one
+// the app was not sent before.  The schema effects.js carries for the demo
+// pedal is not a copy: a pedal built with this app is asked like any other.
+//
+{
+    const sent = [];
+    const asked = () => sent.some((m) => m[2] === 0x01);
+    const applied = () => sent.some((m) => m[2] === 0x05);
+    const connect = (over) => {
+        sent.length = 0;
+        app.awaitSchemaHash();
+        app.handleSysex(asSysex(0x0a, JSON.stringify(identity(over))));
+    };
+    const store = new Map();
+    global.localStorage = {
+        getItem: (k) => (store.has(k) ? store.get(k) : null),
+        setItem: (k, v) => store.set(k, v),
+    };
+    app.tap((m) => sent.push(Array.from(m)));
+
+    connect({ schema: app.BUILT_IN_SCHEMA_HASH });
+    check('a pedal built with this app is still asked for its schema',
+          asked());
+
+    connect({ schema: '0123456789abcdef' });
+    check('a pedal with another schema is asked for it', asked());
+    app.handleSysex(asSysex(0x02, schemaJson));
+    connect({ schema: '0123456789abcdef' });
+    check('and is not asked again once it has answered',
+          !asked() && applied(), JSON.stringify(sent));
+
+    connect({});
+    check('firmware with no schema hash is asked, as before', asked());
+
+    for (const h of ['a', 'b', 'c', 'd', 'e']) {
+        connect({ schema: h });
+        app.handleSysex(asSysex(0x02, schemaJson));
+    }
+    connect({ schema: '0123456789abcdef' });
+    check('only the last few schemas are kept', asked());
+    connect({ schema: 'e' });
+    check('and the newest of them is', !asked());
+
+    global.localStorage = {
+        getItem() { throw new Error('denied'); },
+        setItem() { throw new Error('denied'); },
+    };
+    connect({ schema: 'e' });
+    check('storage that refuses to read is a miss', asked());
+    sent.length = 0;
+    app.handleSysex(asSysex(0x02, schemaJson));
+    check('and refusing to write still puts the schema on screen', applied());
+
+    app.tap(null);
+}
 
 if (failures) {
     say(`test-webmidi: ${failures} failure(s)`);

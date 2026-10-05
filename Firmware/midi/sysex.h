@@ -173,6 +173,12 @@ static void sysex_send_identity(void)
 	sysex_write_str("{\"build\":\"" __DATE__ " " __TIME__ "\"");
 
 	//
+	// Which schema 0x01 would send, so an app holding a copy with this
+	// hash can skip asking for the whole schema.
+	//
+	sysex_write_str(",\"schema\":\"" MIDI_SCHEMA_HASH "\"");
+
+	//
 	// Which pedal this is: the chip's unique id, the same string as the
 	// USB serial.  A pedal reached over USB and over Bluetooth gives the
 	// same answer to both, and nothing else in either says so.

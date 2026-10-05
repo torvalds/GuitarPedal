@@ -1100,6 +1100,16 @@ def generate(audio_dir, out_h, out_js, out_md):
         ]}
         json_str = json.dumps({"steering": steering, "effects": ui_effects},
                               separators=(',', ':'))
+        #
+        # What the identity reply says instead of the schema, so an app
+        # that already has this exact JSON need not ask for it.  Over the
+        # exact bytes sent, so it changes when and only when they do.
+        #
+        # Above the string, which Validation's effectmap.py expects to be
+        # the last thing in the file.
+        #
+        schema_hash = hashlib.sha256(json_str.encode()).hexdigest()[:16]
+        f.write(f'#define MIDI_SCHEMA_HASH "{schema_hash}"\n')
         f.write(f'static const char *const midi_schema_json = "{c_string(json_str)}";\n')
 
     #
@@ -1152,6 +1162,7 @@ def generate(audio_dir, out_h, out_js, out_md):
         # offers is what firmware of this commit would have sent.
         #
         f.write(f"\nconst BUILT_IN_SCHEMA = {json_str};\n")
+        f.write(f"const BUILT_IN_SCHEMA_HASH = '{schema_hash}';\n")
 
     with open(out_md, 'w') as f:
         f.write("# MIDI Implementation\n\n")
