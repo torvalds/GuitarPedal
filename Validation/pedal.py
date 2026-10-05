@@ -26,6 +26,8 @@ import pots
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BUILD = os.path.join(HERE, "..", "build")
+# The build makes this from Firmware/picotool; one on PATH is not used.
+PICOTOOL = os.path.join(BUILD, "picotool", "picotool")
 
 HEADER = bytes([0xF0, 0x7D])
 

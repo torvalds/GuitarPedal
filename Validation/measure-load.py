@@ -219,7 +219,7 @@ def reboot(d):
     """
     pedal.enter_bootsel(d["port"])
     time.sleep(3)
-    subprocess.run(["picotool", "reboot", "--ser", d["serial"]],
+    subprocess.run([pedal.PICOTOOL, "reboot", "--ser", d["serial"]],
                    capture_output=True)
     time.sleep(7)
 
