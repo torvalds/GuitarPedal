@@ -100,6 +100,22 @@ all that and just do ``make flash``, which builds and flashes the board in
 `board.local`.
 ``make flash-split`` does the other one.
 
+### Tools outside the tree
+
+Two tools stay outside the tree, and each has a make target that
+sets it up once per machine.  Both say what they are missing, and
+running either again is safe.
+
+``make probe-rs`` builds probe-rs, which programs and debugs the nRF54
+radio through the pedal, from `~/src/probe-rs` into `~/bin/probe-rs`.
+It needs cargo and the libudev development files (`systemd-devel` on
+Fedora).
+
+``make build123d`` makes a python venv in `~/.build123d` for the
+3D-printed case in `Hardware/Models`, and two commands in `~/bin` that
+use it: ``build123d Compact.py`` runs the model, and ``ocp-viewer`` is
+the viewer it draws in, at http://localhost:3939.
+
 ### Testing
 
 `Validation` has the test suite, and it's split by what it needs.
