@@ -45,6 +45,8 @@ Regardless of platform, you'll need the basics:
  - make
  - python3
  - cmake
+ - a C and C++ compiler for the machine you build on, because picotool
+   and the SDK's PIO assembler are built from source too
  - pkg-config and the libusb-1.0 development files, for picotool
    (`libusb1-devel` on Fedora, `libusb-1.0-0-dev` on Debian)
 
@@ -52,7 +54,20 @@ and a 32-bit arm cross-build environment.  On Linux, that would be
 something like
  - arm-none-eabi-binutils-cs
  - arm-none-eabi-gcc-cs
+ - arm-none-eabi-gcc-cs-c++ (the SDK sets up C++ as well as C)
  - arm-none-eabi-newlib
+
+On Fedora that whole list is
+
+    dnf install git make python3 cmake gcc-c++ pkgconf-pkg-config \
+        libusb1-devel arm-none-eabi-gcc-cs arm-none-eabi-gcc-cs-c++ \
+        arm-none-eabi-newlib
+
+The `ble` board also carries the nRF54 radio's firmware, which is a
+Zephyr build of its own.  ``make -C nRF54 fetch`` sets that up once: a
+python venv with west in it, the Nordic SDK, and Zephyr's ARM toolchain
+in `~/zephyr-sdk-*`, about 7.5GB between them.  It also needs ninja
+(`ninja-build` on Fedora).
 
 There's more than one board this can be built for, and the build won't
 guess.  You say which one this tree is about once, in
@@ -116,9 +131,36 @@ Fedora).
 use it: ``build123d Compact.py`` runs the model, and ``ocp-viewer`` is
 the viewer it draws in, at http://localhost:3939.
 
+### Talking to the pedal without root
+
+picotool and probe-rs open the pedal's USB device directly, and without
+a udev rule only root can.  This is `/etc/udev/rules.d/99-pedal.rules`:
+
+    ATTR{idVendor}=="2e8a", MODE="0660", GROUP="dialout"
+    ATTR{idVendor}=="ffff", ATTR{idProduct}=="0003", MODE="0660", GROUP="dialout"
+
+The first line covers anything with Raspberry Pi's vendor id, which is
+how a board in BOOTSEL shows up; the second is the running pedal, whose
+CMSIS-DAP interface is what probe-rs uses for the radio.  You have to be
+in the `dialout` group, and ``udevadm control --reload`` as root plus a
+replug picks the rule up.  USB audio and MIDI need no rule.
+
+The pedal's debug console is `/dev/ttyACM0`, which needs a kernel with
+`CONFIG_USB_ACM`.  Every distribution kernel has it; a kernel you
+configured yourself may not.
+
 ### Testing
 
 `Validation` has the test suite, and it's split by what it needs.
+
+``make check`` needs gcc and numpy (`python3-numpy`), plus node if
+you want the web app's tests too; without node those are skipped.  The
+bench scripts that talk to a pedal want more: alsa-utils, ffmpeg, scipy
+and matplotlib, ngspice for the circuit comparisons, and dbus-python and
+PyGObject for Bluetooth MIDI.  On Fedora,
+
+    dnf install python3-numpy nodejs alsa-utils ffmpeg-free psmisc \
+        python3-scipy python3-matplotlib ngspice python3-dbus python3-gobject
 
 ``make check`` runs the part that needs no hardware at all: the MIDI
 packetiser, whether the web app still loads and still draws the right
@@ -243,6 +285,11 @@ compressing.
 
 `WebMIDI` is a static web page that talks to the pedal over USB
 MIDI.  There's nothing to install and it runs off a phone.
+
+It also talks to the pedal over Bluetooth MIDI.  On Linux, Chrome only
+offers Bluetooth to a page with
+`chrome://flags/#enable-experimental-web-platform-features` turned on;
+USB needs nothing.
 
 It doesn't know what the effects are.  It asks.  The pedal describes
 every effect it has - every pot, the ranges, the units, the hover text -
