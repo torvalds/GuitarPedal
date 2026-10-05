@@ -24,6 +24,67 @@ include(Firmware/pico-sdk/pico_sdk_init.cmake)
 
 project(rp2350)
 
+#
+# picotool, built from the submodule with USB support.
+#
+# The sdk needs a picotool to make a .uf2.  It uses an installed one if
+# it finds one, which then has to be new enough or the build stops, and
+# otherwise builds its own with PICOTOOL_NO_LIBUSB, which cannot talk to
+# a board - so 'make flash' needed a second picotool on PATH.  The sdk
+# takes whatever 'picotool' target already exists, so this is it, and
+# build/picotool/picotool is what everything here runs.
+#
+# picotool also builds without USB when it cannot find libusb, saying so
+# in one line of cmake output.  Here that is a configure error instead.
+#
+find_package(PkgConfig)
+if (PKG_CONFIG_FOUND)
+	pkg_check_modules(LIBUSB QUIET libusb-1.0)
+endif()
+if (NOT LIBUSB_FOUND)
+	message(FATAL_ERROR
+		"picotool needs libusb to talk to a board, and it is not found.\n"
+		"Install pkg-config and the libusb-1.0 development files\n"
+		"(libusb1-devel on Fedora, libusb-1.0-0-dev on Debian).")
+endif()
+
+include(ExternalProject)
+set(PICOTOOL_DIR "${CMAKE_BINARY_DIR}/picotool")
+ExternalProject_Add(picotool_build
+	SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Firmware/picotool"
+	BINARY_DIR "${PICOTOOL_DIR}"
+	PREFIX "${CMAKE_BINARY_DIR}/picotool-ep"
+	CMAKE_ARGS
+		"--no-warn-unused-cli"
+		"-DCMAKE_MAKE_PROGRAM:FILEPATH=${CMAKE_MAKE_PROGRAM}"
+		"-DPICO_SDK_PATH:FILEPATH=${PICO_SDK_PATH}"
+		"-DCMAKE_RULE_MESSAGES=OFF"
+	INSTALL_COMMAND ""
+	BUILD_BYPRODUCTS "${PICOTOOL_DIR}/picotool")
+
+# Built once, and again when the submodule's HEAD moves - the same
+# dependency branch.h below uses.  BUILD_ALWAYS would cost every build
+# most of a second for a tool that changes a few times a year.
+execute_process(
+	COMMAND git -C "${CMAKE_CURRENT_SOURCE_DIR}/Firmware/picotool"
+		rev-parse --git-path HEAD
+	OUTPUT_VARIABLE PICOTOOL_HEAD
+	OUTPUT_STRIP_TRAILING_WHITESPACE
+	ERROR_QUIET)
+if (PICOTOOL_HEAD)
+	get_filename_component(PICOTOOL_HEAD "${PICOTOOL_HEAD}"
+		ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Firmware/picotool")
+endif()
+if (EXISTS "${PICOTOOL_HEAD}")
+	ExternalProject_Add_Step(picotool_build head
+		DEPENDS "${PICOTOOL_HEAD}"
+		DEPENDERS configure)
+endif()
+
+add_executable(picotool IMPORTED GLOBAL)
+set_property(TARGET picotool PROPERTY IMPORTED_LOCATION "${PICOTOOL_DIR}/picotool")
+add_dependencies(picotool picotool_build)
+
 # initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 

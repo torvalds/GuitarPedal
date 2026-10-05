@@ -7,3 +7,6 @@
 [submodule "nRF54/sdk-nrf"]
 	path = nRF54/nrf
 	url = https://github.com/nrfconnect/sdk-nrf
+[submodule "Firmware/picotool"]
+	path = Firmware/picotool
+	url = https://github.com/raspberrypi/picotool.git
