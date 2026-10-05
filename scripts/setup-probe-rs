@@ -1,0 +1,57 @@
+#!/bin/sh
+#
+# Build probe-rs from source and install it as ~/bin/probe-rs.
+#
+# probe-rs is how the nRF54 radio is programmed and debugged through the
+# pedal, which presents itself as a CMSIS-DAP probe.  It stays outside
+# the tree, but which version, where its source lives and what it needs
+# to build are fixed here rather than remembered.
+#
+# Running it again is safe: an installed binary of this version is left
+# alone.  PROBE_RS_SRC and BINDIR override where the source and the
+# binary go.
+#
+set -eu
+
+VERSION=v0.32.0
+SRC=${PROBE_RS_SRC:-$HOME/src/probe-rs}
+BINDIR=${BINDIR:-$HOME/bin}
+
+if [ -x "$BINDIR/probe-rs" ] &&
+   "$BINDIR/probe-rs" --version 2>/dev/null | grep -q "git commit: $VERSION)"; then
+	echo "probe-rs: $VERSION is already $BINDIR/probe-rs"
+	exit 0
+fi
+
+for tool in git cargo pkg-config; do
+	command -v "$tool" >/dev/null ||
+		{ echo "probe-rs: building it needs $tool" >&2; exit 1; }
+done
+pkg-config --exists libudev || {
+	echo "probe-rs: building it needs the libudev development files" >&2
+	echo "(systemd-devel on Fedora, libudev-dev on Debian)" >&2
+	exit 1
+}
+
+if [ -d "$SRC/.git" ]; then
+	git -C "$SRC" fetch -q --tags origin
+else
+	git clone -q https://github.com/probe-rs/probe-rs.git "$SRC"
+fi
+git -C "$SRC" checkout -q "$VERSION"
+
+# The binary is one package in a large workspace; nothing else in it is
+# wanted.
+(cd "$SRC" && cargo build --release --locked -p probe-rs-tools --bin probe-rs)
+
+mkdir -p "$BINDIR"
+install -s "$SRC/target/release/probe-rs" "$BINDIR/probe-rs"
+"$BINDIR/probe-rs" --version
+
+# The running pedal is ffff:0003, and without a rule only root can open
+# it.  Saying so is all this can do: writing the rule needs root.
+if ! grep -qs 'ATTR{idVendor}=="ffff", ATTR{idProduct}=="0003"' /etc/udev/rules.d/*.rules; then
+	echo "probe-rs: no udev rule gives you the pedal; as root, add" >&2
+	echo "  ATTR{idVendor}==\"ffff\", ATTR{idProduct}==\"0003\", MODE=\"0660\", GROUP=\"dialout\"" >&2
+	echo "to a file in /etc/udev/rules.d/ and run 'udevadm control --reload'" >&2
+fi

@@ -52,4 +52,14 @@ prep:
 		Firmware/pico-sdk Firmware/tinyusb Firmware/picotool
 	cmake -S . -B build
 
-.PHONY: build all-boards usb-device flash prep $(BOARDS)
+#
+# Tools that stay outside the tree but have to be set up once per
+# machine.  The scripts say what each one needs and where it goes.
+#
+probe-rs:
+	scripts/setup-probe-rs
+
+build123d:
+	scripts/setup-build123d
+
+.PHONY: build all-boards usb-device flash prep probe-rs build123d $(BOARDS)

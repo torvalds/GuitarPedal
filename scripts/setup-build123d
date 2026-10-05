@@ -1,0 +1,35 @@
+#!/bin/sh
+#
+# One python venv for the build123d models in Hardware/Models, in
+# ~/.build123d, and two commands in ~/bin that run it:
+#
+#	build123d Compact.py    run a model
+#	ocp-viewer              the viewer a model's show() draws in,
+#	                        a page on http://localhost:3939
+#
+# The venv is about 1GB, mostly OCP, so it is one per machine rather than
+# one per checkout, and the commands mean nothing has to be activated.
+#
+# Running it again is safe, and is how the pinned versions get updated.
+# BUILD123D_VENV, BINDIR and PYTHON override the defaults.
+#
+set -eu
+
+BUILD123D_VERSION=0.13.0
+OCP_VIEWER_VERSION=1.1.3
+
+VENV=${BUILD123D_VENV:-$HOME/.build123d}
+BINDIR=${BINDIR:-$HOME/bin}
+PYTHON=${PYTHON:-python3}
+
+[ -x "$VENV/bin/python3" ] || "$PYTHON" -m venv "$VENV"
+"$VENV/bin/python3" -m pip install -q --disable-pip-version-check \
+	"build123d==$BUILD123D_VERSION" "ocp_viewer==$OCP_VIEWER_VERSION"
+
+mkdir -p "$BINDIR"
+printf '#!/bin/sh\nexec "%s/bin/python3" "$@"\n' "$VENV" >"$BINDIR/build123d"
+printf '#!/bin/sh\nexec "%s/bin/python3" -m ocp_viewer "$@"\n' "$VENV" >"$BINDIR/ocp-viewer"
+chmod +x "$BINDIR/build123d" "$BINDIR/ocp-viewer"
+
+echo "build123d: build123d $BUILD123D_VERSION and ocp_viewer $OCP_VIEWER_VERSION in $VENV"
+echo "build123d: $BINDIR/build123d and $BINDIR/ocp-viewer run them"

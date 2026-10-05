@@ -10,7 +10,7 @@ CFLAGS = -Wall -O2 -I.. -I../Firmware -I../Firmware/midi -I../build/ \
 	 -ffast-math -fsingle-precision-constant -Wfloat-conversion
 
 visualize: test-fft
-	python visualize.py DADGAD.wav
+	python3 visualize.py DADGAD.wav
 
 test-fft: test-fft.c
 
