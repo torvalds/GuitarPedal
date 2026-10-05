@@ -177,13 +177,11 @@ like separate bugs in five different files.
 	0.46 Hz   0.999999817      0.9913      0.5905        0.0052
 	0.67 Hz   0.999999735      0.9874      0.4659        0.0005
 
-   The modulation is the Lexicon trick for breaking up fixed resonant
-   peaks in a long tail, so what this costs is that the reverb slowly
-   turns into the unmodulated version of itself over a few minutes of
-   being switched on, and comes back when a pot is touched (which calls
-   reverb_init() and re-seeds the rotators).  A cheap fix is one
-   reciprocal-square-root every few thousand samples, or just calling
-   fastsincos() on a phase accumulator like every other LFO here does.
+   In that rotator implementation, touching a pot called reverb_init()
+   and re-seeded the rotators, restoring the modulation.  The current
+   phase accumulators already avoid this amplitude drift (see
+   effects/reverb.md).  Separately, reverb_init() now seeds each LFO
+   phase only once, so Room/Damp changes preserve the running phase.
 
 
 2b. The rest of the helpers.  MEASURED.
