@@ -37,14 +37,16 @@ So what's in here:
 I've only ever built the firmware on Linux, but it *should* be perfectly
 possible to build on MacOS or Windows too if you just figure out the
 platform requirements. The project depends on the `pico-sdk` and
-`tinyusb` libraries, and has submodules for both, so they get built
-automatically, but the build tools your platform has to provide.
+`tinyusb` libraries and on `picotool`, and has submodules for all three, so
+they get built automatically, but the build tools your platform has to provide.
 
 Regardless of platform, you'll need the basics:
  - git
  - make
  - python3
  - cmake
+ - pkg-config and the libusb-1.0 development files, for picotool
+   (`libusb1-devel` on Fedora, `libusb-1.0-0-dev` on Debian)
 
 and a 32-bit arm cross-build environment.  On Linux, that would be
 something like
@@ -93,9 +95,9 @@ on a bench and useless the moment the thing is screwed into a box.
 Either way a USB mass storage device shows up and you copy the file to
 it.
 
-If you have installed picotool with USB support (the pico-sdk build only
-builds a cut-down version without it), you can skip all that and just do
-``make flash``, which builds and flashes the board in `board.local`.
+The build makes its own picotool, with USB support, so you can also skip
+all that and just do ``make flash``, which builds and flashes the board in
+`board.local`.
 ``make flash-split`` does the other one.
 
 ### Testing

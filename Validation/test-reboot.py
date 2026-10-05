@@ -42,7 +42,7 @@ import time
 
 import pedal
 
-PICOTOOL = "picotool"
+PICOTOOL = pedal.PICOTOOL
 
 BOOTSEL_TIMEOUT = 15.0
 RETURN_TIMEOUT = 20.0

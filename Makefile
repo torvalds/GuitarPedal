@@ -11,6 +11,9 @@
 BOARDS := split unified minimal ble
 BOARD := $(shell cat board.local 2>/dev/null)
 
+# Built from Firmware/picotool with USB support - see CMakeLists.txt.
+PICOTOOL := build/picotool/picotool
+
 build:
 	cmake --build build
 
@@ -30,14 +33,14 @@ usb-device:
 #
 flash: build
 	@test -n "$(BOARD)" || { echo "no board.local - see 'make prep'"; exit 1; }
-	picotool load build/pedal-$(BOARD).elf && picotool reboot
+	$(PICOTOOL) load build/pedal-$(BOARD).elf && $(PICOTOOL) reboot
 
 flash-%:
 	cmake --build build --target pedal-$*
-	picotool load build/pedal-$*.elf && picotool reboot
+	$(PICOTOOL) load build/pedal-$*.elf && $(PICOTOOL) reboot
 
 #
-# The two submodules the pedal's own build needs, by name.
+# The submodules the pedal's own build needs, by name.
 #
 # Not every submodule: nRF54/nrf is the Nordic SDK, a quarter of a
 # gigabyte on its own and several more once west has resolved it, and
@@ -46,7 +49,7 @@ flash-%:
 #
 prep:
 	git submodule update --init --recursive \
-		Firmware/pico-sdk Firmware/tinyusb
+		Firmware/pico-sdk Firmware/tinyusb Firmware/picotool
 	cmake -S . -B build
 
 .PHONY: build all-boards usb-device flash prep $(BOARDS)

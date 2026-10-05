@@ -42,7 +42,7 @@ import time
 
 import pedal
 
-PICOTOOL = "picotool"
+PICOTOOL = pedal.PICOTOOL
 
 POLL = 0.25
 
