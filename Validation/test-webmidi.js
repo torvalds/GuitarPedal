@@ -385,7 +385,7 @@ if (!schemaFile) {
     process.exit(1);
 }
 
-const literal = fs.readFileSync(schemaFile, 'utf8').match(/"((?:[^"\\]|\\.)*)"/);
+const literal = fs.readFileSync(schemaFile, 'utf8').match(/= "((?:[^"\\]|\\.)*)";/);
 
 //
 // The C literal is the JSON with a second layer of escaping over it.
