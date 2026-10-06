@@ -152,6 +152,7 @@ configured yourself may not.
 ### Testing
 
 `Validation` has the test suite, and it's split by what it needs.
+Run the following commands from the `Validation` directory.
 
 ``make check`` needs gcc and numpy (`python3-numpy`), plus node if
 you want the web app's tests too; without node those are skipped.  The
