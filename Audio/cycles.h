@@ -22,6 +22,8 @@
 #ifndef AUDIO_CYCLES_H
 #define AUDIO_CYCLES_H
 
+#include <stdint.h>
+
 #define DWT_DEMCR	(*(volatile uint32_t *)0xE000EDFCu)
 #define DWT_CTRL	(*(volatile uint32_t *)0xE0001000u)
 #define DWT_CYCCNT	(*(volatile uint32_t *)0xE0001004u)
