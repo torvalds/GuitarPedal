@@ -6,14 +6,13 @@
 # only wants a .uf2 should not pay for it.  Same bargain as
 # Hardware/Models.
 #
-# 'sdk-nrf' is a submodule and is the version pin - it is the one thing
-# git records.  Everything else west clones from the manifest inside it,
-# so upstream stays the authority on which revisions go together.
+# 'sdk-nrf' version is pinned in the application manifest. Everything west
+# clones from the 'sdk-nrf' manifest imported from the application one, so
+# upstream stays the authority on which revisions go together.
 #
 TOPDIR		:= $(CURDIR)
 VENV		:= $(TOPDIR)/.venv
 WEST		:= $(VENV)/bin/west
-MANIFEST	:= nrf
 
 BOARD		:= minimal/nrf54l10/cpuapp
 APP		:= app
@@ -38,27 +37,11 @@ $(VENV)/bin/python:
 $(WEST): $(VENV)/bin/python
 	$(VENV)/bin/pip install --upgrade pip west
 
-$(MANIFEST)/west.yml:
-	git submodule update --init $(MANIFEST)
-
-#
-# The manifest's own groups, less the two this build has no use for:
-# 'optional' is several gigabytes of things nothing here selects, and
-# 'testing' is a unit-test framework for code we do not build.
-#
-# cmock is in neither group and has to be named.  It is a mocking
-# library, so nothing here wants it either, and it cannot be cloned on
-# a machine with transfer.fsckobjects set: one of its own submodules
-# has a malformed URL upstream, which git refuses to follow.  Excluding
-# the project is the fix rather than turning the check off.
-#
-.stamp-west: $(WEST) $(MANIFEST)/west.yml
-	$(WEST) init -l $(MANIFEST)
-	$(WEST) config manifest.group-filter -- -testing,-optional
-	$(WEST) config manifest.project-filter -- -cmock
+.stamp-west: $(WEST)
+	$(WEST) init -l $(APP)
 	touch $@
 
-.stamp-update: .stamp-west
+.stamp-update: .stamp-west $(APP)/west.yml
 	$(WEST) update
 	touch $@
 

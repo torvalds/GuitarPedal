@@ -1,0 +1,19 @@
+manifest:
+  remotes:
+    - name: ncs
+      url-base: https://github.com/nrfconnect
+
+  projects:
+    - name: nrf
+      repo-path: sdk-nrf
+      remote: ncs
+      revision: b20f8619ba9a5530f8c34b0a130d829947cfe55d
+      import:
+        name-allowlist:
+          - cmsis_6
+          - hal_nordic
+          - liblc3
+          - mbedtls
+          - nrfxlib
+          - oberon-psa-crypto
+          - zephyr
