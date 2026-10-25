@@ -39,17 +39,8 @@ flash-%:
 	cmake --build build --target pedal-$*
 	$(PICOTOOL) load build/pedal-$*.elf && $(PICOTOOL) reboot
 
-#
-# The submodules the pedal's own build needs, by name.
-#
-# Not every submodule: nRF54/nrf is the Nordic SDK, a quarter of a
-# gigabyte on its own and several more once west has resolved it, and
-# nobody building a .uf2 should pay for the radio's toolchain.
-# 'make -C nRF54 fetch' is where that is bought, deliberately.
-#
 prep:
-	git submodule update --init --recursive \
-		Firmware/pico-sdk Firmware/tinyusb Firmware/picotool
+	git submodule update --init --recursive
 	cmake -S . -B build
 
 #
