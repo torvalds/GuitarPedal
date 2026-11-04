@@ -39,9 +39,9 @@
         "other_text_thickness": 0.15,
         "other_text_upright": false,
         "pads": {
-          "drill": 0.0,
-          "height": 1.15,
-          "width": 0.6
+          "drill": 3.0,
+          "height": 2.0,
+          "width": 4.0
         },
         "silk_line_width": 0.1,
         "silk_text_italic": false,
@@ -76,7 +76,24 @@
           "width": 0.0
         }
       ],
-      "drc_exclusions": [],
+      "drc_exclusions": [
+        [
+          "copper_edge_clearance|110950000|135000000|e18fc2de-435c-43fb-8a56-98e88901be0d|86695ee2-b297-48e8-9cf8-cea492302765",
+          ""
+        ],
+        [
+          "copper_edge_clearance|117300000|135000000|e18fc2de-435c-43fb-8a56-98e88901be0d|d98610ef-f0e4-4e69-879f-3e59a1e7f12c",
+          ""
+        ],
+        [
+          "copper_edge_clearance|82700000|135000000|d612b054-7938-44c8-aa53-0212d232eddc|4129bdf4-870d-41b9-9e84-3526a041f35f",
+          ""
+        ],
+        [
+          "copper_edge_clearance|89050000|135000000|d612b054-7938-44c8-aa53-0212d232eddc|8b23fe86-2776-47fc-9972-fc172c70775b",
+          ""
+        ]
+      ],
       "meta": {
         "version": 2
       },
@@ -887,7 +904,7 @@
         "uuid": "1cfc5ec2-6e92-4f8b-bcac-06388472f146"
       }
     ],
-    "used_designators": "C1-42,C101-115,C126-128,C201-227,C301-342,C401-422,D1-4,D101-109,D201-207,D301-302,J1-9,J101-107,J201-202,J301-302,R1-22,R101-110,R113-114,R201-212,R301-314,R401-407,U1-9,U101-106,U201-203,U301-303,U401-402,#FLG1-6,#FLG101-104,#FLG201-202,#FLG301-306,#FLG401-404,#PWR1-96,#PWR101-159,#PWR201-236,#PWR301-341,#PWR401-416,FB1,FB101,Y301,Y401,SW1,SW101-103,SW301,NT101,L101-102,L301,L401",
+    "used_designators": "Q101,C1-42,C101-115,C126-128,C201-227,C301-342,C401-422,U1-9,U101-106,U201-203,U301-303,U401-402,D1-4,D101-109,D201-207,D301-302,J1-9,J101-107,J201-202,J301-302,R1-22,R101-114,R201-212,R301-314,R401-407,#FLG1-6,#FLG101-104,#FLG201-202,#FLG301-306,#FLG401-404,#PWR1-96,#PWR101-159,#PWR201-236,#PWR301-341,#PWR401-416,Y301,Y401,SW1,SW101-103,SW301,NT101,RV101,FB1,FB101,L101-102,L301,L401",
     "variants": []
   },
   "sheets": [

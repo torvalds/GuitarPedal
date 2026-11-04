@@ -2813,8 +2813,16 @@
 		(uuid "f8d7c1a7-ea44-4383-8d45-d8dd8b055446")
 	)
 	(no_connect
+		(at 90.17 135.89)
+		(uuid "0b0af77c-d993-490d-b201-a43979b086c8")
+	)
+	(no_connect
 		(at 90.17 91.44)
 		(uuid "1df7b765-3f04-48a9-8a74-8ef783b0fb63")
+	)
+	(no_connect
+		(at 90.17 138.43)
+		(uuid "2d298666-e34d-461e-b68c-0a155f77f6f8")
 	)
 	(no_connect
 		(at 90.17 88.9)
@@ -2831,6 +2839,10 @@
 	(no_connect
 		(at 90.17 86.36)
 		(uuid "d44b6c43-35ea-4ce2-9b15-2beeb4e32188")
+	)
+	(no_connect
+		(at 90.17 124.46)
+		(uuid "e8c34681-2f59-46f6-8246-8ca3f48eb40f")
 	)
 	(bus_entry
 		(at 175.26 114.3)
@@ -4594,16 +4606,6 @@
 	)
 	(wire
 		(pts
-			(xy 76.2 124.46) (xy 80.01 124.46)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "dc94dc02-5f29-4d9e-879e-17bf538d6ea9")
-	)
-	(wire
-		(pts
 			(xy 153.67 73.66) (xy 175.26 73.66)
 		)
 		(stroke
@@ -4651,16 +4653,6 @@
 			(type default)
 		)
 		(uuid "e13d09d9-2d8a-4555-bdaf-884095a60634")
-	)
-	(wire
-		(pts
-			(xy 87.63 124.46) (xy 90.17 124.46)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "e18abae2-a167-4efc-88ba-6364884be88f")
 	)
 	(wire
 		(pts
@@ -4922,16 +4914,6 @@
 		)
 		(uuid "3f375a60-3f5a-4700-b1af-8f281259353b")
 	)
-	(label "SWDIO"
-		(at 90.17 138.43 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "47fde137-7814-482c-a515-e998fef7c4af")
-	)
 	(label "GPIO8"
 		(at 153.67 91.44 0)
 		(effects
@@ -5051,16 +5033,6 @@
 			(justify left bottom)
 		)
 		(uuid "a1bb365f-3adb-4270-81d0-96b5ff053b39")
-	)
-	(label "SWCLK"
-		(at 90.17 135.89 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "ad43c471-53df-4e01-8669-e77115fca2f4")
 	)
 	(label "GPIO1"
 		(at 153.67 73.66 0)
@@ -5211,17 +5183,6 @@
 			(justify right bottom)
 		)
 		(uuid "f6fcbbfb-e53f-4495-8cae-583c65b4e688")
-	)
-	(hierarchical_label "NRST"
-		(shape input)
-		(at 76.2 124.46 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "2ca37377-03b2-45ac-b856-96b039b32b83")
 	)
 	(hierarchical_label "BOOTSEL"
 		(shape input)
@@ -8716,141 +8677,6 @@
 			(project "pedal"
 				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/bb378633-604e-4622-ba6e-edab6adacf96"
 					(reference "C405")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R")
-		(at 83.82 124.46 90)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim yes)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "a3ee406b-742c-43c0-9160-ed40745fac03")
-		(property "Reference" "R404"
-			(at 83.82 118.11 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "1kΩ"
-			(at 83.82 120.65 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 83.82 126.238 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 83.82 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "1kΩ 50V 1% 0402"
-			(at 83.82 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" "0402WGF1001TCE"
-			(at 83.82 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Sim.Device" ""
-			(at 83.82 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Sim.Pins" ""
-			(at 83.82 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC PN" "C11702"
-			(at 83.82 124.46 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Sim.Params" ""
-			(at 83.82 124.46 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "65898832-e862-4acf-a477-583302b96a7b")
-		)
-		(pin "2"
-			(uuid "53b79813-3ea1-4cb0-a356-11bcf87ce846")
-		)
-		(instances
-			(project "pedal"
-				(path "/1cfc5ec2-6e92-4f8b-bcac-06388472f146/bb378633-604e-4622-ba6e-edab6adacf96"
-					(reference "R404")
 					(unit 1)
 				)
 			)

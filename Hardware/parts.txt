@@ -156,6 +156,10 @@
 	UniRoyal 0402WGF5101TCE
 	C25905 basic
 
+10kΩ/50V/1%/0402:
+	UniRoyal 0402WGF1002TCE
+	C25744 basic
+
 100kΩ/50V/1%/0402:
 	UniRoyal 0402WGF1003TCE
 	C25741 basic
@@ -240,10 +244,33 @@ BAT54SW/30V/SOT-323:
 	CHECK: footprint outline in the assembly preview
 	JLC: rotate 180
 
+BAS70WS/70V/70mA/2pF/SOD-323:
+	hongjiacheng BAS70WS
+	C7502716 promo
+	Diode_SMD:D_SOD-323
+	https://datasheet.lcsc.com/datasheet/pdf/0e1257be1dc41ce5488db41c82fcb2cb.pdf
+	CHECK: never yet on a board - confirm the cathode band is on pad 1
+
 SM4007PL/1kV/1A/SOD-123FL:
 	MDD SM4007PL
 	C64898
 	Mylib:SOD-123FL
+
+BZT52C9V1S/9.1V/zener/SOD-323:
+	hongjiacheng BZT52C9V1S
+	C19077445
+	Diode_SMD:D_SOD-323
+	CHECK: never yet on a board - confirm the cathode band is on pad 1
+
+## Transistors
+
+AO3401A/P-MOSFET/-30V/4A/SOT-23:
+	AOS AO3401A
+	C15127 basic
+	Package_TO_SOT_SMD:SOT-23
+	http://www.aosmd.com/pdfs/datasheet/AO3401A.pdf
+	CHECK: rotation applied automatically - confirm the gate is pad 1
+	JLC: rotate 180
 
 ## LEDs
 
