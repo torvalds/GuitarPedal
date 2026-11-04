@@ -1,20 +1,21 @@
 #!/usr/bin/env python3
 #
-# The Daier PBS-24B-2 stomp switch, translated from stomp.scad.
+# The Daier PBS-24B-4 stomp switch
 #
-# Nobody sells a 3D model for this part - it is not in JLCPCB's library,
-# EasyEDA has nothing, and KiCad's generator has no data for it - so this
-# is the only one there is.  It is a rough solid, not a pretty one, and
-# it exists so the switch stops being a hole in the 3D view.
+# Datasheet: https://www.chinadaier.com/wp-content/uploads/2022/08/PBS-24B-4.pdf
 #
-# Datasheet: https://www.taydaelectronics.com/datasheets/files/A-4807.pdf
-# The measurements below are Linus's calipers rather than that sheet,
-# which does not match the part.
+# The datasheet claims the center distance between the lugs is 6mm. That's a
+# lie - or the parts I have aren't actually Daier, but match in every other way.
+# By measurements, it seems to be 1/4" - 6.35mm.
+#
+# The datasheet also doesn't actually give the thickness of the solder lugs.
+# They measure 1mm thick.
 #
 # The origin is the axis of the threaded barrel, in x and y both.  That
 # is deliberate: a stomp switch faces the *top*, so it passes through the
-# lid and both axes are constrained by the hole - see ISSUES 305.  z=0 is
-# the underside of the body, so the pins hang below into the board.
+# lid and both axes are constrained by the hole.
+#
+# z=0 is the underside of the body, so the pins hang below into the board.
 #
 # **Kept as three coloured parts rather than one fused solid.**  STEP
 # carries colour per shape, and export_step writes it - but only if there
@@ -23,8 +24,9 @@
 # default grey.  The grouping is the .scad's own: metal, body, plate.
 #
 from build123d import (Align, Axis, Box, Color, Compound, Cylinder, Plane,
-                       Polyline, Pos, chamfer, export_step, fillet,
+                       Polyline, Pos, Rot, chamfer, export_step, fillet,
                        make_face, revolve)
+from ocp_viewer import show
 
 BOTTOM = (Align.CENTER, Align.CENTER, Align.MIN)   # sit on z, centred in x/y
 
@@ -85,6 +87,12 @@ _barrel -= Pos(-(11.8 / 2 - _kd / 2 + 0.6), 0, HEIGHT + 7.5) * Box(_kd + 1.2, _k
 #
 _barrel -= Pos(0, 0, HEIGHT + 1.4 + 15 / 2) * Cylinder(BORE / 2, 15)
 
+solderlug = (
+	Rot(90,0,0) * (Cylinder(2.4, 1) - Cylinder(1.2, 2))
+	+ Pos(3.6,0,0) * Box(2.2, 1, 7.6)
+	+ Pos(3,0,0) * Box(2,1,2)
+)
+
 # --- the threaded barrel a M12x0.75 nut goes over, what is above it,
 #     the pins below, and the thin flange where barrel meets plate
 metal = (
@@ -92,8 +100,8 @@ metal = (
     + Pos(0, 0, HEIGHT + 14.9 + 5.1) * Cylinder(8.8 / 2, 5.5, align=BOTTOM)
     # the neck is centred on its own height in the .scad, not based
     + Pos(0, 0, HEIGHT + 15 + 2.5) * Cylinder(7.5 / 2, 10)
-    + Pos(-3.1, -3, 0) * Box(3, 1, 10)
-    + Pos(-3.1, +3, 0) * Box(3, 1, 10)
+    + Pos(-14.1-1.8, -3.175, 7.9) * solderlug
+    + Pos(-14.1-1.8, +3.175, 7.9) * solderlug
     + Pos(0, 0, HEIGHT) * Box(12, 12, 0.8)
 )
 
@@ -154,7 +162,7 @@ body.color, body.label = Color(0.25, 0.25, 0.25), "body"
 plate.color, plate.label = Color(*PHENOLIC), "plate"
 
 part = Compound(children=[metal, body, plate])
-part.label = "PBS-24B-2"
+part.label = "PBS-24B-4"
 
 if __name__ == "__main__":
     # Compound.volume under-reports here - it drops a child that has been
@@ -169,5 +177,6 @@ if __name__ == "__main__":
     for ax in "XYZ":
         lo, hi = getattr(bb.min, ax), getattr(bb.max, ax)
         print(f"  {ax.lower()}: {lo:+8.3f}..{hi:+8.3f}   span {hi - lo:7.3f}")
-    export_step(part, "../symbols/PBS-24B-2.step")
-    print("  wrote ../symbols/PBS-24B-2.step")
+    export_step(part, "../symbols/PBS-24B-4.step")
+    print("  wrote ../symbols/PBS-24B-4.step")
+    show(part)

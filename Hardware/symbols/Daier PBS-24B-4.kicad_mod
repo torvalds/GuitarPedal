@@ -1,0 +1,135 @@
+(footprint "Daier PBS-24B-4"
+	(version 20260206)
+	(generator "pcbnew")
+	(generator_version "10.0")
+	(layer "F.Cu")
+	(descr "Footswitch with solder lugs")
+	(tags "SPST stomp switch")
+	(property "Reference" "REF**"
+		(at 0 -0.5 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "262f6921-ddb0-4fa1-82c9-1822e333336d")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(property "Value" "PBS-24B-4"
+		(at 0 1 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "46246698-812f-487e-b011-cb6ee3c614a6")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "5840906c-4df2-45b9-a771-0a264b1255c6")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "b3eba544-6e2c-4a70-955f-1d585f623762")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr through_hole)
+	(duplicate_pad_numbers_are_jumpers no)
+	(fp_circle
+		(center 0 0)
+		(end 6.25 0)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "f3d1cc29-626a-4714-a9c4-9c402ee4d85f")
+	)
+	(fp_rect
+		(start -14.6 -7)
+		(end 11.4 7)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill hatch)
+		(layer "Cmts.User")
+		(uuid "47608770-7a21-4813-a1c7-09a286de893d")
+	)
+	(fp_rect
+		(start -14.6 -7)
+		(end 11.4 7)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.CrtYd")
+		(uuid "ffd3fdd3-29b9-48d7-add6-99aa6c223fd8")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 2.5 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "ca0d5f13-d951-445d-bff7-695e955fe725")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "1" thru_hole roundrect
+		(at -15.9 -3.175)
+		(size 6.5 2.5)
+		(drill oval 5.5 1.5)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(roundrect_rratio 0.15)
+		(uuid "dcafeb2a-976c-4238-a3b0-764d2ebaa147")
+	)
+	(pad "2" thru_hole roundrect
+		(at -15.9 3.175)
+		(size 6.5 2.5)
+		(drill oval 5.5 1.5)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(roundrect_rratio 0.15)
+		(uuid "4953510f-a92e-4688-a3ca-1633e4001b20")
+	)
+	(embedded_fonts no)
+	(model "${KIPRJMOD}/symbols/PBS-24B-4.step"
+		(offset
+			(xyz 0 0 -8.5)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz -0 -0 -0)
+		)
+	)
+)
