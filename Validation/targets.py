@@ -69,8 +69,9 @@ TARGETS = {
                          "filter": k["Filter"] ** 3,
                          "sweep": k["Sweep"],
                          "mode": RAT_MODE[int(k["Mode"])]},
+        # Filter=0 is the only setting with its corner above 10 kHz
         settings=[{}, {"Distortion": 0.8}, {"Mode": 1}, {"Mode": 2},
-                  {"Sweep": 0.5}, {"Filter": 0.9}],
+                  {"Sweep": 0.5}, {"Filter": 0.9}, {"Filter": 0.0}],
         #
         # Distortion against the clamp, because those are the two that
         # decide the shape of an edge.  Filter is one pole after all of

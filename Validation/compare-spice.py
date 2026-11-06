@@ -66,7 +66,8 @@ REP = 6
 F0 = 220.0
 
 LADDER = (-66, -54, -42, -30, -24, -18, -12, -6, 0)
-LIN_HZ = (40, 80, 160, 320, 640, 1250, 2500, 5000)
+# to 20480, the top of the band the EQ pots and effect pages use
+LIN_HZ = (40, 80, 160, 320, 640, 1250, 2500, 5000, 10000, 20480)
 
 
 def harmonics(y):
