@@ -289,6 +289,7 @@ check: test-midi-cin test-link test-uartrx bench/bench bench/coeff bench/gen/mid
 	./effectmap.py
 	./pots.py
 	./check-effect-ids.py
+	../scripts/check-generated.py
 ifeq ($(NODE),)
 	@echo "test-webmidi: SKIPPED - no node in PATH"
 else

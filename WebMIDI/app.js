@@ -3183,6 +3183,97 @@ function formatDbfs(byte) {
     return byte >= 127 ? '\u2212\u221e' : `\u2212${byte}`;
 }
 
+//
+// Level bars for the input and output peaks.
+//
+// The byte is how far below full scale the peak was, in dB, so 0 is a
+// full-scale sample and 127 is silence.  The bar shows -VU_RANGE_DB to 0
+// dBFS: below that a guitar through a quiet pickup is still in the
+// noise, and a bar that spends its life in the bottom pixel says nothing.
+//
+// A tick holds the highest recent peak for VU_HOLD_MS and then falls,
+// because the pedal reports one peak per poll and a transient between
+// two polls is gone by the time anybody looks.  Red from VU_HOT_DB up,
+// which is headroom running out and not yet clipping.
+//
+const VU_RANGE_DB = 60;
+const VU_HOT_DB = 3;
+const VU_HOLD_MS = 1500;
+const VU_FALL_DB_PER_S = 20;
+
+const vuState = { in: null, out: null };
+
+function vuMake(label) {
+    const row = document.createElement('div');
+    row.className = 'vu-row';
+    const name = document.createElement('span');
+    name.className = 'vu-label';
+    name.textContent = label;
+    const track = document.createElement('div');
+    track.className = 'vu-track';
+    track.setAttribute('role', 'meter');
+    track.setAttribute('aria-label', `${label} level`);
+    track.setAttribute('aria-valuemin', `-${VU_RANGE_DB}`);
+    track.setAttribute('aria-valuemax', '0');
+    const fill = document.createElement('div');
+    fill.className = 'vu-fill';
+    const hold = document.createElement('div');
+    hold.className = 'vu-hold';
+    track.appendChild(fill);
+    track.appendChild(hold);
+    row.appendChild(name);
+    row.appendChild(track);
+    return { row, track, fill, hold, held: VU_RANGE_DB, heldAt: 0 };
+}
+
+function vuBuild() {
+    const box = document.createElement('div');
+    box.className = 'vu';
+    vuState.in = vuMake('in');
+    vuState.out = vuMake('out');
+    box.appendChild(vuState.in.row);
+    box.appendChild(vuState.out.row);
+    return box;
+}
+
+// below is how many dB under full scale; null or >= 127 is silence
+function vuSet(meter, below, now) {
+    if (!meter) return;
+    const db = (below === undefined || below >= 127)
+             ? VU_RANGE_DB : Math.min(below, VU_RANGE_DB);
+
+    //
+    // The hold only rises on a new peak, stays for VU_HOLD_MS, then
+    // falls at a steady rate until something louder meets it.
+    //
+    if (db <= meter.held) {
+        meter.held = db;
+        meter.heldAt = now;
+    } else if (now - meter.heldAt > VU_HOLD_MS) {
+        const fall = VU_FALL_DB_PER_S * (now - meter.heldAt - VU_HOLD_MS) / 1000;
+        meter.held = Math.min(db, meter.held + fall);
+        meter.heldAt = now - VU_HOLD_MS;
+    }
+
+    const pct = (d) => `${(100 * (VU_RANGE_DB - d) / VU_RANGE_DB).toFixed(1)}%`;
+    meter.fill.style.width = pct(db);
+    meter.fill.classList.toggle('hot', db <= VU_HOT_DB);
+    meter.hold.style.left = pct(meter.held);
+    meter.hold.hidden = meter.held >= VU_RANGE_DB;
+    meter.track.setAttribute('aria-valuenow', `-${db}`);
+}
+
+function vuReset() {
+    for (const m of [vuState.in, vuState.out]) {
+        if (!m) continue;
+        m.held = VU_RANGE_DB;
+        m.heldAt = 0;
+        m.fill.style.width = '0%';
+        m.fill.classList.remove('hot');
+        m.hold.hidden = true;
+    }
+}
+
 function handleTelemetry(data) {
     // The whole message: F0 7D 0B <version> <fields...> F7
     const at = (i) => (3 + i < data.length - 1 ? data[3 + i] : undefined);
@@ -3193,6 +3284,10 @@ function handleTelemetry(data) {
     const inPeak = at(1), floor = at(2), out = at(3);
     const gate = at(4), loadHi = at(5), loadLo = at(6);
     const bits = [];
+
+    const now = performance.now();
+    vuSet(vuState.in, inPeak, now);
+    vuSet(vuState.out, out, now);
 
     if (inPeak !== undefined) bits.push(`in ${formatDbfs(inPeak)} dB`);
     if (floor !== undefined) bits.push(`floor ${formatDbfs(floor)} dB`);
@@ -3254,6 +3349,7 @@ function updateTelemetryPolling() {
         telemetryTimer = null;
         const el = document.getElementById('signal-chain-meters');
         if (el) el.textContent = 'no readings yet';
+        vuReset();
     }
 }
 
@@ -5596,6 +5692,7 @@ function renderUI() {
             meters.className = 'meters';
             meters.id = 'signal-chain-meters';
             meters.textContent = 'no readings yet';
+            card.appendChild(vuBuild());
             card.appendChild(meters);
         }
 

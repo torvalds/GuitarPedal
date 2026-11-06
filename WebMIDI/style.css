@@ -1697,3 +1697,52 @@ body.fullscreen-open {
   color: var(--text-muted);
   font-family: ui-monospace, monospace;
 }
+
+/* Level bars above the telemetry readout.  See vuMake() in app.js. */
+.vu {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 10px;
+}
+
+.vu-row {
+  display: grid;
+  grid-template-columns: 2.2rem 1fr;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.vu-track {
+  position: relative;
+  height: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+}
+
+.vu-fill {
+  height: 100%;
+  width: 0;
+  background: var(--success);
+  transition: width 0.12s linear;
+}
+
+.vu-fill.hot {
+  background: var(--danger);
+}
+
+.vu-hold {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -2px;
+  background: var(--text-main);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vu-fill { transition: none; }
+}

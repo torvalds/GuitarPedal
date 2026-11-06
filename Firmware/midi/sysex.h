@@ -1564,9 +1564,16 @@ static bool handle_midi_packet_as(const uint8_t packet[4])
 		}
 	} else if ((status & 0xF0) == 0xC0) {
 		handled = true;
-		// Program Change -> Load Scene
-		if (data1 < MAX_SCENES) {
+		//
+		// Program Change -> Load Scene, but only one that has
+		// something in it.  An empty scene resets every effect and
+		// routes nothing, which would silence a working pedal; the
+		// switch bindings refuse it for the same reason.
+		//
+		if (data1 < MAX_SCENES &&
+		    (populated_scenes() & (1u << data1))) {
 			load_scene(data1);
+			midi_dest_add(&state_dump_tx, midi_from);
 		}
 	}
 
