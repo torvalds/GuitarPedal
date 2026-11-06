@@ -21,7 +21,8 @@ each answer takes says whether commands are held up behind the load.
 It passes when every test packet arrived exactly once and intact on both
 sides, the stuck stream was held and then let go, the link counted no gaps,
 nothing was refused, malformed or failed its CRC, and no command took longer
-than --max-rtt-ms, and the radio overwrote nothing in its receive ring.
+than --max-rtt-ms, the radio overwrote nothing in its receive ring, and
+neither side wrote anything off as lost.
 Either side prints each packet it drops on the pedal's debug port, as it
 came off the wire.
 
@@ -242,6 +243,9 @@ def main():
           after["lr"] == before["lr"])
     check("nothing overwritten in the radio's receive ring",
           after["lo"] == before["lo"])
+    check("nothing written off as lost",
+          last["link"]["written_off"] == first["link"]["written_off"] and
+          after["lw"] == before["lw"])
     check("every command answered within %.0f ms" % args.max_rtt_ms,
           bool(rtts) and not unanswered and max(rtts) <= args.max_rtt_ms)
     if ble:

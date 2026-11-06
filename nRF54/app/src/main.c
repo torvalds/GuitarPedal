@@ -889,6 +889,8 @@ int main(void)
 		    k_uptime_get_32() - test.started >= 1000) {
 			test.stalled = true;
 			k_busy_wait(test.cfg.stall_ms * 1000);
+			/* back to the top, to read the ring before acking */
+			continue;
 		}
 		if (test.running && test.lines) {
 			printk("linktest line %u: the quick brown fox jumps "
