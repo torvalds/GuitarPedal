@@ -603,4 +603,30 @@ static inline bool midi_tx_busy(void)
 	return midi_tx.head != midi_tx.tail;
 }
 
+//
+// Is 'flash' still on its way to 'to'?  Each sink's own cursor, since
+// USB can be done with a message the radio is still sending.
+//
+static inline bool midi_tx_queued(const void *flash, struct midi_dest to)
+{
+	uint32_t i = midi_tx.usb.tail;
+	uint8_t via = MIDI_TO_USB;
+
+#ifdef NRF54_SWDIO
+	if (to.to & MIDI_TO_RADIO) {
+		i = midi_tx.radio.tail;
+		via = MIDI_TO_RADIO;
+	}
+#endif
+	for (; i != midi_tx.head; i++) {
+		struct midi_msg *m = &midi_tx.ring[i & (MIDI_TX_MSGS - 1)];
+
+		if (m->flash != flash || !(m->dest.to & via))
+			continue;
+		if (via == MIDI_TO_USB || !m->dest.peer || m->dest.peer == to.peer)
+			return true;
+	}
+	return false;
+}
+
 #endif

@@ -1159,7 +1159,9 @@ static void handle_sysex_payload(uint8_t *sysex_buf, size_t sysex_len)
 {
 	uint8_t cmd = sysex_buf[0];
 	if (cmd == 0x01) { // Schema Request
-		midi_dest_add(&send_schema_tx, midi_from);
+		// Over Bluetooth the schema takes seconds, and the app asks again
+		if (!midi_tx_queued(midi_schema_json, midi_from))
+			midi_dest_add(&send_schema_tx, midi_from);
 	} else if (cmd == 0x03 && sysex_len >= 4) { // Set Parameter
 		//
 		// One effect, and then as many (pot, value) pairs as the
