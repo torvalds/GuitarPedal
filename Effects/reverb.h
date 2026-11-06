@@ -114,9 +114,11 @@ static void reverb_init(unsigned char pot[10])
 	for (int i = 0; i < 4; i++)
 		reverb_state.allpasses[i].delay = reverb_ap_L[i];
 	for (int i = 0; i < 4; i++) {
+		// Seed once: moving Room or Damp must not restart the modulation.
+		if (!reverb_state.lfo[i].lfo.step)
+			reverb_state.lfo[i].lfo.idx =
+				fraction_to_u32(reverb_lfo_phases[i]);
 		set_lfo_freq_X(&reverb_state.lfo[i], reverb_lfo_rates[i]);
-		reverb_state.lfo[i].lfo.idx =
-			fraction_to_u32(reverb_lfo_phases[i]);
 	}
 }
 
