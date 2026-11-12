@@ -188,6 +188,23 @@ a real board agrees with the host build, ``make check-hwtone`` to sweep
 the tone stack the codec runs in its own biquads, and ``make check-loop``
 if you have two pedals to patch into each other.
 
+### Checking generated metadata
+
+After generating metadata, check existing outputs without changing them:
+
+```sh
+python3 scripts/gen_effects.py --check Effects/ build/effect_map.h WebMIDI/effects.js Documentation/MIDI_CC_MAP.md
+```
+
+Use the output paths from your build if they differ. This checks the three
+named files and `midi_schema.h` beside the C header. Exit status is 0 when
+current, 1 for missing or stale output, and 2 for an input or I/O error.
+Missing/stale files are listed with a regeneration command. Ordinary
+generation without `--check` remains the way to create or refresh them.
+Run the hardware-free regression tests with
+`make -C Validation test-generated-metadata`; they also run under
+`make -C Validation check`.
+
 ## Hardware
 
 The kicad design files (and some supporting infrastructure, like the 3D

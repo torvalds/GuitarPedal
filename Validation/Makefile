@@ -58,7 +58,8 @@ BENCH_CFLAGS = -Wall -Wno-unused-function -O2 \
 	       -Ibench/shim -I$(BENCH_GEN) -I.. -I../Firmware -I../Audio
 
 $(BENCH_GEN)/effect_map.h $(BENCH_GEN)/midi_schema.h &: \
-			   $(wildcard ../Effects/*.h) ../scripts/gen_effects.py
+			   $(wildcard ../Effects/*.h) ../scripts/gen_effects.py \
+			   ../Firmware/midi/midi.h
 	@mkdir -p $(BENCH_GEN)
 	python3 ../scripts/gen_effects.py ../Effects/ \
 		$(BENCH_GEN)/effect_map.h $(BENCH_GEN)/effects.js \
@@ -280,7 +281,7 @@ check-reboot:
 	./test-reboot.py $(if $(TARGET),--target $(TARGET)) \
 			 $(if $(JSON),--json $(JSON)) $(BOOTARGS)
 
-check: test-midi-cin test-link test-uartrx bench/bench bench/coeff bench/gen/midi_schema.h
+check: test-generated-metadata test-midi-cin test-link test-uartrx bench/bench bench/coeff bench/gen/midi_schema.h
 	./test-midi-cin
 	./test-link
 	./test-uartrx
@@ -304,6 +305,10 @@ else
 	r=$$?; rm -rf $$t; exit $$r
 endif
 
+test-generated-metadata:
+	python3 test-generated-metadata.py
+
+.PHONY: test-generated-metadata
 .PHONY: bench check check-analog check-analysis check-bench check-biquad
 .PHONY: check-boot check-effects check-hw check-hwtone check-loop
 .PHONY: check-midi check-reboot check-split

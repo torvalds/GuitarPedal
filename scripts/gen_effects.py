@@ -5,6 +5,8 @@ import re
 import hashlib
 import json
 import math
+import shlex
+import tempfile
 from collections import Counter
 
 def c_string(s):
@@ -1348,9 +1350,74 @@ def generate(audio_dir, out_h, out_js, out_md):
                     f.write(f"  - {pot['info']}\n")
             f.write("\n")
 
-if __name__ == "__main__":
-    if len(sys.argv) < 5:
-        print("Usage: gen_effects.py <audio_dir> <out_h> <out_js> <out_md>")
-        sys.exit(1)
+def check_generated(audio_dir, out_h, out_js, out_md):
+    outputs = [out_h, os.path.join(os.path.dirname(out_h), "midi_schema.h"),
+               out_js, out_md]
+    paths = [os.path.normcase(os.path.realpath(p)) for p in outputs]
+    if len(set(paths)) != len(paths):
+        raise ValueError("generated output paths must be distinct")
 
-    generate(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+    # Keep each output's name, but separate directories so equal basenames
+    # in the user's C, JavaScript and documentation directories cannot clash.
+    with tempfile.TemporaryDirectory(prefix="pedal-metadata-") as temp:
+        dirs = [os.path.join(temp, name) for name in ("headers", "js", "docs")]
+        for directory in dirs:
+            os.mkdir(directory)
+        generated_h, generated_js, generated_md = [
+            os.path.join(directory, os.path.basename(path))
+            for directory, path in zip(dirs, (out_h, out_js, out_md))]
+        generate(audio_dir, generated_h, generated_js, generated_md)
+        generated = [generated_h, os.path.join(dirs[0], "midi_schema.h"),
+                     generated_js, generated_md]
+        stale = False
+        for actual, expected in zip(outputs, generated):
+            with open(expected) as f:
+                wanted = f.read()
+            try:
+                # Text-mode comparison accepts ordinary LF/CRLF differences
+                # without rewriting either file or changing its timestamp.
+                with open(actual) as f:
+                    current = f.read()
+            except FileNotFoundError:
+                print(f"missing: {actual}", file=sys.stderr)
+                stale = True
+                continue
+            if current != wanted:
+                print(f"stale: {actual}", file=sys.stderr)
+                stale = True
+        if stale:
+            command = [sys.executable, os.path.abspath(__file__), audio_dir,
+                       out_h, out_js, out_md]
+            print("Regenerate with: " + shlex.join(command), file=sys.stderr)
+        return int(stale)
+
+
+def main():
+    args = sys.argv[1:]
+    check = args[:1] == ["--check"]
+    if check:
+        args = args[1:]
+    if len(args) < 4:
+        print("Usage: gen_effects.py [--check] <audio_dir> <out_h> <out_js> <out_md>",
+              file=sys.stderr)
+        return 2
+    # CMake passes the effect headers as trailing arguments. Keep accepting
+    # those in both modes, as generation has always done.
+    if not check:
+        generate(*args[:4])
+        return 0
+    try:
+        return check_generated(*args[:4])
+    except (OSError, ValueError) as error:
+        print(f"gen_effects: {error}", file=sys.stderr)
+        return 2
+    except SystemExit as error:
+        # Existing generator input validation uses sys.exit(message).
+        # In check mode that is an input error, not a stale-output result.
+        if error.code:
+            print(error.code, file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

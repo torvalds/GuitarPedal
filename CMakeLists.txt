@@ -321,6 +321,7 @@ add_custom_command(
 		"${EFFECT_MD}"
 		${EFFECT_HEADERS}
 	DEPENDS "${SCRIPT_DIR}/gen_effects.py" ${EFFECT_HEADERS}
+		"${CMAKE_CURRENT_SOURCE_DIR}/Firmware/midi/midi.h"
 )
 list(APPEND PEDAL_GENERATED "${EFFECT_MAP_HEADER}")
 
