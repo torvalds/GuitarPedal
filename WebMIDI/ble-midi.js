@@ -355,8 +355,11 @@ const blePedal = {
     // while the first is outstanding fails with "GATT operation already
     // in progress", and send() is called from drawing code that cannot
     // wait, so they are chained rather than awaited.
+    // A new connection starts a new queue; queued writes from the old
+    // one must not be sent to it.
     //
     writes: Promise.resolve(),
+    writeEpoch: 0,
 
     get supported() {
         return typeof navigator !== 'undefined' && !!navigator.bluetooth;
@@ -484,6 +487,8 @@ const blePedal = {
     //
     async attach(device) {
         const gen = this.gen;
+        this.writeEpoch++;
+        this.writes = Promise.resolve();
 
         //
         // Drop a link that is already up before asking for another.
@@ -639,6 +644,8 @@ const blePedal = {
         const device = this.device;
 
         this.gen++;
+        this.writeEpoch++;
+        this.writes = Promise.resolve();
         this.wanted = null;
         this.reconnecting = false;
         this.device = null;
@@ -648,13 +655,20 @@ const blePedal = {
     },
 
     send(bytes) {
-        if (!this.characteristic)
+        const characteristic = this.characteristic;
+        if (!characteristic)
             return;
+        const epoch = this.writeEpoch;
 
         for (const packet of bleMidiEncode(Array.from(bytes))) {
             this.tx++;
             this.writes = this.writes
-                .then(() => this.characteristic.writeValueWithoutResponse(packet))
+                .then(() => {
+                    if (this.writeEpoch !== epoch ||
+                        this.characteristic !== characteristic)
+                        return;
+                    return characteristic.writeValueWithoutResponse(packet);
+                })
                 .catch((err) => {
                     console.error('[BLE MIDI] write failed', err);
                 });
