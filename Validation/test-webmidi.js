@@ -205,7 +205,7 @@ const WANT = ['handleIdentity', 'populateScenePicker', 'updateSceneLabels',
 // ble-midi.js is evaluated in the same scope, so its codec comes out
 // through the same accessor everything else here uses.
 //
-WANT.push('bleCodec');
+WANT.push('bleCodec', 'blePedal');
 
 //
 // The chain is a list held in a variable rather than anything the dom
@@ -1069,6 +1069,38 @@ check('BLE MIDI: a packet whose header has bit 6 set is refused',
           return out.length === 0;
       })());
 
+// A write queued for a previous connection must not reach the newly
+// selected pedal, and a stuck old write must not hold up the new one.
+async function checkBleWriteQueue() {
+    const pedal = app.blePedal;
+    let finishOldWrite;
+    pedal.writes = new Promise((resolve) => { finishOldWrite = resolve; });
+    const sent = [];
+    pedal.characteristic = { writeValueWithoutResponse: () => Promise.resolve() };
+    pedal.send([0xB0, 0x07, 0x40]);
+
+    pedal.release();
+    pedal.characteristic = {
+        writeValueWithoutResponse(packet) {
+            sent.push(Array.from(packet).slice(-3));
+            return Promise.resolve();
+        },
+    };
+    pedal.send([0xB0, 0x08, 0x20]);
+    await new Promise(setImmediate);
+    check('BLE MIDI: a stalled old write does not block a new pedal',
+          JSON.stringify(sent) === JSON.stringify([[0xB0, 0x08, 0x20]]),
+          JSON.stringify(sent));
+
+    finishOldWrite();
+    await new Promise(setImmediate);
+    check('BLE MIDI: a queued old write does not reach a new pedal',
+          JSON.stringify(sent) === JSON.stringify([[0xB0, 0x08, 0x20]]),
+          JSON.stringify(sent));
+    pedal.characteristic = null;
+    pedal.writes = Promise.resolve();
+}
+
 //
 // The schema is asked for only when the hash in the identity reply is one
 // the app was not sent before.  The schema effects.js carries for the demo
@@ -1126,9 +1158,14 @@ check('BLE MIDI: a packet whose header has bit 6 set is refused',
     app.tap(null);
 }
 
-if (failures) {
-    say(`test-webmidi: ${failures} failure(s)`);
+checkBleWriteQueue().then(() => {
+    if (failures) {
+        say(`test-webmidi: ${failures} failure(s)`);
+        process.exit(1);
+    }
+    say('test-webmidi: app loads, identity/scenes/telemetry behave, '
+        + 'BLE MIDI round-trips');
+}).catch((err) => {
+    say(`test-webmidi: BLE write queue threw ${err}`);
     process.exit(1);
-}
-say('test-webmidi: app loads, identity/scenes/telemetry behave, '
-    + 'BLE MIDI round-trips');
+});
