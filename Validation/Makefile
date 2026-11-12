@@ -58,7 +58,8 @@ BENCH_CFLAGS = -Wall -Wno-unused-function -O2 \
 	       -Ibench/shim -I$(BENCH_GEN) -I.. -I../Firmware -I../Audio
 
 $(BENCH_GEN)/effect_map.h $(BENCH_GEN)/midi_schema.h &: \
-			   $(wildcard ../Effects/*.h) ../scripts/gen_effects.py
+			   $(wildcard ../Effects/*.h) ../scripts/gen_effects.py \
+			   ../Firmware/midi/midi.h
 	@mkdir -p $(BENCH_GEN)
 	python3 ../scripts/gen_effects.py ../Effects/ \
 		$(BENCH_GEN)/effect_map.h $(BENCH_GEN)/effects.js \
